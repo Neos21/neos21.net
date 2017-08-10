@@ -162,7 +162,7 @@ gulp.task('dev', ['browser-sync'], function () {
   $.watch('./src/templates/**/*.html', () => {
     return gulp.start(['html-all']);
   });
-  $.watch(['./src/pages/**/*.jpg', './src/pages/**/*.gif', './src/pages/**/*.png'], () => {
+  $.watch(['./src/pages/**/*.jpg', './src/pages/**/*.gif', './src/pages/**/*.png'], (file) => {
     // ファイルが削除された時は dist ディレクトリからも削除する
     if(file.event === 'unlink') {
       return $.del(file.path.replace(/src\\pages/, 'dist').replace(/src\/pages/, 'dist'));
