@@ -11,6 +11,16 @@ const host     = productionConfig.ftp.host;
 const FtpDeploy = require('ftp-deploy');
 const ftpDeploy = new FtpDeploy();
 
+ftpDeploy.on('uploading', (data) => {
+  console.log('★ Uploading \n', data);
+});
+ftpDeploy.on('uploaded', (data) => {
+  console.log('★ Uploaded \n' , data);
+});
+ftpDeploy.on('upload-error', (data) => {
+  console.log('★ Upload Error \n', data);
+});
+
 ftpDeploy.deploy({
   username  : userName,
   password  : password,

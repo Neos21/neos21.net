@@ -76,7 +76,7 @@ gulp.task('js', () => {
 gulp.task('assets-all', () => {
   return gulp
     .src(
-      [ 'src/pages/**/*.jpg', 'src/pages/**/*.gif', 'src/pages/**/*.png', 'src/pages/.htaccess' ],
+      [ 'src/pages/**/*.jpg', 'src/pages/**/*.gif', 'src/pages/**/*.png', 'src/pages/**/*.ico', 'src/pages/.htaccess' ],
       { base: 'src/pages' }
     )
     .pipe(gulp.dest('dist'));
@@ -88,7 +88,7 @@ gulp.task('assets-all', () => {
 gulp.task('assets', () => {
   return gulp
     .src(
-      [ 'src/pages/**/*.jpg', 'src/pages/**/*.gif', 'src/pages/**/*.png', 'src/pages/.htaccess' ],
+      [ 'src/pages/**/*.jpg', 'src/pages/**/*.gif', 'src/pages/**/*.png', 'src/pages/**/*.ico', 'src/pages/.htaccess' ],
       { base: 'src/pages' }
     )
     .pipe($.changed('./dist'))
@@ -162,7 +162,7 @@ gulp.task('dev', ['browser-sync'], function () {
   $.watch('./src/templates/**/*.html', () => {
     return gulp.start(['html-all']);
   });
-  $.watch(['./src/pages/**/*.jpg', './src/pages/**/*.gif', './src/pages/**/*.png', 'src/pages/.htaccess'], (file) => {
+  $.watch(['./src/pages/**/*.jpg', './src/pages/**/*.gif', './src/pages/**/*.png', 'src/pages/**/*.ico', 'src/pages/.htaccess'], (file) => {
     // ファイルが削除された時は dist ディレクトリからも削除する
     if(file.event === 'unlink') {
       return $.del(file.path.replace(/src\\pages/, 'dist').replace(/src\/pages/, 'dist'));
