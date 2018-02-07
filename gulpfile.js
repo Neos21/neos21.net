@@ -1,6 +1,6 @@
 const gulp = require('gulp');
 const $ = require('gulp-load-plugins')({
-  pattern: ['browser-sync', 'browserify', 'del', 'run-sequence', 'vinyl-source-stream'],
+  pattern: ['browser-sync', 'browserify', 'del', 'run-sequence', 'vinyl-buffer', 'vinyl-source-stream'],
   overridePattern: false,  // デフォルトのパターン ('gulp-*', 'gulp.*', '@*/gulp{-,.}*') を残す
   maintainScope: false     // スコープパッケージを階層化しない
 });
@@ -67,6 +67,8 @@ gulp.task('js', () => {
       this.emit('end');
     })
     .pipe($.vinylSourceStream('scripts.js'))  // Vinyl に変換しリネームする
+    .pipe($.vinylBuffer())                    // Uglify できるように変換する
+    .pipe($.uglify())                         // Uglify する
     .pipe(gulp.dest('./dist'));               // ./dist/scripts.js を出力する
 });
 
