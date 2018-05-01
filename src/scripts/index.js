@@ -32,7 +32,7 @@ const createAnchors = () => {
     if(findHeading) {
       // 対象要素内の最初の見出し要素にリンクを付与する場合
       //   ex. selector に 'section' を指定した時に、section 内の最初の見出し要素にリンクを挿入する
-      targetElement = element.querySelector('h1, h2, h3, h4, h5, h6');
+      targetElement = element.querySelector('h2, h3, h4, h5, h6');
       // 見出し要素がなければリンクの挿入を諦める
       if(!targetElement) {
         return;
