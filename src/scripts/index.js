@@ -60,3 +60,12 @@ const createAnchors = () => {
 document.addEventListener('DOMContentLoaded', () => {
   createAnchors();
 });
+
+/**
+ * TouchStart
+ * 
+ * タップ時の動作を早めるため空の関数を設定する
+ */
+document.addEventListener('touchstart', () => {
+  // Do Nothing
+});
