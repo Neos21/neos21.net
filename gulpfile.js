@@ -56,8 +56,8 @@ gulp.task('js', () => {
   return $.browserify({
     entries: ['./src/scripts/index.js'],  // エントリポイント
     transform: [
-      ['babelify', {         // Babelify
-        presets: ['es2015']  // Babel-Preset-ES2015
+      ['babelify', {
+        presets: ['@babel/preset-env']
       }]
     ]
   })
