@@ -45,6 +45,7 @@ gulp.task('css', () => {
       })
       .on('error', $.sass.logError)
     )
+    .pipe($.cleanCss())              // import('.css') をインライン化して全体を圧縮・ついでに UTF-8 BOM を除去してくれる
     .pipe($.rename('./styles.css'))  // リネームする
     .pipe(gulp.dest('./dist'));      // ./dist/styles.css を出力する
 });
