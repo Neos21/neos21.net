@@ -26,12 +26,20 @@ promiseFtp.connect({
   })
   .then((list) => {
     console.log('★ Directory Listing');
-    console.dir(list);
+    list.forEach((file) => {
+      console.log(`--- ${file.name}${file.type === 'd' ? '/' : ''}`);
+    });
+  })
+  .catch((error) => {
+    console.log('★ エラー \n', error);
+  })
+  .then(() => {
+    console.log('★ 切断');
     return promiseFtp.end();
   })
   .then((endResult) => {
-    console.log('★ End ', endResult); // false なら正常終了
+    console.log(`★ ${endResult ? '異常終了' : '正常終了'}`);  // false なら正常終了
   })
   .catch((error) => {
-    console.log('★ Error \n', error);
+    console.log('★ 切断失敗 \n', error);
   });

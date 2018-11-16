@@ -23,7 +23,8 @@ ftpClient.connect(() => {
   
   ftpClient.upload(
     [
-      'dist/test.html'
+      'dist/index.html',
+      'dist/about/new.html',
     ],
     '/public_html/',
     {
