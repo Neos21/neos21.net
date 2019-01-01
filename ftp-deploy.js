@@ -22,12 +22,13 @@ ftpDeploy.on('upload-error', (data) => {
 });
 
 ftpDeploy.deploy({
-  username  : userName,
+  user      : userName,
   password  : password,
   host      : host,
-  localRoot : 'dist',
-  remoteRoot: '/public_html',
-  include   : [],
+  port      : 21,
+  localRoot : __dirname + '/dist',
+  remoteRoot: '/public_html/',
+  include   : ['*', '**/*'],
   exclude   : []
 }, (error) => {
   if(error) {
