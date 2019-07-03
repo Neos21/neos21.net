@@ -26,7 +26,7 @@ ftpDeploy.deploy({
   password  : password,
   host      : host,
   port      : 21,
-  localRoot : __dirname + '/dist',
+  localRoot : __dirname + '/docs',
   remoteRoot: '/public_html/',
   include   : ['*', '**/*'],
   exclude   : []

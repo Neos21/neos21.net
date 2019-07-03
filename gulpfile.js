@@ -16,7 +16,7 @@ gulp.task('html-all', () => {
   return gulp
     .src('./src/pages/**/*.html')
     .pipe($.templateHtml('./src/templates/template.html'))
-    .pipe(gulp.dest('./dist'));
+    .pipe(gulp.dest('./docs'));
 });
 
 /**
@@ -25,9 +25,9 @@ gulp.task('html-all', () => {
 gulp.task('html', () => {
   return gulp
     .src('./src/pages/**/*.html')
-    .pipe($.changed('./dist'))
+    .pipe($.changed('./docs'))
     .pipe($.templateHtml('./src/templates/template.html'))
-    .pipe(gulp.dest('./dist'));
+    .pipe(gulp.dest('./docs'));
 });
 
 /**
@@ -47,7 +47,7 @@ gulp.task('css', () => {
     )
     .pipe($.cleanCss())              // import('.css') をインライン化して全体を圧縮・ついでに UTF-8 BOM を除去する
     .pipe($.rename('./styles.css'))  // リネームする
-    .pipe(gulp.dest('./dist'));      // ./dist/styles.css を出力する
+    .pipe(gulp.dest('./docs'));      // ./docs/styles.css を出力する
 });
 
 /**
@@ -70,7 +70,7 @@ gulp.task('js', () => {
     .pipe($.vinylSourceStream('scripts.js'))  // Vinyl に変換しリネームする
     .pipe($.vinylBuffer())                    // Uglify できるように変換する
     .pipe($.uglify())                         // Uglify する
-    .pipe(gulp.dest('./dist'));               // ./dist/scripts.js を出力する
+    .pipe(gulp.dest('./docs'));               // ./docs/scripts.js を出力する
 });
 
 /**
@@ -82,7 +82,7 @@ gulp.task('assets-all', () => {
       [ 'src/pages/**/*.jpg', 'src/pages/**/*.gif', 'src/pages/**/*.png', 'src/pages/**/*.ico', 'src/pages/.htaccess' ],
       { base: 'src/pages' }
     )
-    .pipe(gulp.dest('dist'));
+    .pipe(gulp.dest('docs'));
 });
 
 /**
@@ -94,8 +94,8 @@ gulp.task('assets', () => {
       [ 'src/pages/**/*.jpg', 'src/pages/**/*.gif', 'src/pages/**/*.png', 'src/pages/**/*.ico', 'src/pages/.htaccess' ],
       { base: 'src/pages' }
     )
-    .pipe($.changed('./dist'))
-    .pipe(gulp.dest('dist'));
+    .pipe($.changed('./docs'))
+    .pipe(gulp.dest('docs'));
 });
 
 
@@ -103,10 +103,10 @@ gulp.task('assets', () => {
 // --------------------------------------------------------------------------------
 
 /**
- * dist ディレクトリ配下のファイルを削除する
+ * docs ディレクトリ配下のファイルを削除する
  */
 gulp.task('clean', () => {
-  return $.del(['./dist/**/*']);
+  return $.del(['./docs/**/*']);
 });
 
 /**
@@ -130,7 +130,7 @@ gulp.task('build', (callback) => {
 gulp.task('browser-sync', () => {
   return $.browserSync.init({
     server: {
-      baseDir: "dist",
+      baseDir: "docs",
       index: "index.html"
     }
   });
@@ -155,9 +155,9 @@ gulp.task('dev', ['browser-sync'], function () {
     return gulp.start(['js']);
   });
   $.watch('./src/pages/**/*.html', (file) => {
-    // ファイルが削除された時は dist ディレクトリからも削除する
+    // ファイルが削除された時は docs ディレクトリからも削除する
     if(file.event === 'unlink') {
-      return $.del(file.path.replace(/src\\pages/, 'dist').replace(/src\/pages/, 'dist'));
+      return $.del(file.path.replace(/src\\pages/, 'docs').replace(/src\/pages/, 'docs'));
     }
     return gulp.start(['html']);
   });
@@ -166,15 +166,15 @@ gulp.task('dev', ['browser-sync'], function () {
     return gulp.start(['html-all']);
   });
   $.watch(['./src/pages/**/*.jpg', './src/pages/**/*.gif', './src/pages/**/*.png', 'src/pages/**/*.ico', 'src/pages/.htaccess'], (file) => {
-    // ファイルが削除された時は dist ディレクトリからも削除する
+    // ファイルが削除された時は docs ディレクトリからも削除する
     if(file.event === 'unlink') {
-      return $.del(file.path.replace(/src\\pages/, 'dist').replace(/src\/pages/, 'dist'));
+      return $.del(file.path.replace(/src\\pages/, 'docs').replace(/src\/pages/, 'docs'));
     }
     return gulp.start(['assets']);
   });
   
-  // dist ファイルを監視してライブリロードする
-  $.watch('./dist/**/*', () => {
+  // docs ファイルを監視してライブリロードする
+  $.watch('./docs/**/*', () => {
     return gulp.start(['reload']);
   });
 });

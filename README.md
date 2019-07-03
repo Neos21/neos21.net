@@ -1,4 +1,4 @@
-# neo.s21.xrea.com
+# Neo's World : neo.s21.xrea.com
 
 __[Neo's World](http://neo.s21.xrea.com/)__ のソースコードを管理するリポジトリ。
 
@@ -34,7 +34,7 @@ $ npm run ftp-list
 # ファイルを指定して FTP アップロード (ftp-upload-files.js)
 $ npm run ftp-upload
 
-# dist ディレクトリの全量を FTP アップロード (ftp-deploy.js)
+# docs ディレクトリの全量を FTP アップロード (ftp-deploy.js)
 $ npm run ftp-deploy
 ```
 
