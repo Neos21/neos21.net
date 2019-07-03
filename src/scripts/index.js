@@ -1,8 +1,7 @@
+/** Neo's World Scripts */
 (function() {
-  console.log(`Neo's World Scripts`);
-  
   /**
-   * アンカーを生成する
+   * 見出しにページ内アンカーを生成する
    * 
    * AnchorJS を参考に、section 要素に振られた ID を最初の子要素の見出し要素に振るように改造
    *   - https://github.com/bryanbraun/anchorjs
@@ -57,22 +56,20 @@
   
   // 読み込みタイミングに関わらず確実に実行されるよう制御する
   if(!document.readyState || document.readyState === 'interactive') {
-    console.log('window.onload 予約');
+    // console.log('window.onload 予約');
     window.addEventListener('load', createAnchors);
   }
   else if(document.readyState === 'loading') {
-    console.log('DOMContentLoaded 予約');
+    // console.log('DOMContentLoaded 予約');
     document.addEventListener('DOMContentLoaded', createAnchors);
   }
   else {
-    console.log('即実行');
+    // console.log('即実行');
     createAnchors();
   }
   
   /**
-   * TouchStart
-   * 
-   * タップ時の動作を早めるため空の関数を設定する
+   * TouchStart : タップ時の動作を早めるため空の関数を設定する
    */
   document.addEventListener('touchstart', () => {
     // Do Nothing
