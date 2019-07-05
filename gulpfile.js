@@ -5,6 +5,16 @@ const $ = require('gulp-load-plugins')({
   maintainScope: false     // スコープパッケージを階層化しない
 });
 
+// コピーのみする画像ファイルなど
+const assetFileNames = [
+  './src/pages/**/*.jpg',
+  './src/pages/**/*.gif',
+  './src/pages/**/*.png',
+  './src/pages/**/*.ico',
+  './src/pages/**/*.swf',
+  './src/pages/.htaccess'
+];
+
 
 // Build
 // --------------------------------------------------------------------------------
@@ -78,10 +88,7 @@ gulp.task('js', () => {
  */
 gulp.task('assets-all', () => {
   return gulp
-    .src(
-      [ 'src/pages/**/*.jpg', 'src/pages/**/*.gif', 'src/pages/**/*.png', 'src/pages/**/*.ico', 'src/pages/.htaccess' ],
-      { base: 'src/pages' }
-    )
+    .src(assetFileNames, { base: 'src/pages' })
     .pipe(gulp.dest('docs'));
 });
 
@@ -90,10 +97,7 @@ gulp.task('assets-all', () => {
  */
 gulp.task('assets', () => {
   return gulp
-    .src(
-      [ 'src/pages/**/*.jpg', 'src/pages/**/*.gif', 'src/pages/**/*.png', 'src/pages/**/*.ico', 'src/pages/.htaccess' ],
-      { base: 'src/pages' }
-    )
+    .src(assetFileNames, { base: 'src/pages' })
     .pipe($.changed('./docs'))
     .pipe(gulp.dest('docs'));
 });
@@ -165,7 +169,7 @@ gulp.task('dev', ['browser-sync'], function () {
   $.watch('./src/templates/**/*.html', () => {
     return gulp.start(['html-all']);
   });
-  $.watch(['./src/pages/**/*.jpg', './src/pages/**/*.gif', './src/pages/**/*.png', 'src/pages/**/*.ico', 'src/pages/.htaccess'], (file) => {
+  $.watch(assetFileNames, (file) => {
     // ファイルが削除された時は docs ディレクトリからも削除する
     if(file.event === 'unlink') {
       return $.del(file.path.replace(/src\\pages/, 'docs').replace(/src\/pages/, 'docs'));
