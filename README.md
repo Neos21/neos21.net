@@ -19,9 +19,6 @@ $ npm run build
 
 # HTMLHint チェック
 $ npm run lint-html
-
-# TextLint チェック
-$ npm run lint-text
 ```
 
 
@@ -31,13 +28,13 @@ $ npm run lint-text
 
 ```sh
 # FTP サーバの内容確認 (ftp-list-files.js)
-$ npm run ftp-list
+$ npm run list
 
 # ファイルを指定して FTP アップロード (ftp-upload-files.js)
-$ npm run ftp-upload
+$ npm run upload
 
 # docs ディレクトリの全量を FTP アップロード (ftp-deploy.js)
-$ npm run ftp-deploy
+$ npm run deploy
 ```
 
 
