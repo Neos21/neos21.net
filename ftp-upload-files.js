@@ -23,12 +23,12 @@ ftpClient.connect(() => {
   
   ftpClient.upload(
     [
-      'dist/index.html',
-      'dist/about/new.html',
+      'docs/index.html',
+      'docs/about/new.html',
     ],
     '/public_html/',
     {
-      baseDir: 'dist',
+      baseDir: 'docs',
       overwrite: 'all'
     }, (result) => {
       console.log('★ Uploaded \n', result);
