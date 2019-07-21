@@ -1,3 +1,7 @@
+/**
+ * FTP Detect Files
+ */
+
 const childProcess = require('child_process');
 
 childProcess.exec('git status --short', (error, stdout, stderr) => {
