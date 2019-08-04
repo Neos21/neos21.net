@@ -12,6 +12,7 @@ const assetFileNames = [
   './src/pages/**/*.png',
   './src/pages/**/*.ico',
   './src/pages/**/*.swf',
+  './src/pages/**/*.txt',
   './src/pages/.htaccess'
 ];
 
