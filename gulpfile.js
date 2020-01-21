@@ -144,14 +144,14 @@ gulp.task('browser-sync', () => {
 /**
  * リロードする
  */
-gulp.task('reload', function () {
+gulp.task('reload', () => {
   return $.browserSync.reload();
 });
 
 /**
  * ファイルを監視してライブリロード開発を行う
  */
-gulp.task('dev', ['browser-sync'], function () {
+gulp.task('dev', gulp.series('browser-sync', () => {
   // src ファイルを監視して処理する
   $.watch('./src/styles/**/*.scss', () => {
     return gulp.start(['css'])
@@ -182,4 +182,4 @@ gulp.task('dev', ['browser-sync'], function () {
   $.watch('./docs/**/*', () => {
     return gulp.start(['reload']);
   });
-});
+}));

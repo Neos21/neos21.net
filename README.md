@@ -8,6 +8,9 @@ __[Enter This Website](http://neo.s21.xrea.com/)__
 ## 開発環境
 
 ```sh
+# Git 管理除外
+$ git update-index --skip-worktree production-config.js ftp-deploy.js ftp-detect-files.js ftp-list-files.js ftp-upload-files.js
+
 # ライブリロード開発
 $ npm start
 
