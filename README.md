@@ -33,6 +33,9 @@ $ npm run lint-html
 # FTP サーバの内容確認 (ftp-list-files.js)
 $ npm run list
 
+# 差分のあるファイルを抽出する (ftp-detect-files.js)
+$ npm run detect
+
 # ファイルを指定して FTP アップロード (ftp-upload-files.js)
 $ npm run upload
 
