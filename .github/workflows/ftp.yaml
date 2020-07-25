@@ -1,0 +1,55 @@
+name: FTP
+on:
+  push:
+    branches:
+      - master
+    workflow_dispatch:
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Use Node.js
+        uses: actions/setup-node@v1
+        with:
+          node-version: 12.x
+      # 変更があったファイルを JSON ファイルに書き出す
+      - name: Get Changed Files
+        id  : get_changed_files
+        uses: jitterbit/get-changed-files@v1
+        with:
+          format: json
+      - name: Write Changed Files
+        run : |
+          mkdir -p ./temp/
+          echo '${{ steps.get_changed_files.outputs.added_modified }}' > ./temp/added_modified.json
+          echo '${{ steps.get_changed_files.outputs.renamed }}' > ./temp/renamed.json
+          echo '${{ steps.get_changed_files.outputs.removed }}' > ./temp/removed.json
+          cat ./temp/added_modified.json
+          cat ./temp/renamed.json
+          cat ./temp/removed.json
+      # JSON ファイルを基にアップロードするファイル名の配列を組み立て ./temp/upload-files.json に書き出す
+      - name: Detect Upload Files
+        id  : detect_upload_files
+        run : |
+          node ./.github/workflows/ftp-detect-upload-files.js
+          if [[ -e ./temp/upload-files.json ]]; then
+            echo "::set-output name=do_upload::true"
+            echo 'Do Upload'
+          else
+            echo "::set-output name=do_upload::false"
+            echo 'Do Not Upload'
+          fi
+      # 以降のデプロイ処理は do_upload Output が true の時だけ実行する
+      - name: Install
+        if  : steps.detect_upload_files.outputs.do_upload == 'true'
+        run : npm install
+      - name: Build
+        if  : steps.detect_upload_files.outputs.do_upload == 'true'
+        run : npm run build --if-present
+      - name: FTP Upload Files
+        if  : steps.detect_upload_files.outputs.do_upload == 'true'
+        run : node ./.github/workflows/ftp-upload-files.js
+        env :
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
