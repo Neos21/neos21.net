@@ -30,7 +30,7 @@ const uploadFiles = filtered.map((file) => {
     return distDir + 'scripts.js';
   }
   if(file.includes(srcDir + 'styles/')) {
-    return distDir + 'styles.js';
+    return distDir + 'styles.css';
   }
   if(file.includes(srcDir + 'pages/')) {
     return file.replace(srcDir + 'pages/', distDir);
