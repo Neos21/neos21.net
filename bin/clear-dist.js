@@ -6,7 +6,6 @@ const log = require('../lib/create-log')('CLEAR_DIST');
 /*!
  * ./dist/ ディレクトリを削除する
  */
-
 log('Clear Dist : Start');
 
 try {

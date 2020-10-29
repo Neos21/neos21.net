@@ -5,19 +5,18 @@ const buildPage = require('../lib/build-page');
 /*!
  * ./src/pages/ 配下の全ての HTML ファイルをビルドする
  */
+log('Build Pages All : Start');
 
-log('Build All Pages : Start');
-
-const htmlFileNames = listFiles('src/pages').filter(fileName => fileName.endsWith('.html'));
-htmlFileNames.forEach((htmlFileName) => {
+const htmlFilePaths = listFiles('src/pages').filter(filePath => filePath.endsWith('.html'));
+htmlFilePaths.forEach((htmlFilePath) => {
   try {
-    //log(`  [${htmlFileName}]`);
-    buildPage(htmlFileName);
+    //log(`  [${htmlFilePath}]`);
+    buildPage(htmlFilePath);
   }
   catch(error) {
-    log(`  Failed To Build [${htmlFileName}]`);
+    log(`  Failed To Build [${htmlFilePath}]`);
     log(error);
   }
 });
 
-log('Build All Pages : Finished');
+log('Build Pages All : Finished');
