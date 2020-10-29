@@ -2,7 +2,14 @@ const fs = require('fs');
 const path = require('path');
 
 const browserSync = require('browser-sync').create();
+const log = require('../lib/create-log')('START_DEV_SERVER');
 const buildPage = require('../lib/build-page');
+
+/*!
+ * 開発サーバを起動する
+ */
+
+log('Start Dev Server : Start');
 
 // ./dist/ ディレクトリがなさそうなら全量ビルドする
 try {
@@ -25,12 +32,13 @@ browserSync.init({
       match: [path.resolve(__dirname, '../src/pages/**/*.html')],
       fn: async (event /* 'add'・'change'・'unlink' */, fileName /* ex. 'src/pages/index.html' */) => {
         if(['add', 'change'].includes(event)) {
-          return buildPage(fileName);
+          buildPage(fileName);
+          return log(`  [${fileName}] Build`);
         }
         
         const distFileName = fileName.replace('src/pages', 'dist');
-        await fs.promises.unlink(distFileName).catch(error => console.warn(error));
-        console.log(`[${distFileName}] Removed`);
+        await fs.promises.unlink(distFileName).catch(error => { log('  Failed To Remove'); log(error); });
+        log(`  [${distFileName}] Removed`);
       }
     }
   ]
