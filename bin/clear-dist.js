@@ -1,20 +1,18 @@
 const fs = require('fs');
 const path = require('path');
 
-const log = require('../lib/create-log')('CLEAR_DIST');
+const makeDirectory = require('../lib/make-directory');
 
 /*!
  * ./dist/ ディレクトリを削除する
  */
-log('Clear Dist : Start');
 
-try {
-  fs.rmdirSync(path.resolve(__dirname, '../dist'), { recursive: true });
-  log('  Success');
-}
-catch(error) {
-  log('  Failed To Remove');
-  log(error);
-}
+const distDirectoryPath = path.resolve(__dirname, '../dist');
+fs.rmdirSync(distDirectoryPath, { recursive: true });
 
-log('Clear Dist : Finished');
+// make-directory が path.dirname() を使っているので適当なファイル名を付与しておき
+// ./dist/ ディレクトリが生成されるようにしておく
+const makeDistDirectoryPath = path.resolve(distDirectoryPath, './.gitkeep');
+makeDirectory(makeDistDirectoryPath);
+
+console.log('Clear Dist : Succeeded');
