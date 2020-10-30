@@ -11,7 +11,7 @@ const cssFilePaths = listFiles('src/styles').filter(filePath => filePath.endsWit
 cssFilePaths.forEach((cssFilePath) => {
   try {
     //log(`  [${htmlFilePath}]`);
-    const distFilePath = cssFilePath.replace('src/styles', 'dist').replace('index.css', 'styles.css');
+    const distFilePath = cssFilePath.replace('src/styles', 'dist');
     buildCss(cssFilePath, distFilePath);
   }
   catch(error) {

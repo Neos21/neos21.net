@@ -48,7 +48,7 @@ browserSync.init({
           return log(`  Build HTML [${sourcePath}]`);
         }
         if(sourcePath.endsWith('.css')) {
-          const distFilePath = sourcePath.replace('src/styles', 'dist').replace('index.css', 'styles.css');
+          const distFilePath = sourcePath.replace('src/styles', 'dist');
           buildCss(sourcePath, distFilePath);
           return log(`  Build CSS [${sourcePath}]`);
         }

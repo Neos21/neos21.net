@@ -1,4 +1,4 @@
-const log = require('../lib/create-log')('BUILD_ALL_PAGES');
+const log = require('../lib/create-log')('BUILD_PAGES_ALL');
 const listFiles = require('../lib/list-files');
 const buildPage = require('../lib/build-page');
 
