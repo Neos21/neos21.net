@@ -1,6 +1,30 @@
-# Neo's World : neo.s21.xrea.com
+# Neo's World
 
-__[Enter This Website](http://neo.s21.xrea.com/)__
+
+## Enter This Website
+
+- <http://neo.s21.xrea.com/>
+  - 2002年10月に XREA サーバをレンタルし始めた時の URL
+  - HTTP のみ
+- <https://ss1.xrea.com/neo.s21.xrea.com/>
+  - XREA が提供する「SSL 対応ページ」の URL
+  - ドキュメントルートがズレるため CSS が読み込めなくなっていたり、リンクパスが不正なモノになっていたりして、使い物にならず
+- <http://neos21.net/>
+- <https://neos21.net/>
+- <http://www.neos21.net/>
+- <https://www.neos21.net/>
+  - 2020-11-01 に Value Domain で取得した独自ドメイン
+  - XREA 上のサイトに紐付けている (ミラーサーバがあるワケではない)
+  - XREA の無料 SSL で HTTPS 化している
+  - `www` あり版の対応は DNS に Aレコードを追加した上で XREA 管理画面で行っている
+- <http://neos21.tk/>
+- <https://neos21.tk/>
+- <http://www.neos21.tk/>
+- <https://www.neos21.tk/>
+  - 2020-08-22 に Freenom で取得した無料の独自ドメイン
+  - XREA 上のサイトに紐付けている (ミラーサーバがあるワケではない)
+  - XREA の無料 SSL で HTTPS 化している
+  - `www` あり版の対応は DNS に Aレコードを追加した上で XREA 管理画面で行っている
 
 
 ## テンプレートの仕様
