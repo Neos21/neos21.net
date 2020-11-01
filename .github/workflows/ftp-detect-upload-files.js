@@ -1,7 +1,7 @@
 const fs = require('fs');
 
 const srcDir  = 'src/';
-const distDir = 'docs/';
+const distDir = 'dist/';
 
 // 前 Step で JSON ファイルに書き出しておいた変更ファイル一覧を取得する
 const addedModified = require('../../temp/added_modified.json');
@@ -26,12 +26,6 @@ const filtered = joined.filter((file) => file.includes(srcDir));
 
 // ビルド後のコンテンツに対応するようファイル名を直す
 const uploadFiles = filtered.map((file) => {
-  if(file.includes(srcDir + 'scripts/')) {
-    return distDir + 'scripts.js';
-  }
-  if(file.includes(srcDir + 'styles/')) {
-    return distDir + 'styles.css';
-  }
   if(file.includes(srcDir + 'pages/')) {
     return file.replace(srcDir + 'pages/', distDir);
   }

@@ -16,7 +16,7 @@ ftpClient.connect(() => {
     uploadFiles,
     '/public_html/',
     {
-      baseDir: 'docs',
+      baseDir: 'dist',
       overwrite: 'all'
     },
     (result) => {
