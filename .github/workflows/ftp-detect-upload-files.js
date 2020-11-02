@@ -38,6 +38,12 @@ if(!uploadFiles.length) {
   return console.log('Upload Files Not Exist');
 }
 
+// 必ずアップロードするファイルを付け足す
+uploadFiles.push('dist/feeds/atom.xml');
+uploadFiles.push('dist/index.html');
+uploadFiles.push('dist/about/new.html');
+uploadFiles.push('dist/blog/index.html');
+
 const stringified = JSON.stringify(uploadFiles);
 console.log('Upload Files :');
 console.log(stringified);
