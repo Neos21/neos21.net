@@ -8,7 +8,7 @@ path:
 
 ## 最新記事
 
-{{ blog-list-latests 5 }}
+{{ blog-latests 5 }}
 
 
 ## 過去ログ
