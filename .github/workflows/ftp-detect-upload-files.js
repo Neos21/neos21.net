@@ -38,13 +38,13 @@ uploadFiles.push('dist/index.html');
 uploadFiles.push('dist/about/new.html');
 uploadFiles.push('dist/blog/index.html');
 
-// 現在年月の /blog/YYYY/MM/index.html ファイルが存在すれば、必ずアップロードする対象にする
+// 現在年月の `/blog/YYYY/MM/index.md` ファイルが存在すれば、必ずアップロードする対象にする
 const now = new Date();
 const currentYearMonth = now.getFullYear() + '/' + ('0' + (now.getMonth() + 1)).slice(-2);  // `'YYYY/MM'` 形式にする
-const currentYearMonthIndex = distDir + 'blog/' + currentYearMonth + '/index.html';
+const currentYearMonthIndex = srcDir + '/pages/blog/' + currentYearMonth + '/index.md';
 try {
-  fs.statSync(currentYearMonthIndex);  // ビルド後のファイルの存在をチェックする
-  uploadFiles.push(currentYearMonthIndex);  // 存在していればアップロード対象にする
+  fs.statSync(currentYearMonthIndex);  // ビルド前のファイルの存在をチェックする
+  uploadFiles.push(distDir + 'blog/' + currentYearMonth + '/index.html');  // 存在していればビルド後のファイル名をアップロード対象にする
 }
 catch(_error) {
   console.log(`Current Year Month Index File [${currentYearMonthIndex}] Does Not Exist`);
