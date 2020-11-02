@@ -25,7 +25,7 @@ if(isTemplateChanged) {
 const filtered = joined.filter((file) => file.includes(srcDir + 'pages/'));
 
 // ビルド後のコンテンツに対応するようファイル名を直す
-const uploadFiles = filtered.map((file) => file.replace(srcDir + 'pages/', distDir));
+const uploadFiles = filtered.map((file) => file.replace(srcDir + 'pages/', distDir).replace('.md', '.html'));
 
 // 変更ファイルがなければ結果ファイルを作らず終了する
 if(!uploadFiles.length) {
