@@ -15,30 +15,24 @@ if(removed.length) {
 const joined = [...addedModified, ...renamed];
 
 // src/templates/ 配下の変更がある場合は一切のアップロードを行わないこととする
-const isTemplateChanged = joined.some((file) => file.includes(srcDir + 'templates/'));
+const isTemplateChanged = joined.some((file) => file.includes('src/templates/'));
 if(isTemplateChanged) {
   console.error('Templates Changed! Please Upload Manually. Aborted');
   return process.exit(1);
 }
 
-// src/ 配下の変更ファイルのみ抽出する
-const filtered = joined.filter((file) => file.includes(srcDir));
+// src/pages/ 配下の変更を特定する
+const filtered = joined.filter((file) => file.includes(srcDir + 'pages/'));
 
 // ビルド後のコンテンツに対応するようファイル名を直す
-const uploadFiles = filtered.map((file) => {
-  if(file.includes(srcDir + 'pages/')) {
-    return file.replace(srcDir + 'pages/', distDir);
-  }
-  // 知らないパスにファイルが登場したら中止する
-  throw new Error(`The file path is not supported : [${file}]`);
-});
+const uploadFiles = filtered.map((file) => file.replace(srcDir + 'pages/', distDir));
 
 // 変更ファイルがなければ結果ファイルを作らず終了する
 if(!uploadFiles.length) {
   return console.log('Upload Files Not Exist');
 }
 
-// 必ずアップロードするファイルを付け足す
+// src/ 配下の変更が検知できなくても必ずアップロードするファイルを付け足す
 uploadFiles.push('dist/feeds/atom.xml');
 uploadFiles.push('dist/index.html');
 uploadFiles.push('dist/about/new.html');
