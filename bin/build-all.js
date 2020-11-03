@@ -8,7 +8,7 @@ const copyFile = require('../lib/copy-file');
 /*!
  * HTML・Markdown をビルドし、それ以外のファイルをコピーする
  * 
- * CSS は clean-css-cli の `@import` 解釈に問題があるので npm run にて別途実行する
+ * CSS は clean-css-cli の `@import` 解釈に問題があるので `npm run` にて別途実行する
  */
 
 const files = listFiles('src/pages');

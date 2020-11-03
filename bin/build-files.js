@@ -8,6 +8,7 @@ const copyFile = require('../lib/copy-file');
  * 
  * ファイル拡張子に基づき、ビルドもしくはコピーを行う
  */
+
 const sourcePaths = process.argv.slice(2);
 if(!sourcePaths.length) return console.log('Please Select Source File(s)');
 

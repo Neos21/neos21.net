@@ -12,26 +12,27 @@ const host = 'https://neos21.net';
 /** 取得するデータの件数 */
 const latestNum = 30;
 
-/** メイン処理 */
-function main() {
-  const news = getLatestNews();
-  const blogPosts = getLatestBlogPosts();
-  const merged = [...news, ...blogPosts];
-  const sorted = merged.sort((a, b) => {  // 降順ソートになるよう記述する
-    if(a.updated > b.updated) return -1;
-    if(a.updated < b.updated) return  1;
-    return 0;
-  });
-  const sliced = sorted.slice(0, latestNum);  // マージ後絞る
-  const entries = createEntries(sliced);
-  
-  const atomTemplate = fs.readFileSync(path.resolve(__dirname, '../src/feeds/atom.xml'), 'utf-8');
-  const atomFeed = atomTemplate
-    .replace('{{ updated }}', sliced[0].updated)
-    .replace('{{ entries }}', entries);
-  makeDirectory(path.resolve(__dirname, '../dist/feeds/.gitkeep'));  // `path.dirname()` を使っているので適当なファイル名を与えておく
-  fs.writeFileSync(path.resolve(__dirname, '../dist/feeds/atom.xml'), atomFeed, 'utf-8');
-}
+/*!
+ * Atom フィードを生成する
+ */
+
+const news = getLatestNews();
+const blogPosts = getLatestBlogPosts();
+const merged = [...news, ...blogPosts];
+const sorted = merged.sort((a, b) => {  // 降順ソートになるよう記述する
+  if(a.updated > b.updated) return -1;
+  if(a.updated < b.updated) return  1;
+  return 0;
+});
+const sliced = sorted.slice(0, latestNum);  // マージ後絞る
+const entries = createEntries(sliced);
+
+const atomTemplate = fs.readFileSync(path.resolve(__dirname, '../src/feeds/atom.xml'), 'utf-8');
+const atomFeed = atomTemplate
+  .replace('{{ updated }}', sliced[0].updated)
+  .replace('{{ entries }}', entries);
+makeDirectory(path.resolve(__dirname, '../dist/feeds/.gitkeep'));  // `path.dirname()` を使っているので適当なファイル名を与えておく
+fs.writeFileSync(path.resolve(__dirname, '../dist/feeds/atom.xml'), atomFeed, 'utf-8');
 
 /**
  * 最新の更新履歴を取得する
@@ -95,6 +96,3 @@ function createEntries(latests) {
   </entry>`)
     .join('\n');
 }
-
-// 実行
-main();

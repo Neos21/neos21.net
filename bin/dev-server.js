@@ -14,9 +14,9 @@ const copyFile = require('../lib/copy-file');
  */
 
 browserSync.init({
-  server: path.resolve(__dirname, '../dist'),  // ./dist/ ディレクトリを表示する
+  server: path.resolve(__dirname, '../dist'),  // `./dist/` ディレクトリを表示する
   port: 3000,
-  watch: true,  // ./dist/ ディレクトリの変更時に自動リロードする
+  watch: true,  // `./dist/` ディレクトリの変更時に自動リロードする
   open: false,  // ブラウザを開かない
   files: [  // 変更検知時の処理を定義する
     {

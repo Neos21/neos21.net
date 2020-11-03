@@ -34,6 +34,7 @@ if(!uploadFiles.length) {
 
 // src/ 配下の変更が検知できなくても必ずアップロードするファイルを付け足す
 uploadFiles.push('dist/feeds/atom.xml');
+uploadFiles.push('dist/sitemap.xml');
 uploadFiles.push('dist/index.html');
 uploadFiles.push('dist/about/new.html');
 uploadFiles.push('dist/blog/index.html');
