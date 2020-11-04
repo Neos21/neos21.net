@@ -2,6 +2,10 @@ const fs = require('fs');
 
 const constants = require('../../lib/constants');
 
+/*!
+ * アップロード対象のファイルパスを組み立てる
+ */
+
 // 前 Step で JSON ファイルに書き出しておいた変更ファイル一覧を取得する
 // ファイルパスは `'src/pages/index.html'` のようにプロジェクトルートからの表記になっている
 const addedModified = require('../../temp/added_modified.json');
@@ -36,7 +40,7 @@ uploadFiles.push(`${constants.pages.dist}/blog/index.html`);
 
 // 現在年月の `/blog/YYYY/MM/index.md` ファイルが存在すれば、必ずアップロードする対象にする
 const now = new Date();
-const currentYearMonth = now.getFullYear() + '/' + ('0' + (now.getMonth() + 1)).slice(-2);  // `'YYYY/MM'` 形式にする
+const currentYearMonth = `${now.getFullYear()}/${('0' + (now.getMonth() + 1)).slice(-2)}`;  // `'YYYY/MM'` 形式にする
 const currentYearMonthIndex = `${constants.pages.src}/blog/${currentYearMonth}/index.md`;
 try {
   fs.statSync(currentYearMonthIndex);  // ビルド前のファイルの存在をチェックする
@@ -47,6 +51,5 @@ catch(_error) {
 }
 
 const stringified = JSON.stringify(uploadFiles);
-console.log('Upload Files :');
-console.log(stringified);
+console.log('Upload Files :\n', stringified);
 fs.writeFileSync('./temp/upload-files.json', stringified, 'utf-8');

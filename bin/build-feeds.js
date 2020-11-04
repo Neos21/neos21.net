@@ -1,5 +1,4 @@
 const fs = require('fs');
-const path = require('path');
 
 const yaml = require('yaml');
 
@@ -18,15 +17,15 @@ const makeDirectory = require('../lib/make-directory');
  * @return {Array<object>} 最新のブログ投稿情報
  */
 const getLatestNews = () => {
-  const rawNews = fs.readFileSync(path.resolve(__dirname, `../${constants.news.src}`), 'utf-8');
+  const rawNews = fs.readFileSync(constants.news.src, 'utf-8');
   const allNews = yaml.parse(rawNews);
   return allNews
     .slice(0, constants.feeds.feedsCount)  // 最新の指定件数のみ取得する
     .map(newsItem => ({
         title  : `${constants.siteName} ${newsItem.date} の更新情報`,
         link   : `${constants.protocol}${constants.host}/index.html?t=${newsItem.date}`,  // 一律でトップページに案内するが、ID をユニークにしたいのでパラメータを付与する
-        updated: newsItem.date + 'T00:00:00Z',  // 'YYYY-MM-DDTHH:mm:ssZ' 形式にする
-        summary: newsItem.news.map(listItem => listItem.replace(/<("[^"]*"|'[^']*'|[^'">])*>/g, '')).join('・')  // HTML タグを消して結合する
+        updated: `${newsItem.date}T00:00:00Z`,  // 'YYYY-MM-DDTHH:mm:ssZ' 形式にする
+        summary: newsItem.news.map(listItem => listItem.replace((/<("[^"]*"|'[^']*'|[^'">])*>/g), '')).join('・')  // HTML タグを消して結合する
     }));
 };
 
@@ -35,7 +34,7 @@ const getLatestNews = () => {
  * 
  * @return {Array<object>} 最新のブログ投稿情報
  */
-const getLatestBlogPosts = () => listFiles(path.resolve(__dirname, `../${constants.pages.src}/blog`))
+const getLatestBlogPosts = () => listFiles(`${constants.pages.src}/blog`)
   .filter(filePath => filePath.match((/\/blog\/[0-9]{4}\/[0-9]{2}\/[0-9]{2}-[0-9]{2}\.md/u)))  // 記事ファイルのみに絞り込む
   .sort()
   .reverse()  // 新しい順にする
@@ -46,8 +45,8 @@ const getLatestBlogPosts = () => listFiles(path.resolve(__dirname, `../${constan
     const time = filePath.replace((/.*\/blog\/[0-9]{4}\/[0-9]{2}\/[0-9]{2}-([0-9]{2})\.md/u), '$1');  // ファイル名の連番部分を時間に利用する
     return {
       title  : postFrontMatter.title,
-      link   : `${constants.protocol}${constants.host}${filePath.replace((/.*\/src\/pages/u), '').replace('.md', '.html')}`,  // `/blog/` からのルート相対パスを生成して結合する
-      updated: postFrontMatter.created + 'T' + time + ':00:00Z',  // 'YYYY-MM-DDTHH:mm:ssZ' 形式にする
+      link   : `${constants.protocol}${constants.host}${filePath.replace(new RegExp(`.*${constants.pages.src}`, 'u'), '').replace('.md', '.html')}`,  // `/blog/` からのルート相対パスを生成して結合する
+      updated: `${postFrontMatter.created}T${time}:00:00Z`,  // 'YYYY-MM-DDTHH:mm:ssZ' 形式にする
       summary: postFrontMatter.title
     };
   });
@@ -79,7 +78,7 @@ const latests = [...news, ...blogPosts]
   .slice(0, constants.feeds.feedsCount);  // マージ後絞る
 const entries = createEntries(latests);
 
-const template = fs.readFileSync(path.resolve(__dirname, `../${constants.feeds.src}`), 'utf-8');
+const template = fs.readFileSync(constants.feeds.src, 'utf-8');
 const feeds = template
   .replace((/{{ host }}/g), `${constants.protocol}${constants.host}/`)
   .replace('{{ site-name }}', constants.siteName)
@@ -87,8 +86,7 @@ const feeds = template
   .replace('{{ feeds-path }}', `${constants.protocol}${constants.host}${constants.feeds.canonical}`)
   .replace('{{ updated }}', latests[0].updated)
   .replace('{{ entries }}', entries);
-const distFilePath = path.resolve(__dirname, `../${constants.feeds.dist}`);
-makeDirectory(distFilePath, true);
-fs.writeFileSync(distFilePath, feeds, 'utf-8');
+makeDirectory(constants.feeds.dist, true);
+fs.writeFileSync(constants.feeds.dist, feeds, 'utf-8');
 
 console.log('Build Feeds : Succeeded');

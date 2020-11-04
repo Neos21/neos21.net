@@ -4,6 +4,10 @@ const path = require('path');
 const constants = require('../lib/constants');
 const makeDirectory = require('../lib/make-directory');
 
+/*!
+ * `./dist/` ディレクトリを削除して配下に空ディレクトリを作成する
+ */
+
 /**
  * 指定のディレクトリパス配下のディレクトリを全て列挙する
  * 
@@ -19,17 +23,12 @@ const listDirectories = targetDirectoryPath => {
   return allDirectoryPaths.sort();
 };
 
-/*!
- * `./dist/` ディレクトリを削除して配下に空ディレクトリを作成する
- */
-
-// `./dist/` ディレクトリのフルパス
-const distDirectoryPath = path.resolve(__dirname, `../${constants.dist}`);
-fs.rmdirSync(distDirectoryPath, { recursive: true });
-makeDirectory(distDirectoryPath, false);
+// `./dist/` ディレクトリを削除して再作成する
+fs.rmdirSync(constants.dist, { recursive: true });
+makeDirectory(constants.dist, false);
 
 // `./src/pages/` 配下のサブディレクトリパスを抽出し、空ディレクトリを作成したい `./dist/` 配下のフルパスに変換する
-listDirectories(path.resolve(__dirname, `../${constants.pages.src}`))
+listDirectories(constants.pages.src)
   .map(directoryPath => directoryPath.replace(constants.pages.src, constants.pages.dist))
   .forEach(directoryPath => makeDirectory(directoryPath, false));
 
