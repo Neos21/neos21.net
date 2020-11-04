@@ -1,3 +1,4 @@
+const constants = require('../lib/constants');
 const buildCss = require('../lib/build-css');
 const buildHtml = require('../lib/build-html');
 const buildMarkdown = require('../lib/build-markdown');
@@ -12,8 +13,8 @@ const copyFile = require('../lib/copy-file');
 const sourcePaths = process.argv.slice(2);
 if(!sourcePaths.length) return console.log('Please Select Source File(s)');
 
-sourcePaths.forEach((sourcePath) => {
-  if(!sourcePath.includes('src/pages')) return console.warn(`Ignore [${sourcePath}]`);
+sourcePaths.forEach(sourcePath => {
+  if(!sourcePath.includes(constants.src)) return console.warn(`Ignore [${sourcePath}]`);
   
   if(sourcePath.endsWith('.css')) {
     console.log(`CSS : [${sourcePath}]`);
@@ -31,4 +32,5 @@ sourcePaths.forEach((sourcePath) => {
   console.log(`Asset : [${sourcePath}]`);
   copyFile(sourcePath);
 });
+
 console.log('Build Files : Succeeded');

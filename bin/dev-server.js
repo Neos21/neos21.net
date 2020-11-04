@@ -10,7 +10,7 @@ const buildMarkdown = require('../lib/build-markdown');
 const copyFile = require('../lib/copy-file');
 
 /*!
- * 開発サーバを起動する
+ * 開発サーバを起動する : TODO : 見直し
  */
 
 browserSync.init({

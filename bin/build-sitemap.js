@@ -1,23 +1,26 @@
 const fs = require('fs');
 const path = require('path');
 
+const constants = require('../lib/constants');
 const listFiles = require('../lib/list-files');
 const makeDirectory = require('../lib/make-directory');
 
-/** ホスト名・後ろに `/` 始まりのルート相対パスを付与できるよう末尾スラッシュなし */
-const host = 'https://neos21.net';
+/*!
+ * サイトマップを生成する
+ */
 
-const header = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n`;
-const pages = listFiles(path.resolve(__dirname, '../src/pages'))
-  .filter((filePath) => filePath.endsWith('.html') || filePath.endsWith('.md'))
-  .filter((filePath) => !filePath.includes('403.html') && !filePath.includes('404.html') && !filePath.includes('500.html'))
-  .map((filePath) => filePath.replace((/.*\/src\/pages/u), host).replace('.md', '.html'))
-  .map((filePath) => `  <url><loc>${filePath}</loc></url>`)
+const template = fs.readFileSync(path.resolve(__dirname, `../${constants.sitemap.src}`), 'utf-8');
+const pagesRegExp = new RegExp(`.*${constants.pages.src}`, 'u');
+const pages = listFiles(path.resolve(__dirname, `../${constants.pages.src}`))
+  .filter(filePath => filePath.endsWith('.html') || filePath.endsWith('.md'))
+  .filter(filePath => !filePath.includes('403.html') && !filePath.includes('404.html') && !filePath.includes('500.html'))
+  .map(filePath => filePath.replace(pagesRegExp, `${constants.protocol}${constants.host}`).replace('.md', '.html'))
+  .map(filePath => `  <url><loc>${filePath}</loc></url>`)
   .sort()
   .join('\n');
-const footer = `\n</urlset>\n`;
+const sitemap = template.replace('{{ url-list }}', pages);
+const distFilePath = path.resolve(__dirname, `../${constants.sitemap.dist}`);
+makeDirectory(distFilePath, true);
+fs.writeFileSync(distFilePath, sitemap, 'utf-8');
 
-const sitemap = header + pages + footer;
-
-makeDirectory(path.resolve(__dirname, '../dist/.gitkeep'));  // `path.dirname()` を使っているので適当なファイル名を与えておく
-fs.writeFileSync(path.resolve(__dirname, '../dist/sitemap.xml'), sitemap, 'utf-8');
+console.log('Build Sitemap : Succeeded');

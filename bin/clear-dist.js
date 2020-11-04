@@ -1,18 +1,36 @@
 const fs = require('fs');
 const path = require('path');
 
+const constants = require('../lib/constants');
 const makeDirectory = require('../lib/make-directory');
 
+/**
+ * 指定のディレクトリパス配下のディレクトリを全て列挙する
+ * 
+ * @param {string} targetDirectoryPath ディレクトリパス・末尾スラッシュなし
+ * @return {Array<string>} ディレクトリパスの配列
+ */
+const listDirectories = targetDirectoryPath => {
+  const directoryPaths = fs.readdirSync(targetDirectoryPath, { withFileTypes: true })
+    .filter(dirent => dirent.isDirectory())
+    .map(dirent => `${targetDirectoryPath}/${dirent.name}`);
+  const allDirectoryPaths = [...directoryPaths];
+  directoryPaths.forEach(subDirectoryPath => allDirectoryPaths.push(...listDirectories(subDirectoryPath)));
+  return allDirectoryPaths.sort();
+};
+
 /*!
- * `./dist/` ディレクトリを削除する
+ * `./dist/` ディレクトリを削除して配下に空ディレクトリを作成する
  */
 
-const distDirectoryPath = path.resolve(__dirname, '../dist');
+// `./dist/` ディレクトリのフルパス
+const distDirectoryPath = path.resolve(__dirname, `../${constants.dist}`);
 fs.rmdirSync(distDirectoryPath, { recursive: true });
+makeDirectory(distDirectoryPath, false);
 
-// `make-directory` が `path.dirname()` を使っているので適当なファイル名を付与しておき
-// `./dist/` ディレクトリが生成されるようにしておく
-const makeDistDirectoryPath = path.resolve(distDirectoryPath, './.gitkeep');
-makeDirectory(makeDistDirectoryPath);
+// `./src/pages/` 配下のサブディレクトリパスを抽出し、空ディレクトリを作成したい `./dist/` 配下のフルパスに変換する
+listDirectories(path.resolve(__dirname, `../${constants.pages.src}`))
+  .map(directoryPath => directoryPath.replace(constants.pages.src, constants.pages.dist))
+  .forEach(directoryPath => makeDirectory(directoryPath, false));
 
 console.log('Clear Dist : Succeeded');
