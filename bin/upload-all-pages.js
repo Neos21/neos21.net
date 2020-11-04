@@ -11,7 +11,7 @@ const ftp = require('../lib/ftp');
 (async () => {
   const targetFilePaths = listFiles(constants.dist)
     .filter(filePath => ['.html', '.css', '.xml'].includes(path.extname(filePath)))  // HTML・CSS・XML (フィードとサイトマップ) を対象にする
-    .map(filePath => filePath.replace(new RegExp(`.*/${constants.dist}`, 'u'), constants.dist));  // `dist/` から始まるように調整する
+    .map(filePath => filePath.replace(new RegExp(`.*${constants.dist}`, 'u'), constants.dist));  // `dist/` から始まるように調整する
   if(!targetFilePaths.length) return console.error('Not Uploading Files, Aborted');
   console.log('Target File Paths :\n', targetFilePaths);
   
