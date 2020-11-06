@@ -30,7 +30,7 @@ browserSync.init({
       fn: (event, sourcePath) => {
         if(event === 'addDir') return;  // Do Nothing
         if(event === 'unlink') {
-          const distFilePath = sourcePath.replace(constants.pages.src, constants.pages.dist);
+          const distFilePath = sourcePath.replace(constants.pages.src, constants.pages.dist).replace('.md', '.html');
           try {
             fs.unlinkSync(distFilePath);
           }
@@ -53,7 +53,25 @@ browserSync.init({
         // 以降 `add` or `change` のみ
         if(sourcePath.endsWith('.css')) return buildCss();
         if(sourcePath.endsWith('.html')) return buildHtml(sourcePath);
-        if(sourcePath.endsWith('.md')) return buildMarkdown(sourcePath);
+        if(sourcePath.endsWith('.md')) {
+          buildMarkdown(sourcePath);
+          if(sourcePath.match((/\/[0-9]{4}\/[0-9]{2}\//u))) {
+            const monthPath = sourcePath.replace((/\/([0-9]{4})\/([0-9]{2})\/.*/u), '/$1/$2/index.md');
+            console.log(`Build Blog Month Index [${monthPath}]`);
+            buildMarkdown(monthPath);
+            const yearPath = sourcePath.replace((/\/([0-9]{4})\/.*/u), '/$1/index.md');
+            console.log(`Build Blog Year Index [${yearPath}]`);
+            buildMarkdown(yearPath);
+            const blogIndexPath = sourcePath.replace((/\/([0-9]{4})\/.*/u), '/index.md');
+            console.log(`Build Blog Index [${blogIndexPath}]`);
+            buildMarkdown(blogIndexPath);
+            const indexPath = sourcePath.replace((/\/blog\/.*/u), '/index.html');
+            console.log(`Build Index HTML [${indexPath}]`);
+            buildHtml(indexPath);
+          }
+          return;
+        }
+        
         copyFile(sourcePath);  // ビルド不要なファイルはコピーのみ
       }
     },
