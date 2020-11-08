@@ -25,8 +25,8 @@ if(isTemplateChanged) {
 }
 
 const uploadFiles = joined
-  .filter(file => file.includes(constants.pages.src))  // `src/pages/` 配下の変更のみ扱う
-  .map(file => file.replace(constants.pages.src, constants.pages.dist).replace('.md', '.html'));  // ファイルパス・ファイル名を直す
+  .filter(uploadFile => uploadFile.includes(constants.pages.src))  // `src/pages/` 配下の変更のみ扱う
+  .map(uploadFile => uploadFile.replace(constants.pages.src, constants.pages.dist).replace('.md', '.html'));  // ファイルパス・ファイル名を直す
 
 // 変更ファイルがなければ結果ファイルを作らず終了する
 if(!uploadFiles.length) return console.log('Upload Files Not Exist');
@@ -38,17 +38,18 @@ uploadFiles.push(constants.styles.dist);
 uploadFiles.push(...constants.news.dist);
 uploadFiles.push(`${constants.pages.dist}/blog/index.html`);
 
-// 現在年月の `/blog/YYYY/MM/index.md` ファイルが存在すれば、必ずアップロードする対象にする
-const now = new Date();
-const currentYearMonth = `${now.getFullYear()}/${('0' + (now.getMonth() + 1)).slice(-2)}`;  // `'YYYY/MM'` 形式にする
-const currentYearMonthIndex = `${constants.pages.src}/blog/${currentYearMonth}/index.md`;
-try {
-  fs.statSync(currentYearMonthIndex);  // ビルド前のファイルの存在をチェックする
-  uploadFiles.push(`${constants.pages.dist}/blog/${currentYearMonth}/index.html`);  // 存在していればビルド後のファイル名をアップロード対象にする
-}
-catch(_error) {
-  console.log(`Current Year Month Index File [${currentYearMonthIndex}] Does Not Exist`);
-}
+// 更新したファイル内に `/blog/YYYY/MM/index.md` ファイルが存在すれば `index.md` もアップロード対象にする
+const blogIndexes = new Set();
+uploadFiles.forEach(uploadFile => {
+  const match = uploadFile.match((/\/blog\/([0-9]{4})\/([0-9]{2})\/[0-9]{2}-[0-9]{2}\.md/u));
+  if(!match) return;
+  
+  const year  = match[1];
+  const month = match[2];
+  blogIndexes.add(`${constants.pages.dist}/blog/${year}/${month}/index.html`);
+  blogIndexes.add(`${constants.pages.dist}/blog/${year}/index.html`);
+});
+uploadFiles.push(...Array.from(blogIndexes));
 
 const stringified = JSON.stringify(uploadFiles);
 console.log('Upload Files :\n', stringified);

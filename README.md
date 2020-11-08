@@ -10,7 +10,7 @@
   - 2020-11-01 に Value Domain で取得した独自ドメイン
   - XREA 上のサイトに紐付けている (ミラーサーバがあるワケではない)
   - XREA の無料 SSL で HTTPS 化している
-  - `www` あり版の対応は DNS に Aレコードを追加した上で XREA 管理画面で行っている
+  - `www` あり版の対応は DNS に A レコードを追加した上で XREA 管理画面で行っている
 - <http://neo.s21.xrea.com/>
   - 2002年10月に XREA サーバをレンタルし始めた時の URL
   - HTTP のみ
@@ -21,7 +21,7 @@
   - 2020-08-22 に Freenom で取得した無料の独自ドメイン
   - XREA 上のサイトに紐付けている (ミラーサーバがあるワケではない)
   - XREA の無料 SSL で HTTPS 化している
-  - `www` あり版の対応は DNS に Aレコードを追加した上で XREA 管理画面で行っている
+  - `www` あり版の対応は DNS に A レコードを追加した上で XREA 管理画面で行っている
 - <https://ss1.xrea.com/neo.s21.xrea.com/>
   - XREA が提供する「SSL 対応ページ」の URL
   - ドキュメントルートがズレるため CSS が読み込めなくなっていたり、リンクパスが不正なモノになっていたりして、使い物にならず
@@ -102,8 +102,5 @@ HTML・Markdown ファイルの先頭には YAML 形式の Front Matter が記�
 ## Links
 
 - [Neo's World](https://neos21.net/)
-- [Corredor](https://neos21.hatenablog.com/)
-- [Murga](https://neos21.hatenablog.jp/)
-- [El Mylar](https://neos21.hateblo.jp/)
 - [Neo's GitHub Pages](https://neos21.github.io/)
-- [GitHub - Neos21](https://github.com/Neos21/)
+- [Corredor](https://neos21.hatenablog.com/)
