@@ -89,9 +89,9 @@ HTML・Markdown ファイルの先頭には YAML 形式の Front Matter が記�
 ### Markdown
 
 - `{{ blog-latests 【num】 }}`
-- `{{ blog-years }}`
-- `{{ blog-months }}`
-- `{{ blog-dates }}`
+- `{{ blog-list-years }}`
+- `{{ blog-list-months }}`
+- `{{ blog-list-dates }}`
 
 
 ## Author
