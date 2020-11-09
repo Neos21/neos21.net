@@ -29,11 +29,19 @@ jobs:
           cat ./temp/added_modified.json
           cat ./temp/renamed.json
           cat ./temp/removed.json
-      # JSON ファイルを基にアップロードするファイル名の配列を組み立て ./temp/upload-files.json に書き出す
-      - name: Detect Upload Files
-        id  : detect_upload_files
+      # npm install 後、一部ファイルはビルドしておく (アップロードするかどうかは後で特定する)
+      - name: Setup npm
         run : |
-          node ./.github/workflows/ftp-detect-upload-files.js
+          npm install
+          npm run clear
+          npm run css
+          npm run feeds
+          npm run sitemap
+      # JSON ファイルを基にアップロードするファイルをビルドしておき、ファイル名を ./temp/upload-files.json に書き出す
+      - name: Build Upload Files
+        id  : build_upload_files
+        run : |
+          node ./.github/workflows/ftp-upload-build.js
           if [[ -e ./temp/upload-files.json ]]; then
             echo "::set-output name=do_upload::true"
             echo 'Do Upload'
@@ -42,12 +50,6 @@ jobs:
             echo 'Do Not Upload'
           fi
       # 以降のデプロイ処理は do_upload Output が true の時だけ実行する
-      - name: Install
-        if  : steps.detect_upload_files.outputs.do_upload == 'true'
-        run : npm install
-      - name: Build
-        if  : steps.detect_upload_files.outputs.do_upload == 'true'
-        run : npm run build --if-present
       - name: FTP Upload Files
         if  : steps.detect_upload_files.outputs.do_upload == 'true'
         run : node ./.github/workflows/ftp-upload-files.js
