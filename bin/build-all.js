@@ -15,13 +15,21 @@ const copyFile = require('../lib/copy-file');
 const sourceFilePaths = listFiles(constants.pages.src);
 
 sourceFilePaths
-  .filter(filePath => filePath.endsWith('.html'))
-  .forEach(filePath => buildHtml(filePath));
+  .filter(sourceFilePath => sourceFilePath.endsWith('.html'))
+  .forEach(sourceFilePath => buildHtml(sourceFilePath));
 sourceFilePaths
-  .filter(filePath => filePath.endsWith('.md'))
-  .forEach(filePath => buildMarkdown(filePath));
+  .filter(sourceFilePath => sourceFilePath.endsWith('.md'))
+  .forEach(sourceFilePath => buildMarkdown(sourceFilePath));
 sourceFilePaths
-  .filter(filePath => !['.html', '.md'].includes(path.extname(filePath)))
-  .forEach(filePath => copyFile(filePath));
+  .filter(sourceFilePath => !['.html', '.md'].includes(path.extname(sourceFilePath)))
+  .forEach(sourceFilePath => {
+    const distFilePath = sourceFilePath.replace(constants.pages.src, constants.pages.dist);
+    copyFile(sourceFilePath, distFilePath);
+  });
+
+listFiles(constants.documents.src).forEach(sourceFilePath => {
+  const distFilePath = sourceFilePath.replace(constants.documents.src, constants.documents.dist);
+  copyFile(sourceFilePath, distFilePath);
+});
 
 console.log('Build All : Succeeded');

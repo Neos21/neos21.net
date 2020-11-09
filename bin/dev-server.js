@@ -7,7 +7,6 @@ const constants = require('../lib/constants');
 const buildCss = require('../lib/build-css');
 const buildHtml = require('../lib/build-html');
 const buildMarkdown = require('../lib/build-markdown');
-
 const copyFile = require('../lib/copy-file');
 
 /*!
@@ -27,10 +26,10 @@ browserSync.init({
       ],
       // event : `add`・`change`・`unlink`・`addDir`・`unlinkDir`
       // sourdePath : ex. `src/pages/index.html`
-      fn: (event, sourcePath) => {
+      fn: (event, sourceFilePath) => {
         if(event === 'addDir') return;  // Do Nothing
         if(event === 'unlink') {
-          const distFilePath = sourcePath.replace(constants.pages.src, constants.pages.dist).replace('.md', '.html');
+          const distFilePath = sourceFilePath.replace(constants.pages.src, constants.pages.dist).replace('.md', '.html');
           try {
             fs.unlinkSync(distFilePath);
           }
@@ -40,7 +39,7 @@ browserSync.init({
           return;
         }
         if(event === 'unlinkDir') {
-          const distDirectoryPath = sourcePath.replace(constants.pages.src, constants.pages.dist);
+          const distDirectoryPath = sourceFilePath.replace(constants.pages.src, constants.pages.dist);
           try {
             fs.rmdirSync(distDirectoryPath, { recursive: true });
           }
@@ -51,28 +50,29 @@ browserSync.init({
         }
         
         // 以降 `add` or `change` のみ
-        if(sourcePath.endsWith('.css')) return buildCss();
-        if(sourcePath.endsWith('.html')) return buildHtml(sourcePath);
-        if(sourcePath.endsWith('.md')) {
-          buildMarkdown(sourcePath);
-          if(sourcePath.match((/\/[0-9]{4}\/[0-9]{2}\//u))) {
-            const monthPath = sourcePath.replace((/\/([0-9]{4})\/([0-9]{2})\/.*/u), '/$1/$2/index.md');
+        if(sourceFilePath.endsWith('.css')) return buildCss();
+        if(sourceFilePath.endsWith('.html')) return buildHtml(sourceFilePath);
+        if(sourceFilePath.endsWith('.md')) {
+          buildMarkdown(sourceFilePath);
+          if(sourceFilePath.match((/\/[0-9]{4}\/[0-9]{2}\//u))) {
+            const monthPath = sourceFilePath.replace((/\/([0-9]{4})\/([0-9]{2})\/.*/u), '/$1/$2/index.md');
             console.log(`Build Blog Month Index [${monthPath}]`);
             buildMarkdown(monthPath);
-            const yearPath = sourcePath.replace((/\/([0-9]{4})\/.*/u), '/$1/index.md');
+            const yearPath = sourceFilePath.replace((/\/([0-9]{4})\/.*/u), '/$1/index.md');
             console.log(`Build Blog Year Index [${yearPath}]`);
             buildMarkdown(yearPath);
-            const blogIndexPath = sourcePath.replace((/\/([0-9]{4})\/.*/u), '/index.md');
+            const blogIndexPath = sourceFilePath.replace((/\/([0-9]{4})\/.*/u), '/index.md');
             console.log(`Build Blog Index [${blogIndexPath}]`);
             buildMarkdown(blogIndexPath);
-            const indexPath = sourcePath.replace((/\/blog\/.*/u), '/index.html');
+            const indexPath = sourceFilePath.replace((/\/blog\/.*/u), '/index.html');
             console.log(`Build Index HTML [${indexPath}]`);
             buildHtml(indexPath);
           }
           return;
         }
         
-        copyFile(sourcePath);  // ビルド不要なファイルはコピーのみ
+        const distFilePath = sourceFilePath.replace(constants.pages.src, constants.pages.dist);
+        copyFile(sourceFilePath, distFilePath);  // ビルド不要なファイルはコピーのみ
       }
     },
     {

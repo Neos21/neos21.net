@@ -10,27 +10,28 @@ const copyFile = require('../lib/copy-file');
  * ファイル拡張子に基づき、ビルドもしくはコピーを行う
  */
 
-const sourcePaths = process.argv.slice(2);
-if(!sourcePaths.length) return console.log('Please Select Source File(s)');
+const sourceFilePaths = process.argv.slice(2);
+if(!sourceFilePaths.length) return console.log('Please Select Source File(s)');
 
-sourcePaths.forEach(sourcePath => {
-  if(!sourcePath.includes(constants.src)) return console.warn(`Ignore [${sourcePath}]`);
+sourceFilePaths.forEach(sourceFilePath => {
+  if(!sourceFilePath.includes(constants.src)) return console.warn(`Ignore [${sourceFilePath}]`);
   
-  if(sourcePath.endsWith('.css')) {
-    console.log(`CSS : [${sourcePath}]`);
+  if(sourceFilePath.endsWith('.css')) {
+    console.log(`CSS : [${sourceFilePath}]`);
     return buildCss();
   }
-  if(sourcePath.endsWith('.html')) {
-    console.log(`HTML : [${sourcePath}]`);
-    return buildHtml(sourcePath);
+  if(sourceFilePath.endsWith('.html')) {
+    console.log(`HTML : [${sourceFilePath}]`);
+    return buildHtml(sourceFilePath);
   }
-  if(sourcePath.endsWith('.md')) {
-    console.log(`Markdown : [${sourcePath}]`);
-    return buildMarkdown(sourcePath);
+  if(sourceFilePath.endsWith('.md')) {
+    console.log(`Markdown : [${sourceFilePath}]`);
+    return buildMarkdown(sourceFilePath);
   }
   
-  console.log(`Asset : [${sourcePath}]`);
-  copyFile(sourcePath);
+  console.log(`Asset : [${sourceFilePath}]`);
+  const distFilePath = sourceFilePath.replace(constants.pages.src, constants.pages.dist);
+  copyFile(sourceFilePath, distFilePath);
 });
 
 console.log('Build Files : Succeeded');
