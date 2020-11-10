@@ -87,7 +87,7 @@ changedFiles.filter(sourceFilePath => sourceFilePath.includes(constants.src)).fo
 
 if(uploadFilesSet.size) {
   // サイトマップはアップロード対象があれば常に一緒にアップロードする
-  uploadFilesSet.push(constants.sitemap.dist);
+  uploadFilesSet.add(constants.sitemap.dist);
 }
 else {
   // 変更ファイルがなければ結果ファイルを作らず終了する
