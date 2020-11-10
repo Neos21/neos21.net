@@ -35,7 +35,7 @@ changedFiles.filter(sourceFilePath => sourceFilePath.includes(constants.src)).fo
   // CSS はビルド済・変更がある場合はアップロード対象に入れる
   if(sourceFilePath.includes(constants.styles.src)) return uploadFilesSet.add(constants.styles.dist);
   
-  // News に変更がある場合 : フィードはビルド済
+  // News に変更がある場合 : News を使用するページをビルドする・Atom フィードはビルド済なので対象追加のみ
   if(sourceFilePath.includes(constants.news.src)) {
     buildHtml(`${constants.pages.src}/index.html`);
     buildHtml(`${constants.pages.src}/about/new.html`);
@@ -54,7 +54,7 @@ changedFiles.filter(sourceFilePath => sourceFilePath.includes(constants.src)).fo
     else if(sourceFilePath.endsWith('.md')) {
       buildMarkdown(sourceFilePath);
       
-      // `/blog/YYYY/MM/index.md` ファイルの更新時は `index.md` もアップロード対象にする
+      // `/blog/YYYY/MM/index.md` ファイルの更新時は `index.md` と Atom フィードもアップロード対象にする
       const match = sourceFilePath.match((/\/blog\/([0-9]{4})\/([0-9]{2})\/[0-9]{2}-[0-9]{2}\.md/u));
       if(match) {
         const year  = match[1];
@@ -65,6 +65,7 @@ changedFiles.filter(sourceFilePath => sourceFilePath.includes(constants.src)).fo
         uploadFilesSet.add(`${constants.pages.dist}/blog/${year}/${month}/index.html`);
         uploadFilesSet.add(`${constants.pages.dist}/blog/${year}/index.html`);
         uploadFilesSet.add(`${constants.pages.dist}/blog/index.html`);
+        uploadFilesSet.add(constants.feeds.dist);
       }
     }
     else {
