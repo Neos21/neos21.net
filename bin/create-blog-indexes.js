@@ -6,7 +6,7 @@ const listDirectories = require('../lib/list-directories');
 const isExist = require('../lib/is-exist');
 
 /*!
- * Blog の index.md がなければ作る
+ * `./src/pages/blog/` 配下に年月のディレクトリがあるのに `index.md` がなければ作る
  */
 
 const templateYearIndex  = fs.readFileSync('./src/templates/blog-year-index.md' , 'utf-8');

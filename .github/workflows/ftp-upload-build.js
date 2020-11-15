@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 
 const constants = require('../../lib/constants');
+const isNotFuture = require('../../is-not-future');
 const buildHtml = require('../../lib/build-html');
 const buildMarkdown = require('../../lib/build-markdown');
 const copyFile = require('../../lib/copy-file');
@@ -47,6 +48,15 @@ changedFiles.filter(sourceFilePath => sourceFilePath.includes(constants.src)).fo
   
   // `src/pages/` 配下の変更 : ビルド or コピーする
   if(sourceFilePath.includes(constants.pages.src)) {
+    // 未来日日付のブログ記事・画像などを除外する
+    const match = sourceFilePath.match((/\/blog\/([0-9]{4})\/([0-9]{2})\/([0-9]{2})/u));
+    if(match) {
+      const blogYear  = Number(match[1]);
+      const blogMonth = Number(match[2]);
+      const blogDate  = Number(match[3]);
+      if(!isNotFuture(blogYear, blogMonth, blogDate)) return console.log(`This Is Future Blog Asset : [${sourceFilePath}]`);  // 未来日ならビルドしない
+    }
+    
     const distFilePath = sourceFilePath.replace(constants.pages.src, constants.pages.dist).replace('.md', '.html');
     if(sourceFilePath.endsWith('.html')) {
       buildHtml(sourceFilePath);
