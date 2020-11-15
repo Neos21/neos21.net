@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 
 const constants = require('../../lib/constants');
-const isNotFuture = require('../../is-not-future');
+const isNotFuture = require('../../lib/is-not-future');
 const buildHtml = require('../../lib/build-html');
 const buildMarkdown = require('../../lib/build-markdown');
 const copyFile = require('../../lib/copy-file');
