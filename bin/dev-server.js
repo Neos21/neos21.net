@@ -20,10 +20,7 @@ browserSync.init({
   open: false,  // ブラウザを開かない
   files: [  // 変更検知時の処理を定義する
     {
-      match: [
-        `${constants.pages.src}/**/*`,
-        `${path.dirname(constants.styles.src)}/**/*`
-      ],
+      match: [`${constants.pages.src}/**/*`],
       // event : `add`・`change`・`unlink`・`addDir`・`unlinkDir`
       // sourdePath : ex. `src/pages/index.html`
       fn: (event, sourceFilePath) => {
@@ -50,20 +47,27 @@ browserSync.init({
         }
         
         // 以降 `add` or `change` のみ
-        if(sourceFilePath.endsWith('.css')) return buildCss();
-        if(sourceFilePath.endsWith('.html')) return buildHtml(sourceFilePath);
+        if(sourceFilePath.endsWith('.html')) {
+          buildHtml(sourceFilePath);
+          return;
+        }
+        
         if(sourceFilePath.endsWith('.md')) {
           buildMarkdown(sourceFilePath);
+          
           if(sourceFilePath.match((/\/[0-9]{4}\/[0-9]{2}\//u))) {
             const monthPath = sourceFilePath.replace((/\/([0-9]{4})\/([0-9]{2})\/.*/u), '/$1/$2/index.md');
             console.log(`Build Blog Month Index [${monthPath}]`);
             buildMarkdown(monthPath);
+            
             const yearPath = sourceFilePath.replace((/\/([0-9]{4})\/.*/u), '/$1/index.md');
             console.log(`Build Blog Year Index [${yearPath}]`);
             buildMarkdown(yearPath);
+            
             const blogIndexPath = sourceFilePath.replace((/\/([0-9]{4})\/.*/u), '/index.md');
             console.log(`Build Blog Index [${blogIndexPath}]`);
             buildMarkdown(blogIndexPath);
+            
             const indexPath = sourceFilePath.replace((/\/blog\/.*/u), '/index.html');
             console.log(`Build Index HTML [${indexPath}]`);
             buildHtml(indexPath);
@@ -73,6 +77,12 @@ browserSync.init({
         
         const distFilePath = sourceFilePath.replace(constants.pages.src, constants.pages.dist);
         copyFile(sourceFilePath, distFilePath);  // ビルド不要なファイルはコピーのみ
+      }
+    },
+    {
+      match: [`${path.dirname(constants.styles.src)}/**/*`],
+      fn: (_event, _sourcePath) => {
+        buildCss();
       }
     },
     {
