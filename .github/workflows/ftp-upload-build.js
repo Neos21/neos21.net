@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 
 const constants = require('../../lib/constants');
-const isNotFuture = require('../../is-not-future');
+const isNotFuture = require('../../lib/is-not-future');
 const buildHtml = require('../../lib/build-html');
 const buildMarkdown = require('../../lib/build-markdown');
 const copyFile = require('../../lib/copy-file');
@@ -69,9 +69,9 @@ changedFiles.filter(sourceFilePath => sourceFilePath.includes(constants.src)).fo
       if(match) {
         const year  = match[1];
         const month = match[2];
-        buildMarkdown(`${constants.pages.src}/blog/${year}/${month}/index.html`);
-        buildMarkdown(`${constants.pages.src}/blog/${year}/index.html`);
-        buildMarkdown(`${constants.pages.src}/blog/index.html`);
+        buildMarkdown(`${constants.pages.src}/blog/${year}/${month}/index.md`);
+        buildMarkdown(`${constants.pages.src}/blog/${year}/index.md`);
+        buildMarkdown(`${constants.pages.src}/blog/index.md`);
         uploadFilesSet.add(`${constants.pages.dist}/blog/${year}/${month}/index.html`);
         uploadFilesSet.add(`${constants.pages.dist}/blog/${year}/index.html`);
         uploadFilesSet.add(`${constants.pages.dist}/blog/index.html`);
