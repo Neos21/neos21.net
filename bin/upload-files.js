@@ -1,4 +1,5 @@
 const constants = require('../lib/constants');
+const jstNow = require('../lib/jst-now');
 const ftp = require('../lib/ftp');
 
 /*!
@@ -12,6 +13,16 @@ const ftp = require('../lib/ftp');
   // `./dist/` 配下のファイルのみ対象にする
   const targetFilePaths = args.filter(targetFilePath => targetFilePath.includes(constants.dist));
   if(!targetFilePaths.length) return console.error('Not Uploading Files, Aborted');
+  
+  // 更新を知らせるためのファイルを追加する
+  targetFilePaths.push(constants.feeds.dist);
+  targetFilePaths.push(constants.sitemap.dist);
+  targetFilePaths.push(`${constants.pages.dist}/index.html`);
+  targetFilePaths.push(`${constants.pages.dist}/about/new.html`);
+  targetFilePaths.push(`${constants.pages.dist}/blog/index.html`);
+  targetFilePaths.push(`${constants.pages.dist}/blog/${jstNow.jstCurrentYear}/index.html`);
+  targetFilePaths.push(`${constants.pages.dist}/blog/${jstNow.jstCurrentYear}/${jstNow.zeroPadJstCurrentMonth}/index.html`);
+  
   console.log('Target File Paths :\n', targetFilePaths);
   
   const ftpClient = ftp.create();
