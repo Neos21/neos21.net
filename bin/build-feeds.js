@@ -3,6 +3,7 @@ const fs = require('fs');
 const yaml = require('yaml');
 
 const constants = require('../lib/constants');
+const isNotFuture = require('../lib/is-not-future');
 const listFiles = require('../lib/list-files');
 const markdownExtractFrontMatter = require('../lib/markdown-extract-front-matter');
 const makeDirectory = require('../lib/make-directory');
@@ -20,6 +21,14 @@ const getLatestNews = () => {
   const rawNews = fs.readFileSync(constants.news.src, 'utf-8');
   const allNews = yaml.parse(rawNews);
   return allNews
+    .filter(newsItem => {  // 未来日のデータを除外する
+      const match = newsItem.date.match((/^([0-9]{4})-([0-9]{2})-([0-9]{2})/u));
+      if(!match) return false;  // マッチしなかった不正値は除外する
+      const newsYear  = Number(match[1]);
+      const newsMonth = Number(match[2]);
+      const newsDate  = Number(match[3]);
+      return isNotFuture(newsYear, newsMonth, newsDate);
+    })
     .slice(0, constants.feeds.feedsCount)  // 最新の指定件数のみ取得する
     .map(newsItem => ({
         title  : `${constants.siteName} ${newsItem.date} の更新情報`,
@@ -35,7 +44,14 @@ const getLatestNews = () => {
  * @return {Array<object>} 最新のブログ投稿情報
  */
 const getLatestBlogPosts = () => listFiles(`${constants.pages.src}/blog`)
-  .filter(filePath => filePath.match((/\/blog\/[0-9]{4}\/[0-9]{2}\/[0-9]{2}-[0-9]{2}\.md/u)))  // 記事ファイルのみに絞り込む
+  .filter(filePath => {  // 未来日でない記事ファイルのみに絞り込む
+    const match = filePath.match((/\/blog\/([0-9]{4})\/([0-9]{2})\/([0-9]{2})-[0-9]{2}\.md/u));
+    if(!match) return false;  // 記事ファイル以外は除外する
+    const blogYear  = Number(match[1]);
+    const blogMonth = Number(match[2]);
+    const blogDate  = Number(match[3]);
+    return isNotFuture(blogYear, blogMonth, blogDate);
+  })
   .sort()
   .reverse()  // 新しい順にする
   .slice(0, constants.feeds.feedsCount)  // 最新の指定件数のみ取得する
