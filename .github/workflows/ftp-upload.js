@@ -1,4 +1,3 @@
-const fs = require('fs');
 const path = require('path');
 
 const constants = require('../../lib/constants');
@@ -7,9 +6,10 @@ const isNotFuture = require('../../lib/is-not-future');
 const buildHtml = require('../../lib/build-html');
 const buildMarkdown = require('../../lib/build-markdown');
 const copyFile = require('../../lib/copy-file');
+const ftp = require('../../lib/ftp');
 
 /*!
- * アップロード対象のファイルをビルドする
+ * 対象のファイルをビルドしてアップロードする
  */
 
 console.log(`JST Now : ${jstNow.jstCurrentYear}-${jstNow.zeroPadJstCurrentMonth}-${jstNow.zeroPadJstCurrentDate} ${jstNow.zeroPadJstCurrentHour}`);
@@ -35,6 +35,7 @@ if(isTemplateChanged) {
 // 重複を除去するため一旦 Set を使う
 const uploadFilesSet = new Set();
 // `src/` 配下のみ扱う
+// TODO : 未来日が最終更新日の静的ページを除外できていない
 changedFiles.filter(sourceFilePath => sourceFilePath.includes(constants.src)).forEach(sourceFilePath => {
   // CSS はビルド済・変更がある場合はアップロード対象に入れる
   if(sourceFilePath.includes(constants.styles.src)) return uploadFilesSet.add(constants.styles.dist);
@@ -67,7 +68,7 @@ changedFiles.filter(sourceFilePath => sourceFilePath.includes(constants.src)).fo
     else if(sourceFilePath.endsWith('.md')) {
       buildMarkdown(sourceFilePath);
       
-      // `/blog/YYYY/MM/index.md` ファイルの更新時は `index.md` と Atom フィードもアップロード対象にする
+      // `/blog/YYYY/MM/DD-00.md` ファイルの更新時は `index.md` と Atom フィードもアップロード対象にする
       const match = sourceFilePath.match((/\/blog\/([0-9]{4})\/([0-9]{2})\/[0-9]{2}-[0-9]{2}\.md/u));
       if(match) {
         const year  = match[1];
@@ -121,6 +122,12 @@ uploadFilesSet.forEach(uploadFilePath => {
 // アップロード対象のディレクトリパス・ファイルパスの配列を作る
 const uploadFiles = [...Array.from(uploadDirectoriesSet).sort(), ...Array.from(uploadFilesSet).sort()];
 
-const stringified = JSON.stringify(uploadFiles);
-console.log('Upload Files :\n', stringified);
-fs.writeFileSync('./temp/upload-files.json', stringified, 'utf-8');
+// アップロード対象のファイルを FTP アップロードする
+(async () => {
+  const ftpClient = ftp.create();
+  await ftp.connect(ftpClient);
+  await ftp.upload(ftpClient, uploadFiles)
+    .then(result => console.log(result))
+    .catch(error => console.error(error));
+  console.log('FTP Upload Finished');
+})();

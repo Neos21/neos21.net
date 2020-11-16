@@ -39,12 +39,12 @@ path:
   - _例示 :_ 組織構造がバグの再現率に寄与する。組織自体のコミュニケーションが大事
   - _出自 :_ コンピュータ科学者、プログラマである <dfn title="メルヴィン・コンウェイ">Melvin Conway</dfn> が1967年に提唱
   - _参考 :_
-    - [Wikipedia - Conway's law](https://en.wikipedia.org/wiki/Conway%27s_law)
-    - [Wikipedia - メルヴィン・コンウェイ](https://ja.wikipedia.org/wiki/%E3%83%A1%E3%83%AB%E3%83%B4%E3%82%A3%E3%83%B3%E3%83%BB%E3%82%B3%E3%83%B3%E3%82%A6%E3%82%A7%E3%82%A4)
+      - [Wikipedia - Conway's law](https://en.wikipedia.org/wiki/Conway%27s_law)
+      - [Wikipedia - メルヴィン・コンウェイ](https://ja.wikipedia.org/wiki/%E3%83%A1%E3%83%AB%E3%83%B4%E3%82%A3%E3%83%B3%E3%83%BB%E3%82%B3%E3%83%B3%E3%82%A6%E3%82%A7%E3%82%A4)
 - __ボーイスカウト原則__
   - _意味 :_ モジュールをチェックインする際には、必ずチェックアウト時よりも美しくする
   - _例示 :_ ボーイスカウトが訪れた山を綺麗にして帰ることから。改修のために触ったコードは、既存のコードを綺麗にする
-    - 現場によっては「関係ないコードを触るな」なんて言われたりするが、単体テスト自動化、CI 環境が整備できていれば問題ないレベルの「改善」をしよう
+      - 現場によっては「関係ないコードを触るな」なんて言われたりするが、単体テスト自動化、CI 環境が整備できていれば問題ないレベルの「改善」をしよう
   - _出自 :_ 書籍「プログラマが知るべき97のこと」内、<dfn title="ロバート・C・マーチン">Robert C. Martin</dfn>
   - _参考 :_ [プログラマが知るべき97のこと - ボーイスカウト・ルール](https://プログラマが知るべき97のこと.com/%E3%82%A8%E3%83%83%E3%82%BB%E3%82%A4/%E3%83%9C%E3%83%BC%E3%82%A4%E3%82%B9%E3%82%AB%E3%82%A6%E3%83%88-%E3%83%AB%E3%83%BC%E3%83%AB/)
 - __<abbr title="You Ain't Gonna Need It">YAGNI</abbr> (ヤグニ・ヤーグニ)__
@@ -52,17 +52,17 @@ path:
   - _例示 :_ 本当にそれが必要になるまでは、余計なモノは実装しない (その時間が無駄)。<abbr title="eXtreme Programming">XP</abbr> の原則
   - _出自 :_ 1999年の書籍「Extreme Programming」の著者の一人、<abbr title="ロン・ジェフリーズ">Ron Jeffries</abbr> が主に発言
   - _参考 :_
-    - [Wikipedia - YAGNI](https://ja.wikipedia.org/wiki/YAGNI)
-    - [Wikipedia - You aren't gonna need it](https://en.wikipedia.org/wiki/You_aren%27t_gonna_need_it)
+      - [Wikipedia - YAGNI](https://ja.wikipedia.org/wiki/YAGNI)
+      - [Wikipedia - You aren't gonna need it](https://en.wikipedia.org/wiki/You_aren%27t_gonna_need_it)
 - __<abbr title="Don't Repeat Yourself">DRY</abbr>__
   - _意味 :_ 同じことを繰り返すな
   - _例示 :_ 同じような処理を何度も書いているならメソッド化する。DB の正規化
   - _出自 :_ Andy Hunt・Dave Thomas の著書「The Pragmatic Programmer (達人プログラマー)」で提唱。「プログラマが知るべき97のこと」でも言及されている
   - _参考 :_
-    - [Wikipedia - Don't repeat yourself](https://ja.wikipedia.org/wiki/Don%27t_repeat_yourself)
-    - [Wikipedia - コードの再利用](https://ja.wikipedia.org/wiki/%E3%82%B3%E3%83%BC%E3%83%89%E3%81%AE%E5%86%8D%E5%88%A9%E7%94%A8)
-    - [Wikipedia - 関係の正規化](https://ja.wikipedia.org/wiki/%E9%96%A2%E4%BF%82%E3%81%AE%E6%AD%A3%E8%A6%8F%E5%8C%96)
-    - [プログラマが知るべき97のこと - DRY 原則](https://プログラマが知るべき97のこと.com/%E3%82%A8%E3%83%83%E3%82%BB%E3%82%A4/DRY%E5%8E%9F%E5%89%87/)
+      - [Wikipedia - Don't repeat yourself](https://ja.wikipedia.org/wiki/Don%27t_repeat_yourself)
+      - [Wikipedia - コードの再利用](https://ja.wikipedia.org/wiki/%E3%82%B3%E3%83%BC%E3%83%89%E3%81%AE%E5%86%8D%E5%88%A9%E7%94%A8)
+      - [Wikipedia - 関係の正規化](https://ja.wikipedia.org/wiki/%E9%96%A2%E4%BF%82%E3%81%AE%E6%AD%A3%E8%A6%8F%E5%8C%96)
+      - [プログラマが知るべき97のこと - DRY 原則](https://プログラマが知るべき97のこと.com/%E3%82%A8%E3%83%83%E3%82%BB%E3%82%A4/DRY%E5%8E%9F%E5%89%87/)
 - __<abbr title="Keep It Simple, Stupid!">KISS</abbr>__
   - _意味 :_ シンプルにしておけバカ。「Keep It Short and Simple (簡潔・単純にしておけ)」とも
   - _例示 :_ 設計や実装手法を単純なモノにブレイクダウンしておくこと。不必要に複雑にしないこと
@@ -70,24 +70,24 @@ path:
   - _参考 :_ [Wikipedia - KISS の原則](https://ja.wikipedia.org/wiki/KISS%E3%81%AE%E5%8E%9F%E5%89%87)
 - __<abbr title="SRP・OCP・LSP・ISP・DIP">SOLID</abbr>__
   - _意味 :_ オブジェクト指向設計に関する以下の5つの原則の頭文字
-    1. <abbr title="Single Responsibility Principle">SRP</abbr> (単一責務の原則) : クラスを変更する理由は1つにする。
-    2. <abbr title="Open / Closed Principle">OCP</abbr> (開放 / 閉鎖原則) : クラスは拡張に対して開き、修正に対して閉じておく。
-    3. <abbr title="Liskov Substitution Principle">LSP</abbr> (リスコフの置換原則) : 派生型 (継承する子クラス) はその基本型 (親クラス) と置換可能にする。
-    4. <abbr title="Interface Segregation Principle">ISP</abbr> (インターフェース分離の原則) : クライアントが利用しないメソッドへの依存を強制しない。
-    5. <abbr title="Dependenciy Inversion Principle">DIP</abbr> (依存性逆転の原則) : 上位のモジュールは下位のモジュールに依存しない。どちらも「抽象」に依存するべき。
+      1. <abbr title="Single Responsibility Principle">SRP</abbr> (単一責務の原則) : クラスを変更する理由は1つにする。
+      2. <abbr title="Open / Closed Principle">OCP</abbr> (開放 / 閉鎖原則) : クラスは拡張に対して開き、修正に対して閉じておく。
+      3. <abbr title="Liskov Substitution Principle">LSP</abbr> (リスコフの置換原則) : 派生型 (継承する子クラス) はその基本型 (親クラス) と置換可能にする。
+      4. <abbr title="Interface Segregation Principle">ISP</abbr> (インターフェース分離の原則) : クライアントが利用しないメソッドへの依存を強制しない。
+      5. <abbr title="Dependenciy Inversion Principle">DIP</abbr> (依存性逆転の原則) : 上位のモジュールは下位のモジュールに依存しない。どちらも「抽象」に依存するべき。
   - _例示 :_ (それぞれの原則の項で個別に触れる)
   - _出自 :_ XP の提唱者ロバート・C・マーチンが2005年に書いた「The Principles of <abbr title="Object Oriented Design">OOD</abbr>」という記事で SOLID という5つにまとめたとされる
   - _参考 :_
-    - [Wikipedia - SOLID](https://en.wikipedia.org/wiki/SOLID)
-    - [The Principles of OOD](http://butunclebob.com/ArticleS.UncleBob.PrinciplesOfOod)
+      - [Wikipedia - SOLID](https://en.wikipedia.org/wiki/SOLID)
+      - [The Principles of OOD](http://butunclebob.com/ArticleS.UncleBob.PrinciplesOfOod)
 - __単一責務の原則 : <abbr title="Single Responsibility Principle">SRP</abbr>__
   - _意味 :_ 一つのモノの責務・役割は一つにする。一つのモノに変更が入る理由は一つにする。「単一_責任_の原則」とも
   - _例示 :_ 1つのクラスやメソッドにに複数の処理を詰め込まない
   - _出自 :_ XP の提唱者ロバート・C・マーチンが2005年に書いた「The Principles of <abbr title="Object Oriented Design">OOD</abbr>」という記事がほぼ初出
   - _参考 :_
-    - [Wikipedia - Single responsibility principle](https://en.wikipedia.org/wiki/Single_responsibility_principle)
-    - [プログラマが知るべき97のこと - 単一責任原則](https://プログラマが知るべき97のこと.com/%E3%82%A8%E3%83%83%E3%82%BB%E3%82%A4/%E5%8D%98%E4%B8%80%E8%B2%AC%E4%BB%BB%E5%8E%9F%E5%89%87/)
-    - 拙記事：[一つのモノには一つのことだけやらせる](single-responsibility-principle.html)
+      - [Wikipedia - Single responsibility principle](https://en.wikipedia.org/wiki/Single_responsibility_principle)
+      - [プログラマが知るべき97のこと - 単一責任原則](https://プログラマが知るべき97のこと.com/%E3%82%A8%E3%83%83%E3%82%BB%E3%82%A4/%E5%8D%98%E4%B8%80%E8%B2%AC%E4%BB%BB%E5%8E%9F%E5%89%87/)
+      - 拙記事：[一つのモノには一つのことだけやらせる](single-responsibility-principle.html)
 - __開放 / 閉鎖原則 : <abbr title="Open / Closed Principle">OCP</abbr> : オープン・クローズドの原則__
   - _意味 :_ 拡張に対して開いていて、修正に対して閉じていること
   - _例示 :_ 機能の追加や変更がしやすい作りであり、かつ、既存の実装を修正した時の影響範囲が少なくなる作りが良い、ということ。一度作ったクラスは原則変更せず、継承によって機能を追加したり、ポリモーフィズムを利用したりして、拡張に対して開く。また、グローバル変数を利用しないようにしたり、インスタンス変数を `private` で扱ったりすることで、修正時の影響を小さくする
@@ -98,25 +98,25 @@ path:
   - _例示 :_ 基本クラスを使っている場所で、その基本クラスの代わりにサブクラスを用いたとしても、正しく動作すること
   - _出自 :_ <abbr title="バーバラ・リスコフ">Barbara Liskov</abbr>・<abbr title="ジャネット・ウィング">Jeannette Wing</abbr> の1993年の論文「Family Values: A Behavioral Notion of Subtyping」で示された
   - _参考 :_
-    - [Wikipedia - リスコフの置換原則](https://ja.wikipedia.org/wiki/%E3%83%AA%E3%82%B9%E3%82%B3%E3%83%95%E3%81%AE%E7%BD%AE%E6%8F%9B%E5%8E%9F%E5%89%87)
-    - [Qiita - オブジェクト指向設計原則とは](https://qiita.com/UWControl/items/98671f53120ae47ff93a)
+      - [Wikipedia - リスコフの置換原則](https://ja.wikipedia.org/wiki/%E3%83%AA%E3%82%B9%E3%82%B3%E3%83%95%E3%81%AE%E7%BD%AE%E6%8F%9B%E5%8E%9F%E5%89%87)
+      - [Qiita - オブジェクト指向設計原則とは](https://qiita.com/UWControl/items/98671f53120ae47ff93a)
 - __インターフェース分離の原則 : <abbr title="Interface Segregation Principle">ISP</abbr>__
   - _意味 :_ クライアントは自分が使わないメソッドに依存することを強制されない
   - _例示 :_ クライアントが本当に使いたいメソッド (インターフェース) のみが提供されるべき。インターフェースや委譲による分離。「Listener (リスナー)」というインターフェース
   - _出自 :_ 2002年、ロバート・C・マーチンの「Agile Software Development」にて提唱された
   - _参考 :_
-    - [Wikipedia - Interface segregation principle](https://en.wikipedia.org/wiki/Interface_segregation_principle)
-    - [オブラブ - ソフトウェア原則 4](http://objectclub.jp/technicaldoc/object-orientation/principle/principle06)
+      - [Wikipedia - Interface segregation principle](https://en.wikipedia.org/wiki/Interface_segregation_principle)
+      - [オブラブ - ソフトウェア原則 4](http://objectclub.jp/technicaldoc/object-orientation/principle/principle06)
 - __依存性逆転の原則 : <abbr title="Dependenciy Inversion Principle">DIP</abbr>__
   - _意味 :_ 上位のモジュールは下位のモジュールに依存してはならない。どちらも「抽象」に依存するべき
   - _例示 :_ クラス同士を具象クラスで依存させるのではなく、抽象クラスかインターフェースを通じて関係を示す
-    - ある具象クラス「A クラス」が、別の具象クラス「B クラス」の処理を利用する場合、「B クラス」のインターフェースに依存することになる
-    - しかし、「B クラス」をそのまま呼ばず、「A クラス」側でインターフェースを宣言しておき、そこに「B クラス」を適用する (<abbr title="Dependency Injection">DI</abbr>) ようにすると、「A クラス」が呼びたいインターフェースを自分で決めたことになり、インターフェースの所有権が「A クラス」に変えられる。コレが「逆転」ということ
+      - ある具象クラス「A クラス」が、別の具象クラス「B クラス」の処理を利用する場合、「B クラス」のインターフェースに依存することになる
+      - しかし、「B クラス」をそのまま呼ばず、「A クラス」側でインターフェースを宣言しておき、そこに「B クラス」を適用する (<abbr title="Dependency Injection">DI</abbr>) ようにすると、「A クラス」が呼びたいインターフェースを自分で決めたことになり、インターフェースの所有権が「A クラス」に変えられる。コレが「逆転」ということ
   - _出自 :_ ロバート・C・マーチンの1994年の論文「Object Oriented Design Quality Metrics: an analysis of dependencies」
   - _参考 :_
-    - [Wikipedia - Dependency inversion principle](https://en.wikipedia.org/wiki/Dependency_inversion_principle)
-    - [A Memorandum - The Dependency Inversion Principle DIP 依存関係逆転原則](http://etc9.hatenablog.com/entry/20090924/1253802289)
-    - [SlideShare - 20160526 依存関係逆転の原則](https://www.slideshare.net/ShintaroKurosawa/20160526-62511723)
+      - [Wikipedia - Dependency inversion principle](https://en.wikipedia.org/wiki/Dependency_inversion_principle)
+      - [A Memorandum - The Dependency Inversion Principle DIP 依存関係逆転原則](http://etc9.hatenablog.com/entry/20090924/1253802289)
+      - [SlideShare - 20160526 依存関係逆転の原則](https://www.slideshare.net/ShintaroKurosawa/20160526-62511723)
 - __関心の分離 : <abbr title="Separation of Concerns">SoC</abbr>__
   - _意味 :_ それぞれのプログラムの関心事 (やりたいこと) を分けること
   - _例示 :_ Web ページを構成する HTML・CSS・JavaScript は、それぞれ文書構造・見栄え・画面処理というそれぞれの関心事に分離されており、それぞれは疎結合になっている。MVC パターンなども「関心の分離」の一例
@@ -129,22 +129,22 @@ path:
   - _参考 :_ [オブラブ - ソフトウェア原則 ちょっと横道 その1 JTP Joshua Tree Principle](http://objectclub.jp/technicaldoc/object-orientation/principle/principle04)
 - __UNIX 哲学__
   - _意味 :_ UNIX OS の開発経験に基づく規範や哲学的なアプローチのまとまり。有名なものは以下
-    1. 一つのことを行い、またそれをうまくやるプログラムを書け。(ダグラス・マキルロイ)
-    2. 早すぎる最適化は諸悪の根源である。 (ドナルド・クヌース)
-    3. 疑いがあるときは総当たり (Brute Force) を使え。 (ケン・トンプソン)
-    4. スマートなデータを使うつまらないコードを書け。
-    5. 小さいものは美しい。 (マイク・ガンカーズ)
-    6. できる限り早くプロトタイプを作れ。 (マイク・ガンカーズ)
-    7. 効率よりも移植しやすさ。 (マイク・ガンカーズ)
-    8. 単純なテキストファイルにデータを格納せよ。 (マイク・ガンカーズ)
-    9. 拘束的なユーザインタフェースは作るな。 (マイク・ガンカーズ)
-    10. 全てのプログラムはフィルタとして振る舞うようにせよ。 (マイク・ガンカーズ)
-    11. より悪いことは、より良いことだ。 (リチャード・P・ガブリエル) … (質と機能性は必ずしも比例しないことから。完全さよりもシンプルさ)
+      1. 一つのことを行い、またそれをうまくやるプログラムを書け。(ダグラス・マキルロイ)
+      2. 早すぎる最適化は諸悪の根源である。 (ドナルド・クヌース)
+      3. 疑いがあるときは総当たり (Brute Force) を使え。 (ケン・トンプソン)
+      4. スマートなデータを使うつまらないコードを書け。
+      5. 小さいものは美しい。 (マイク・ガンカーズ)
+      6. できる限り早くプロトタイプを作れ。 (マイク・ガンカーズ)
+      7. 効率よりも移植しやすさ。 (マイク・ガンカーズ)
+      8. 単純なテキストファイルにデータを格納せよ。 (マイク・ガンカーズ)
+      9. 拘束的なユーザインタフェースは作るな。 (マイク・ガンカーズ)
+      10. 全てのプログラムはフィルタとして振る舞うようにせよ。 (マイク・ガンカーズ)
+      11. より悪いことは、より良いことだ。 (リチャード・P・ガブリエル) … (質と機能性は必ずしも比例しないことから。完全さよりもシンプルさ)
   - _例示 :_ 全体的に、「シンプルが良いこと」という感じ「1つのプログラムは、1つのことを小さくやろう (単一責務の原則)」「完璧さを求めず、平易でシンプルにしよう (KISS 原則)」
   - _出自 :_ UNIX 創始者の一人で、「パイプ」の技術を発明したプログラマ、ダグラス・マキルロイの2000年の著書「UNIX の四半世紀」や、1989年、ロブ・パイクの「Notes on Programming in C」など
   - _参考 :_
-    - [Wikipedia - UNIX 哲学](https://ja.wikipedia.org/wiki/UNIX%E5%93%B2%E5%AD%A6)
-    - [デザインの「悪い方がよい」原則](http://chasen.org/~daiti-m/text/worse-is-better-ja.html)
+      - [Wikipedia - UNIX 哲学](https://ja.wikipedia.org/wiki/UNIX%E5%93%B2%E5%AD%A6)
+      - [デザインの「悪い方がよい」原則](http://chasen.org/~daiti-m/text/worse-is-better-ja.html)
 - __ポステルの法則 : Postel's Law__
   - _意味 :_ 送信するものに関しては厳密に、受信するものに関しては寛容に
   - _例示 :_ 元はインターネット通信の原則だが、「受信」を「入力」、「送信」を「出力」と解釈して「入力は寛容に、出力は厳密に」と捉えると、メソッドの作りの原則としても応用できる
@@ -153,8 +153,8 @@ path:
 - __銀の弾丸などない__
   - _意味 :_ 魔法のように、すぐに役に立ち、プログラマの生産性を倍増させるような技術や特効薬は存在しない
   - _例示 :_
-    - 何かをサクッと解決することはできない
-    - 複雑性の性質を区別する。本質的な複雑性 (解決したい問題自体の複雑さ) にのみフォーカスし、偶有的な複雑性 (開発者が発生させている、解決可能な問題) はできるだけ早く取り除く
+      - 何かをサクッと解決することはできない
+      - 複雑性の性質を区別する。本質的な複雑性 (解決したい問題自体の複雑さ) にのみフォーカスし、偶有的な複雑性 (開発者が発生させている、解決可能な問題) はできるだけ早く取り除く
   - _出自 :_ フレデリック・ブルックスの1986年の書籍「銀の弾などない - ソフトウェアエンジニアリングの本質と偶有的事項」
   - _参考 :_ [Wikipedia - 銀の弾丸などない](https://ja.wikipedia.org/wiki/%E9%8A%80%E3%81%AE%E5%BC%BE%E3%81%AA%E3%81%A9%E3%81%AA%E3%81%84)
 - __金のハンマー : ゴールデン・ハンマー病 : ハンマー釘病__
@@ -192,8 +192,8 @@ path:
   - _例示 :_ 「○○を実装したい」という真の目的の前に、「SSL 認証が必要で、そのためには証明書の準備が必要で、そのために文字列変換が必要になって、その中で文字コード変換が必要になって…」といった状態
   - _出自 :_ Jeremy H. Brown のメールが元らしい
   - _参考 :_
-    - [Yak Shaving](http://projects.csail.mit.edu/gsb/old-archive/gsb-archive/gsb2000-02-11.html)
-    - [bk ブログ - yak shaving で人生の問題の80%が説明できる問題](http://0xcc.net/blog/archives/000196.html)
+      - [Yak Shaving](http://projects.csail.mit.edu/gsb/old-archive/gsb-archive/gsb2000-02-11.html)
+      - [bk ブログ - yak shaving で人生の問題の80%が説明できる問題](http://0xcc.net/blog/archives/000196.html)
 
 
 ## プロジェクトマネジメント関連
@@ -231,9 +231,9 @@ path:
 - __パレートの法則 : 80対20の法則__
   - _意味 :_ 「成果の 80% は、作業の 20% から得られる」
   - _例示 :_ ある事象・結果の8割の要因は、作業全体の2割の影響が大きい、ということ。作業全体からすると些細なことでも、結果の大部分に影響を与えたりする
-    - 働きアリの法則と同様に、「組織の2割の人が大部分の収益を上げていて、その2割の人が間引かれると残りの8割中の2割が大部分の利益をもたらすようになる」など
-    - プログラムの処理にかかる時間の 80% は、コード全体の 20% の部分が占める
-    - 全体の 20% が優れた設計ならば、実用上 80% の状況で優れた能力を発揮する
+      - 働きアリの法則と同様に、「組織の2割の人が大部分の収益を上げていて、その2割の人が間引かれると残りの8割中の2割が大部分の利益をもたらすようになる」など
+      - プログラムの処理にかかる時間の 80% は、コード全体の 20% の部分が占める
+      - 全体の 20% が優れた設計ならば、実用上 80% の状況で優れた能力を発揮する
   - _出自 :_ 20世紀初頭、イタリアの経済学者ヴィルフレド・パレートが発見
   - _参考 :_ [Wikipedia - パレートの法則](https://ja.wikipedia.org/wiki/%E3%83%91%E3%83%AC%E3%83%BC%E3%83%88%E3%81%AE%E6%B3%95%E5%89%87)
 - __<abbr title="Not Invented Here">NIH</abbr> 症候群 : 独自技術症候群 : 自前主義__
@@ -241,17 +241,17 @@ path:
   - _例示 :_ 俗にいう「車輪の再発明」が起こる原因の一つ。「目的を容易に達成できる既存ツールの存在を知らずに、自前で作ってしまった」という場合ではなく、「アレはどこそこが作ったオープンソースだから使わない」などというそれ以外の理由で独自開発すること
   - _出自 :_ 1982年の Katz, Ralph, and Thomas J. Allen の論文「Investigating the Not Invented Here (NIH) syndrome: A look at the performance, tenure, and communication patterns of 50 R & D Project Groups」が出典？
   - _参考 :_
-    - [Wikipedia - NIH 症候群](https://ja.wikipedia.org/wiki/NIH%E7%97%87%E5%80%99%E7%BE%A4)
-    - [Not Invented Here 症候群 ： お前のアイディアがそんなに優れているはずがない](http://edx.hatenablog.com/entry/not-invented-here)
-    - 拙記事：[Murga - 「NIH 症候群」は誰も得しない](https://neos21.hatenablog.jp/entry/2017/01/31/000000)
+      - [Wikipedia - NIH 症候群](https://ja.wikipedia.org/wiki/NIH%E7%97%87%E5%80%99%E7%BE%A4)
+      - [Not Invented Here 症候群 ： お前のアイディアがそんなに優れているはずがない](http://edx.hatenablog.com/entry/not-invented-here)
+      - 拙記事：[Murga - 「NIH 症候群」は誰も得しない](https://neos21.hatenablog.jp/entry/2017/01/31/000000)
 - __ピーターの法則 : Peter Principle__
   - _意味 :_
-    1. 人間は能力の極限まで出世する。したがって、有能だったヒラ社員は、無能な中間管理職になる。
-    2. 時が経つにつれ、人間はみな出世していく。無能なヒラ社員は、そのままヒラ社員の地位に落ち着く。有能なヒラ社員は無能な中間管理職の地位に落ち着く。その結果、各階層は、無能な人間で埋め尽くされる。
-    3. その組織の仕事は、まだ出世の余地のある人間によって遂行される。
+      1. 人間は能力の極限まで出世する。したがって、有能だったヒラ社員は、無能な中間管理職になる。
+      2. 時が経つにつれ、人間はみな出世していく。無能なヒラ社員は、そのままヒラ社員の地位に落ち着く。有能なヒラ社員は無能な中間管理職の地位に落ち着く。その結果、各階層は、無能な人間で埋め尽くされる。
+      3. その組織の仕事は、まだ出世の余地のある人間によって遂行される。
   - _例示 :_ ヒラ社員としては能力があるとして評価された人も、管理職になってより困難な問題を扱うようになると、段々と評価されにくくなっていく。「管理職としては無能」となった人はその地位に残り続ける。たとえ管理職として評価された人も、経営層に出世して同じように評価されるかというと難しく、「無能な経営者」に落ち着いてしまったりする。結果的に、どの層にも無能が溢れることになる。それでも仕事がなんとか進んでいるのは、その階層において出世の余地がある人の頑張りによってなされているから
-    - 「働きアリの法則」「パレートの法則」に類似するもので、「2割の勤勉者」が何故いるかというと、この「ピーターの法則」でいう「出世の余地がある人間」ということになる
-    - 優秀なヒラ社員が、優秀な管理職になるとは限らない。しかし人は「ある有効な手段を、別の困難な問題に応用したがる」ので、結果的に失敗する
+      - 「働きアリの法則」「パレートの法則」に類似するもので、「2割の勤勉者」が何故いるかというと、この「ピーターの法則」でいう「出世の余地がある人間」ということになる
+      - 優秀なヒラ社員が、優秀な管理職になるとは限らない。しかし人は「ある有効な手段を、別の困難な問題に応用したがる」ので、結果的に失敗する
   - _出自 :_ アメリカの教育学者ローレンス・J・ピーターの1969年の著書「ピーターの法則 - 創造的無能のすすめ」の中で提唱
   - _参考 :_ [Wikipedia - ピーターの法則](https://ja.wikipedia.org/wiki/%E3%83%94%E3%83%BC%E3%82%BF%E3%83%BC%E3%81%AE%E6%B3%95%E5%89%87)
 - __大きな泥だんご : Big ball of mud__

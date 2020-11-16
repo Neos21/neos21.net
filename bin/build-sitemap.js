@@ -7,6 +7,8 @@ const makeDirectory = require('../lib/make-directory');
 
 /*!
  * `./src/` 配下のファイルを見てサイトマップを生成する
+ * 
+ * TODO : 予約投稿するつもりで未アップロードの新規ページも対象に入ってしまう
  */
 
 const template = fs.readFileSync(constants.sitemap.src, 'utf-8');
