@@ -67,7 +67,7 @@ path:
 - [LibreELEC で地デジを楽しむために Mirakurun と EPGStation を一発で動かす](https://mzyy94.com/blog/2020/08/18/libreelec-mirakurun-epgstation/)
 - [自宅録画環境2020 Raspberry Pi 4](https://blog.kksg.net/posts/raspi4-recorder/)
   - [Raspberry Pi 4 で構築する録画マシン](https://medium.com/chinachu/c98v-raspberry-pi-4-49c9692f5c09)
-- [Raspberry Pi 4 で地上波録画サーバーの作り方。安定運用のコツなど](https://www.cleartex.net/entry/2020/01/22/raspberrypi4-recoder)
+- [Raspberry Pi 4 で地上波録画サーバーの作り方安定運用のコツなど](https://www.cleartex.net/entry/2020/01/22/raspberrypi4-recoder)
 - [ラズパイとWebカメラで赤ちゃんに優しいベビーモニターを作る](https://qiita.com/osamasao/items/0638ec0050cf2e15e71d)
 
 
