@@ -4,6 +4,7 @@ const path = require('path');
 const browserSync = require('browser-sync').create();
 
 const constants = require('../lib/constants');
+const isExist = require('../lib/is-exist');
 const buildCss = require('../lib/build-css');
 const buildHtml = require('../lib/build-html');
 const buildMarkdown = require('../lib/build-markdown');
@@ -18,6 +19,18 @@ browserSync.init({
   port: 3000,
   watch: true,  // `./dist/` ディレクトリの変更時に自動リロードする
   open: false,  // ブラウザを開かない
+  middleware: [
+    // 勝手に `/path/to/file.html` へのリンクを `/path/to/file/` でアクセスしようとしてエラーになりやがるので置換する
+    (req, _res, next) => {
+      if(isExist(`${constants.dist}${req.url}index.html`)) {
+        req.url = `${req.url}index.html`;
+      }
+      else if(isExist(`${constants.dist}${req.url.replace((/\/$/u), '.html')}`)) {
+        req.url = `${req.url.replace((/\/$/u), '.html')}`;
+      }
+      next();
+    }
+  ],
   files: [  // 変更検知時の処理を定義する
     {
       match: [`${constants.pages.src}/**/*`],

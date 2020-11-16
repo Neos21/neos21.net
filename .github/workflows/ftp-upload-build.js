@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 
 const constants = require('../../lib/constants');
+const jstNow = require('../../lib/jst-now');
 const isNotFuture = require('../../lib/is-not-future');
 const buildHtml = require('../../lib/build-html');
 const buildMarkdown = require('../../lib/build-markdown');
@@ -10,6 +11,8 @@ const copyFile = require('../../lib/copy-file');
 /*!
  * アップロード対象のファイルをビルドする
  */
+
+console.log(`JST Now : ${jstNow.jstCurrentYear}-${jstNow.zeroPadJstCurrentMonth}-${jstNow.zeroPadJstCurrentDate} ${jstNow.zeroPadJstCurrentHour}`);
 
 // 前 Step で JSON ファイルに書き出しておいた変更ファイル一覧を取得する
 // ファイルパスは `'src/pages/index.html'` のようにプロジェクトルートからの表記になっている
