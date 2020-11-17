@@ -6,21 +6,22 @@ const listDirectories = require('../lib/list-directories');
 const isExist = require('../lib/is-exist');
 
 /*!
- * `./src/pages/blog/` 配下に年月のディレクトリがあるのに `index.md` がなければ作る
+ * `src/pages/blog/` 配下に年月のディレクトリがあるのに `index.md` がなければ作る
  */
 
-const templateYearIndex  = fs.readFileSync('./src/templates/blog-year-index.md' , 'utf-8');
-const templateMonthIndex = fs.readFileSync('./src/templates/blog-month-index.md', 'utf-8');
+const templateYearIndex  = fs.readFileSync(`${constants.src}/templates/blog-year-index.md` , 'utf-8');
+const templateMonthIndex = fs.readFileSync(`${constants.src}/templates/blog-month-index.md`, 'utf-8');
 
 listDirectories(`${constants.pages.src}/blog`).forEach(directoryPath => {
-  if(directoryPath.match((/([0-9]{4})$/u))) {  // 年
+  // 年
+  if(directoryPath.match((/([0-9]{4})$/u))) {
     const yearIndexFilePath = path.resolve(directoryPath, './index.md');
     if(!isExist(yearIndexFilePath)) {
       const match = directoryPath.match((/([0-9]{4})$/u));
       const year = match[1];
       const output = templateYearIndex.replace((/YYYY/gu), year);
       fs.writeFileSync(yearIndexFilePath, output, 'utf-8');
-      console.log(`Write Year [${yearIndexFilePath}]`);
+      console.log(`Write Year : [${yearIndexFilePath}]`);
     }
     return;
   }
@@ -33,12 +34,12 @@ listDirectories(`${constants.pages.src}/blog`).forEach(directoryPath => {
       const month = match[2];
       const output = templateMonthIndex.replace((/YYYY/gu), year).replace((/MM/gu), month);
       fs.writeFileSync(monthIndexFilePath, output, 'utf-8');
-      console.log(`Write Month [${monthIndexFilePath}]`);
+      console.log(`Write Month : [${monthIndexFilePath}]`);
     }
     return;
   }
   
-  console.log(`Unknown Path [${directoryPath}]`);
+  console.log(`Unknown Path : [${directoryPath}]`);
 });
 
 console.log('Create Blog Indexes : Succeeded');

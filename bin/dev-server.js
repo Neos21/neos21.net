@@ -17,7 +17,7 @@ const copyFile = require('../lib/copy-file');
 browserSync.init({
   server: constants.dist,
   port: 3000,
-  watch: true,  // `./dist/` ディレクトリの変更時に自動リロードする
+  watch: true,  // `dist/` ディレクトリの変更時に自動リロードする
   open: false,  // ブラウザを開かない
   middleware: [
     // 勝手に `/path/to/file.html` へのリンクを `/path/to/file/` でアクセスしようとしてエラーになりやがるので置換する
@@ -38,72 +38,95 @@ browserSync.init({
       // sourdePath : ex. `src/pages/index.html`
       fn: (event, sourceFilePath) => {
         if(event === 'addDir') return;  // Do Nothing
-        if(event === 'unlink') {
-          const distFilePath = sourceFilePath.replace(constants.pages.src, constants.pages.dist).replace('.md', '.html');
-          try {
-            fs.unlinkSync(distFilePath);
-          }
-          catch(error) {
-            console.warn(`Failed To Remove File [${distFilePath}]`, error);
-          }
-          return;
-        }
-        if(event === 'unlinkDir') {
-          const distDirectoryPath = sourceFilePath.replace(constants.pages.src, constants.pages.dist);
-          try {
-            fs.rmdirSync(distDirectoryPath, { recursive: true });
-          }
-          catch(error) {
-            console.warn(`Failed To Remove Directory [${distFilePath}]`, error);
-          }
-          return;
-        }
+        if(event === 'unlink') return unlinkFunc(sourceFilePath);
+        if(event === 'unlinkDir') return unlinkDirFunc(sourceFilePath);
         
         // 以降 `add` or `change` のみ
+        
         if(sourceFilePath.endsWith('.html')) {
-          buildHtml(sourceFilePath);
-          return;
+          console.log(`Build HTML : [${sourceFilePath}]`);
+          return buildHtml(sourceFilePath);
         }
         
         if(sourceFilePath.endsWith('.md')) {
+          console.log(`Build Markdown : [${sourceFilePath}]`);
           buildMarkdown(sourceFilePath);
-          
-          if(sourceFilePath.match((/\/[0-9]{4}\/[0-9]{2}\//u))) {
-            const monthPath = sourceFilePath.replace((/\/([0-9]{4})\/([0-9]{2})\/.*/u), '/$1/$2/index.md');
-            console.log(`Build Blog Month Index [${monthPath}]`);
-            buildMarkdown(monthPath);
-            
-            const yearPath = sourceFilePath.replace((/\/([0-9]{4})\/.*/u), '/$1/index.md');
-            console.log(`Build Blog Year Index [${yearPath}]`);
-            buildMarkdown(yearPath);
-            
-            const blogIndexPath = sourceFilePath.replace((/\/([0-9]{4})\/.*/u), '/index.md');
-            console.log(`Build Blog Index [${blogIndexPath}]`);
-            buildMarkdown(blogIndexPath);
-            
-            const indexPath = sourceFilePath.replace((/\/blog\/.*/u), '/index.html');
-            console.log(`Build Index HTML [${indexPath}]`);
-            buildHtml(indexPath);
-          }
+          buildForBlog(sourceFilePath);  // 必要に応じて Index ページもビルドする
           return;
         }
         
+        // ビルド不要なファイルはコピーのみ
         const distFilePath = sourceFilePath.replace(constants.pages.src, constants.pages.dist);
-        copyFile(sourceFilePath, distFilePath);  // ビルド不要なファイルはコピーのみ
+        copyFile(sourceFilePath, distFilePath);
       }
     },
     {
       match: [`${path.dirname(constants.styles.src)}/**/*`],
-      fn: (_event, _sourcePath) => {
+      fn: (event, sourceFilePath) => {
+        console.log(`Build CSS : [${event}] [${sourceFilePath}]`)
         buildCss();
       }
     },
     {
       match: [constants.templates.src],
-      fn: (_event, _sourcePath) => {
-        // FIXME : テンプレートファイルを更新時は全量ビルドが必要になるが、うまくファイル更新されないので諦める
-        console.warn('WARNING : Template Changes Does Not Supported, So Do Nothing. Please Build All Manually');
+      fn: (event, sourceFilePath) => {
+        // テンプレートファイルを更新時は全量ビルドが必要になるが、うまくファイル更新されないので諦める
+        console.warn(`Warning : Template Changes Does Not Supported, So Do Nothing. Please Build All Manually … [${event}] [${sourceFilePath}]`);
       }
     }
   ]
 });
+
+
+// ================================================================================
+
+
+/**
+ * ファイルを削除する
+ * 
+ * @param {string} sourceFilePath 変更があったファイルパス
+ */
+function unlinkFunc(sourceFilePath) {
+  const distFilePath = sourceFilePath.replace(constants.pages.src, constants.pages.dist).replace('.md', '.html');
+  try {
+    fs.unlinkSync(distFilePath);
+    console.log(`Remove File : [${distFilePath}]`);
+  }
+  catch(error) {
+    console.warn(`Failed To Remove File [${distFilePath}]`, error);
+  }
+}
+
+/**
+ * ディレクトリを削除する
+ * 
+ * @param {string} sourceFilePath 変更があったディレクトリパス
+ */
+function unlinkDirFunc(sourceFilePath) {
+  const distDirectoryPath = sourceFilePath.replace(constants.pages.src, constants.pages.dist);
+  try {
+    fs.rmdirSync(distDirectoryPath, { recursive: true });
+    console.log(`Remove Directory : [${distDirectoryPath}]`);
+  }
+  catch(error) {
+    console.warn(`Failed To Remove Directory [${distFilePath}]`, error);
+  }
+}
+
+/**
+ * `/blog/YYYY/MM/DD-00.md` ファイルの更新時は `index.md` も更新する
+ * 
+ * @param {string} sourceFilePath 変更があったファイルパス
+ */
+function buildForBlog(sourceFilePath) {
+  const match = sourceFilePath.match((/\/blog\/([0-9]{4})\/([0-9]{2})\/[0-9]{2}-[0-9]{2}\.md/u));
+  if(!match) return;
+  
+  console.log(`Build Index Pages For Blog`);
+  const year  = match[1];
+  const month = match[2];
+  buildMarkdown(`${constants.pages.src}/blog/${year}/${month}/index.md`);
+  buildMarkdown(`${constants.pages.src}/blog/${year}/index.md`);
+  buildMarkdown(`${constants.pages.src}/blog/index.md`);
+  buildHtml(`${constants.pages.src}/index.html`);
+}

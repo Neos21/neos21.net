@@ -11,18 +11,25 @@ const copyFile = require('../lib/copy-file');
  * ファイル拡張子に基づき、ビルドもしくはコピーを行う
  */
 
-const sourceFilePaths = process.argv.slice(2);
-if(!sourceFilePaths.length) return console.log('Please Select Source File(s)');
+const argFilePaths = process.argv.slice(2);
+if(!argFilePaths.length) return console.log('Please Select Source File(s)');
+
+// 重複を除外するために Set を使う
+const sourceFilePathsSet = new Set(argFilePaths);
 
 // 更新を知らせるためのファイルを追加する
-sourceFilePaths.push(`${constants.pages.src}/index.html`);
-sourceFilePaths.push(`${constants.pages.src}/about/new.html`);
-sourceFilePaths.push(`${constants.pages.src}/blog/index.md`);
-sourceFilePaths.push(`${constants.pages.src}/blog/${jstNow.jstCurrentYear}/index.md`);
-sourceFilePaths.push(`${constants.pages.src}/blog/${jstNow.jstCurrentYear}/${jstNow.zeroPadJstCurrentMonth}/index.md`);
+sourceFilePathsSet.add(`${constants.pages.src}/index.html`);
+sourceFilePathsSet.add(`${constants.pages.src}/about/new.html`);
+sourceFilePathsSet.add(`${constants.pages.src}/blog/index.md`);
+sourceFilePathsSet.add(`${constants.pages.src}/blog/${jstNow.jstCurrentYear}/index.md`);
+sourceFilePathsSet.add(`${constants.pages.src}/blog/${jstNow.jstCurrentYear}/${jstNow.zeroPadJstCurrentMonth}/index.md`);
+
+const sourceFilePaths = Array.from(sourceFilePathsSet);
 
 sourceFilePaths.forEach(sourceFilePath => {
-  if(!sourceFilePath.includes(constants.src)) return console.warn(`Ignore [${sourceFilePath}]`);
+  if(!sourceFilePath.includes(constants.src)) {
+    return console.warn(`Ignore : [${sourceFilePath}]`);
+  }
   
   if(sourceFilePath.endsWith('.css')) {
     console.log(`CSS : [${sourceFilePath}]`);

@@ -1,41 +1,45 @@
-const childProcess = require('child_process');
+const fs = require('fs');
 const path = require('path');
 
 const constants = require('../../lib/constants');
 const jstNow = require('../../lib/jst-now');
+const listFiles = require('../../lib/list-files');
 const buildHtml = require('../../lib/build-html');
 const buildMarkdown = require('../../lib/build-markdown');
 const copyFile = require('../../lib/copy-file');
+const detectDirectoryPathsFromFilePaths = require('../../lib/detect-directory-paths-from-file-paths');
 const ftp = require('../../lib/ftp');
 
 /*!
- * 今日更新されるファイルをビルドしてアップロードする
+ * `last-modified` が今日日付のファイルをビルドしてアップロードする
  * 
- * NOTE : このスクリプトは `./src/documents/` は対象外。CSS の変更も検知しない
+ * - 対象外
+ *  - CSS の変更
+ *  - `src/documents/` 配下
+ *  - `src/pages/` 配下、ブログ以外の画像ファイルなど (新規ファイルなのか特定ができないため)
+ * - ブログと静的ページの予約投稿に対応するのみ
  */
 
+// 最終更新日が今日に設定されているファイルを取得する
 const today = `${jstNow.jstCurrentYear}-${jstNow.zeroPadJstCurrentMonth}-${jstNow.zeroPadJstCurrentDate}`;
-console.log(`JST Now : ${today} ${jstNow.zeroPadJstCurrentHour}`);
+const todaySourceHtmlMdFilePaths = listFiles(constants.pages.src)
+  .filter(sourceFilePath => ['.html', '.md'].includes(path.extname(sourceFilePath)))
+  .filter(sourceFilePath => {
+    const text = fs.readFileSync(sourceFilePath, 'utf-8');
+    return text.split('\n').find(line => line.match(new RegExp(`^last-modified(\\s*): ${today}`, 'u')));
+  });
+// ブログの画像ファイルなどを取得する
+const todaySourceAssetFilePaths = listFiles(constants.pages.src)
+  .filter(sourceFilePath => !['.html', '.md'].includes(path.extname(sourceFilePath)))
+  .filter(sourceFilePath => {
+    const match = sourceFilePath.match((/\/blog\/([0-9]{4})\/([0-9]{2})\/([0-9]{2})/u));
+    if(!match) return false;  // マッチしなかった資材はアップロード対象にしない
+    const date = `${match[1]}-${match[2]}-${match[3]}`;
+    return date === today;
+  });
+const todaySourceFilePaths = [...todaySourceHtmlMdFilePaths, ...todaySourceAssetFilePaths];
 
-let todaySourceFilePathsStr = null;
-try {
-  // `./src/pages/` 配下の最終更新日が今日のファイルを抽出する
-  todaySourceFilePathsStr = childProcess.execSync(`grep -r -l -E 'last-modified(\\s*): ${today}' ${constants.pages.src}`).toString();
-}
-catch(error) {
-  console.error('Error ---\n', error, '\nError ---');
-  console.error('Maybe There Was No Assets Today. Aborted');
-  return;
-}
-
-const todaySourceFilePaths = todaySourceFilePathsStr.split('\n').filter(filePath => filePath);
-
-// 何らかの理由で不正値になっていたらココで終了する
-if(todaySourceFilePaths == null || !todaySourceFilePaths.length) {
-  console.error('Invalid Today Source Files :\n', todaySourceFilePaths);
-  return process.exit(1);
-}
-
+if(!todaySourceFilePaths.length) return console.log('Maybe There Was No Assets Today. Aborted');
 console.log('Today Source Files :\n', todaySourceFilePaths);
 
 // 重複を除去するため一旦 Set を使う
@@ -47,7 +51,7 @@ buildHtml(`${constants.pages.src}/about/new.html`);
 uploadFilesSet.add(`${constants.pages.dist}/index.html`);
 uploadFilesSet.add(`${constants.pages.dist}/about/new.html`);
 uploadFilesSet.add(constants.feeds.dist);
-//uploadFilesSet.add(constants.sitemap.dist);  // FIXME : サイトマップは予約投稿ファイルを除外しきれていないので一旦対象外とする
+uploadFilesSet.add(constants.sitemap.dist);
 
 // ビルドしてアップロード対象にする
 todaySourceFilePaths.forEach(sourceFilePath => {
@@ -77,26 +81,17 @@ todaySourceFilePaths.forEach(sourceFilePath => {
   uploadFilesSet.add(distFilePath);
 });
 
-// アップロード対象ファイルのディレクトリの配列を作る
-const uploadDirectoriesSet = new Set();
-uploadFilesSet.forEach(uploadFilePath => {
-  let directoryPath = uploadFilePath;
-  while(directoryPath !== constants.dist) {
-    directoryPath = path.dirname(directoryPath);
-    if(directoryPath === constants.dist) break;
-    uploadDirectoriesSet.add(directoryPath);
-  }
-});
-
 // アップロード対象のディレクトリパス・ファイルパスの配列を作る
-const uploadFiles = [...Array.from(uploadDirectoriesSet).sort(), ...Array.from(uploadFilesSet).sort()];
+const filePaths = Array.from(uploadFilesSet).sort();
+const directoryPaths = detectDirectoryPathsFromFilePaths(filePaths);
+const uploadFilePaths = [...directoryPaths, ...filePaths];
 
 // アップロード対象のファイルを FTP アップロードする
 (async () => {
   const ftpClient = ftp.create();
   await ftp.connect(ftpClient);
-  await ftp.upload(ftpClient, uploadFiles)
+  await ftp.upload(ftpClient, uploadFilePaths)
     .then(result => console.log(result))
     .catch(error => console.error(error));
-  console.log('Daily Upload Finished');
+  console.log('Daily Upload : Succeeded');
 })();

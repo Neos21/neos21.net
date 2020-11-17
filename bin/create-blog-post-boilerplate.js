@@ -13,13 +13,13 @@ const inputDate = process.argv[2];
 if(!inputDate) return console.log('Please Input Date : ex. YYYY-MM-DD');
 
 const match = inputDate.match((/^([0-9]{4})-([0-9]{2})-([0-9]{2})$/u));
-if(!match) return console.log(`Invalid Date [${inputDate}]`);
+if(!match) return console.log(`Invalid Date : [${inputDate}]`);
 
 const year  = match[1];
 const month = match[2];
 const date  = match[3];
 
-const template = fs.readFileSync('./src/templates/blog-post.md', 'utf-8');
+const template = fs.readFileSync(`${constants.src}/templates/blog-post.md`, 'utf-8');
 
 for(let num = 1; num < 100; num++) {
   const padNum = `0${num}`.slice(-2);
@@ -29,7 +29,7 @@ for(let num = 1; num < 100; num++) {
   if(!isExist(distFilePath)) {
     const output = template.replace((/YYYY/gu), year).replace((/MM/gu), month).replace((/DD/gu), date);
     fs.writeFileSync(distFilePath, output, 'utf-8');
-    console.log(`Write [${distFilePath}]`);
+    console.log(`Write : [${distFilePath}]`);
     break;
   }
   
