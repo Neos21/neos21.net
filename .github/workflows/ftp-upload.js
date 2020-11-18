@@ -38,11 +38,14 @@ const uploadFilesSet = new Set();
 
 // CSS はビルド済・変更がある場合
 if(changedFiles.some(sourceFilePath => sourceFilePath.includes(constants.styles.src))) {
+  console.log('Update : CSS');
   uploadFilesSet.add(constants.styles.dist);
 }
 
 // News YAML に変更がある場合 : News を使用するページをビルドし追加する・Atom フィードはビルド済なので対象追加のみ
+// 未来日の更新履歴を追加しただけの場合も取り込まれてしまうがやむなし
 if(changedFiles.some(sourceFilePath => sourceFilePath.includes(constants.news.src))) {
+  console.log('Update : News YAML … /index.html・/about/new.html・/feeds.xml');
   buildHtml(`${constants.pages.src}/index.html`);
   buildHtml(`${constants.pages.src}/about/new.html`);
   uploadFilesSet.add(`${constants.pages.dist}/index.html`);
@@ -54,6 +57,7 @@ if(changedFiles.some(sourceFilePath => sourceFilePath.includes(constants.news.sr
 changedFiles
   .filter(sourceFilePath => sourceFilePath.includes(constants.documents.src))
   .forEach(sourceFilePath => {
+    console.log(`Update : Documents … [${sourceFilePath}]`);
     const distFilePath = sourceFilePath.replace(constants.documents.src, constants.documents.dist);
     copyFile(sourceFilePath, distFilePath);
     uploadFilesSet.add(distFilePath);
@@ -74,6 +78,7 @@ changedFiles
     return isNotFutureFile;
   })
   .forEach(sourceFilePath => {
+    console.log(`Update : Pages Asset … [${sourceFilePath}]`);
     const distFilePath = sourceFilePath.replace(constants.pages.src, constants.pages.dist);
     copyFile(sourceFilePath, distFilePath);
     uploadFilesSet.add(distFilePath);
@@ -108,9 +113,11 @@ changedFiles
   .forEach(sourceFilePath => {
     const distFilePath = sourceFilePath.replace(constants.pages.src, constants.pages.dist).replace('.md', '.html');
     if(sourceFilePath.endsWith('.html')) {
+      console.log(`Update : HTML … [${sourceFilePath}]`);
       buildHtml(sourceFilePath);
     }
     else {
+      console.log(`Update : Markdown … [${sourceFilePath}]`);
       buildMarkdown(sourceFilePath);
     
       // `/blog/YYYY/MM/DD-00.md` ファイルの更新時は `index.md` と Atom フィードもアップロード対象にする
@@ -118,12 +125,15 @@ changedFiles
       if(match) {
         const year  = match[1];
         const month = match[2];
+        console.log(`Update : Markdown Blog Indexes … [${sourceFilePath}] [${year}-${month}]`);
         buildMarkdown(`${constants.pages.src}/blog/${year}/${month}/index.md`);
         buildMarkdown(`${constants.pages.src}/blog/${year}/index.md`);
         buildMarkdown(`${constants.pages.src}/blog/index.md`);
+        buildHtml(`${constants.pages.src}/index.html`);
         uploadFilesSet.add(`${constants.pages.dist}/blog/${year}/${month}/index.html`);
         uploadFilesSet.add(`${constants.pages.dist}/blog/${year}/index.html`);
         uploadFilesSet.add(`${constants.pages.dist}/blog/index.html`);
+        uploadFilesSet.add(`${constants.pages.dist}/index.html`);
         uploadFilesSet.add(constants.feeds.dist);
       }
     }
