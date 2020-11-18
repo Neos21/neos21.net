@@ -70,7 +70,7 @@ changedFiles
     const blogMonth = Number(match[2]);
     const blogDate  = Number(match[3]);
     const isNotFutureFile = isNotFuture(blogYear, blogMonth, blogDate);
-    if(!isNotFutureFile) console.log(`Filtered : Future Blog Asset … [${filePath}]`);
+    if(!isNotFutureFile) console.log(`Filtered : Future Blog Asset … [${sourceFilePath}]`);
     return isNotFutureFile;
   })
   .forEach(sourceFilePath => {
@@ -91,7 +91,7 @@ changedFiles
     const lastModifiedMonth = Number(lastModifiedMatch[3]);
     const lastModifiedDate  = Number(lastModifiedMatch[4]);
     const isNotFutureFile   = isNotFuture(lastModifiedYear, lastModifiedMonth, lastModifiedDate);
-    if(!isNotFutureFile) console.log(`Filtered : Future File … [${filePath}]`);
+    if(!isNotFutureFile) console.log(`Filtered : Future File … [${sourceFilePath}]`);
     return isNotFutureFile;
   })
   .filter(sourceFilePath => {
