@@ -1,7 +1,7 @@
 ---
 title        : Tech
 created      : 2020-11-23
-last-modified: 2020-11-23
+last-modified: 2020-11-24
 path:
   - /index.html Neo's World
 ---
@@ -9,6 +9,10 @@ path:
 技術関連のネタを書きます。日付は初版公開日です。
 
 <dl>
+  <dt><time>2020-11-24</time> : <a href="windows-mac-environment.html">Windows と Mac で開発環境を揃える Tips 集</a></dt>
+  <dd>
+    <p>Windows と Mac でなるべく環境差異をなくすための手段を紹介します。</p>
+  </dd>
   <dt><time>2020-11-23</time> : <a href="xrea-value-domain-ssl.html">XREA サーバに Value-Domain で取得した独自ドメインを設定し SSL 化する</a></dt>
   <dd>
     <p>このサイトは XREA でホスティングしているので、XREA にまつわる専門的な情報を解説します。</p>
