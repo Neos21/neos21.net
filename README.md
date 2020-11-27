@@ -61,7 +61,7 @@ HTML・Markdown ファイルの先頭には YAML 形式の Front Matter が記�
   - HTML の ToC が `{{ contents }}` の先頭に付いてしまうため、ToC の前段に書きたい内容があれば書けるようにしてある
   - Markdown の場合は `## 目次` 見出しの位置に自由に挿入できるため利用機会がないが、記述したい場合は Markdown ではなく HTML で書くこと
 - `{{ contents }}`
-  - 「ブロック・プレースホルダ」 : `main#main` の直下、`aside.adsense` に挟まれた位置に配置してある
+  - 「ブロック・プレースホルダ」 : `main#main` の直下に配置してある
   - マッピング : HTML・Markdown の先頭にある Front Matter 部分を除去した残りの部分
   - HTML・Markdown ともに、Slug、ToC、Prism.js、見出しリンクを付与し、HTML 形式で挿入される
   - __HTML の場合、`toc` プロパティに `false` を指定してあると ToC を配置しないようにできる__
