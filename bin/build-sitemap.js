@@ -14,6 +14,12 @@ const pages = listFiles(constants.pages.src)
   .filter(filePath => ['.html', '.md'].includes(path.extname(filePath)))
   .filter(filePath => !filePath.includes('403.html') && !filePath.includes('404.html') && !filePath.includes('500.html'))
   .filter(filePath => {
+    // ファイルパスにアンダースコアを含んでいれば除外する
+    const isIncludesUnderscore = filePath.includes('_');
+    if(isIncludesUnderscore) console.log(`Filtered : File Name With Underscore … [${filePath}]`);
+    return !isIncludesUnderscore;
+  })
+  .filter(filePath => {
     // `created` が未来日のファイルを除外する (コレで未来日のブログも除外される)
     // 作成日が未来日なファイルは公開しておらずサイトマップには載せられないため
     // (ココだけ `last-modified` ではなく `created` で判定する必要がある)

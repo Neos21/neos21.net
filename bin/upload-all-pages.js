@@ -17,6 +17,12 @@ const ftp = require('../lib/ftp');
 const targetFilePaths = listFiles(constants.dist)
   .filter(filePath => ['.html', '.css', '.xml'].includes(path.extname(filePath)))  // HTML・CSS・XML (フィードとサイトマップ) を対象にする
   .filter(filePath => {
+    // ファイルパスにアンダースコアを含んでいれば除外する
+    const isIncludesUnderscore = filePath.includes('_');
+    if(isIncludesUnderscore) console.log(`Filtered : File Name With Underscore … [${filePath}]`);
+    return !isIncludesUnderscore;
+  })
+  .filter(filePath => {
     // HTML ファイル以外、`dist/documents/` 配下の HTML ファイルは素通しする
     if(!filePath.endsWith('.html') || filePath.includes(constants.documents.dist)) return true;
     

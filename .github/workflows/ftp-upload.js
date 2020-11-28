@@ -67,6 +67,12 @@ changedFiles
 changedFiles
   .filter(sourceFilePath => sourceFilePath.includes(constants.pages.src) && !['.html', '.md'].includes(path.extname(sourceFilePath)))
   .filter(sourceFilePath => {
+    // ファイルパスにアンダースコアを含んでいればアップロード対象にしない
+    const isIncludesUnderscore = sourceFilePath.includes('_');
+    if(isIncludesUnderscore) console.log(`Filtered : Asset File Name With Underscore … [${sourceFilePath}]`);
+    return !isIncludesUnderscore;
+  })
+  .filter(sourceFilePath => {
     // 未来日のブログ関連のファイルは除外する
     const match = sourceFilePath.match((/\/blog\/([0-9]{4})\/([0-9]{2})\/([0-9]{2})/u));
     if(!match) return true;  // マッチしなかったファイルはアップロード対象にする
@@ -87,6 +93,12 @@ changedFiles
 // `src/pages/` 配下の HTML・Markdown ファイルに変更がある場合 : 最終更新日・ブログのファイルパスが未来日のモノを除外する
 changedFiles
   .filter(sourceFilePath => sourceFilePath.includes(constants.pages.src) && ['.html', '.md'].includes(path.extname(sourceFilePath)))
+  .filter(sourceFilePath => {
+    // ファイルパスにアンダースコアを含んでいればアップロード対象にしない
+    const isIncludesUnderscore = sourceFilePath.includes('_');
+    if(isIncludesUnderscore) console.log(`Filtered : File Name With Underscore … [${sourceFilePath}]`);
+    return !isIncludesUnderscore;
+  })
   .filter(sourceFilePath => {
     // 最終更新日が未来日のファイルを除外する (コレで未来日のブログも除外される)
     const text = fs.readFileSync(sourceFilePath, 'utf-8');

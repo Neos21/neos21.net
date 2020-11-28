@@ -21,4 +21,32 @@ path:
   <dd>
     <p>このサイトを構築するために使用している技術を紹介します。</p>
   </dd>
+  <dt><time>2020-11-23</time> : <a href="dev-tips/index.html">開発 Tips</a></dt>
+  <dd>
+    <p>プログラミング、コーディング、システム開発プロセス全般、プロジェクトマネジメントに関する Tips。</p>
+    <ul>
+      <li><a href="dev-tips/4-bases.html">プロジェクト管理における4つの「ベース」</a></li>
+      <li><a href="dev-tips/principles.html">プログラミング・プロジェクトマネジメントに関する著名な原理・原則の一覧</a></li>
+    </ul>
+  </dd>
+  <dt><time>2020-11-21</time> : <a href="unix-like-commands-for-windows.html">Unix Like Commands For Windows</a></dt>
+  <dd>
+    <p>Bash コマンド名と、それを Windows で再現する方法をまとめた一覧表。</p>
+  </dd>
+  <dt><time>2020-11-21</time> : <a href="scripts-comparison.html">Scripts Comparison</a></dt>
+  <dd>
+    <p>「あの処理はあのスクリプト言語でどう書くの？」のまとめ。</p>
+  </dd>
+  <dt><time>2020-11-16</time> : <a href="excel-best-practices.html">Excel ドキュメントを書く時の定石集</a></dt>
+  <dd>
+    <p>SE が良い Excel ドキュメントを書くための定石。</p>
+  </dd>
+  <dt><time>2020-11-16</time> : <a href="documents-best-practices.html">ドキュメントを書く時の定石集</a></dt>
+  <dd>
+    <p>SE が良いドキュメントを書くための定石。</p>
+  </dd>
+  <dt><time>2020-11-16</time> : <a href="bookmarks.html">ブックマーク</a></dt>
+  <dd>
+    <p>便利なサイトへのリンク集。</p>
+  </dd>
 </dl>

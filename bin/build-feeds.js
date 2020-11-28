@@ -44,7 +44,8 @@ function getLatestNews() {
   const rawNews = fs.readFileSync(constants.news.src, 'utf-8');
   const allNews = yaml.parse(rawNews);
   return allNews
-    .filter(newsItem => {  // 未来日のデータを除外する
+    .filter(newsItem => {
+      // 未来日のデータを除外する
       const match = newsItem.date.match((/^([0-9]{4})-([0-9]{2})-([0-9]{2})/u));
       const newsYear  = Number(match[1]);
       const newsMonth = Number(match[2]);
@@ -69,7 +70,14 @@ function getLatestNews() {
  */
 function getLatestBlogPosts() {
   return listFiles(`${constants.pages.src}/blog`)
-    .filter(filePath => {  // 未来日でない記事ファイルのみに絞り込む
+    .filter(filePath => {
+      // ファイルパスにアンダースコアを含んでいれば除外する
+      const isIncludesUnderscore = filePath.includes('_');
+      if(isIncludesUnderscore) console.log(`Filtered : File Name With Underscore … [${filePath}]`);
+      return !isIncludesUnderscore;
+    })
+    .filter(filePath => {
+      // 未来日でない記事ファイルのみに絞り込む
       const match = filePath.match((/\/blog\/([0-9]{4})\/([0-9]{2})\/([0-9]{2})-[0-9]{2}\.md/u));
       if(!match) return false;  // 記事ファイル以外は除外する
       const blogYear  = Number(match[1]);
