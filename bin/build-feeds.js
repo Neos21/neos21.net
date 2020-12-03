@@ -50,9 +50,7 @@ function getLatestNews() {
       const newsYear  = Number(match[1]);
       const newsMonth = Number(match[2]);
       const newsDate  = Number(match[3]);
-      const isNotFutureNews = isNotFuture(newsYear, newsMonth, newsDate);
-      if(!isNotFutureNews) console.log(`Filtered : Future News … [${newsItem.date}]`);
-      return isNotFutureNews;
+      return isNotFuture(newsYear, newsMonth, newsDate);
     })
     .slice(0, constants.feeds.feedsCount)  // 最新の指定件数のみ取得する
     .map(newsItem => ({
@@ -70,12 +68,7 @@ function getLatestNews() {
  */
 function getLatestBlogPosts() {
   return listFiles(`${constants.pages.src}/blog`)
-    .filter(filePath => {
-      // ファイルパスにアンダースコアを含んでいれば除外する
-      const isIncludesUnderscore = filePath.includes('_');
-      if(isIncludesUnderscore) console.log(`Filtered : File Name With Underscore … [${filePath}]`);
-      return !isIncludesUnderscore;
-    })
+    .filter(filePath => !filePath.includes('_'))  // ファイルパスにアンダースコアを含んでいれば除外する
     .filter(filePath => {
       // 未来日でない記事ファイルのみに絞り込む
       const match = filePath.match((/\/blog\/([0-9]{4})\/([0-9]{2})\/([0-9]{2})-[0-9]{2}\.md/u));
@@ -83,9 +76,7 @@ function getLatestBlogPosts() {
       const blogYear  = Number(match[1]);
       const blogMonth = Number(match[2]);
       const blogDate  = Number(match[3]);
-      const isNotFutureBlogPost = isNotFuture(blogYear, blogMonth, blogDate);
-      if(!isNotFutureBlogPost) console.log(`Filtered : Future Blog Post … [${filePath}]`);
-      return isNotFutureBlogPost;
+      return isNotFuture(blogYear, blogMonth, blogDate);
     })
     .sort()
     .reverse()  // 新しい順にする

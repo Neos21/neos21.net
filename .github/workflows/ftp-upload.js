@@ -66,12 +66,7 @@ changedFiles
 // `src/pages/` 配下の HTML・Markdown 以外のファイルに変更がある場合 : 未来日のブログに関する画像などのみ除外する
 changedFiles
   .filter(sourceFilePath => sourceFilePath.includes(constants.pages.src) && !['.html', '.md'].includes(path.extname(sourceFilePath)))
-  .filter(sourceFilePath => {
-    // ファイルパスにアンダースコアを含んでいればアップロード対象にしない
-    const isIncludesUnderscore = sourceFilePath.includes('_');
-    if(isIncludesUnderscore) console.log(`Filtered : Asset File Name With Underscore … [${sourceFilePath}]`);
-    return !isIncludesUnderscore;
-  })
+  .filter(sourceFilePath => !sourceFilePath.includes('_'))  // ファイルパスにアンダースコアを含んでいればアップロード対象にしない
   .filter(sourceFilePath => {
     // 未来日のブログ関連のファイルは除外する
     const match = sourceFilePath.match((/\/blog\/([0-9]{4})\/([0-9]{2})\/([0-9]{2})/u));
@@ -79,9 +74,7 @@ changedFiles
     const blogYear  = Number(match[1]);
     const blogMonth = Number(match[2]);
     const blogDate  = Number(match[3]);
-    const isNotFutureFile = isNotFuture(blogYear, blogMonth, blogDate);
-    if(!isNotFutureFile) console.log(`Filtered : Future Blog Asset … [${sourceFilePath}]`);
-    return isNotFutureFile;
+    return isNotFuture(blogYear, blogMonth, blogDate);
   })
   .forEach(sourceFilePath => {
     console.log(`Update : Pages Asset … [${sourceFilePath}]`);
@@ -93,12 +86,7 @@ changedFiles
 // `src/pages/` 配下の HTML・Markdown ファイルに変更がある場合 : 最終更新日・ブログのファイルパスが未来日のモノを除外する
 changedFiles
   .filter(sourceFilePath => sourceFilePath.includes(constants.pages.src) && ['.html', '.md'].includes(path.extname(sourceFilePath)))
-  .filter(sourceFilePath => {
-    // ファイルパスにアンダースコアを含んでいればアップロード対象にしない
-    const isIncludesUnderscore = sourceFilePath.includes('_');
-    if(isIncludesUnderscore) console.log(`Filtered : File Name With Underscore … [${sourceFilePath}]`);
-    return !isIncludesUnderscore;
-  })
+  .filter(sourceFilePath => !sourceFilePath.includes('_'))  // ファイルパスにアンダースコアを含んでいればアップロード対象にしない
   .filter(sourceFilePath => {
     // 最終更新日が未来日のファイルを除外する (コレで未来日のブログも除外される)
     const text = fs.readFileSync(sourceFilePath, 'utf-8');
@@ -107,9 +95,7 @@ changedFiles
     const lastModifiedYear  = Number(lastModifiedMatch[2]);
     const lastModifiedMonth = Number(lastModifiedMatch[3]);
     const lastModifiedDate  = Number(lastModifiedMatch[4]);
-    const isNotFutureFile   = isNotFuture(lastModifiedYear, lastModifiedMonth, lastModifiedDate);
-    if(!isNotFutureFile) console.log(`Filtered : Future File … [${sourceFilePath}]`);
-    return isNotFutureFile;
+    return isNotFuture(lastModifiedYear, lastModifiedMonth, lastModifiedDate);
   })
   .filter(sourceFilePath => {
     // 上の処理で除外できているはずだが、念のためファイルパスでも未来日のブログ記事を除外する
@@ -118,9 +104,7 @@ changedFiles
     const blogYear  = Number(match[1]);
     const blogMonth = Number(match[2]);
     const blogDate  = Number(match[3]);
-    const isNotFutureFile = isNotFuture(blogYear, blogMonth, blogDate);
-    if(!isNotFutureFile) console.log(`Filtered : Future Blog File … [${sourceFilePath}] (Maybe Invalid Last-Modified)`);
-    return isNotFutureFile;
+    return isNotFuture(blogYear, blogMonth, blogDate);
   })
   .forEach(sourceFilePath => {
     const distFilePath = sourceFilePath.replace(constants.pages.src, constants.pages.dist).replace('.md', '.html');

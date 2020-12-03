@@ -24,12 +24,7 @@ const ftp = require('../../lib/ftp');
 const today = `${jstNow.jstCurrentYear}-${jstNow.zeroPadJstCurrentMonth}-${jstNow.zeroPadJstCurrentDate}`;
 const todaySourceHtmlMdFilePaths = listFiles(constants.pages.src)
   .filter(sourceFilePath => ['.html', '.md'].includes(path.extname(sourceFilePath)))
-  .filter(sourceFilePath => {
-    // ファイルパスにアンダースコアを含んでいればアップロード対象にしない
-    const isIncludesUnderscore = sourceFilePath.includes('_');
-    if(isIncludesUnderscore) console.log(`Filtered : File Name With Underscore … [${sourceFilePath}]`);
-    return !isIncludesUnderscore;
-  })
+  .filter(sourceFilePath => !sourceFilePath.includes('_'))  // ファイルパスにアンダースコアを含んでいればアップロード対象にしない
   .filter(sourceFilePath => {
     const text = fs.readFileSync(sourceFilePath, 'utf-8');
     return text.split('\n').find(line => line.match(new RegExp(`^last-modified(\\s*): ${today}`, 'u')));
@@ -37,12 +32,7 @@ const todaySourceHtmlMdFilePaths = listFiles(constants.pages.src)
 // ブログの画像ファイルなどを取得する
 const todaySourceAssetFilePaths = listFiles(constants.pages.src)
   .filter(sourceFilePath => !['.html', '.md'].includes(path.extname(sourceFilePath)))
-  .filter(sourceFilePath => {
-    // ファイルパスにアンダースコアを含んでいればアップロード対象にしない
-    const isIncludesUnderscore = sourceFilePath.includes('_');
-    if(isIncludesUnderscore) console.log(`Filtered : Asset File Name With Underscore … [${sourceFilePath}]`);
-    return !isIncludesUnderscore;
-  })
+  .filter(sourceFilePath => !sourceFilePath.includes('_'))  // ファイルパスにアンダースコアを含んでいればアップロード対象にしない
   .filter(sourceFilePath => {
     const match = sourceFilePath.match((/\/blog\/([0-9]{4})\/([0-9]{2})\/([0-9]{2})/u));
     if(!match) return false;  // マッチしなかった資材はアップロード対象にしない

@@ -13,12 +13,7 @@ const makeDirectory = require('../lib/make-directory');
 const pages = listFiles(constants.pages.src)
   .filter(filePath => ['.html', '.md'].includes(path.extname(filePath)))
   .filter(filePath => !filePath.includes('403.html') && !filePath.includes('404.html') && !filePath.includes('500.html'))
-  .filter(filePath => {
-    // ファイルパスにアンダースコアを含んでいれば除外する
-    const isIncludesUnderscore = filePath.includes('_');
-    if(isIncludesUnderscore) console.log(`Filtered : File Name With Underscore … [${filePath}]`);
-    return !isIncludesUnderscore;
-  })
+  .filter(filePath => !filePath.includes('_'))  // ファイルパスにアンダースコアを含んでいれば除外する
   .filter(filePath => {
     // `created` が未来日のファイルを除外する (コレで未来日のブログも除外される)
     // 作成日が未来日なファイルは公開しておらずサイトマップには載せられないため
@@ -29,9 +24,7 @@ const pages = listFiles(constants.pages.src)
     const createdYear  = Number(created[2]);
     const createdMonth = Number(created[3]);
     const createdDate  = Number(created[4]);
-    const isNotFutureFile = isNotFuture(createdYear, createdMonth, createdDate);
-    if(!isNotFutureFile) console.log(`Filtered : Future Created File … [${filePath}]`);
-    return isNotFutureFile;
+    return isNotFuture(createdYear, createdMonth, createdDate);
   })
   .filter(filePath => {
     // 上の処理で除外できているはずだが、念のためファイルパスでも未来日のブログ記事を除外する
@@ -40,9 +33,7 @@ const pages = listFiles(constants.pages.src)
     const blogYear  = Number(match[1]);
     const blogMonth = Number(match[2]);
     const blogDate  = Number(match[3]);
-    const isNotFutureFile = isNotFuture(blogYear, blogMonth, blogDate);
-    if(!isNotFutureFile) console.log(`Filtered : Future Blog File … [${filePath}] (Maybe Invalid Created)`);
-    return isNotFutureFile;
+    return isNotFuture(blogYear, blogMonth, blogDate);
   })
   .map(filePath => filePath.replace(new RegExp(`.*${constants.pages.src}`, 'u'), `${constants.protocol}${constants.host}`).replace('.md', '.html'))
   .map(filePath => `  <url><loc>${filePath}</loc></url>`)

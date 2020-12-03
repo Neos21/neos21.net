@@ -16,12 +16,7 @@ const ftp = require('../lib/ftp');
 
 const targetFilePaths = listFiles(constants.dist)
   .filter(filePath => ['.html', '.css', '.xml'].includes(path.extname(filePath)))  // HTML・CSS・XML (フィードとサイトマップ) を対象にする
-  .filter(filePath => {
-    // ファイルパスにアンダースコアを含んでいれば除外する
-    const isIncludesUnderscore = filePath.includes('_');
-    if(isIncludesUnderscore) console.log(`Filtered : File Name With Underscore … [${filePath}]`);
-    return !isIncludesUnderscore;
-  })
+  .filter(filePath => !filePath.includes('_'))  // ファイルパスにアンダースコアを含んでいれば除外する
   .filter(filePath => {
     // HTML ファイル以外、`dist/documents/` 配下の HTML ファイルは素通しする
     if(!filePath.endsWith('.html') || filePath.includes(constants.documents.dist)) return true;
@@ -33,9 +28,7 @@ const targetFilePaths = listFiles(constants.dist)
     const lastModifiedYear  = Number(lastModifiedMatch[2]);
     const lastModifiedMonth = Number(lastModifiedMatch[3]);
     const lastModifiedDate  = Number(lastModifiedMatch[4]);
-    const isNotFutureFile   = isNotFuture(lastModifiedYear, lastModifiedMonth, lastModifiedDate);
-    if(!isNotFutureFile) console.log(`Filtered : Future File … [${filePath}]`);
-    return isNotFutureFile;
+    return isNotFuture(lastModifiedYear, lastModifiedMonth, lastModifiedDate);
   })
   .filter(filePath => {
     // 上の処理で除外できているはずだが、念のためファイルパスでも未来日のブログ記事を除外する
@@ -44,9 +37,7 @@ const targetFilePaths = listFiles(constants.dist)
     const blogYear  = Number(match[1]);
     const blogMonth = Number(match[2]);
     const blogDate  = Number(match[3]);
-    const isNotFutureFile = isNotFuture(blogYear, blogMonth, blogDate);
-    if(!isNotFutureFile) console.log(`Filtered : Future Blog File … [${filePath}] (Maybe Invalid Last-Modified)`);
-    return isNotFutureFile;
+    return isNotFuture(blogYear, blogMonth, blogDate);
   })
   .map(filePath => filePath.replace(new RegExp(`.*${constants.dist}`, 'u'), constants.dist))
   .sort();  // `dist/` から始まるように調整する
