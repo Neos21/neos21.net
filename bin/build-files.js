@@ -1,5 +1,8 @@
+const fs = require('fs');
+
 const constants = require('../lib/constants');
 const jstNow = require('../lib/jst-now');
+const listFiles = require('../lib/list-files');
 const buildCss = require('../lib/build-css');
 const buildHtml = require('../lib/build-html');
 const buildMarkdown = require('../lib/build-markdown');
@@ -8,7 +11,8 @@ const copyFile = require('../lib/copy-file');
 /*!
  * 引数で指定されたファイル (1つ以上) をビルド処理する
  * 
- * ファイル拡張子に基づき、ビルドもしくはコピーを行う
+ * - ディレクトリを指定した場合は配下のファイルを再帰的に追加する
+ * - ファイル拡張子に基づき、ビルドもしくはコピーを行う
  */
 
 const argFilePaths = process.argv.slice(2);
@@ -24,12 +28,29 @@ sourceFilePathsSet.add(`${constants.pages.src}/blog/index.md`);
 sourceFilePathsSet.add(`${constants.pages.src}/blog/${jstNow.jstCurrentYear}/index.md`);
 sourceFilePathsSet.add(`${constants.pages.src}/blog/${jstNow.jstCurrentYear}/${jstNow.zeroPadJstCurrentMonth}/index.md`);
 
-const sourceFilePaths = Array.from(sourceFilePathsSet);
-
-sourceFilePaths.forEach(sourceFilePath => {
+// ディレクトリが指定されていた時に配下のファイルを追加する (ディレクトリ指定時は末尾スラッシュなし)
+const beforeSourceFilePaths = Array.from(sourceFilePathsSet);
+beforeSourceFilePaths.forEach(sourceFilePath => {
   if(!sourceFilePath.includes(constants.src)) {
     return console.warn(`Ignore : [${sourceFilePath}]`);
   }
+  
+  try {
+    const stat = fs.statSync(sourceFilePath);
+    if(stat.isDirectory()) {
+      const files = listFiles(sourceFilePath);
+      files.forEach(file => sourceFilePathsSet.add(file));  // 配下のファイルを追加する
+      sourceFilePathsSet.delete(sourceFilePath);  // 元のディレクトリパスは除去する
+    }
+  }
+  catch(error) {
+    console.warn(`Before Source File Paths Error : [${sourceFilePath}]`, error);
+  }
+});
+
+const sourceFilePaths = Array.from(sourceFilePathsSet);
+sourceFilePaths.forEach(sourceFilePath => {
+  if(!sourceFilePath.includes(constants.src)) return;
   
   if(sourceFilePath.endsWith('.css')) {
     console.log(`CSS : [${sourceFilePath}]`);

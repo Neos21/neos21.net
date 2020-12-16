@@ -1,5 +1,4 @@
 const fs = require('fs');
-const path = require('path');
 
 const constants = require('../lib/constants');
 const makeDirectory = require('../lib/make-directory');
