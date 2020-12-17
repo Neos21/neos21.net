@@ -244,7 +244,7 @@ path:
   - _参考 :_
       - [Wikipedia - NIH 症候群](https://ja.wikipedia.org/wiki/NIH%E7%97%87%E5%80%99%E7%BE%A4)
       - [Not Invented Here 症候群 ： お前のアイディアがそんなに優れているはずがない](http://edx.hatenablog.com/entry/not-invented-here)
-      - 拙記事：[Murga - 「NIH 症候群」は誰も得しない](https://neos21.hatenablog.jp/entry/2017/01/31/000000)
+      - 拙記事：[「NIH 症候群」は誰も得しない](/blog/2017/01/31-01.html)
 - __ピーターの法則 : Peter Principle__
   - _意味 :_
       1. 人間は能力の極限まで出世する。したがって、有能だったヒラ社員は、無能な中間管理職になる。

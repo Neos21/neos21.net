@@ -21,8 +21,8 @@ SNS やその他アカウント一覧。
   - [Neo's GitHub Pages](https://neos21.github.io/)
 - [Hatena](http://profile.hatena.ne.jp/neos21/)
   - [Corredor](https://neos21.hatenablog.com/)
-  - [Murga](https://neos21.hatenablog.jp/)
-  - [El Mylar](https://neos21.hateblo.jp/)
+  - ~~[Murga](https://neos21.hatenablog.jp/)~~
+  - ~~[El Mylar](https://neos21.hateblo.jp/)~~
 - [Instagram](https://www.instagram.com/Neos21/)
 - [LinkedIn](https://www.linkedin.com/in/Neos21/)
 - [MDN](https://developer.mozilla.org/ja/profiles/Neos21)
