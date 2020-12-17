@@ -7,7 +7,7 @@ const listFiles = require('../lib/list-files');
 const makeDirectory = require('../lib/make-directory');
 
 /*!
- * `src/` 配下のファイルを見てサイトマップを生成する
+ * `src/pages/` 配下のファイルを見てサイトマップを生成する (`src/documents/` は対象外)
  */
 
 const pages = listFiles(constants.pages.src)
