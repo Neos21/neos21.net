@@ -1,7 +1,7 @@
 ---
 title        : Tech
 created      : 2020-11-23
-last-modified: 2020-11-24
+last-modified: 2021-01-01
 path:
   - /index.html Neo's World
 ---
@@ -9,6 +9,10 @@ path:
 技術関連のネタを書きます。日付は初版公開日です。
 
 <dl>
+  <dt><time>2021-01-01</time> : <a href="knowledges/index.html">ナレッジ整理</a></dt>
+  <dd>
+    <p>技術関連のナレッジを、なるべく一般人にも分かるように整理してみる。</p>
+  </dd>
   <dt><time>2020-11-24</time> : <a href="windows-mac-environment.html">Windows と Mac で開発環境を揃える Tips 集</a></dt>
   <dd>
     <p>Windows と Mac でなるべく環境差異をなくすための手段を紹介します。</p>
