@@ -103,4 +103,3 @@ HTML・Markdown ファイルの先頭には YAML 形式の Front Matter が記�
 
 - [Neo's World](https://neos21.net/)
 - [Neo's GitHub Pages](https://neos21.github.io/)
-- [Corredor](https://neos21.hatenablog.com/)

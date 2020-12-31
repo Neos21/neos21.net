@@ -1,7 +1,7 @@
 ---
 title        : アカウント一覧
 created      : 2020-11-16
-last-modified: 2020-11-19
+last-modified: 2021-01-01
 path:
   - /index.html Neo's World
   - /about/index.html About
@@ -20,7 +20,7 @@ SNS やその他アカウント一覧。
 - [GitHub](https://github.com/Neos21)
   - [Neo's GitHub Pages](https://neos21.github.io/)
 - [Hatena](http://profile.hatena.ne.jp/neos21/)
-  - [Corredor](https://neos21.hatenablog.com/)
+  - ~~[Corredor](https://neos21.hatenablog.com/)~~
   - ~~[Murga](https://neos21.hatenablog.jp/)~~
   - ~~[El Mylar](https://neos21.hateblo.jp/)~~
 - [Instagram](https://www.instagram.com/Neos21/)
