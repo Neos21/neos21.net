@@ -1,14 +1,14 @@
 ---
 title        : Blog
 created      : 2020-11-01
-last-modified: 2020-11-02
+last-modified: 2021-01-11
 path:
   - /index.html Neo's World
 ---
 
 ## 最新記事
 
-{{ blog-latests 5 }}
+{{ blog-latests 10 }}
 
 
 ## 過去ログ
