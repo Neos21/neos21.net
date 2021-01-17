@@ -1,7 +1,7 @@
 ---
 title        : 薬に関するメモ
-created      : 2021-01-22
-last-modified: 2021-01-22
+created      : 2021-01-18
+last-modified: 2021-01-18
 path:
   - /index.html Neo's World
   - /etc/index.html Etc.
