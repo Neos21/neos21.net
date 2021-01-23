@@ -1,7 +1,7 @@
 ---
 title        : アカウント一覧
 created      : 2020-11-16
-last-modified: 2021-01-01
+last-modified: 2021-01-23
 path:
   - /index.html Neo's World
   - /about/index.html About
@@ -10,7 +10,6 @@ path:
 SNS やその他アカウント一覧。
 
 - [Bitbucket](https://bitbucket.org/Neos21/)
-- [Coconala](https://profile.coconala.com/users/1578422)
 - [CodePen.io](https://codepen.io/Neos21/)
 - [Dot Install](https://dotinstall.com/users/neos21)
 - [Enty](https://enty.jp/Neos21)
@@ -50,3 +49,4 @@ SNS やその他アカウント一覧。
 
 - Qrunch (`https://neos21.qrunch.io/`) : サービス停止
 - [Zeit](https://zeit.co/neos21) : 現在の Vercel
+- ~~[Coconala](https://profile.coconala.com/users/1578422)~~ : 2021-01-23 退会
