@@ -1,7 +1,7 @@
 ---
 title        : Tech
 created      : 2020-11-23
-last-modified: 2021-01-22
+last-modified: 2021-01-27
 path:
   - /index.html Neo's World
 ---
@@ -9,13 +9,17 @@ path:
 技術関連のネタを書きます。日付は初版公開日です。
 
 <dl>
+  <dt><time>2021-01-27</time> : <a href="cheat-sheets/index.html">オレオレチートシート</a></dt>
+  <dd>
+    <p>よく忘れる・間違えるコマンドなどをチートシートにしておく。</p>
+  </dd>
   <dt><time>2021-01-22</time> : <a href="memos.html">SE のタメになるメモ</a></dt>
   <dd>
     <p>SE のタメになりそうな雑多なメモ (スクラップ)。</p>
   </dd>
   <dt><time>2021-01-01</time> : <a href="knowledges/index.html">ナレッジ整理</a></dt>
   <dd>
-    <p>技術関連のナレッジを、なるべく一般人にも分かるように整理してみる。</p>
+    <p>技術関連のナレッジ (知識・技術の概念など) を、なるべく一般人にも分かるように整理・解説します。</p>
   </dd>
   <dt><time>2020-11-24</time> : <a href="windows-mac-environment.html">Windows と Mac で開発環境を揃える Tips 集</a></dt>
   <dd>

@@ -5,7 +5,6 @@ last-modified: 2020-11-21
 path:
   - /index.html Neo's World
   - /tech/index.html Tech
-toc : false
 ---
 
 プログラミング、コーディング、システム開発プロセス全般、プロジェクトマネジメントに関する Tips。公開日が新しいモノほど上にあります。
