@@ -1,7 +1,7 @@
 ---
 title        : 言葉に関するメモ
 created      : 2021-01-20
-last-modified: 2021-02-04
+last-modified: 2021-02-09
 path:
   - /index.html Neo's World
   - /etc/index.html Etc.
@@ -15,6 +15,10 @@ path:
 
 ## 言葉に関する雑多なメモ
 
+- [【テクスト論とはなにか】作品論との違いからバルトの議論まで解説｜リベラルアーツガイド](https://liberal-arts-guide.com/the-theory-of-text/)
+  - テクスト論・表現論 : 作者の意図を汲み取ろうとするのではなく、純粋に文章から解釈すること。読者が作者の意図と異なる捉え方をして良いという考え方
+  - 作品論・作家論 : 作者の意図こそが正解なので、それを読み取ろうとする考え方
+  - [文学における表現論的立場と作品論的立場とはどういう意味を持つのですか... - Yahoo!知恵袋](https://detail.chiebukuro.yahoo.co.jp/qa/question_detail/q1443286274)
 - 言葉の意味するものが先にあるのではなく、言葉のルールが先にある
   - 参考：[西洋哲学 - 現代 | のんちゃん物語](https://ameblo.jp/knknbyp/entry-11998676819.html)
 - 「おいしくないです」が日本語として不適切な理由
