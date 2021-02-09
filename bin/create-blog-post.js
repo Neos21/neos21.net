@@ -37,4 +37,4 @@ for(let num = 1; num < 100; num++) {
   if(num >= 99) throw new Error(`Cannot Write File [${inputDate}] [${distFilePath}]`);
 }
 
-console.log('Create Blog Post Boilerplate : Succeeded');
+console.log('Create Blog Post : Succeeded');
