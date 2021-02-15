@@ -46,7 +46,7 @@ Windows 専用、Mac 専用のフリーソフトは多々あるが、それら�
 
 JavaScript をブラウザ外で動かすためのランタイムとなる Node.js も、クロスプラットフォームで動作し、OS の差異による影響をほとんど受けない。使用するパッケージにもよるが、ビルドすればブラウザ上でも動作する JavaScript コードになりうるので、本当に実行環境を選ばない言語だと思っている。
 
-メインで使用する言語は別にあったとしても、ちょっとしたツールを作ったりする時に、Node.js や JavaScript という選択肢を持っていれば、OS の差異をほとんど木にすることなくツールやアプリが作れるだろう。
+メインで使用する言語は別にあったとしても、ちょっとしたツールを作ったりする時に、Node.js や JavaScript という選択肢を持っていれば、OS の差異をほとんど気にすることなくツールやアプリが作れるだろう。
 
 
 ## Windows を Linux に近付ける方法
@@ -161,7 +161,7 @@ OS 固有なブラウザというと、Windows ではサポートが切れかか
 - [LibreOffice](https://ja.libreoffice.org/)
   - Ubuntu 標準搭載。Ubuntu でとりあえず閲覧する時に
 - iWork (Pages・Numbers・Keynote)
-  - Mac App Store からすぐ入れられる。MS Office をインストールしていないま死んでとりあえず閲覧する時に
+  - Mac App Store からすぐ入れられる。MS Office をインストールしていないマシンでとりあえず閲覧する時に
 
 ### 画像・動画編集：Adobe CC
 
@@ -184,7 +184,7 @@ Mac は「英数」「かな」キーで IME のオン・オフができ、コ�
 
 Windows の場合は [AutoHotKey](https://sites.google.com/site/autohotkeyjp/) をインストールし、[alt-ime-ahk](https://github.com/karakaram/alt-ime-ahk) を導入することで、Alt キーの空打ちで IME の ON・OFF が切り替えられるようになる。
 
-ちなみに Ubuntu の場合は Google 日本語入力のオープンソース版である Mozc を用いると同じ感覚で変換できる。Alt キーの空打ちによる IME 切り替えは Fcitx で実現できる。
+ちなみに Ubuntu の場合は Google 日本語入力のオープンソース版である Mozc (fcitx-mozc) を用いると同じ感覚で変換できる。Alt キーの空打ちによる IME 切り替えは Fcitx で実現できる。
 
 ### フォント：Noto Sans Mono CJK JP
 
