@@ -1,7 +1,9 @@
+const fs = require('fs');
+
 const constants = require('../lib/constants');
-const jstNow = require('../lib/jst-now');
 const detectDirectoryPathsFromFilePaths = require('../lib/detect-directory-paths-from-file-paths');
 const ftp = require('../lib/ftp');
+const listFiles = require('../lib/list-files');
 
 /*!
  * 引数で指定されたファイル (1つ以上) をアップロードする
@@ -13,6 +15,20 @@ if(!args.length) return console.error('Please Select Dist File(s)');
 // `dist/` 配下のファイルのみ対象にする
 const targetFilePaths = args.filter(targetFilePath => targetFilePath.includes(constants.dist));
 if(!targetFilePaths.length) return console.error('Not Uploading Files. Aborted');
+
+// ディレクトリが指定されていた時に配下のファイルを追加する
+targetFilePaths.slice().forEach(targetFilePath => {
+  try {
+    const stat = fs.statSync(targetFilePath);
+    if(stat.isDirectory()) {
+      const files = listFiles(targetFilePath);
+      files.forEach(file => targetFilePaths.push(file));  // 配下のファイルを追加する
+    }
+  }
+  catch(error) {
+    console.warn(`Target File Paths Error : [${targetFilePath}]`, error);
+  }
+})
 
 // 更新を知らせるためのファイルを追加する
 targetFilePaths.push(constants.feeds.dist);
