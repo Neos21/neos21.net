@@ -3,6 +3,7 @@ const fs = require('fs');
 const constants = require('../lib/constants');
 const detectDirectoryPathsFromFilePaths = require('../lib/detect-directory-paths-from-file-paths');
 const ftp = require('../lib/ftp');
+const jstNow = require('../lib/jst-now');
 const listFiles = require('../lib/list-files');
 
 /*!
