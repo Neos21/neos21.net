@@ -1,14 +1,14 @@
 const fs = require('fs');
 const path = require('path');
 
-const constants = require('../../lib/constants');
-const jstNow = require('../../lib/jst-now');
-const listFiles = require('../../lib/list-files');
 const buildHtml = require('../../lib/build-html');
 const buildMarkdown = require('../../lib/build-markdown');
+const constants = require('../../lib/constants');
 const copyFile = require('../../lib/copy-file');
 const detectDirectoryPathsFromFilePaths = require('../../lib/detect-directory-paths-from-file-paths');
 const ftp = require('../../lib/ftp');
+const jstNow = require('../../lib/jst-now');
+const listFiles = require('../../lib/list-files');
 
 /*!
  * `last-modified` が今日日付のファイルをビルドしてアップロードする
@@ -47,11 +47,13 @@ console.log('Today Source Files :\n', todaySourceFilePaths);
 // 重複を除去するため一旦 Set を使う
 const uploadFilesSet = new Set();
 
-// 更新を通知するためトップ・更新履歴ページと Atom フィードを対象にする
+// 更新を通知するためトップ・更新履歴・サイトマップページと Atom フィード・サイトマップを対象にする
 buildHtml(`${constants.pages.src}/index.html`);
 buildHtml(`${constants.pages.src}/about/new.html`);
+buildMarkdown(`${constants.pages.src}/about/sitemap.md`);
 uploadFilesSet.add(`${constants.pages.dist}/index.html`);
 uploadFilesSet.add(`${constants.pages.dist}/about/new.html`);
+uploadFilesSet.add(`${constants.pages.dist}/about/sitemap.html`);
 uploadFilesSet.add(constants.feeds.dist);
 uploadFilesSet.add(constants.sitemap.dist);
 

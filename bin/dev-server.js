@@ -3,12 +3,12 @@ const path = require('path');
 
 const browserSync = require('browser-sync').create();
 
-const constants = require('../lib/constants');
-const isExist = require('../lib/is-exist');
 const buildCss = require('../lib/build-css');
 const buildHtml = require('../lib/build-html');
 const buildMarkdown = require('../lib/build-markdown');
+const constants = require('../lib/constants');
 const copyFile = require('../lib/copy-file');
+const isExist = require('../lib/is-exist');
 
 /*!
  * 開発サーバを起動する

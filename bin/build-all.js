@@ -1,10 +1,10 @@
 const path = require('path');
 
-const constants = require('../lib/constants');
-const listFiles = require('../lib/list-files');
 const buildHtml = require('../lib/build-html');
 const buildMarkdown = require('../lib/build-markdown');
+const constants = require('../lib/constants');
 const copyFile = require('../lib/copy-file');
+const listFiles = require('../lib/list-files');
 
 /*!
  * HTML・Markdown をビルドし、それ以外のファイルをコピーする

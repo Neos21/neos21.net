@@ -5,8 +5,8 @@ const yaml = require('yaml');
 const constants = require('../lib/constants');
 const isNotFuture = require('../lib/is-not-future');
 const listFiles = require('../lib/list-files');
-const markdownExtractFrontMatter = require('../lib/markdown-extract-front-matter');
 const makeDirectory = require('../lib/make-directory');
+const markdownExtractFrontMatter = require('../lib/markdown-extract-front-matter');
 
 /*!
  * Atom フィードを生成する

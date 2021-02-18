@@ -1,8 +1,8 @@
 const fs = require('fs');
 
 const constants = require('../lib/constants');
-const makeDirectory = require('../lib/make-directory');
 const listDirectories = require('../lib/list-directories');
+const makeDirectory = require('../lib/make-directory');
 
 /*!
  * `dist/` ディレクトリを削除して配下に空ディレクトリを作成する

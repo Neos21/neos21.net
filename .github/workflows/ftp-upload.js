@@ -1,13 +1,13 @@
 const fs = require('fs');
 const path = require('path');
 
-const constants = require('../../lib/constants');
-const isNotFuture = require('../../lib/is-not-future');
 const buildHtml = require('../../lib/build-html');
 const buildMarkdown = require('../../lib/build-markdown');
+const constants = require('../../lib/constants');
 const copyFile = require('../../lib/copy-file');
 const detectDirectoryPathsFromFilePaths = require('../../lib/detect-directory-paths-from-file-paths');
 const ftp = require('../../lib/ftp');
+const isNotFuture = require('../../lib/is-not-future');
 
 /*!
  * 対象のファイルをビルドしてアップロードする
@@ -139,6 +139,8 @@ changedFiles
 if(!uploadFilesSet.size) return console.log('Upload Files Not Exist');
 
 // サイトマップはアップロード対象があれば常に一緒にアップロードする
+buildMarkdown(`${constants.pages.src}/about/sitemap.md`);
+uploadFilesSet.add(`${constants.pages.dist}/about/sitemap.html`);
 uploadFilesSet.add(constants.sitemap.dist);
 
 // アップロード対象のディレクトリパス・ファイルパスの配列を作る

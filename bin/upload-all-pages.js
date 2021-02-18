@@ -2,10 +2,10 @@ const fs = require('fs');
 const path = require('path');
 
 const constants = require('../lib/constants');
-const isNotFuture = require('../lib/is-not-future');
-const listFiles = require('../lib/list-files');
 const detectDirectoryPathsFromFilePaths = require('../lib/detect-directory-paths-from-file-paths');
 const ftp = require('../lib/ftp');
+const isNotFuture = require('../lib/is-not-future');
+const listFiles = require('../lib/list-files');
 
 /*!
  * `dist/` 配下の HTML・CSS・XML ファイルを全てアップロードする

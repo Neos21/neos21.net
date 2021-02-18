@@ -2,8 +2,8 @@ const fs = require('fs');
 const path = require('path');
 
 const constants = require('../lib/constants');
-const listDirectories = require('../lib/list-directories');
 const isExist = require('../lib/is-exist');
+const listDirectories = require('../lib/list-directories');
 
 /*!
  * `src/pages/blog/` 配下に年月のディレクトリがあるのに `index.md` がなければ作る

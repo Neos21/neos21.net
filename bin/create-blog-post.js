@@ -1,8 +1,8 @@
 const fs = require('fs');
 
 const constants = require('../lib/constants');
-const makeDirectory = require('../lib/make-directory');
 const isExist = require('../lib/is-exist');
+const makeDirectory = require('../lib/make-directory');
 
 /*!
  * 指定日付のブログ記事の雛形ファイルを配置する

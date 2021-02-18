@@ -1,12 +1,12 @@
 const fs = require('fs');
 
-const constants = require('../lib/constants');
-const jstNow = require('../lib/jst-now');
-const listFiles = require('../lib/list-files');
 const buildCss = require('../lib/build-css');
 const buildHtml = require('../lib/build-html');
 const buildMarkdown = require('../lib/build-markdown');
+const constants = require('../lib/constants');
 const copyFile = require('../lib/copy-file');
+const jstNow = require('../lib/jst-now');
+const listFiles = require('../lib/list-files');
 
 /*!
  * 引数で指定されたファイル (1つ以上) をビルド処理する
@@ -24,6 +24,7 @@ const sourceFilePathsSet = new Set(argFilePaths);
 // 更新を知らせるためのファイルを追加する
 sourceFilePathsSet.add(`${constants.pages.src}/index.html`);
 sourceFilePathsSet.add(`${constants.pages.src}/about/new.html`);
+sourceFilePathsSet.add(`${constants.pages.src}/about/sitemap.md`);
 sourceFilePathsSet.add(`${constants.pages.src}/blog/index.md`);
 sourceFilePathsSet.add(`${constants.pages.src}/blog/${jstNow.jstCurrentYear}/index.md`);
 sourceFilePathsSet.add(`${constants.pages.src}/blog/${jstNow.jstCurrentYear}/${jstNow.zeroPadJstCurrentMonth}/index.md`);
