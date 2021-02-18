@@ -13,7 +13,7 @@
   - `www` あり版の対応は DNS に A レコードを追加した上で XREA 管理画面で行っている
 - <http://neo.s21.xrea.com/>
   - 2002年10月に XREA サーバをレンタルし始めた時の URL
-  - HTTP のみ
+  - HTTP のみ・<http://neos21.net/> にリダイレクトされる
 - <http://neos21.tk/>
 - <https://neos21.tk/>
 - <http://www.neos21.tk/>
@@ -88,8 +88,7 @@ HTML・Markdown ファイルの先頭には YAML 形式の Front Matter が記�
 
 ### Markdown
 
-- `{{ blog-latests 【num】 }}`
-- `{{ blog-list-years }}`
+- `{{ blog-list-years 【year】 }}`
 - `{{ blog-list-months }}`
 - `{{ blog-list-dates }}`
 
