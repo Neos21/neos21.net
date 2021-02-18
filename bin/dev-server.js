@@ -109,7 +109,7 @@ function unlinkDirFunc(sourceFilePath) {
     console.log(`Remove Directory : [${distDirectoryPath}]`);
   }
   catch(error) {
-    console.warn(`Failed To Remove Directory [${distFilePath}]`, error);
+    console.warn(`Failed To Remove Directory [${distDirectoryPath}]`, error);
   }
 }
 

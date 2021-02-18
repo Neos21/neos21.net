@@ -74,7 +74,9 @@ function getText(filePath) {
   try {
     return fs.readFileSync(sourceHtmlFilePath, 'utf-8');
   }
-  catch(_error) { }
+  catch(_error) {
+    // Do Nothing
+  }
   
   // ソース HTML ファイルが見つからなければ Markdown ファイルを探す
   const sourceMarkdownFilePath = sourceHtmlFilePath.replace('.html', '.md');
