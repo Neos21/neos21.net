@@ -36,7 +36,7 @@ targetFilePaths.push(constants.feeds.dist);
 targetFilePaths.push(constants.sitemap.dist);
 targetFilePaths.push(`${constants.pages.dist}/index.html`);
 targetFilePaths.push(`${constants.pages.dist}/about/new.html`);
-targetFilePaths.push(`${constants.pages.src}/about/sitemap.md`);
+targetFilePaths.push(`${constants.pages.dist}/about/sitemap.html`);
 targetFilePaths.push(`${constants.pages.dist}/blog/index.html`);
 targetFilePaths.push(`${constants.pages.dist}/blog/${jstNow.jstCurrentYear}/index.html`);
 targetFilePaths.push(`${constants.pages.dist}/blog/${jstNow.jstCurrentYear}/${jstNow.zeroPadJstCurrentMonth}/index.html`);
