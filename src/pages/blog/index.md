@@ -3397,7 +3397,7 @@ head: |
 - <time>2017-11-26</time>  
   [CSS だけで実装する宇宙空間](/blog/2017/11/26-03.html)
 - <time>2017-11-26</time>  
-  [MacBookAir  13インチ Early 2015 と MacBookPro 13インチ Early 2015 の外観を比べてみた](/blog/2017/11/26-02.html)
+  [MacBookAir 13インチ Early 2015 と MacBookPro 13インチ Early 2015 の外観を比べてみた](/blog/2017/11/26-02.html)
 - <time>2017-11-26</time>  
   [Windows マシンの「スリープ」「休止状態」の使い分け方](/blog/2017/11/26-01.html)
 - <time>2017-11-25</time>  
