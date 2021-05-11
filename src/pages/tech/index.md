@@ -1,7 +1,7 @@
 ---
 title        : Tech
 created      : 2020-11-23
-last-modified: 2021-01-27
+last-modified: 2021-05-11
 path:
   - /index.html Neo's World
 ---
@@ -9,6 +9,10 @@ path:
 技術関連のネタを書きます。日付は初版公開日です。
 
 <dl>
+  <dt><time>2021-05-11</time> : <a href="homebrew-list.html">自分が使ったことのある Homebrew アプリ一覧</a></dt>
+  <dd>
+    <p>自分が MacOS 環境で使用したことがある Homebrew アプリの一覧を紹介する。</p>
+  </dd>
   <dt><time>2021-01-27</time> : <a href="cheat-sheets/index.html">オレオレチートシート</a></dt>
   <dd>
     <p>よく忘れる・間違えるコマンドなどをチートシートにしておく。</p>
