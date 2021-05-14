@@ -1,7 +1,7 @@
 ---
 title        : 自分が使ったことのある Homebrew アプリ一覧
 created      : 2021-05-11
-last-modified: 2021-05-11
+last-modified: 2021-05-14
 path:
   - /index.html Neo's World
   - /tech/index.html Tech
@@ -233,22 +233,22 @@ $ brew install ngrok
 ### ジョーク系
 
 ```bash
-$ brew cask install cool-retro-term
+$ brew install --cask cool-retro-term
 ```
 
 ### 各種ユーティリティ
 
 ```bash
-$ brew cask install finicky
-$ brew cask install mounty
-$ brew cask install rectangle
+$ brew install --cask finicky
+$ brew install --cask rectangle
+$ brew install --cask mounty
 ```
 
 ### プログラミング言語
 
 ```bash
-$ brew cask install java
-$ brew cask install powershell
+$ brew install --cask java
+$ brew install --cask powershell
 ```
 
 
