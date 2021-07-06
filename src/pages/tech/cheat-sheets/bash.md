@@ -13,7 +13,7 @@ path:
 
 ## エンコードを変える
 
-```sh
+```bash
 $ LANG='ja_JP.euc-JP'
 $ LANG='ja_JP.UTF-8'
 ```
@@ -53,7 +53,7 @@ $ LANG='ja_JP.UTF-8'
 
 ## `grep` のオプション
 
-```sh
+```bash
 # 基本
 $ grep -inR '調べたいこと' .
 
@@ -76,7 +76,7 @@ $ grep -irl img_memo --exclude='*.class' --exclude='*.java'
 
 ## EUC-JP なファイルを `tail` する (`nkf` を使う)
 
-```sh
+```bash
 $ tail -f ./apache/logs/catalina.out | nkf -u -w
 ```
 

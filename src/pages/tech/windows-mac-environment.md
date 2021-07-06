@@ -72,7 +72,7 @@ Git SDK 搭載の Vim や、Pacman でインストールできる Tmux であれ
 
 Mac は BSD 系の OS なので、どちらかというと Windows よりは Linux 環境に近付けやすい。各種コマンドが BSD 系でオプションに違いがあるので、次のような GNU 系のコマンド群を Homebrew で入れておくと良いだろう。
 
-```sh
+```bash
 $ brew install \
   coreutils binutils moreutils diffutils findutils \
   gnu-sed gnu-tar gnu-which gnu-time gnu-getopt gawk gnutls \
