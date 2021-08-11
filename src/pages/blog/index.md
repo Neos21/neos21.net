@@ -555,7 +555,7 @@ head: |
 - <time>2020-07-22</time>  
   [Vue で Material Design。Vuetify を導入してみた](/blog/2020/07/22-01.html)
 - <time>2020-07-21</time>  
-  [TypeORM で created_at・updated_at カラムを作る](/blog/2020/07/21-01.html)
+  [TypeORM で created\_at・updated\_at カラムを作る](/blog/2020/07/21-01.html)
 - <time>2020-07-20</time>  
   [PostgreSQL は SQL 文をケースインセンシティブに解釈する。TypeORM での調整方法](/blog/2020/07/20-01.html)
 - <time>2020-07-19</time>  
