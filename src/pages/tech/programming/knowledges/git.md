@@ -1,11 +1,12 @@
 ---
-title        : Git の忘れっぽい Tips
+title        : Git
 created      : 2021-01-27
 last-modified: 2021-01-27
 path:
   - /index.html Neo's World
   - /tech/index.html Tech
-  - /tech/cheat-sheets/index.html オレオレチートシート
+  - /tech/programming/index.html プログラミング
+  - /tech/programming/knowledges/index.html プログラミング関連ナレッジ
 ---
 
 ## 目次

@@ -5,8 +5,8 @@ last-modified: 2020-11-21
 path:
   - /index.html Neo's World
   - /tech/index.html Tech
-description: |
-  <p>「あの処理はあのスクリプト言語でどう書くの？」のまとめ。Windows 向けのスクリプト言語多め。</p>
+  - /tech/programming/index.html プログラミング
+  - /tech/programming/knowledges/index.html プログラミング関連ナレッジ
 head : |
   <style>
     .codes {
@@ -40,8 +40,16 @@ head : |
   </style>
 ---
 
-<h2>Call From Windows Batch</h2>
-<p>Windows Batch から各スクリプトを呼び出す方法。</p>
+「あの処理はあのスクリプト言語でどう書くの？」のまとめ。Windows 向けのスクリプト言語多め。
+
+
+## 目次
+
+
+## Call From Windows Batch
+
+Windows Batch から各スクリプトを呼び出す方法。
+
 <div class="codes">
   <pre class="language-batch language-batch"><code class="language-batch">Rem 同プロセスで呼ぶ
 Call "script.bat"
@@ -81,8 +89,12 @@ Rem コンパイラでコンパイルする
 Rem コンパイルできたら実行する
 If "%ERRORLEVEL%" == "0" ( "script.exe" )</code></pre>
 </div>
-<h2>Template</h2>
-<p>オレオレテンプレート。</p>
+
+
+## Template
+
+オレオレテンプレート。
+
 <div class="codes">
   <pre class="language-batch language-batch"><code class="language-batch">@Echo Off
 
@@ -145,8 +157,12 @@ class CSharp {
   }
 }</code></pre>
 </div>
-<h2>Echo</h2>
-<p>コンソールに文字列を出力する。</p>
+
+
+## Echo
+
+コンソールに文字列を出力する。
+
 <div class="codes">
   <pre class="language-batch language-batch"><code class="language-batch">Echo FooBar
 Echo ほげピヨ</code></pre>
@@ -175,9 +191,12 @@ Console.WriteLine("ほげピヨ");</code></pre>
 Console.WriteLine("FooBar");
 Console.WriteLine("ほげピヨ");</code></pre>
 </div>
-<h2>Sleep</h2>
-<p>指定時間処理を一時停止する。</p>
-<p>3秒停止させるサンプル。</p>
+
+
+## Sleep
+
+指定時間処理を一時停止する。3秒停止させるサンプル。
+
 <div class="codes">
   <pre class="language-batch language-batch"><code class="language-batch">Ping localhost -n 4
 Timeout 3
@@ -198,8 +217,12 @@ System.Threading.Thread.Sleep(3000);</code></pre>
 
 System.Threading.Thread.Sleep(3000);</code></pre>
 </div>
-<h2>Pause</h2>
-<p>ユーザからのキー入力を待つ。</p>
+
+
+## Pause
+
+ユーザからのキー入力を待つ。
+
 <div class="codes">
   <pre class="language-batch language-batch"><code class="language-batch">Pause
 Rem => 続行するには何かキーを押してください . . .</code></pre>
@@ -222,8 +245,12 @@ Console.ReadLine();</code></pre>
 Console.WriteLine("続行するには Enter キーを押してください。");
 Console.ReadLine();</code></pre>
 </div>
-<h2>Comment</h2>
-<p>スクリプト内でのコメント。</p>
+
+
+## Comment
+
+スクリプト内でのコメント。
+
 <div class="codes">
   <pre class="language-batch language-batch"><code class="language-batch">Rem コメント
 

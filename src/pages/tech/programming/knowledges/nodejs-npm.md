@@ -1,12 +1,21 @@
 ---
-title        : npm パッケージのバージョニング表記
+title        : Node.js npm
 created      : 2021-01-27
 last-modified: 2021-01-27
 path:
   - /index.html Neo's World
   - /tech/index.html Tech
-  - /tech/cheat-sheets/index.html オレオレチートシート
+  - /tech/programming/index.html プログラミング
+  - /tech/programming/knowledges/index.html プログラミング関連ナレッジ
 ---
+
+Node.js の中でも npm に関する情報。
+
+
+## 目次
+
+
+## npm パッケージのバージョニング表記 (SemVer)
 
 npm パッケージのバージョンには慣例的に SemVer (Semantic Versioning) と呼ばれるバージョン体系が採用されることが多い。
 

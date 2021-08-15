@@ -5,7 +5,7 @@ last-modified: 2021-01-05
 path:
   - /index.html Neo's World
   - /tech/index.html Tech
-  - /tech/knowledges/index.html ナレッジ整理
+  - /tech/seventeen-explanation/index.html いろはに解説
 ---
 
 ## Unicode とは

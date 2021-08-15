@@ -46,10 +46,10 @@ path:
       <li>ビジネスコミュニケーション (文書作成能力)</li>
     </ul>
   </dd>
-  <dt>プログラミング</dt>
+  <dt><a href="./programming/index.html">プログラミング</a></dt>
   <dd>
     <ul>
-      <li>チートシート (コマンド・スクリプト・ワンライナーなど、覚えて活用すると個人の作業効率が向上するモノ)</li>
+      <li><a href="./programming/knowledges/index.html">プログラミング関連ナレッジ</a> … いわゆるチートシート。コマンド・スクリプト・ワンライナーなど、覚えて活用すると個人の作業効率が向上するモノ</li>
       <li>開発環境構築・生産性向上</li>
     </ul>
   </dd>
@@ -61,9 +61,9 @@ path:
       <li>作業効率化術</li>
     </ul>
   </dd>
-  <dt>いろは解説</dt>
+  <dt><a href="./seventeen-explanation/index.html">いろはに解説</a></dt>
   <dd>
-    <p>一般人・初心者でも理解できるように情報をまとめる。</p>
+    <p>技術関連の概念や知識について、一般人・初心者でも理解できる初歩の初歩 (「いろは」) から、中級者になれるそのもう一歩先 (「に」) も学べる情報をまとめる。</p>
   </dd>
 </dl>
 
@@ -86,17 +86,9 @@ path:
   <dd>
     <p>自分が MacOS 環境で使用したことがある Homebrew アプリの一覧を紹介する。</p>
   </dd>
-  <dt><time>2021-01-27</time> : <a href="cheat-sheets/index.html">オレオレチートシート</a></dt>
-  <dd>
-    <p>よく忘れる・間違えるコマンドなどをチートシートにしておく。</p>
-  </dd>
   <dt><time>2021-01-22</time> : <a href="memos.html">SE のタメになるメモ</a></dt>
   <dd>
     <p>SE のタメになりそうな雑多なメモ (スクラップ)。</p>
-  </dd>
-  <dt><time>2021-01-01</time> : <a href="knowledges/index.html">ナレッジ整理</a></dt>
-  <dd>
-    <p>技術関連のナレッジ (知識・技術の概念など) を、なるべく一般人にも分かるように整理・解説します。</p>
   </dd>
   <dt><time>2020-11-24</time> : <a href="windows-mac-environment.html">Windows と Mac で開発環境を揃える Tips 集</a></dt>
   <dd>
@@ -113,18 +105,6 @@ path:
   <dt><time>2020-11-23</time> : <a href="dev-tips/index.html">開発 Tips</a></dt>
   <dd>
     <p>プログラミング、コーディング、システム開発プロセス全般、プロジェクトマネジメントに関する Tips。</p>
-    <ul>
-      <li><a href="dev-tips/4-bases.html">プロジェクト管理における4つの「ベース」</a></li>
-      <li><a href="dev-tips/principles.html">プログラミング・プロジェクトマネジメントに関する著名な原理・原則の一覧</a></li>
-    </ul>
-  </dd>
-  <dt><time>2020-11-21</time> : <a href="unix-like-commands-for-windows.html">Unix Like Commands For Windows</a></dt>
-  <dd>
-    <p>Bash コマンド名と、それを Windows で再現する方法をまとめた一覧表。</p>
-  </dd>
-  <dt><time>2020-11-21</time> : <a href="scripts-comparison.html">Scripts Comparison</a></dt>
-  <dd>
-    <p>「あの処理はあのスクリプト言語でどう書くの？」のまとめ。</p>
   </dd>
   <dt><time>2020-11-16</time> : <a href="excel-best-practices.html">Excel ドキュメントを書く時の定石集</a></dt>
   <dd>

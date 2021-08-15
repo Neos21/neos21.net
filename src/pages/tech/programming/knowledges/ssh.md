@@ -1,20 +1,21 @@
 ---
-title        : SSH 鍵・サーバ証明書の作り方・中身の見方まとめ
+title        : SSH
 created      : 2021-01-27
 last-modified: 2021-01-27
 path:
   - /index.html Neo's World
   - /tech/index.html Tech
-  - /tech/cheat-sheets/index.html オレオレチートシート
+  - /tech/programming/index.html プログラミング
+  - /tech/programming/knowledges/index.html プログラミング関連ナレッジ
 ---
 
-`ssh-keygen` とか `openssl` とかコマンド複雑すぎて分からんねん。作り方、どんなファイルが出てくるか、中身の確認方法、ペアとなるファイルの同一性確認方法などをまとめる。
+SSH とか OpenSSL とかその辺の話。`ssh-keygen` とか `openssl` とかコマンド複雑すぎて分からんねん。作り方、どんなファイルが出てくるか、中身の確認方法、ペアとなるファイルの同一性確認方法などをまとめる。
 
 
 ## 目次
 
 
-## SSH 鍵ペア
+## SSH 鍵ペアの作り方と中身の見方
 
 OpenSSH 形式の鍵ペア。SSH 接続時に使用する。`ssh-keygen` コマンドを使用する。
 

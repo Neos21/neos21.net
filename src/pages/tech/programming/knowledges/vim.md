@@ -1,14 +1,20 @@
 ---
-title        : Vim の忘れっぽい Tips
+title        : Vim
 created      : 2021-01-27
 last-modified: 2021-01-27
 path:
   - /index.html Neo's World
   - /tech/index.html Tech
-  - /tech/cheat-sheets/index.html オレオレチートシート
+  - /tech/programming/index.html プログラミング
+  - /tech/programming/knowledges/index.html プログラミング関連ナレッジ
 ---
 
-個人的に忘れやすいけど、使えると便利な Vim コマンドをまとめます。個人的に覚えていること、使わなくていいと思っているモノはあえて書きません。
+## 目次
+
+
+## 覚えておきたい Vim コマンド
+
+個人的に忘れやすいけど、使えると便利な Vim コマンドをまとめておく。個人的に覚えていること、使わなくていいと思っているモノは書かない。
 
 - `:!ls` など
   - コマンドが実行できる

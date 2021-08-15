@@ -1,12 +1,21 @@
 ---
-title        : JavaScript の Truthy・Falsy まとめ
+title        : JavaScript
 created      : 2021-01-27
 last-modified: 2021-01-27
 path:
   - /index.html Neo's World
   - /tech/index.html Tech
-  - /tech/cheat-sheets/index.html オレオレチートシート
+  - /tech/programming/index.html プログラミング
+  - /tech/programming/knowledges/index.html プログラミング関連ナレッジ
 ---
+
+ECMAScript 全般。ブラウザでも Node.js 上でも変わらない、言語仕様的な情報。
+
+
+## 目次
+
+
+## Truthy・Falsy まとめ
 
 - Truthy
   - `{}` (オブジェクト)

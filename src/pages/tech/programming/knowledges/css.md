@@ -1,16 +1,22 @@
 ---
-title        : CSS における折り返し関連プロパティまとめ
+title        : CSS
 created      : 2021-01-27
 last-modified: 2021-01-27
 path:
   - /index.html Neo's World
   - /tech/index.html Tech
-  - /tech/cheat-sheets/index.html オレオレチートシート
+  - /tech/programming/index.html プログラミング
+  - /tech/programming/knowledges/index.html プログラミング関連ナレッジ
 ---
+
+## 目次
+
+
+## 折り返し関連プロパティまとめ
 
 `word-break` などのプロパティ、どれを使えば良いのか。
 
-結論：_普段は `word-wrap: break-word`_ を使う。とにかく折り返したい時は __`word-break: break-all`__ を使う。
+結論：_普段は `word-wrap: break-word`_ を使う。どんな場合でも意地でも折り返したい時は __`word-break: break-all`__ を使う。
 
 - `word-wrap`
   - `normal`・`break-word`

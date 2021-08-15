@@ -5,7 +5,8 @@ last-modified: 2020-11-21
 path:
   - /index.html Neo's World
   - /tech/index.html Tech
-toc : false
+  - /tech/programming/index.html プログラミング
+  - /tech/programming/knowledges/index.html プログラミング関連ナレッジ
 head: |
   <style>
     .commands-table-wrapper {
@@ -35,8 +36,10 @@ head: |
   </style>
 ---
 
-<p>Bash コマンド名と、それを Windows で再現する方法をまとめた一覧表です。完全な空欄セルは調査未済な内容です。</p>
-<p>Windows コマンドプロンプトと、Windows GitBash までをベース環境とし、それ以外の統合環境 (Cygwin や MSYS・MinGW など) は、依存するモノを減らすためなるべく利用しないようにします。</p>
+Bash コマンド名と、それを Windows で再現する方法をまとめた一覧表。完全な空欄セルは調査未済な部分です。
+
+Windows コマンドプロンプトと、Windows GitBash までをベース環境とし、それ以外の統合環境 (Cygwin や MSYS・MinGW など) は、依存するモノを減らすためなるべく利用しないようにします。
+
 <div class="commands-table-wrapper monospace">
   <table>
     <thead>
