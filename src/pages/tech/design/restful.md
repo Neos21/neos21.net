@@ -1,11 +1,11 @@
 ---
-title        : RESTful な URL 設計
+title        : RESTful
 created      : 2021-01-27
 last-modified: 2021-01-27
 path:
   - /index.html Neo's World
   - /tech/index.html Tech
-  - /tech/cheat-sheets/index.html オレオレチートシート
+  - /tech/design/index.html 設計
 ---
 
 Rails の Scaffold を参考にした、RESTful な URL 設計。

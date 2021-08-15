@@ -5,10 +5,16 @@ last-modified: 2020-11-17
 path:
   - /index.html Neo's World
   - /tech/index.html Tech
-  - /tech/dev-tips/index.html 開発 Tips
+  - /tech/programming/index.html プログラミング
 ---
 
-コードのネストを深くしない。浅く保つ。具体的には、1つの関数で条件分岐やループによるネストを4つ・5つ以上にしない。
+コードのネストを深くしない。浅く保つ。具体的には、1つの関数で条件分岐やループによるネストは多くて3つまでに保ち、4つ・5つ以上にはしない。
+
+
+## ネストが浅いことによるメリット
+
+- 1つの関数のネストが浅いということは、条件分岐やループ処理が少なく、処理・状態が追いやすくなるということ
+- 適切に関数を分割していれば、各関数を読む時は最低限の前提知識・前提条件だけ押さえておけば読めるようになるし、処理全体を追う時は各関数の詳細な処理について知らなくても読めるようになる
 
 
 ## ネストが深いことによるデメリット
@@ -16,12 +22,6 @@ path:
 - ネストが深くなるということは、それだけ「特定の条件に合致する」から深くなる。つまり、覚えておかないといけない前提条件、状態などの情報が増えることになる
   - 例：「注文処理」メソッドの中で、ステータス「受注済」の場合の処理があり、「発注キャンセル」フラグと「返金状況」ステータスを加味して「キャンセル金額」を集計して…などとなると、そのコードを読む時に覚えておかないといけない前段が多すぎる
 - 覚えておくことが多いと、勘違いや読み間違いをしやすいし、改修時も影響調査が困難になる
-
-
-## ネストが浅くなることによるメリット
-
-- 1つの関数のネストが浅いということは、条件分岐やループ処理が少なく、状態が追いやすくなるということ
-- 適切に関数を分割していれば、各関数を読む時は最低限の前提知識・前提条件だけ押さえておけば読めるようになるし、処理全体を追う時は各関数の詳細な処理について知らなくても読めるようになる
 
 
 ## コードで例
@@ -36,7 +36,7 @@ path:
  * 
  * @param productName 商品名
  * @param price 商品単価
- * @paran quantity 注文数量
+ * @param quantity 注文数量
  */
 function order(productName, price, quantity) {
   // 売り切れチェック用変数
@@ -142,7 +142,7 @@ function order(productName, price, quantity) {
  * 
  * @param productName 商品名
  * @param price 商品単価
- * @paran quantity 注文数量
+ * @param quantity 注文数量
  */
 function order(productName, price, quantity) {
   // 売り切れ・在庫不足の場合はエラーメッセージを表示して終了する
@@ -204,7 +204,7 @@ function getStocks(productName) {
  * 
  * @param productName 商品名
  * @param price 商品単価
- * @paran quantity 注文数量
+ * @param quantity 注文数量
  * @throws 注文失敗エラー or 売上金額計上失敗エラー or SQLError
  */
 function execOrderPosting(productName, price, quantity) {

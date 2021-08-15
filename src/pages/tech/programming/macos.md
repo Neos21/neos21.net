@@ -1,45 +1,46 @@
 ---
-title        : 自分が使ったことのある Homebrew アプリ一覧
-created      : 2021-05-11
-last-modified: 2021-05-14
+title        : MacOS
+created      : 2021-01-27
+last-modified: 2021-01-27
 path:
   - /index.html Neo's World
   - /tech/index.html Tech
+  - /tech/programming/index.html プログラミング
 ---
 
-自分が MacOS 環境に `brew install` コマンドを明示的に入力してインストールし、使用したことがある Homebrew アプリの一覧を紹介する。依存パッケージとして勝手にインストールされ、`brew list` で確認していても自分が意識していないアプリについては記載しない。そのままインストールできるようにコマンド形式で記載する。
+主に MacOSX 以降で通用する情報。
 
 
 ## 目次
 
 
-## ジョーク系
+## iOS シミュレータを起動する
 
 ```bash
-$ brew install asciiquarium
-$ brew install cowsay
-$ brew install cmatrix
-$ brew install figlet
-$ brew install fortune
-$ brew install lolcat
-$ brew install nyancat
-$ brew install ponysay
-$ brew install sl
-$ brew install toilet
+# インストールされているデバイスと UUID を確認できる
+$ xcrun simctl list
+
+# 次のように UUID を指定して起動する
+$ open -a Simulator --args -CurrentDeviceUDID XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX
 ```
 
 
-## システム関連
+## 「ターミナル.app」のショートカットキー
 
-```bash
-$ brew install archey
-$ brew install neofetch
-$ brew install pstree
-$ brew install screenfetch
-```
+- `Control + a` : 行頭に移動
+- `Control + e` : 行末に移動
+- `Control + k` : カーソル位置から行末までを切り取る
+- `Control + u` : カーソル位置から行頭までを切り取る
+- `Control + y` : 切り取った文字列を貼り付ける
+- `Cmd + k` : 画面クリア・以前のモノが見えなくなる
+- `Cmd + ↑`・`Cmd + ↓` : 入力をハイライトする
 
 
-## ターミナル環境全般
+## Homebrew でインストールしているアプリ一覧
+
+自分が MacOS 環境に `brew install` コマンドを明示的に入力してインストールし、使用したことがある Homebrew アプリの一覧を紹介する。依存パッケージとして勝手にインストールされ、`brew list` で確認していても自分が意識していないアプリについては記載しない。そのままインストールできるようにコマンド形式で記載する。
+
+### ターミナル環境全般
 
 ```bash
 $ brew install bash-completion
@@ -48,10 +49,7 @@ $ brew install tmux
 $ brew install vim
 ```
 
-
-## コマンド
-
-### Utils 系
+### Utils 系コマンド
 
 ```bash
 $ brew install binutils
@@ -97,16 +95,14 @@ $ brew install thefuck
 $ brew install tldr
 ```
 
-
-## ファイル・エクスプローラ
+### ファイル・エクスプローラ
 
 ```bash
 $ brew install midnight-commander
 $ brew install tree
 ```
 
-
-## ネットワーク
+### ネットワーク
 
 ```bash
 $ brew install iproute2mac
@@ -120,8 +116,7 @@ $ brew install wget
 $ brew install wifi-password
 ```
 
-
-## 各種ユーティリティ
+### 各種ユーティリティ
 
 ```bash
 $ brew install jq
@@ -129,12 +124,12 @@ $ brew install pwgen
 $ brew install rig  # ダミープロフィール
 $ brew install watch
 $ brew install yq
+$ brew install --cask finicky
+$ brew install --cask rectangle
+$ brew install --cask mounty
 ```
 
-
-## アプリ・ツール別
-
-### Git・GitHub
+### Git
 
 ```bash
 $ brew install ghi
@@ -166,16 +161,14 @@ $ brew install terraform
 $ brew install tfenv
 ```
 
-
-## データベース
+### データベース
 
 ```bash
 $ brew install mysql
 $ brew install postgresql
 ```
 
-
-## テキスト関連
+### テキスト関連
 
 ```bash
 $ brew install mecab
@@ -183,24 +176,21 @@ $ brew install mecab-ipadic
 $ brew install nkf
 ```
 
-
-## オーディオ・音声関連
+### オーディオ・音声関連
 
 ```bash
 $ brew install espeak
 $ brew install open-jtalk
 ```
 
-
-## 画像・イラスト関連
+### 画像・イラスト関連
 
 ```bash
 $ brew install graphviz
 $ brew install imagemagick
 ```
 
-
-## プログラミング言語
+### プログラミング言語
 
 ```bash
 $ brew install go
@@ -209,63 +199,47 @@ $ brew install python
 $ brew install rbenv
 $ brew install ruby-build
 $ brew install shellcheck
+$ brew install --cask java
+$ brew install --cask powershell
 ```
 
-
-## プログラミング・開発・テスト
+### プログラミング・開発・テスト
 
 ```bash
 $ brew install cloc
 $ brew install locust
 ```
 
-
-## ウェブサービスと連動するモノ
+### ウェブサービスと連動するモノ
 
 ```bash
 $ brew install certbot  # Let's Encrypt
 $ brew install ngrok
 ```
 
+### システム関連
 
-## Homebrew Cask
+```bash
+$ brew install archey
+$ brew install neofetch
+$ brew install pstree
+$ brew install screenfetch
+```
 
 ### ジョーク系
 
 ```bash
+$ brew install asciiquarium
+$ brew install cowsay
+$ brew install cmatrix
+$ brew install figlet
+$ brew install fortune
+$ brew install lolcat
+$ brew install nyancat
+$ brew install ponysay
+$ brew install sl
+$ brew install toilet
 $ brew install --cask cool-retro-term
 ```
 
-### 各種ユーティリティ
-
-```bash
-$ brew install --cask finicky
-$ brew install --cask rectangle
-$ brew install --cask mounty
-```
-
-### プログラミング言語
-
-```bash
-$ brew install --cask java
-$ brew install --cask powershell
-```
-
-
-<div class="ad-amazon">
-  <div class="ad-amazon-image">
-    <a href="https://www.amazon.co.jp/dp/B087QK53C7?tag=neos21-22&amp;linkCode=osi&amp;th=1&amp;psc=1">
-      <img src="https://m.media-amazon.com/images/I/51DqDUiERJL._SL160_.jpg" width="113" height="160">
-    </a>
-  </div>
-  <div class="ad-amazon-info">
-    <div class="ad-amazon-title">
-      <a href="https://www.amazon.co.jp/dp/B087QK53C7?tag=neos21-22&amp;linkCode=osi&amp;th=1&amp;psc=1">［新版 zsh&amp;bash対応］macOS×コマンド入門 ──ターミナルとコマンドライン、基本の力 WEB+DB PRESS plus</a>
-    </div>
-  </div>
-</div>
-
-
-## 参考文献
-
-- [Top homebrew packages](https://gist.github.com/pmkay/e09034971b6f23214fd9f95a3e6d1c44)
+- 参考：[Top homebrew packages](https://gist.github.com/pmkay/e09034971b6f23214fd9f95a3e6d1c44)

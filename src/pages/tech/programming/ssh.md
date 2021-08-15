@@ -6,7 +6,6 @@ path:
   - /index.html Neo's World
   - /tech/index.html Tech
   - /tech/programming/index.html プログラミング
-  - /tech/programming/knowledges/index.html プログラミング関連ナレッジ
 ---
 
 SSH とか OpenSSL とかその辺の話。`ssh-keygen` とか `openssl` とかコマンド複雑すぎて分からんねん。作り方、どんなファイルが出てくるか、中身の確認方法、ペアとなるファイルの同一性確認方法などをまとめる。

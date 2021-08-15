@@ -6,7 +6,6 @@ path:
   - /index.html Neo's World
   - /tech/index.html Tech
   - /tech/programming/index.html プログラミング
-  - /tech/programming/knowledges/index.html プログラミング関連ナレッジ
 ---
 
 「[Linux](./linux.html)」全般の話題というより、Bash シェル上で使うことの多いコマンドのチートシートがメイン。

@@ -6,7 +6,6 @@ path:
   - /index.html Neo's World
   - /tech/index.html Tech
   - /tech/programming/index.html プログラミング
-  - /tech/programming/knowledges/index.html プログラミング関連ナレッジ
 ---
 
 ECMAScript 全般。ブラウザでも Node.js 上でも変わらない、言語仕様的な情報。

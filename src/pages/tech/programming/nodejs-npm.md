@@ -6,7 +6,6 @@ path:
   - /index.html Neo's World
   - /tech/index.html Tech
   - /tech/programming/index.html プログラミング
-  - /tech/programming/knowledges/index.html プログラミング関連ナレッジ
 ---
 
 Node.js の中でも npm に関する情報。

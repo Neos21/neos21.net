@@ -29,34 +29,30 @@ path:
   <dt>開発工程別</dt>
   <dd>
     <ul>
-      <li>要件定義 (企画)</li>
-      <li>設計 (共通設計・基本設計・詳細設計)</li>
-      <li>実装 (環境構築・コーディング)</li>
+      <li><a href="./requirements/index.html">要件定義</a></li>
+      <li><a href="./design/index.html">設計</a> (共通設計・基本設計・詳細設計)</li>
+      <li><a href="./programming/index.html">プログラミング</a> (環境構築・実装)</li>
       <li>テスト (単体テスト・結合テスト)</li>
       <li>保守 (監視・障害の暫定対応)</li>
       <li>運用 (障害の恒久対応・リリース後の改修)</li>
     </ul>
   </dd>
-  <dt>プロジェクト管理</dt>
+  <dt><a href="./project-management/index.html">プロジェクト管理</a></dt>
   <dd>
     <ul>
       <li>見積</li>
       <li>タスク管理</li>
       <li>顧客折衝</li>
-      <li>ビジネスコミュニケーション (文書作成能力)</li>
     </ul>
   </dd>
-  <dt><a href="./programming/index.html">プログラミング</a></dt>
+  <dt><a href="./business-communication/index.html">ビジネスコミュニケーション</a></dt>
   <dd>
-    <ul>
-      <li><a href="./programming/knowledges/index.html">プログラミング関連ナレッジ</a> … いわゆるチートシート。コマンド・スクリプト・ワンライナーなど、覚えて活用すると個人の作業効率が向上するモノ</li>
-      <li>開発環境構築・生産性向上</li>
-    </ul>
+    <p>文書作成能力、過不足のない情報伝達術。エンジニア個人の必須スキルであり、開発チームメンバ全員が共通の認識を持つべき基礎スキル。</p>
   </dd>
-  <dt>エンジニア的・仕事術</dt>
+  <dt>エンジニア必須スキル</dt>
   <dd>
     <ul>
-      <li>(個人の) タスク管理</li>
+      <li>タスク管理</li>
       <li>時間管理術</li>
       <li>作業効率化術</li>
     </ul>
