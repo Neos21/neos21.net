@@ -1,7 +1,7 @@
 ---
 title        : タメになったメモ
 created      : 2021-01-22
-last-modified: 2021-02-04
+last-modified: 2021-08-21
 path:
   - /index.html Neo's World
   - /etc/index.html Etc.
