@@ -5,7 +5,7 @@ last-modified: 2020-11-17
 path:
   - /index.html Neo's World
   - /tech/index.html Tech
-  - /tech/dev-tips/index.html 開発 Tips
+  - /tech/engineer-skills/index.html エンジニア必須スキル
 ---
 
 1つの操作、1回の作業は小さな単位で行い、素早く確認することで、大きな問題に発展させないようにする。

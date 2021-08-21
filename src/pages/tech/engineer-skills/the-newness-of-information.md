@@ -5,7 +5,7 @@ last-modified: 2020-11-17
 path:
   - /index.html Neo's World
   - /tech/index.html Tech
-  - /tech/dev-tips/index.html 開発 Tips
+  - /tech/engineer-skills/index.html エンジニア必須スキル
 ---
 
 検索してヒットした情報の「鮮度」を気にしないと、古くて非効率、もしくは「もはや誤りとなった方法」を採用してしまうかもしれない。

@@ -5,7 +5,7 @@ last-modified: 2020-11-17
 path:
   - /index.html Neo's World
   - /tech/index.html Tech
-  - /tech/dev-tips/index.html 開発 Tips
+  - /tech/project-management/index.html プロジェクト管理
 ---
 
 安易に「○○禁止」と言わない。それが禁止ということは分かっても、他にどうするのが良いのかが伝わりづらい。

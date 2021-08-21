@@ -5,7 +5,7 @@ last-modified: 2020-11-17
 path:
   - /index.html Neo's World
   - /tech/index.html Tech
-  - /tech/dev-tips/index.html 開発 Tips
+  - /tech/engineer-skills/index.html エンジニア必須スキル
 ---
 
 セットアップ作業、コーディング中、バグ修正時。どんな時も、作業ログを取っておく。
@@ -29,7 +29,7 @@ path:
 ## ログの残し方
 
 - 当日日付のテキストファイルを1つ作成し、全てそこに記録する
-  - 参考：[一元化する二重管理を避ける](centralization.html)
+  - 参考：[一元化する二重管理を避ける](../project-management/centralization.html)
 - 参考にした文献の情報を正確に書く
   - 書籍名、ページ、該当部分の引用
   - 記事タイトル、URL、該当部分の引用

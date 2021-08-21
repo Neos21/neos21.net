@@ -5,7 +5,7 @@ last-modified: 2020-11-17
 path:
   - /index.html Neo's World
   - /tech/index.html Tech
-  - /tech/dev-tips/index.html 開発 Tips
+  - /tech/engineer-skills/index.html エンジニア必須スキル
 ---
 
 日々の定型的なメール、設計書を Excel で書く時にいつもやっている連番の修正、月次単位で実施する集計作業。

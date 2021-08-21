@@ -5,7 +5,7 @@ last-modified: 2020-11-17
 path:
   - /index.html Neo's World
   - /tech/index.html Tech
-  - /tech/dev-tips/index.html 開発 Tips
+  - /tech/project-management/index.html プロジェクト管理
 ---
 
 部下やチームメンバに指示を出す時に、伝えるべき内容、伝えない方が良い内容。

@@ -8,28 +8,11 @@ path:
 
 自分が学んだ技術関連の情報を体系的にまとめるデータベース。
 
-
-## このページで使う用語の定義
-
-<dl>
-  <dt>ナレッジ</dt>
-  <dd>
-    <p>知識。覚えたらそのまま使える普遍的な情報。コマンドのチートシートとか、広く知られている「原則」とか、その手のネタ。</p>
-  </dd>
-  <dt>ノウハウ</dt>
-  <dd>
-    <p>知恵、テクニック。「ナレッジ」を基に、その組合せ方や選択が重要なモノについての考え方。定石、ベストプラクティスとか、発展的な Tips とか、その手のネタ。</p>
-  </dd>
-</dt>
-
-
-## カテゴリ
-
 <dl>
   <dt>開発工程別</dt>
   <dd>
     <ul>
-      <li><a href="./requirements/index.html">要件定義</a></li>
+      <li>要件定義</li>
       <li><a href="./design/index.html">設計</a> (共通設計・基本設計・詳細設計)</li>
       <li><a href="./programming/index.html">プログラミング</a> (環境構築・実装)</li>
       <li>テスト (単体テスト・結合テスト)</li>
@@ -39,27 +22,30 @@ path:
   </dd>
   <dt><a href="./project-management/index.html">プロジェクト管理</a></dt>
   <dd>
-    <ul>
-      <li>見積</li>
-      <li>タスク管理</li>
-      <li>顧客折衝</li>
-    </ul>
+    <p>見積、タスク管理、顧客折衝、チームメンバの管理など。</p>
   </dd>
   <dt><a href="./business-communication/index.html">ビジネスコミュニケーション</a></dt>
   <dd>
-    <p>文書作成能力、過不足のない情報伝達術。エンジニア個人の必須スキルであり、開発チームメンバ全員が共通の認識を持つべき基礎スキル。</p>
+    <p>文書作成能力、過不足のない情報伝達術。エンジニア個人の必須スキルでもあり、開発チームメンバ全員が共通の認識を持つべき基礎スキル。</p>
   </dd>
-  <dt>エンジニア必須スキル</dt>
+  <dt><a href="./engineer-skills/index.html">エンジニア必須スキル</a></dt>
   <dd>
-    <ul>
-      <li>タスク管理</li>
-      <li>時間管理術</li>
-      <li>作業効率化術</li>
-    </ul>
+    <p>タスク管理、時間管理術、個人の作業効率・作業品質を向上させるための、エンジニアが必ず身に付けるべきスキルやノウハウ。</p>
   </dd>
   <dt><a href="./seventeen-explanation/index.html">いろはに解説</a></dt>
   <dd>
     <p>技術関連の概念や知識について、一般人・初心者でも理解できる初歩の初歩 (「いろは」) から、中級者になれるそのもう一歩先 (「に」) も学べる情報をまとめる。</p>
+  </dd>
+  <dt><a href="./others/index.html">その他技術情報</a></dt>
+  <dd>
+    <p>どのカテゴリにも合わない単発の話題とか、このサイトの技術の話とか。</p>
+    <p>以下は「<a href="/etc/index.html">Etc.</a>」配下のコンテンツだが、何かと参考になるかもしれない。</p>
+    <ul>
+      <li><a href="/etc/memo-impressed.html">タメになったメモ</a></li>
+      <li><a href="/etc/memo-words.html">言葉に関するメモ</a></li>
+      <li><a href="/etc/memo-lifehack.html">ライフハック関連メモ</a></li>
+      <li><a href="/etc/what-is-the-word.html">あれ何て言うの？正式名称辞典</a></li>
+    </ul>
   </dd>
 </dl>
 
@@ -73,45 +59,15 @@ path:
   - 特定の言語やツールを前提とした情報については、バージョン情報を明記したうえでなるべく最新の情報にアップデートしていく
   - Tech 配下から削除した情報でも、特定の条件では引き続きニーズがある場合も考えられるので、Tech から削除すると同時に [Blog](/blog/index.html) 側にリライトして移植しておくなど、何らかの方法で「完全削除」はしないようにするつもり
 
-
----
-
+### このページで使う用語の定義
 
 <dl>
-  <dt><time>2021-05-11</time> : <a href="homebrew-list.html">自分が使ったことのある Homebrew アプリ一覧</a></dt>
+  <dt>ナレッジ</dt>
   <dd>
-    <p>自分が MacOS 環境で使用したことがある Homebrew アプリの一覧を紹介する。</p>
+    <p>知識。覚えたらそのまま使える普遍的な情報。コマンドのチートシートとか、広く知られている「原則」とか、その手のネタ。</p>
   </dd>
-  <dt><time>2021-01-22</time> : <a href="memos.html">SE のタメになるメモ</a></dt>
+  <dt>ノウハウ</dt>
   <dd>
-    <p>SE のタメになりそうな雑多なメモ (スクラップ)。</p>
+    <p>知恵、テクニック。「ナレッジ」を基に、その組合せ方や選択が重要なモノについての考え方。定石、ベストプラクティスとか、発展的な Tips とか、その手のネタ。</p>
   </dd>
-  <dt><time>2020-11-24</time> : <a href="windows-mac-environment.html">Windows と Mac で開発環境を揃える Tips 集</a></dt>
-  <dd>
-    <p>Windows と Mac でなるべく環境差異をなくすための手段を紹介します。</p>
-  </dd>
-  <dt><time>2020-11-23</time> : <a href="xrea-value-domain-ssl.html">XREA サーバに Value-Domain で取得した独自ドメインを設定し SSL 化する</a></dt>
-  <dd>
-    <p>このサイトは XREA でホスティングしているので、XREA にまつわる専門的な情報を解説します。</p>
-  </dd>
-  <dt><time>2020-11-23</time> : <a href="tech-of-this-site.html">このサイトに使われている技術</a></dt>
-  <dd>
-    <p>このサイトを構築するために使用している技術を紹介します。</p>
-  </dd>
-  <dt><time>2020-11-23</time> : <a href="dev-tips/index.html">開発 Tips</a></dt>
-  <dd>
-    <p>プログラミング、コーディング、システム開発プロセス全般、プロジェクトマネジメントに関する Tips。</p>
-  </dd>
-  <dt><time>2020-11-16</time> : <a href="excel-best-practices.html">Excel ドキュメントを書く時の定石集</a></dt>
-  <dd>
-    <p>SE が良い Excel ドキュメントを書くための定石。</p>
-  </dd>
-  <dt><time>2020-11-16</time> : <a href="documents-best-practices.html">ドキュメントを書く時の定石集</a></dt>
-  <dd>
-    <p>SE が良いドキュメントを書くための定石。</p>
-  </dd>
-  <dt><time>2020-11-16</time> : <a href="bookmarks.html">ブックマーク</a></dt>
-  <dd>
-    <p>便利なサイトへのリンク集。</p>
-  </dd>
-</dl>
+</dt>

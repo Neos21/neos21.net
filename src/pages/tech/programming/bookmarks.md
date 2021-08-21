@@ -1,10 +1,11 @@
 ---
-title        : ブックマーク
+title        : プログラミング関連ブックマーク
 created      : 2020-11-16
 last-modified: 2020-11-16
 path:
   - /index.html Neo's World
   - /tech/index.html Tech
+  - /tech/programming/index.html プログラミング
 ---
 
 ## 目次

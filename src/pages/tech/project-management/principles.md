@@ -5,7 +5,7 @@ last-modified: 2020-11-17
 path:
   - /index.html Neo's World
   - /tech/index.html Tech
-  - /tech/dev-tips/index.html 開発 Tips
+  - /tech/project-management/index.html プロジェクト管理
 ---
 
 プロジェクトマネジメントやシステム開発全般に関する、著名な原理・原則をまとめる。個人の思い付きで掲げた標語ではなく、世間的に知られているベストプラクティスなら、皆に従ってもらいやすいだろうという権威主義的な考え。

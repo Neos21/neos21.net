@@ -5,6 +5,7 @@ last-modified: 2020-11-24
 path:
   - /index.html Neo's World
   - /tech/index.html Tech
+  - /tech/programming/index.html プログラミング
 ---
 
 Windows と Mac でなるべく環境差異をなくすための手段を紹介する。

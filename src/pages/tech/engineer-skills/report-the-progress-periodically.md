@@ -5,7 +5,7 @@ last-modified: 2020-11-17
 path:
   - /index.html Neo's World
   - /tech/index.html Tech
-  - /tech/dev-tips/index.html 開発 Tips
+  - /tech/engineer-skills/index.html エンジニア必須スキル
 ---
 
 「何か問題があったら報告してね」「進捗が遅れそうなら相談してね」と言われると、本人が「問題ない」と思っている間は何も報告してもらえないことがある。字面どおりにしか指示を聞けないタイプだ。

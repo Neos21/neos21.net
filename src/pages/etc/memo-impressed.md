@@ -13,7 +13,6 @@ path:
 
 - 言葉、英語に関するメモは「[言葉に関するメモ](memo-words.html)」
 - ライフハック・仕事術に関するメモは「[ライフハック関連メモ](memo-lifehack.html)」
-- SE 業に関するメモは「[Tech](/tech/index.html)」内の「[SE のタメになるメモ](/tech/memos.html)」
 
 にまとめておりますので、合わせてご覧ください。
 

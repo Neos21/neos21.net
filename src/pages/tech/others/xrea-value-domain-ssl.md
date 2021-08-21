@@ -5,6 +5,7 @@ last-modified: 2020-11-23
 path:
   - /index.html Neo's World
   - /tech/index.html Tech
+  - /tech/others/index.html その他技術情報
 ---
 
 このサイトは [XREA サーバ](https://www.xrea.com/)でホスティングしています。XREA と同じ運営会社が提供する [Value-Domain](https://www.value-domain.com/) では、独自ドメインが取得でき、XREA サーバとの連携も簡単です。そこで今回は、当サイトが実際に Value-Domain でドメインを取得して、XREA サーバに設定した手順を紹介します。

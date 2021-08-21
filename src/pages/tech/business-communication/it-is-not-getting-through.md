@@ -5,7 +5,7 @@ last-modified: 2020-11-17
 path:
   - /index.html Neo's World
   - /tech/index.html Tech
-  - /tech/dev-tips/index.html 開発 Tips
+  - /tech/business-communication/index.html ビジネスコミュニケーション
 ---
 
 どれだけ配慮して話していても、自分の話は相手には正しく伝わっていない。どれだけ注意深く聞いているつもりでも、相手の話は正しく理解できていない。

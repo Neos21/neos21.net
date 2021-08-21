@@ -5,6 +5,7 @@ last-modified: 2020-11-23
 path:
   - /index.html Neo's World
   - /tech/index.html Tech
+  - /tech/others/index.html その他技術情報
 ---
 
 このサイトをどのように構築しているのか、その裏側を紹介します。

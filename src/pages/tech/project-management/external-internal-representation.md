@@ -5,7 +5,7 @@ last-modified: 2020-11-17
 path:
   - /index.html Neo's World
   - /tech/index.html Tech
-  - /tech/dev-tips/index.html 開発 Tips
+  - /tech/project-management/index.html プロジェクト管理
 ---
 
 ユーザが目にする「外部表現」と、開発者が見る「内部表現」は分けて表示・出力するべきだ。
