@@ -1,0 +1,55 @@
+name: Daily Deploy To GitHub Pages
+on:
+  schedule:
+    # Every Day At 08:00 JST
+    - cron: '0 23 * * *'
+  # 手動実行
+  workflow_dispatch:
+jobs:
+  daily-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Master Branch
+        uses: actions/checkout@v2
+      - name: Use Node.js
+        uses: actions/setup-node@v1
+        with:
+          node-version: 14.x
+      # npm install 後、一部ファイルはビルドしておく (アップロードするかどうかは後で特定する)
+      - name: Setup npm
+        run : |
+          npm install
+          npm run clear-dist
+          npm run build-feeds
+          npm run build-sitemap
+      # 最終更新日が今日のファイルをビルドする (ビルドしたファイルがあれば `./temp/upload.json` を生成する)
+      - name: Detect And Build
+        run : |
+          node ./.github/workflows/daily-deploy.js
+      # ビルドしたアップロード対象ファイルのリストがあるかチェックする
+      - name: Check File Exists
+        id: check_file_exists
+        uses: andstor/file-existence-action@v1
+        with:
+          files: './temp/upload.json'
+      # ファイルがあればそれをデプロイする
+      # `npm install` 時に `package.json` が整形されて差分扱いになるようなのでチェックアウトして戻しておく (コレをしないとブランチ切替に失敗する)
+      # `./dist/` を Stash し `gh-pages` ブランチに切替後 Pop することで、`./dist/` ディレクトリを `gh-pages` ブランチ内に復元する
+      # `./dist/` 配下の全ファイル (隠しファイルは含まれない) を再帰的にコピーし `./dist/` ディレクトリを削除する (ファイル移動だと上手く処理しきれなかったので諦めた)
+      - name: Deploy To GitHub Pages
+        if  : steps.check_file_exists.outputs.files_exists == 'true'
+        run : |
+          cat ./temp/upload.json
+          rm -rf ./temp
+          git checkout ./package.json
+          git stash --include-untracked -- ./dist
+          git fetch origin
+          git checkout -b gh-pages --track origin/gh-pages
+          git stash pop
+          cp -r ./dist/* .
+          rm -rf ./dist ./node_modules ./package-lock.json
+          git config --global user.email 'neos21@gmail.com'
+          git config --global user.name 'Neos21'
+          git add .
+          git commit -m 'Deploy gh-pages'
+          git push origin gh-pages
