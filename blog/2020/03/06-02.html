@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>nginx で CGI (Perl・Ruby・PHP) を動かす - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2020/03/06-02.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2020/index.html">2020年</a></li>
+            <li><a href="/blog/2020/03/index.html">03月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2020-03-06</time></div>
+        <h1 id="page-title">nginx で CGI (Perl・Ruby・PHP) を動かす</h1>
+
+<p>Apache みたいな感じでサクッと動かせるのかと思ったら、nginx ではすんなり CGI が動かせないらしい。やり方を調べて、nginx 上で Perl・Ruby・PHP スクリプトが動かせるようになったので、手順を紹介する。</p>
+<p>前提条件として、nginx はインストール済で、<code>$ systemctl start nginx.service</code> で起動できる状態とする。</p>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#perl-%E3%81%A8-ruby-%E3%82%92%E5%8B%95%E3%81%8B%E3%81%99--fcgiwrap%E3%83%BBspawn-fcgi">Perl と Ruby を動かす : fcgiwrap・spawn-fcgi</a></li>
+  <li><a href="#php-%E3%82%92%E5%8B%95%E3%81%8B%E3%81%99--php-fpm">PHP を動かす : php-fpm</a></li>
+  <li><a href="#%E4%BB%A5%E4%B8%8A">以上</a></li>
+  <li><a href="#%E5%8F%82%E8%80%83%E6%96%87%E7%8C%AE">参考文献</a></li>
+</ul>
+<h2 id="perl-と-ruby-を動かす--fcgiwrap・spawn-fcgi"><a class="header-link" href="#perl-と-ruby-を動かす--fcgiwrap・spawn-fcgi"><span class="header-link-mark"></span></a>Perl と Ruby を動かす : fcgiwrap・spawn-fcgi</h2>
+<p>nginx で CGI を動かすには、fcgiwrap と spawn-fcgi というライブラリを利用する。</p>
+<p>Oracle Linux 7 だと <code>yum search</code> してみたらパッケージが見つかったのでそのままインストールしてみた。CentOS とかで見つからない場合は適宜調べてなんとかせよ。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># Perl は最初から入っていたのでとりあえず良しとする</span>
+$ perl --version
+This is perl <span class="token number">5</span>, version <span class="token number">16</span>, subversion <span class="token number">3</span> <span class="token punctuation">(</span>v5.16.3<span class="token punctuation">)</span> built <span class="token keyword">for</span> x86_64-linux-thread-multi
+<span class="token punctuation">(</span>with <span class="token number">39</span> registered patches, see perl -V <span class="token keyword">for</span> <span class="token function">more</span> detail<span class="token punctuation">)</span>
+
+Copyright <span class="token number">1987</span>-2012, Larry Wall
+
+Perl may be copied only under the terms of either the Artistic License or the
+GNU General Public License, <span class="token function">which</span> may be found <span class="token keyword">in</span> the Perl <span class="token number">5</span> <span class="token builtin class-name">source</span> kit.
+
+Complete documentation <span class="token keyword">for</span> Perl, including FAQ lists, should be found on
+this system using <span class="token string">"man perl"</span> or <span class="token string">"perldoc perl"</span><span class="token builtin class-name">.</span>  If you have access to the
+Internet, point your browser at http://www.perl.org/, the Perl Home Page.
+
+<span class="token comment"># Ruby は Yum でサクッと入れておく。バージョン管理とかめんどいから無視</span>
+$ yum <span class="token function">install</span> -y ruby
+$ ruby --version
+ruby <span class="token number">2.0</span>.0p648 <span class="token punctuation">(</span><span class="token number">2015</span>-12-16<span class="token punctuation">)</span> <span class="token punctuation">[</span>x86_64-linux<span class="token punctuation">]</span>
+
+<span class="token comment"># fcgiwrap : spawn-fcgi との橋渡しをするラッパー</span>
+$ yum <span class="token function">install</span> -y fcgiwrap
+$ <span class="token function">which</span> fcgiwrap
+/sbin/fcgiwrap
+
+<span class="token comment"># Perl・Ruby は spawn-fcgi で動かす</span>
+$ yum <span class="token function">install</span> -y spawn-fcgi fcgi-devel
+</code></pre>
+<p>続いて <code>spawn-fcgi</code> の設定ファイルを記述する。nginx ユーザが利用すること、9001番ポートで待機すること、などを書いている。先程 <code>which</code> コマンドで確認した <code>fcgiwrap</code> のフルパスも書く。</p>
+<ul>
+  <li><code>$ vi /etc/sysconfig/spawn-fcgi</code></li>
+</ul>
+<pre class="language-properties"><code class="language-properties"><span class="token comment"># 末尾に以下を追記する</span>
+<span class="token attr-name">OPTIONS</span><span class="token punctuation">=</span><span class="token attr-value">"-u nginx -g nginx -a 127.0.0.1 -p 9001 -P /var/run/spawn-fcgi.pid -- /sbin/fcgiwrap"</span>
+</code></pre>
+<p>そしたら <code>spawn-fcgi</code> を起動し、ステータスが <code>active (running)</code> になっていることを確認する。</p>
+<pre class="language-bash"><code class="language-bash">$ systemctl start spawn-fcgi
+$ systemctl status spawn-fcgi
+</code></pre>
+<p><code>$ lsof -i:9001</code> などとして、9001番ポートでリスンされていることを確認しておくと良いだろう。</p>
+<p><code>spawn-fcgi</code> の設定ができたら、nginx の設定ファイルを修正する。</p>
+<ul>
+  <li><code>$ vi /etc/nginx/conf.d/default.conf</code>
+    <ul>
+      <li>変更前</li>
+    </ul>
+  </li>
+</ul>
+<pre class="language-nginx"><code class="language-nginx"><span class="token keyword">server</span> <span class="token punctuation">{</span>
+    <span class="token keyword">listen</span>       <span class="token number">80</span><span class="token punctuation">;</span>
+    <span class="token keyword">server_name</span>  localhost<span class="token punctuation">;</span>
+    
+    <span class="token comment">#charset koi8-r;</span>
+    <span class="token comment">#access_log  /var/log/nginx/host.access.log  main;</span>
+    
+    <span class="token keyword">location</span> <span class="token operator">/</span> <span class="token punctuation">{</span>
+        <span class="token keyword">root</span>   <span class="token operator">/</span>usr<span class="token operator">/</span>share<span class="token operator">/</span>nginx<span class="token operator">/</span>html<span class="token punctuation">;</span>
+        <span class="token keyword">index</span>  <span class="token keyword">index</span><span class="token punctuation">.</span>html <span class="token keyword">index</span><span class="token punctuation">.</span>htm<span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+    
+    <span class="token comment">#error_page  404              /404.html;</span>
+    
+    <span class="token comment"># redirect server error pages to the static page /50x.html</span>
+    <span class="token comment">#</span>
+    <span class="token keyword">error_page</span>   <span class="token number">500</span> <span class="token number">502</span> <span class="token number">503</span> <span class="token number">504</span>  <span class="token operator">/</span><span class="token number">50</span>x<span class="token punctuation">.</span>html<span class="token punctuation">;</span>
+    <span class="token keyword">location</span> <span class="token operator">=</span> <span class="token operator">/</span><span class="token number">50</span>x<span class="token punctuation">.</span>html <span class="token punctuation">{</span>
+        <span class="token keyword">root</span>   <span class="token operator">/</span>usr<span class="token operator">/</span>share<span class="token operator">/</span>nginx<span class="token operator">/</span>html<span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+    
+    <span class="token comment"># proxy the PHP scripts to Apache listening on 127.0.0.1:80</span>
+    <span class="token comment">#</span>
+    <span class="token comment">#location ~ \.php$ {</span>
+    <span class="token comment">#    proxy_pass   http://127.0.0.1;</span>
+    <span class="token comment">#}</span>
+    
+    <span class="token comment"># pass the PHP scripts to FastCGI server listening on 127.0.0.1:9000</span>
+    <span class="token comment">#</span>
+    <span class="token comment">#location ~ \.php$ {</span>
+    <span class="token comment">#    root           html;</span>
+    <span class="token comment">#    fastcgi_pass   127.0.0.1:9000;</span>
+    <span class="token comment">#    fastcgi_index  index.php;</span>
+    <span class="token comment">#    fastcgi_param  SCRIPT_FILENAME  /scripts$fastcgi_script_name;</span>
+    <span class="token comment">#    include        fastcgi_params;</span>
+    <span class="token comment">#}</span>
+    
+    <span class="token comment"># deny access to .htaccess files, if Apache's document root</span>
+    <span class="token comment"># concurs with nginx's one</span>
+    <span class="token comment">#</span>
+    <span class="token comment">#location ~ /\.ht {</span>
+    <span class="token comment">#    deny  all;</span>
+    <span class="token comment">#}</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>元はこんな状態だった。</p>
+<p>PHP 向けの設定サンプルが記述されている部分を参考に、次のように記載する。<code>include</code> は <code>fastcgi_params;</code> とだけ記述しても問題なさそう。</p>
+<ul>
+  <li><code>$ vi /etc/nginx/conf.d/default.conf</code>
+    <ul>
+      <li>変更後</li>
+    </ul>
+  </li>
+</ul>
+<pre class="language-nginx"><code class="language-nginx">    <span class="token comment"># pass the PHP scripts to FastCGI server listening on 127.0.0.1:9000</span>
+    
+    <span class="token comment"># For CGI : Perl Ruby</span>
+    <span class="token keyword">location</span> <span class="token operator">~</span> \<span class="token punctuation">.</span><span class="token punctuation">(</span>pl<span class="token operator">|</span>rb<span class="token operator">|</span>cgi<span class="token punctuation">)</span>$ <span class="token punctuation">{</span>
+        <span class="token keyword">try_files</span>      <span class="token variable">$uri</span> <span class="token operator">/</span><span class="token number">404.</span>html<span class="token punctuation">;</span>
+        <span class="token keyword">root</span>           <span class="token operator">/</span>usr<span class="token operator">/</span>share<span class="token operator">/</span>nginx<span class="token operator">/</span>html<span class="token punctuation">;</span>
+        <span class="token keyword">fastcgi_pass</span>   <span class="token number">127.0</span><span class="token number">.0</span><span class="token number">.1</span><span class="token punctuation">:</span><span class="token number">9001</span><span class="token punctuation">;</span>
+        <span class="token keyword">fastcgi_index</span>  <span class="token keyword">index</span><span class="token punctuation">.</span>cgi<span class="token punctuation">;</span>
+        <span class="token keyword">fastcgi_param</span>  SCRIPT_FILENAME  <span class="token variable">$document_root</span><span class="token variable">$fastcgi_script_name</span><span class="token punctuation">;</span>
+        <span class="token keyword">include</span>        <span class="token operator">/</span>etc<span class="token operator">/</span>nginx<span class="token operator">/</span>fastcgi_params<span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+</code></pre>
+<p>設定ファイルを書き換えたら、nginx を再起動する。</p>
+<pre class="language-bash"><code class="language-bash">$ systemctl restart nginx
+</code></pre>
+<p>nginx の準備ができたので、検証用の Perl・Ruby スクリプトを書く。ファイルには実行権限を付与しておくこと。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token builtin class-name">cd</span> /usr/share/nginx/html/
+$ <span class="token function">touch</span> example.pl
+$ <span class="token function">chmod</span> <span class="token number">755</span> example.pl
+$ <span class="token function">touch</span> example.rb
+$ <span class="token function">chmod</span> <span class="token number">755</span> example.rb
+</code></pre>
+<ul>
+  <li><code>/usr/share/nginx/html/example.pl</code></li>
+</ul>
+<pre class="language-perl"><code class="language-perl"><span class="token comment">#!/usr/bin/perl</span>
+
+<span class="token keyword">print</span> <span class="token string">"Content-type: text/plain\n\n"</span><span class="token punctuation">;</span>
+<span class="token variable">$my_var</span> <span class="token operator">=</span> <span class="token string">'Perl'</span><span class="token punctuation">;</span>
+<span class="token keyword">print</span> <span class="token string">"Hello World from $my_var ."</span><span class="token punctuation">;</span>
+</code></pre>
+<ul>
+  <li><code>/usr/share/nginx/html/example.rb</code></li>
+</ul>
+<pre class="language-ruby"><code class="language-ruby"><span class="token comment">#!/usr/bin/ruby</span>
+
+print<span class="token punctuation">(</span><span class="token string">"Content-type: text/plain\n\n"</span><span class="token punctuation">)</span>
+my_var <span class="token operator">=</span> <span class="token string">'Ruby'</span>
+print<span class="token punctuation">(</span><span class="token string">"Hello World from <span class="token interpolation"><span class="token delimiter tag">#{</span>my_var<span class="token delimiter tag">}</span></span> ."</span><span class="token punctuation">)</span>
+</code></pre>
+<p>それぞれ</p>
+<ul>
+  <li><code>http://【サーバ URL】/example.pl</code></li>
+  <li><code>http://【サーバ URL】/example.rb</code></li>
+</ul>
+<p>にアクセスして、Hello World 〜といった文言が出れば OK。</p>
+<h2 id="php-を動かす--php-fpm"><a class="header-link" href="#php-を動かす--php-fpm"><span class="header-link-mark"></span></a>PHP を動かす : php-fpm</h2>
+<p>PHP だけは <code>php-fpm</code> というライブラリを使わないといけないらしいので、コレを使う。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># PHP の準備はサクッと Yum で</span>
+$ yum <span class="token function">install</span> -y php
+$ php --version
+PHP <span class="token number">5.4</span>.16 <span class="token punctuation">(</span>cli<span class="token punctuation">)</span> <span class="token punctuation">(</span>built: Oct <span class="token number">31</span> <span class="token number">2019</span> <span class="token number">11</span>:43:39<span class="token punctuation">)</span> 
+Copyright <span class="token punctuation">(</span>c<span class="token punctuation">)</span> <span class="token number">1997</span>-2013 The PHP Group
+Zend Engine v2.4.0, Copyright <span class="token punctuation">(</span>c<span class="token punctuation">)</span> <span class="token number">1998</span>-2013 Zend Technologies
+
+<span class="token comment"># PHP は PHP-FPM で動かす</span>
+$ yum <span class="token function">install</span> -y php-fpm
+
+<span class="token comment"># PHP-FPM を起動する</span>
+$ systemctl start php-fpm
+$ systemctl status php-fpm
+</code></pre>
+<p>PHP-FPM の設定ファイルを修正する。</p>
+<ul>
+  <li><code>$ vi /etc/php-fpm.d/www.conf</code>
+    <ul>
+      <li>変更前</li>
+    </ul>
+  </li>
+</ul>
+<pre class="language-nginx"><code class="language-nginx"><span class="token punctuation">;</span> Unix <span class="token keyword">user</span><span class="token operator">/</span>group of processes
+<span class="token punctuation">;</span> Note<span class="token punctuation">:</span> The <span class="token keyword">user</span> is mandatory<span class="token punctuation">.</span> <span class="token keyword">If</span> the group is not <span class="token keyword">set</span><span class="token punctuation">,</span> the default <span class="token keyword">user</span>'s group
+<span class="token punctuation">;</span>       will be used<span class="token punctuation">.</span>
+<span class="token punctuation">;</span> RPM<span class="token punctuation">:</span> apache Choosed to be able to access some dir as httpd
+<span class="token keyword">user</span> <span class="token operator">=</span> apache
+<span class="token punctuation">;</span> RPM<span class="token punctuation">:</span> Keep a group allowed to write in log dir<span class="token punctuation">.</span>
+group <span class="token operator">=</span> apache
+</code></pre>
+<p>デフォルトでは <code>user</code> と <code>group</code> に <code>apache</code> が記述されていると思うので、ココを <code>nginx</code> に書き換える。</p>
+<ul>
+  <li><code>$ vi /etc/php-fpm.d/www.conf</code>
+    <ul>
+      <li>変更後</li>
+    </ul>
+  </li>
+</ul>
+<pre class="language-nginx"><code class="language-nginx"><span class="token punctuation">;</span> Unix <span class="token keyword">user</span><span class="token operator">/</span>group of processes
+<span class="token punctuation">;</span> Note<span class="token punctuation">:</span> The <span class="token keyword">user</span> is mandatory<span class="token punctuation">.</span> <span class="token keyword">If</span> the group is not <span class="token keyword">set</span><span class="token punctuation">,</span> the default <span class="token keyword">user</span>'s group
+<span class="token punctuation">;</span>       will be used<span class="token punctuation">.</span>
+<span class="token punctuation">;</span> RPM<span class="token punctuation">:</span> apache Choosed to be able to access some dir as httpd
+<span class="token keyword">user</span> <span class="token operator">=</span> nginx
+<span class="token punctuation">;</span> RPM<span class="token punctuation">:</span> Keep a group allowed to write in log dir<span class="token punctuation">.</span>
+group <span class="token operator">=</span> nginx
+</code></pre>
+<p>そしたら PHP-FPM を再起動する。</p>
+<pre class="language-bash"><code class="language-bash">$ systemctl restart php-fpm
+</code></pre>
+<p>コレでデフォルトでは9000番ポートがリスンされていると思うので、念のため <code>$ lsof -i:9000</code> などで確認しておく。</p>
+<p>続いて nginx 設定ファイルに次のセクションを追加する。</p>
+<ul>
+  <li><code>$ vi /etc/nginx/conf.d/default.conf</code></li>
+</ul>
+<pre class="language-nginx"><code class="language-nginx">    <span class="token comment"># pass the PHP scripts to FastCGI server listening on 127.0.0.1:9000</span>
+    
+    <span class="token comment"># For CGI : Perl Ruby</span>
+    <span class="token keyword">location</span> <span class="token operator">~</span> \<span class="token punctuation">.</span><span class="token punctuation">(</span>pl<span class="token operator">|</span>rb<span class="token operator">|</span>cgi<span class="token punctuation">)</span>$ <span class="token punctuation">{</span>
+        <span class="token keyword">try_files</span>      <span class="token variable">$uri</span> <span class="token operator">/</span><span class="token number">404.</span>html<span class="token punctuation">;</span>
+        <span class="token keyword">root</span>           <span class="token operator">/</span>usr<span class="token operator">/</span>share<span class="token operator">/</span>nginx<span class="token operator">/</span>html<span class="token punctuation">;</span>
+        <span class="token keyword">fastcgi_pass</span>   <span class="token number">127.0</span><span class="token number">.0</span><span class="token number">.1</span><span class="token punctuation">:</span><span class="token number">9001</span><span class="token punctuation">;</span>
+        <span class="token keyword">fastcgi_index</span>  <span class="token keyword">index</span><span class="token punctuation">.</span>cgi<span class="token punctuation">;</span>
+        <span class="token keyword">fastcgi_param</span>  SCRIPT_FILENAME  <span class="token variable">$document_root</span><span class="token variable">$fastcgi_script_name</span><span class="token punctuation">;</span>
+        <span class="token keyword">include</span>        <span class="token operator">/</span>etc<span class="token operator">/</span>nginx<span class="token operator">/</span>fastcgi_params<span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+    
+    <span class="token comment"># ↑ココまでは先程どおり・以下を追加する</span>
+    
+    <span class="token comment"># For PHP</span>
+    <span class="token keyword">location</span> <span class="token operator">~</span> \<span class="token punctuation">.</span>php$ <span class="token punctuation">{</span>
+        <span class="token keyword">try_files</span>      <span class="token variable">$uri</span> <span class="token operator">/</span><span class="token number">404.</span>html<span class="token punctuation">;</span>
+        <span class="token keyword">root</span>           <span class="token operator">/</span>usr<span class="token operator">/</span>share<span class="token operator">/</span>nginx<span class="token operator">/</span>html<span class="token punctuation">;</span>
+        <span class="token keyword">fastcgi_pass</span>   <span class="token number">127.0</span><span class="token number">.0</span><span class="token number">.1</span><span class="token punctuation">:</span><span class="token number">9000</span><span class="token punctuation">;</span>
+        <span class="token keyword">fastcgi_index</span>  <span class="token keyword">index</span><span class="token punctuation">.</span>php<span class="token punctuation">;</span>
+        <span class="token keyword">fastcgi_param</span>  SCRIPT_FILENAME  <span class="token variable">$document_root</span><span class="token variable">$fastcgi_script_name</span><span class="token punctuation">;</span>
+        <span class="token keyword">include</span>        <span class="token operator">/</span>etc<span class="token operator">/</span>nginx<span class="token operator">/</span>fastcgi_params<span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+</code></pre>
+<p>Perl・Ruby 用の設定との違いは、9001番ポートではなく9000番ポートを指定しているだけ。</p>
+<p>設定ファイルを書き換えたら nginx を再起動する。</p>
+<pre class="language-bash"><code class="language-bash">$ systemctl restart nginx
+</code></pre>
+<p>検証用の PHP スクリプトを書く。ファイルには読み取り権限だけあれば良い (644)。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token builtin class-name">cd</span> /usr/share/nginx/html/
+$ <span class="token function">touch</span> example.php
+</code></pre>
+<ul>
+  <li><code>/usr/share/nginx/html/example.php</code></li>
+</ul>
+<pre class="language-php"><code class="language-php"><span class="token php language-php"><span class="token delimiter important">&#x3C;?php</span>
+
+<span class="token function">phpinfo</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token delimiter important">?></span></span>
+</code></pre>
+<p>コレで</p>
+<ul>
+  <li><code>http://【サーバ URL】/example.php</code></li>
+</ul>
+<p>にアクセスして PHP 情報が見えれば OK。</p>
+<h2 id="以上"><a class="header-link" href="#以上"><span class="header-link-mark"></span></a>以上</h2>
+<p>結構仕組みを調べるのに手こずった…。</p>
+<h2 id="参考文献"><a class="header-link" href="#参考文献"><span class="header-link-mark"></span></a>参考文献</h2>
+<ul>
+  <li><a href="https://qiita.com/hmikisato/items/c793ced0ba2695a89de6">NginxでCGIを動かそうと頑張った話 - Qiita</a></li>
+  <li><a href="https://blog.uedder.com/setup-cgi-with-nginx.html">nyao's blog – nginxでCGI実行環境を整える</a></li>
+  <li><a href="https://www.unix-power.net/networking/post-1132">CentOS7 NginxでCGI(Perl)</a></li>
+  <li><a href="https://www.server-world.info/query?os=Ubuntu_18.04&#x26;p=nginx&#x26;f=5">Ubuntu 18.04 LTS : Nginx : CGI 実行環境を設定する : Server World</a></li>
+  <li><a href="https://www.setouchino.cloud/blogs/35">【centos7】nginx環境でシェルスクリプトをcgiとして動かす | 瀬戸内の雲のように</a></li>
+  <li><a href="https://server-recipe.com/1257/">nginxで、.cgiなどのCGIを動かす (2019/07/14 更新) | サーバーレシピ</a></li>
+  <li><a href="https://qiita.com/noraworld/items/fd491a77af9d4e1ccffa">CentOS7 + Nginx + PHP-FPM でPHPを実行する環境を整える - Qiita</a></li>
+  <li><a href="https://www.petitmonte.com/ruby/nginx_fcgiwrap.html">Nginx/Rails/PHPにFastCGIでPerl/Pythonを共存させる CentOS</a></li>
+  <li><a href="https://qiita.com/bloodia/items/a130f552e39cb3ddb9d9">nginx事前準備から動作テストまでのメモ - Qiita</a></li>
+  <li><a href="https://qiita.com/u-dai/items/085e3570450aad811693">CentOS7 Nginx サーバーで PHP-FPM を使って PHP を実行させるための設定 - Qiita</a></li>
+  <li><a href="https://www.petitmonte.com/ruby/nginx_php.html">NginxでPHP7(PHP-FPM)を動作させる CentOS</a></li>
+</ul>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2020-03-06</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2020-03-06</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

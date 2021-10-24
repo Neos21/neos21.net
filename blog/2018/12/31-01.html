@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>Windows GitBash のプロンプト表示が遅いのをなんとかしたかった - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2018/12/31-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2018/index.html">2018年</a></li>
+            <li><a href="/blog/2018/12/index.html">12月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2018-12-31</time></div>
+        <h1 id="page-title">Windows GitBash のプロンプト表示が遅いのをなんとかしたかった</h1>
+
+<p>Windows GitBash のプロンプト表示がやたらと遅い。何のコマンドも打たずに <code>Enter</code> を押しただけでも、何か表示がつっかえる。</p>
+<p>何が原因かと思って調べてみたところ、どうも GitBash デフォルトのプロンプト内に設定されている <strong>`</strong>git_ps1`__ という関数が遅いようだ。</p>
+<p>その証拠に、プロンプトを <em><code>PS1='$ '</code></em> と簡素化すると、かなりサクサク動くようになった。</p>
+<blockquote>
+  <p>It looks like there problem lies in your bash prompt setting. Try setting <code>PS1='$ '</code> so that whatever fancy prompt setting is deactivated, then see if it is still slow to you.</p>
+  <ul>
+    <li>参考：<a href="https://stackoverflow.com/questions/42888024/git-bash-mintty-is-extremely-slow-on-windows-10-os#comment72878876_42888024">Git Bash (mintty) is extremely slow on Windows 10 OS - Stack Overflow</a></li>
+  </ul>
+</blockquote>
+<p>そこで、この関数の中身を探って、プロンプト表示を早く出来ないか、色々調べてみた。</p>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#__git_ps1-%E9%96%A2%E6%95%B0%E3%81%A8%E3%81%AF"><code>__git_ps1</code> 関数とは</a></li>
+  <li><a href="#__git_ps1-%E9%96%A2%E6%95%B0%E3%81%AB%E3%81%A4%E3%81%84%E3%81%A6%E8%AA%BF%E3%81%B9%E3%82%8B"><code>__git_ps1</code> 関数について調べる</a></li>
+  <li><a href="#__git_ps1-%E9%96%A2%E6%95%B0%E3%82%92%E4%BB%A3%E6%9B%BF%E3%81%99%E3%82%8B%E3%82%AA%E3%83%AA%E3%82%B8%E3%83%8A%E3%83%AB%E3%81%AE%E9%96%A2%E6%95%B0%E3%82%92%E4%BD%9C%E3%82%8B"><code>__git_ps1</code> 関数を代替するオリジナルの関数を作る</a></li>
+  <li><a href="#gitconfig-%E3%81%A7-git-%E3%82%B3%E3%83%9E%E3%83%B3%E3%83%89%E3%81%AE%E5%8B%95%E4%BD%9C%E3%82%92%E9%80%9F%E3%81%8F%E3%81%99%E3%82%8B"><code>.gitconfig</code> で Git コマンドの動作を速くする</a></li>
+  <li><a href="#%E3%82%AA%E3%83%AC%E3%82%AA%E3%83%AC-__git_ps1-%E3%82%92%E4%BD%9C%E3%81%A3%E3%81%9F">オレオレ <code>__git_ps1</code> を作った</a></li>
+  <li><a href="#%E3%81%9D%E3%81%AE%E4%BB%96">その他</a></li>
+  <li><a href="#git-completionbash-%E3%81%AB%E3%81%A4%E3%81%84%E3%81%A6"><code>git-completion.bash</code> について</a></li>
+  <li><a href="#%E3%81%9D%E3%82%93%E3%81%AA%E3%83%AF%E3%82%B1%E3%81%A72018%E5%B9%B4%E6%9C%AB%E3%81%AE-bash_profile-%E3%81%A8-bashrc-%E3%82%92%E7%B4%B9%E4%BB%8B">そんなワケで2018年末の <code>.bash_profile</code> と <code>.bashrc</code> を紹介</a></li>
+  <li><a href="#%E4%BB%A5%E4%B8%8A">以上</a></li>
+</ul>
+<h2 id="__git_ps1-関数とは"><a class="header-link" href="#__git_ps1-関数とは"><span class="header-link-mark"></span></a><code>__git_ps1</code> 関数とは</h2>
+<p>Windows GitBash 標準のプロンプトは、以下のような構成になっている。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token builtin class-name">echo</span> <span class="token environment constant">$PS1</span>
+<span class="token punctuation">\</span><span class="token punctuation">[</span><span class="token punctuation">\</span>033<span class="token punctuation">]</span><span class="token number">0</span><span class="token punctuation">;</span><span class="token variable">$TITLEPREFIX</span><span class="token builtin class-name">:</span><span class="token environment constant">$PWD</span><span class="token punctuation">\</span>007<span class="token punctuation">\</span><span class="token punctuation">]</span><span class="token punctuation">\</span>n<span class="token punctuation">\</span><span class="token punctuation">[</span><span class="token punctuation">\</span>033<span class="token punctuation">[</span>32m<span class="token punctuation">\</span><span class="token punctuation">]</span><span class="token punctuation">\</span>u@<span class="token punctuation">\</span>h <span class="token punctuation">\</span><span class="token punctuation">[</span><span class="token punctuation">\</span>033<span class="token punctuation">[</span>35m<span class="token punctuation">\</span><span class="token punctuation">]</span><span class="token variable">$MSYSTEM</span> <span class="token punctuation">\</span><span class="token punctuation">[</span><span class="token punctuation">\</span>033<span class="token punctuation">[</span>33m<span class="token punctuation">\</span><span class="token punctuation">]</span><span class="token punctuation">\</span>w<span class="token punctuation">\</span><span class="token punctuation">[</span><span class="token punctuation">\</span>033<span class="token punctuation">[</span>36m<span class="token punctuation">\</span><span class="token punctuation">]</span><span class="token variable"><span class="token variable">`</span>__git_ps1<span class="token variable">`</span></span><span class="token punctuation">\</span><span class="token punctuation">[</span><span class="token punctuation">\</span>033<span class="token punctuation">[</span>0m<span class="token punctuation">\</span><span class="token punctuation">]</span><span class="token punctuation">\</span>n$
+</code></pre>
+<p>カラーリングの設定が含まれていて分かりにくいが、</p>
+<ul>
+  <li><code>\u</code>：ユーザ名</li>
+  <li><code>\h</code>：ホスト名 (コンピュータ名)</li>
+  <li><code>$MSYSTEM</code>：MSYS2 で起動したことを示す環境変数</li>
+  <li><code>\w</code>：カレントディレクトリのパス</li>
+  <li><code>__git_ps1</code>：コレが Git リポジトリを開いたときに <code>(master *)</code> などのようなプロンプトを表示させている関数</li>
+</ul>
+<p>以上のようなモノが含まれている。</p>
+<p>このプロンプトは <code>/etc/profile.d/git-prompt.sh</code> (<code>C:\Program Files\Git\etc\profile.d\git-prompt.sh</code>) というファイルが起動時に設定している。ファイルの中身を抜粋すると以下のとおり。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token assign-left variable"><span class="token environment constant">PS1</span></span><span class="token operator">=</span><span class="token string">'\[<span class="token entity" title="\033">\033</span>]0;<span class="token variable">$TITLEPREFIX</span>:<span class="token environment constant">$PWD</span><span class="token entity" title="\007">\007</span>\]'</span> <span class="token comment"># set window title</span>
+<span class="token assign-left variable"><span class="token environment constant">PS1</span></span><span class="token operator">=</span><span class="token string">"<span class="token environment constant">$PS1</span>"</span>'<span class="token punctuation">\</span>n<span class="token string">'                 # new line
+PS1="<span class="token environment constant">$PS1</span>"'</span><span class="token punctuation">\</span><span class="token punctuation">[</span><span class="token punctuation">\</span>033<span class="token punctuation">[</span>32m<span class="token punctuation">\</span><span class="token punctuation">]</span><span class="token string">'       # change to green
+PS1="<span class="token environment constant">$PS1</span>"'</span><span class="token punctuation">\</span>u@<span class="token punctuation">\</span>h <span class="token string">'             # user@host&#x3C;space>
+PS1="<span class="token environment constant">$PS1</span>"'</span><span class="token punctuation">\</span><span class="token punctuation">[</span><span class="token punctuation">\</span>033<span class="token punctuation">[</span>35m<span class="token punctuation">\</span><span class="token punctuation">]</span><span class="token string">'       # change to purple
+PS1="<span class="token environment constant">$PS1</span>"'</span><span class="token variable">$MSYSTEM</span> <span class="token string">'          # show MSYSTEM
+PS1="<span class="token environment constant">$PS1</span>"'</span><span class="token punctuation">\</span><span class="token punctuation">[</span><span class="token punctuation">\</span>033<span class="token punctuation">[</span>33m<span class="token punctuation">\</span><span class="token punctuation">]</span><span class="token string">'       # change to brownish yellow
+PS1="<span class="token environment constant">$PS1</span>"'</span><span class="token punctuation">\</span>w<span class="token string">'                 # current working directory
+if test -z "<span class="token variable">$WINELOADERNOEXEC</span>"
+then
+  GIT_EXEC_PATH="<span class="token variable"><span class="token variable">$(</span><span class="token function">git</span> --exec-path <span class="token operator"><span class="token file-descriptor important">2</span>></span>/dev/null<span class="token variable">)</span></span>"
+  COMPLETION_PATH="<span class="token variable">${GIT_EXEC_PATH<span class="token operator">%</span><span class="token operator">/</span>libexec<span class="token operator">/</span>git-core}</span>"
+  COMPLETION_PATH="<span class="token variable">${COMPLETION_PATH<span class="token operator">%</span><span class="token operator">/</span>lib<span class="token operator">/</span>git-core}</span>"
+  COMPLETION_PATH="<span class="token variable">$COMPLETION_PATH</span>/share/git/completion"
+  if test -f "<span class="token variable">$COMPLETION_PATH</span>/git-prompt.sh"
+  then
+    . "<span class="token variable">$COMPLETION_PATH</span>/git-completion.bash"  # ★
+    . "<span class="token variable">$COMPLETION_PATH</span>/git-prompt.sh"        # ★
+    PS1="<span class="token environment constant">$PS1</span>"'</span><span class="token punctuation">\</span><span class="token punctuation">[</span><span class="token punctuation">\</span>033<span class="token punctuation">[</span>36m<span class="token punctuation">\</span><span class="token punctuation">]</span><span class="token string">'  # change color to cyan
+    PS1="<span class="token environment constant">$PS1</span>"'</span><span class="token variable"><span class="token variable">`</span>__git_ps1<span class="token variable">`</span></span><span class="token string">'   # bash function
+  fi
+fi
+PS1="<span class="token environment constant">$PS1</span>"'</span><span class="token punctuation">\</span><span class="token punctuation">[</span><span class="token punctuation">\</span>033<span class="token punctuation">[</span>0m<span class="token punctuation">\</span><span class="token punctuation">]</span><span class="token string">'        # change color
+PS1="<span class="token environment constant">$PS1</span>"'</span><span class="token punctuation">\</span>n<span class="token string">'                 # new line
+PS1="<span class="token environment constant">$PS1</span>"'</span>$ '                 <span class="token comment"># prompt: always $</span>
+</code></pre>
+<p>このうち、コメントで <code># ★</code> と付けた部分で、タブ補完を実現する <code>git-completion.bash</code> と、<strong>`</strong>git_ps1<code>関数を提供する</code>git-prompt.sh<code>__ というファイルを読み込んでいる。いずれも、</code>C:\Program Files\Git\mingw64\share\git\completion` ディレクトリ配下に置いてある。</p>
+<p>GitBash 起動後の実行順序としては、</p>
+<ol>
+  <li><code>/etc/profile</code> … このファイルが以降のファイルを <code>source</code> している</li>
+  <li><code>/etc/msystem</code></li>
+  <li><code>/etc/profile.d/git-prompt.sh</code> … <code>$PS1</code> を定義している
+    <ol>
+      <li><code>/mingw64/share/git/completion/git-completion.bash</code></li>
+      <li><code>/mingw64/share/git/completion/git-prompt.sh</code> … <code>__git_ps1</code> 関数を持つファイル</li>
+    </ol>
+  </li>
+  <li><code>/etc/bash.bashrc</code></li>
+</ol>
+<p>こんな感じになっている。起動時から色々読み込んでいるようだ。</p>
+<p>さて、プロンプトを定義している <code>/etc/profile.d/git-prompt.sh</code> から読み込まれている、<code>__git_ps1</code> 関数を提供している方の <code>git-prompt.sh</code> の存在が分かったところで、この関数の中身を見ていこうと思う。</p>
+<h2 id="__git_ps1-関数について調べる"><a class="header-link" href="#__git_ps1-関数について調べる"><span class="header-link-mark"></span></a><code>__git_ps1</code> 関数について調べる</h2>
+<p><code>git-prompt.sh</code> の中身は以下で読める。Windows GitBash にインストールされるモノも、Mac にインストールされるモノも、いずれも同じ内容のファイルだった。OS 環境を問わず使い回せる、Git 提供のスクリプトのようだ。</p>
+<ul>
+  <li><a href="https://github.com/git/git/blob/041fe8f/contrib/completion/git-prompt.sh">git/git-prompt.sh at 041fe8fc83770f95b09db4aa9d9b3783789eab08 · git/git · GitHub</a> … 2017-12-07 のコミット</li>
+</ul>
+<p>関数全体の処理時間をチェック。以下の文献では <code>time</code> コマンドを使って <code>__git_ps1</code> 関数の実行速度を計測している。自分の環境でも試してみたが、1回あたり0.7秒くらい実行にかかっているようだった。</p>
+<ul>
+  <li>参考：<a href="https://stackoverflow.com/questions/4192014/git-ps1-extremely-slow-in-kernel-tree">git - <code>__git_ps1</code> extremely slow in kernel tree - Stack Overflow</a></li>
+</ul>
+<p>次に、<code>git add</code> 前後のファイルがあると <code>*</code> や <code>+</code> といった記号をプロンプトに併記してくれる、<code>$GIT_PS1_SHOWDIRTYSTATE</code> オプションを外してみると、少し動作が速くなった。コレは <code>git-prompt.sh</code> 内で、<code>git diff</code> が実行されなくなったからなようだ。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># git-prompt.sh の L480～L488 を抜粋</span>
+<span class="token keyword">if</span> <span class="token punctuation">[</span> -n <span class="token string">"<span class="token variable">${GIT_PS1_SHOWDIRTYSTATE-}</span>"</span> <span class="token punctuation">]</span> <span class="token operator">&#x26;&#x26;</span>
+   <span class="token punctuation">[</span> <span class="token string">"<span class="token variable"><span class="token variable">$(</span><span class="token function">git</span> config --bool bash.showDirtyState<span class="token variable">)</span></span>"</span> <span class="token operator">!=</span> <span class="token string">"false"</span> <span class="token punctuation">]</span>
+<span class="token keyword">then</span>
+  <span class="token function">git</span> <span class="token function">diff</span> --no-ext-diff --quiet <span class="token operator">||</span> <span class="token assign-left variable">w</span><span class="token operator">=</span><span class="token string">"*"</span>
+  <span class="token function">git</span> <span class="token function">diff</span> --no-ext-diff --cached --quiet <span class="token operator">||</span> <span class="token assign-left variable">i</span><span class="token operator">=</span><span class="token string">"+"</span>
+  <span class="token keyword">if</span> <span class="token punctuation">[</span> -z <span class="token string">"<span class="token variable">$short_sha</span>"</span> <span class="token punctuation">]</span> <span class="token operator">&#x26;&#x26;</span> <span class="token punctuation">[</span> -z <span class="token string">"<span class="token variable">$i</span>"</span> <span class="token punctuation">]</span><span class="token punctuation">;</span> <span class="token keyword">then</span>
+    <span class="token assign-left variable">i</span><span class="token operator">=</span><span class="token string">"#"</span>
+  <span class="token keyword">fi</span>
+<span class="token keyword">fi</span>
+</code></pre>
+<p>同様に、<code>git add</code> 前の新規作成ファイルが存在するときに <code>%</code> 記号を表示する <code>$GIT_PS1_SHOWUNTRACKEDFILES</code> オプションを外すと、これまた速くなった。<code>git ls-files</code> が遅いようだ。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># git-prompt.sh の L495～L500 を抜粋</span>
+<span class="token keyword">if</span> <span class="token punctuation">[</span> -n <span class="token string">"<span class="token variable">${GIT_PS1_SHOWUNTRACKEDFILES-}</span>"</span> <span class="token punctuation">]</span> <span class="token operator">&#x26;&#x26;</span>
+   <span class="token punctuation">[</span> <span class="token string">"<span class="token variable"><span class="token variable">$(</span><span class="token function">git</span> config --bool bash.showUntrackedFiles<span class="token variable">)</span></span>"</span> <span class="token operator">!=</span> <span class="token string">"false"</span> <span class="token punctuation">]</span> <span class="token operator">&#x26;&#x26;</span>
+   <span class="token function">git</span> ls-files --others --exclude-standard --directory --no-empty-directory --error-unmatch -- <span class="token string">':/*'</span> <span class="token operator">></span>/dev/null <span class="token operator"><span class="token file-descriptor important">2</span>></span>/dev/null
+<span class="token keyword">then</span>
+  <span class="token assign-left variable">u</span><span class="token operator">=</span><span class="token string">"%<span class="token variable">${ZSH_VERSION+<span class="token operator">%</span>}</span>"</span>
+<span class="token keyword">fi</span>
+</code></pre>
+<p>これらの動作が遅いことは先程の記事などでも指摘されていて、この <code>git-prompt.sh</code> はちょくちょく改善されているようだ。</p>
+<ul>
+  <li>参考：<a href="https://stackoverflow.com/questions/4192014/git-ps1-extremely-slow-in-kernel-tree/5076116#5076116">git - <code>__git_ps1</code> extremely slow in kernel tree - Stack Overflow</a></li>
+  <li>参考：<a href="https://code.i-harness.com/ja/q/3ff70e">最新 - カーネルツリーで<code>__git_ps1</code>が非常に遅い</a></li>
+</ul>
+<h2 id="__git_ps1-関数を代替するオリジナルの関数を作る"><a class="header-link" href="#__git_ps1-関数を代替するオリジナルの関数を作る"><span class="header-link-mark"></span></a><code>__git_ps1</code> 関数を代替するオリジナルの関数を作る</h2>
+<p>この関数のやりたいことといえば、</p>
+<ul>
+  <li>Git 管理されているディレクトリだったらブランチ名を表示する</li>
+  <li>(<code>$GIT_PS1_SHOWDIRTYSTATE</code> オプションがある場合) <code>git add</code> 前のファイルがあれば <code>*</code>、<code>git add</code> 後のファイルがあれば <code>+</code> 記号を表示する</li>
+  <li>(<code>$GIT_PS1_SHOWUNTRACKEDFILES</code> オプションがある場合) <code>git add</code> 前の新規作成ファイルがあれば <code>%</code> 記号を表示する</li>
+</ul>
+<p>…とこのぐらいなのに、(コメント込みだが) 535行もある。何度か <code>git</code> コマンドを実行しているのが遅くなっていそうなのは予想がつく。</p>
+<p>それならば、<em>自分で簡易版の <code>__git_ps1</code> 関数を作ってみたらどうだろう</em>、と思いつくと、既に同じことを考えている人たちがいた。</p>
+<ul>
+  <li>参考：<a href="https://joshtronic.com/2018/01/28/minimalist-git-prompt/">Minimalist git prompt</a></li>
+</ul>
+<p>ただ、このミニマム版は、ブランチ名の表示しか対応しておらず、差分の有無は確認しないようにしているみたいだ。</p>
+<p>他に調べていると、<code>git diff</code> ではなく <code>git status</code> を使って差分をプロンプトに表示しているコードが見つかった。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token keyword">function</span> <span class="token function-name function">git_status_string</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token builtin class-name">local</span> <span class="token assign-left variable">statuses</span><span class="token operator">=</span><span class="token variable"><span class="token variable">$(</span><span class="token function">git</span> status -s <span class="token operator"><span class="token file-descriptor important">2</span>></span> /dev/null <span class="token operator">|</span> <span class="token function">sed</span> <span class="token string">'s/^ *//'</span> <span class="token operator">|</span> <span class="token function">cut</span> -d <span class="token string">' '</span> -f <span class="token number">1</span> <span class="token operator">|</span> <span class="token function">sort</span> <span class="token operator">|</span> <span class="token function">uniq</span><span class="token variable">)</span></span>
+  <span class="token keyword">if</span> <span class="token punctuation">[</span> -z <span class="token string">"<span class="token variable">$statuses</span>"</span> <span class="token punctuation">]</span><span class="token punctuation">;</span> <span class="token keyword">then</span> <span class="token builtin class-name">echo</span> <span class="token variable">$CAWAII_PROMPT_STATUS_OK</span><span class="token punctuation">;</span> <span class="token builtin class-name">return</span><span class="token punctuation">;</span> <span class="token keyword">fi</span>
+  <span class="token keyword">if</span> <span class="token punctuation">[</span> -z <span class="token string">"<span class="token variable">${statuses<span class="token operator">/</span>*U*<span class="token operator">/</span>}</span>"</span> <span class="token punctuation">]</span><span class="token punctuation">;</span> <span class="token keyword">then</span> <span class="token builtin class-name">echo</span> <span class="token variable">$CAWAII_PROMPT_STATUS_NG</span><span class="token punctuation">;</span> <span class="token builtin class-name">return</span><span class="token punctuation">;</span> <span class="token keyword">fi</span>
+  <span class="token keyword">if</span> <span class="token punctuation">[</span> -z <span class="token string">"<span class="token variable">${statuses<span class="token operator">/</span>*<span class="token punctuation">[</span>MA?<span class="token punctuation">]</span>*<span class="token operator">/</span>}</span>"</span> <span class="token punctuation">]</span><span class="token punctuation">;</span> <span class="token keyword">then</span> <span class="token builtin class-name">echo</span> <span class="token variable">$CAWAII_PROMPT_STATUS_WARN</span><span class="token punctuation">;</span> <span class="token builtin class-name">return</span><span class="token punctuation">;</span> <span class="token keyword">fi</span>
+  <span class="token builtin class-name">echo</span> <span class="token variable">$CAWAII_PROMPT_STATUS_BUG</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<ul>
+  <li>参考：<a href="https://qiita.com/ken1flan/items/7697b63214378424958a#git_status_string">かわいいプロンプト - Qiita</a></li>
+</ul>
+<p>このコードは <code>cut</code> と <code>uniq</code> を使っていて、<code>git add</code> の前後で <code>*</code> と <code>+</code> を区別したりしていない。</p>
+<h2 id="gitconfig-で-git-コマンドの動作を速くする"><a class="header-link" href="#gitconfig-で-git-コマンドの動作を速くする"><span class="header-link-mark"></span></a><code>.gitconfig</code> で Git コマンドの動作を速くする</h2>
+<p><code>__git_ps1</code> 関数を簡略化して自作するにしても、結局は <code>git</code> コマンドを呼ぶことになり、その動作が遅いのであれば、Git とファイルシステムの問題ともいえる。そこでもう少し調べてみると、「Git コマンド自体がトロい」という人も多く見られ、<code>.gitconfig</code> にて次のような設定をすることで改善された、という文献が見つかった。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">git</span> config --global core.preloadindex <span class="token boolean">true</span>
+$ <span class="token function">git</span> config --global core.fscache <span class="token boolean">true</span>
+$ <span class="token function">git</span> config --global gc.auto <span class="token number">256</span>
+</code></pre>
+<ul>
+  <li>参考：<a href="https://blog.entelect.co.za/view/7554/speed-up-git-bash-on-windows">https://blog.entelect.co.za/view/7554/speed-up-git-bash-on-windows</a> … 自作の <code>fast_git_ps1()</code> 関数の紹介もアリ</li>
+  <li>参考：<a href="https://code-examples.net/ja/q/446fc3">プル遅い - samba git 遅い - 入門サンプル</a></li>
+</ul>
+<p>オプションの内容は以下のとおり。</p>
+<ul>
+  <li><code>preloadindex</code>：ファイル・インデックスの比較を並列実行してくれる
+    <ul>
+      <li>参考：<a href="https://qiita.com/kentana20/items/538b0f1e3a86188632d0">Windows環境でGitを高速化する - Qiita</a></li>
+    </ul>
+  </li>
+  <li><code>fscache</code>：ファイルシステムをキャッシュしてくれる</li>
+  <li><code>gc.auto</code>：ガベージコレクトのしきい値を設定する
+    <ul>
+      <li>参考：<a href="https://git-scm.com/book/ja/v1/Git%E3%81%AE%E5%86%85%E5%81%B4-%E3%83%A1%E3%82%A4%E3%83%B3%E3%83%86%E3%83%8A%E3%83%B3%E3%82%B9%E3%81%A8%E3%83%87%E3%83%BC%E3%82%BF%E3%83%AA%E3%82%AB%E3%83%90%E3%83%AA">Git - Book</a></li>
+    </ul>
+  </li>
+</ul>
+<p>効果のほどはよく分からなかったが、気休め程度に設定してみた。</p>
+<h2 id="オレオレ-__git_ps1-を作った"><a class="header-link" href="#オレオレ-__git_ps1-を作った"><span class="header-link-mark"></span></a>オレオレ <code>__git_ps1</code> を作った</h2>
+<p>色々なスクリプトを参考にして、オレオレ <code>__git_ps1</code> を作ってみた。</p>
+<p>実装時に考慮したこと。</p>
+<ul>
+  <li>ブランチ名の取得は、速度を考えて <code>git symbolic-ref</code> を使用。タグなどが表示できないので、用途によっては <code>git describe</code> の方がいいかも。そちらもコメントアウトで残しておいた。</li>
+  <li><strong>結局、どうやってもパフォーマンスを改善できなかったので、ブランチ名だけ取得して表示して終わりにするコードも残しておいた。</strong>自分は普段こっちを使っているので、<code>GIT_PS1</code> 系のオプションをチェックするところから先のコードはデッドコードになっている。</li>
+  <li>差分は <code>git status --short</code> を見ることにした。
+    <ul>
+      <li><code>cut</code> コマンドで各行の1文字目を取得すれば <code>git add</code> 後の Staged なファイルの有無が分かる。</li>
+      <li>同様に2文字目を見ると <code>git add</code> 前の Unstaged なファイルの有無が分かる。</li>
+      <li>Untracked なファイルは <code>?</code> の有無で見る。</li>
+    </ul>
+  </li>
+  <li>差分情報を連結して出力している。</li>
+</ul>
+<p>ブランチ名取得の時と <code>git status</code> を叩く時に、終了コードで判断した方が良いのかな？とも思う。特に <code>git status --short --branch</code> は <code>--branch</code> オプションを呼ぶ必要があんまりないので (直後に <code>if [ -z ]</code> で判断したいがために書いてる)、パフォーマンス改善の余地はありそう。</p>
+<p>あと <code>echo</code> よりも <code>printf</code> の方が良いのかなぁ？パフォーマンス差よく分からなかったので <code>echo</code> 使ってみたが…。</p>
+<p>途中にも書いたけど、結局 <em><code>git status</code> を呼んだらどうやっても遅くなってしまった</em>ので、自分は諦めてブランチ名だけ出力する関数にしてしまった。</p>
+<p>以下は参考にした文献。</p>
+<ul>
+  <li>参考：<a href="https://qiita.com/sugyan/items/83e060e895fa8ef2038c">get current branch name - Qiita</a>
+    <ul>
+      <li>ブランチ名の取得方法。<code>git symbolic-ref --short HEAD</code> は手軽で速そう。</li>
+    </ul>
+  </li>
+  <li>参考：<a href="https://stackoverflow.com/questions/6245570/how-to-get-the-current-branch-name-in-git/19585361#19585361">How to get the current branch name in Git? - Stack Overflow</a>
+    <ul>
+      <li>色々なブランチ名の取得方法。コレを見ると <code>git symbolic-ref</code> はブランチ名以外のタグなどが取れない。<code>git describe --all | sed 's/heads\///'</code> が色々なシチュエーションに対応できそう。</li>
+    </ul>
+  </li>
+  <li>参考：<a href="https://qiita.com/8x9/items/f1156503694d3683e78d">シェルスクリプトを何万倍も遅くしないためには —— ループせずフィルタしよう - Qiita</a>
+    <ul>
+      <li>速いシェルスクリプトの書き方。まずループは遅い。次に <code>grep</code> や <code>cut</code> も遅い。<code>awk</code> もいいけど <code>tr</code> や <code>wc</code> で代用するともう少し速い。</li>
+    </ul>
+  </li>
+  <li>参考：<a href="https://git-scm.com/docs/git-status#_short_format">Git - git-status Documentation</a>
+    <ul>
+      <li><code>git status --short</code> 表示の例。</li>
+    </ul>
+  </li>
+</ul>
+<h2 id="その他"><a class="header-link" href="#その他"><span class="header-link-mark"></span></a>その他</h2>
+<p><code>git-prompt.sh</code> による <code>__git_ps1</code> 関数だが、<strong>Mac のターミナルに組み込んでも全く遅くならない。</strong>スクリプトの中身は同じなのに、Windows GitBash だと異様に遅いのだ。コレはやはり、GitBash (MSYS2) が仮想的に Bash ターミナルを再現しているために、ファイル情報の読み込みが遅いのだろう。</p>
+<ul>
+  <li>参考：<a href="https://www.infoq.com/jp/news/2017/02/GVFS">大規模リポジトリの問題を解決するGit Virtual File System</a>
+    <ul>
+      <li>Git Virtual File System (GVFS) というモノも組み込まれているようだが…</li>
+    </ul>
+  </li>
+</ul>
+<p>あと、AMD Radeon Graphics Driver を使っている環境ではコレを無効にすると Git の動作が速くなるんだとか。NVIDIA GTX1080 使いなので関係なかった。</p>
+<ul>
+  <li>参考：<a href="https://qiita.com/sin_w/items/9ffbc30a39155f52cc54">Windows10 64bit でgitBashやSourceTreeがやたら遅い 重い - Qiita</a></li>
+</ul>
+<h2 id="git-completionbash-について"><a class="header-link" href="#git-completionbash-について"><span class="header-link-mark"></span></a><code>git-completion.bash</code> について</h2>
+<p>今回の <code>git-prompt.sh</code> とは関係ないが、タブ補完を実現するための <code>git-completion.bash</code> についてもバージョン差異があるらしく、Windows と Mac とでスクリプトの内容が違った。</p>
+<p>本稿執筆時点で最新の <code>git-completion.bash</code> は以下の 2018-11-13 のコミット。</p>
+<ul>
+  <li><a href="https://github.com/git/git/blob/95182c6/contrib/completion/git-completion.bash">git/git-completion.bash at 95182c65d844e799e80a8f8997e357cdf8a3c7a6 · git/git · GitHub</a></li>
+</ul>
+<p>コレについてはあまり気にならなかったものの、Windows 環境ではやはり遅いことが多いようだ。</p>
+<ul>
+  <li>参考：<a href="http://klabgames.tech.blog.jp.klab.com/archives/1044082345.html">コマンドラインでgitのブランチ補完が異常に遅い原因を調べた@windows : KLabGames Tech Blog</a>
+    <ul>
+      <li>Completion が遅い場合の調査</li>
+    </ul>
+  </li>
+</ul>
+<h2 id="そんなワケで2018年末の-bash_profile-と-bashrc-を紹介"><a class="header-link" href="#そんなワケで2018年末の-bash_profile-と-bashrc-を紹介"><span class="header-link-mark"></span></a>そんなワケで2018年末の <code>.bash_profile</code> と <code>.bashrc</code> を紹介</h2>
+<p>色々試行錯誤してみたものの、<strong>Windows 環境下では <code>git status</code> や <code>git diff</code> 等の実行コストを削減しきれなかったので、差分情報をプロンプト出力するのは諦めた。</strong>Mac ではこれまでどおり、<code>git-prompt.sh</code> が提供する <code>__git_ps1</code> 関数を使い、Windows ではブランチ名のみ出力する自作の <code>__git_ps1</code> 関数を使うことにした。</p>
+<p>そんなこんなで構築した、2018年末時点の僕の <code>.bash_profile</code> と <code>.bashrc</code> の中身は以下のとおり。</p>
+<ul>
+  <li><code>.bash_profile</code></li>
+</ul>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># ================================================================================</span>
+<span class="token comment"># .bash_profile</span>
+<span class="token comment"># ================================================================================</span>
+
+<span class="token comment"># Detect OS And Settings</span>
+<span class="token comment"># ================================================================================</span>
+
+<span class="token keyword">if</span> <span class="token punctuation">[</span> <span class="token string">"<span class="token variable"><span class="token variable">$(</span><span class="token function">uname</span><span class="token variable">)</span></span>"</span> <span class="token operator">==</span> <span class="token string">"Darwin"</span> <span class="token punctuation">]</span><span class="token punctuation">;</span> <span class="token keyword">then</span>
+  <span class="token builtin class-name">echo</span> <span class="token string">'[MacOS] .bash_profile'</span>
+  <span class="token comment"># ==============================================================================</span>
+  
+  <span class="token comment"># Git Prompt : 標準の __git_ps1 を使う</span>
+  <span class="token builtin class-name">test</span> -r ~/.git-prompt.sh <span class="token operator">&#x26;&#x26;</span> <span class="token builtin class-name">.</span> ~/.git-prompt.sh
+  <span class="token assign-left variable">GIT_PS1_SHOWDIRTYSTATE</span><span class="token operator">=</span>true
+  <span class="token assign-left variable">GIT_PS1_SHOWUNTRACKEDFILES</span><span class="token operator">=</span>true
+  <span class="token builtin class-name">export</span> <span class="token assign-left variable"><span class="token environment constant">PS1</span></span><span class="token operator">=</span><span class="token string">'<span class="token entity" title="\n">\n</span>\[<span class="token entity" title="\033">\033</span>[32m\]\u@\h \[<span class="token entity" title="\033">\033</span>[33m\]\w\[<span class="token entity" title="\033">\033</span>[36m\]<span class="token variable"><span class="token variable">`</span>__git_ps1<span class="token variable">`</span></span>\[<span class="token entity" title="\033">\033</span>[0m\]<span class="token entity" title="\n">\n</span>$ '</span>
+  
+  <span class="token comment"># Nodebrew</span>
+  <span class="token builtin class-name">export</span> <span class="token assign-left variable"><span class="token environment constant">PATH</span></span><span class="token operator">=</span><span class="token string">"<span class="token environment constant">$HOME</span>/.nodebrew/current/bin:<span class="token environment constant">$PATH</span>"</span>
+  
+  <span class="token comment"># VSCode</span>
+  <span class="token builtin class-name">export</span> <span class="token assign-left variable"><span class="token environment constant">PATH</span></span><span class="token operator">=</span><span class="token string">"/Applications/Visual Studio Code.app/Contents/Resources/app/bin:<span class="token environment constant">$PATH</span>"</span>
+  
+  <span class="token comment"># PostgreSQL</span>
+  <span class="token builtin class-name">export</span> <span class="token assign-left variable"><span class="token environment constant">PATH</span></span><span class="token operator">=</span><span class="token string">"/Library/PostgreSQL/11/bin:<span class="token environment constant">$PATH</span>"</span>
+  
+  <span class="token comment"># RBEnv</span>
+  <span class="token builtin class-name">eval</span> <span class="token string">"<span class="token variable"><span class="token variable">$(</span>rbenv init - <span class="token operator"><span class="token file-descriptor important">2</span>></span> /dev/null<span class="token variable">)</span></span>"</span>
+  
+  
+  <span class="token comment"># ------------------------------------------------------------------------------</span>
+<span class="token keyword">elif</span> <span class="token punctuation">[</span> <span class="token string">"<span class="token variable"><span class="token variable">$(</span><span class="token function">expr</span> substr <span class="token punctuation">$(</span>uname -s<span class="token punctuation">)</span> <span class="token number">1</span> <span class="token number">5</span><span class="token variable">)</span></span>"</span> <span class="token operator">==</span> <span class="token string">"MINGW"</span> <span class="token punctuation">]</span><span class="token punctuation">;</span> <span class="token keyword">then</span>
+  <span class="token builtin class-name">echo</span> <span class="token string">'[Windows] .bash_profile'</span>
+  <span class="token comment"># ==============================================================================</span>
+  
+  <span class="token comment"># Git Prompt : 標準の __git_ps1 は未使用</span>
+  <span class="token comment"># test -r ~/.git-prompt.sh &#x26;&#x26; . ~/.git-prompt.sh</span>
+  <span class="token comment"># GIT_PS1_SHOWDIRTYSTATE=true</span>
+  <span class="token comment"># GIT_PS1_SHOWUNTRACKEDFILES=true</span>
+  
+  <span class="token comment"># Neo's __git_ps1 : 標準の __git_ps1 が Windows 環境で遅いので簡易版を自作した</span>
+  <span class="token keyword">function</span> <span class="token function-name function">__git_ps1</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token comment"># ブランチ名 : symbolic-ref はブランチ名しか出せないが、タグなどにも対応している describe よりは若干高速</span>
+    <span class="token builtin class-name">local</span> <span class="token assign-left variable">branch_name</span><span class="token operator">=</span><span class="token string">"<span class="token variable"><span class="token variable">$(</span><span class="token function">git</span> symbolic-ref --short HEAD <span class="token operator"><span class="token file-descriptor important">2</span>></span> /dev/null<span class="token variable">)</span></span>"</span>  <span class="token comment"># "$(git describe --all 2> /dev/null | sed 's/heads\///' 2> /dev/null)"</span>
+    
+    <span class="token comment"># ブランチ名がなければ Git リポジトリ配下ではないと見なす・何も出力せず中断する</span>
+    <span class="token keyword">if</span> <span class="token punctuation">[</span> -z <span class="token string">"<span class="token variable">$branch_name</span>"</span> <span class="token punctuation">]</span><span class="token punctuation">;</span> <span class="token keyword">then</span>
+      <span class="token builtin class-name">exit</span> <span class="token number">0</span>
+    <span class="token keyword">fi</span>
+    
+    <span class="token comment"># どうしてもパフォーマンスが出ないのでブランチ名だけ出すことにする</span>
+    <span class="token builtin class-name">echo</span> <span class="token string">" [<span class="token variable">$branch_name</span>]"</span>
+    <span class="token builtin class-name">exit</span> <span class="token number">0</span>
+  <span class="token punctuation">}</span>
+  
+  <span class="token builtin class-name">export</span> <span class="token assign-left variable"><span class="token environment constant">PS1</span></span><span class="token operator">=</span><span class="token string">'<span class="token entity" title="\n">\n</span>\[<span class="token entity" title="\033">\033</span>[32m\]\u@\h \[<span class="token entity" title="\033">\033</span>[33m\]\w\[<span class="token entity" title="\033">\033</span>[36m\]<span class="token variable"><span class="token variable">`</span>__git_ps1<span class="token variable">`</span></span>\[<span class="token entity" title="\033">\033</span>[0m\]<span class="token entity" title="\n">\n</span>$ '</span>
+  
+  <span class="token comment"># Nodist</span>
+  <span class="token assign-left variable">NODIST_BIN_DIR__</span><span class="token operator">=</span><span class="token variable"><span class="token variable">$(</span><span class="token builtin class-name">echo</span> <span class="token string">"<span class="token variable">$NODIST_PREFIX</span>"</span> <span class="token operator">|</span> <span class="token function">sed</span> -e <span class="token string">'s,<span class="token entity" title="\\">\\</span>,/,g'</span><span class="token variable">)</span></span>/bin<span class="token punctuation">;</span>
+  <span class="token builtin class-name">test</span> -r <span class="token string">"<span class="token variable">$NODIST_BIN_DIR__</span>/nodist.sh"</span> <span class="token operator">&#x26;&#x26;</span> <span class="token builtin class-name">.</span> <span class="token string">"<span class="token variable">$NODIST_BIN_DIR__</span>/nodist.sh"</span>
+  <span class="token builtin class-name">unset</span> NODIST_BIN_DIR__<span class="token punctuation">;</span>
+  
+  
+  <span class="token comment"># ------------------------------------------------------------------------------</span>
+<span class="token keyword">elif</span> <span class="token punctuation">[</span> <span class="token string">"<span class="token variable"><span class="token variable">$(</span><span class="token function">expr</span> substr <span class="token punctuation">$(</span>uname -s<span class="token punctuation">)</span> <span class="token number">1</span> <span class="token number">5</span><span class="token variable">)</span></span>"</span> <span class="token operator">==</span> <span class="token string">"Linux"</span> <span class="token punctuation">]</span><span class="token punctuation">;</span> <span class="token keyword">then</span>
+  <span class="token builtin class-name">echo</span> <span class="token string">'[Linux] .bash_profile'</span>
+  <span class="token comment"># ==============================================================================</span>
+  
+  
+  <span class="token comment"># ------------------------------------------------------------------------------</span>
+<span class="token keyword">else</span>
+  <span class="token builtin class-name">echo</span> <span class="token string">'[Unknown OS] .bash_profile'</span>
+  <span class="token comment"># ==============================================================================</span>
+  
+  
+  <span class="token comment"># ------------------------------------------------------------------------------</span>
+<span class="token keyword">fi</span>
+
+<span class="token comment"># History Control</span>
+<span class="token comment"># ================================================================================</span>
+
+<span class="token builtin class-name">export</span> <span class="token assign-left variable"><span class="token environment constant">HISTCONTROL</span></span><span class="token operator">=</span>ignoreboth
+
+<span class="token comment"># Git Completion</span>
+<span class="token comment"># ================================================================================</span>
+
+<span class="token builtin class-name">test</span> -r ~/.git-completion.bash <span class="token operator">&#x26;&#x26;</span> <span class="token builtin class-name">.</span> ~/.git-completion.bash
+
+<span class="token comment"># My Aliases : 念のため関数定義を確認してエイリアス用の Completion を設定する</span>
+<span class="token keyword">if</span> <span class="token builtin class-name">type</span> __git_complete <span class="token operator"><span class="token file-descriptor important">1</span>></span>/dev/null <span class="token operator"><span class="token file-descriptor important">2</span>></span>/dev/null<span class="token punctuation">;</span> <span class="token keyword">then</span>
+  <span class="token comment"># Git</span>
+  __git_complete g __git_main
+  <span class="token comment"># Add</span>
+  __git_complete ga _git_add
+  <span class="token comment"># Branch</span>
+  __git_complete gb _git_branch
+  __git_complete gba _git_branch
+  __git_complete gbd _git_branch
+  <span class="token comment"># Checkout</span>
+  __git_complete gco _git_checkout
+  __git_complete gcob _git_checkout
+  <span class="token comment"># Commit</span>
+  __git_complete gc _git_commit
+  __git_complete gce _git_commit
+  __git_complete gcem _git_commit
+  __git_complete gcm _git_commit
+  <span class="token comment"># Diff</span>
+  __git_complete gdf _git_diff
+  __git_complete gdfc _git_diff
+  __git_complete gdfn _git_diff
+  __git_complete gdfnc _git_diff
+  __git_complete gdfw _git_diff
+  __git_complete gdfwc _git_diff
+  __git_complete gdfwo _git_diff
+  __git_complete gdfwoc _git_diff
+  <span class="token comment"># Fetch</span>
+  __git_complete gfe _git_fetch
+  <span class="token comment"># Log</span>
+  __git_complete gl _git_log
+  __git_complete glf _git_log
+  __git_complete glo _git_log
+  __git_complete glr _git_log
+  <span class="token comment"># Merge</span>
+  __git_complete gm _git_merge
+  <span class="token comment"># Pull</span>
+  __git_complete gpl _git_pull
+  <span class="token comment"># Push</span>
+  __git_complete gps _git_push
+  <span class="token comment"># Reset</span>
+  __git_complete gre _git_reset
+  __git_complete greh _git_reset
+  <span class="token comment"># Status</span>
+  __git_complete gst _git_statusstatus
+  __git_complete gs _git_statusstatus
+<span class="token keyword">fi</span>
+
+<span class="token comment"># Source .bashrc</span>
+<span class="token comment"># ================================================================================</span>
+
+<span class="token builtin class-name">test</span> -r ~/.bashrc <span class="token operator">&#x26;&#x26;</span> <span class="token builtin class-name">.</span> ~/.bashrc
+</code></pre>
+<ul>
+  <li><code>.bashrc</code></li>
+</ul>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># ================================================================================</span>
+<span class="token comment"># .bashrc</span>
+<span class="token comment"># ================================================================================</span>
+
+<span class="token comment"># Detect OS And Settings</span>
+<span class="token comment"># ================================================================================</span>
+
+<span class="token keyword">if</span> <span class="token punctuation">[</span> <span class="token string">"<span class="token variable"><span class="token variable">$(</span><span class="token function">uname</span><span class="token variable">)</span></span>"</span> <span class="token operator">==</span> <span class="token string">"Darwin"</span> <span class="token punctuation">]</span><span class="token punctuation">;</span> <span class="token keyword">then</span>
+  <span class="token builtin class-name">echo</span> <span class="token string">'[MacOS] .bashrc'</span>
+  <span class="token comment"># ==============================================================================</span>
+  
+  
+  <span class="token comment"># Ls</span>
+  <span class="token builtin class-name">export</span> <span class="token assign-left variable">CLICOLOR</span><span class="token operator">=</span><span class="token number">1</span>
+  <span class="token builtin class-name">export</span> <span class="token assign-left variable">LSCOLORS</span><span class="token operator">=</span>gxfxcxdxbxegedabagacad
+  <span class="token builtin class-name">alias</span> <span class="token assign-left variable">ls</span><span class="token operator">=</span><span class="token string">'ls -G'</span>
+  
+  <span class="token comment"># Open = Start</span>
+  <span class="token builtin class-name">alias</span> <span class="token assign-left variable">start</span><span class="token operator">=</span><span class="token string">'open'</span>
+  
+  <span class="token comment"># sed</span>
+  <span class="token builtin class-name">alias</span> <span class="token assign-left variable">sed</span><span class="token operator">=</span><span class="token string">'gsed'</span>
+  
+  <span class="token comment"># tree</span>
+  <span class="token builtin class-name">alias</span> <span class="token assign-left variable">tree</span><span class="token operator">=</span><span class="token string">'tree -N'</span>
+  
+  <span class="token comment"># Open App</span>
+  <span class="token builtin class-name">alias</span> <span class="token assign-left variable">chrome</span><span class="token operator">=</span><span class="token string">'open -a "Google Chrome"'</span>
+  <span class="token builtin class-name">alias</span> <span class="token assign-left variable">cot</span><span class="token operator">=</span><span class="token string">'open -a CotEditor'</span>
+  
+  <span class="token comment"># Nodebrew</span>
+  <span class="token builtin class-name">alias</span> <span class="token assign-left variable">nb</span><span class="token operator">=</span><span class="token string">'nodebrew'</span>
+  
+  <span class="token comment"># Sudo コマンドの補完を有効化</span>
+  complete -cf <span class="token function">sudo</span>
+  
+  <span class="token comment"># カレントディレクトリ配下の .DS_Store を全て消す</span>
+  <span class="token builtin class-name">alias</span> <span class="token assign-left variable">delds</span><span class="token operator">=</span><span class="token string">'find . -name ".DS_Store" -delete'</span>
+  
+  
+  <span class="token comment"># ------------------------------------------------------------------------------</span>
+<span class="token keyword">elif</span> <span class="token punctuation">[</span> <span class="token string">"<span class="token variable"><span class="token variable">$(</span><span class="token function">expr</span> substr <span class="token punctuation">$(</span>uname -s<span class="token punctuation">)</span> <span class="token number">1</span> <span class="token number">5</span><span class="token variable">)</span></span>"</span> <span class="token operator">==</span> <span class="token string">"MINGW"</span> <span class="token punctuation">]</span><span class="token punctuation">;</span> <span class="token keyword">then</span>
+  <span class="token builtin class-name">echo</span> <span class="token string">'[Windows] .bashrc'</span>
+  <span class="token comment"># ==============================================================================</span>
+  
+  
+  <span class="token comment"># VSCode のターミナルで日本語が文字化けするので設定する</span>
+  <span class="token builtin class-name">export</span> <span class="token assign-left variable"><span class="token environment constant">LANG</span></span><span class="token operator">=</span>ja_JP.UTF-8
+  
+  <span class="token comment"># Ls</span>
+  <span class="token comment"># C:\Program Files\Git\etc\DIR_COLORS が色設定を持っている</span>
+  <span class="token comment"># 「DIR 01;34」を「DIR 01;36」にするとディレクトリが水色になる</span>
+  <span class="token builtin class-name">alias</span> <span class="token assign-left variable">ls</span><span class="token operator">=</span><span class="token string">'ls -F --color=auto --show-control-chars'</span>
+  <span class="token builtin class-name">eval</span> <span class="token variable"><span class="token variable">$(</span><span class="token function">dircolors</span> /etc/DIR_COLORS <span class="token operator"><span class="token file-descriptor important">2</span>></span> /dev/null<span class="token variable">)</span></span>
+  
+  <span class="token comment"># Start = Open</span>
+  <span class="token builtin class-name">alias</span> <span class="token assign-left variable">open</span><span class="token operator">=</span><span class="token string">'start'</span>
+  
+  <span class="token comment"># Notepad++</span>
+  <span class="token builtin class-name">alias</span> <span class="token assign-left variable">np</span><span class="token operator">=</span><span class="token string">'"/c/Program Files/Notepad++/notepad++.exe" &#x26;'</span>
+  
+  
+  <span class="token comment"># ------------------------------------------------------------------------------</span>
+<span class="token keyword">elif</span> <span class="token punctuation">[</span> <span class="token string">"<span class="token variable"><span class="token variable">$(</span><span class="token function">expr</span> substr <span class="token punctuation">$(</span>uname -s<span class="token punctuation">)</span> <span class="token number">1</span> <span class="token number">5</span><span class="token variable">)</span></span>"</span> <span class="token operator">==</span> <span class="token string">"Linux"</span> <span class="token punctuation">]</span><span class="token punctuation">;</span> <span class="token keyword">then</span>
+  <span class="token builtin class-name">echo</span> <span class="token string">'[Linux] .bashrc'</span>
+  <span class="token comment"># ==============================================================================</span>
+  
+  
+  <span class="token comment"># ------------------------------------------------------------------------------</span>
+<span class="token keyword">else</span>
+  <span class="token builtin class-name">echo</span> <span class="token string">'[Unknown OS] .bashrc'</span>
+  <span class="token comment"># ==============================================================================</span>
+  
+  
+  <span class="token comment"># ------------------------------------------------------------------------------</span>
+<span class="token keyword">fi</span>
+
+<span class="token comment"># --------------------------------------------------------------------------------</span>
+<span class="token comment"># Alias</span>
+<span class="token comment"># --------------------------------------------------------------------------------</span>
+
+<span class="token comment"># Alias : General</span>
+<span class="token comment"># ================================================================================</span>
+
+<span class="token builtin class-name">alias</span> <span class="token assign-left variable">quit</span><span class="token operator">=</span><span class="token string">'exit'</span>
+<span class="token builtin class-name">alias</span> <span class="token assign-left variable">cls</span><span class="token operator">=</span><span class="token string">'reset'</span>
+
+<span class="token comment"># Ls</span>
+<span class="token builtin class-name">alias</span> <span class="token assign-left variable">la</span><span class="token operator">=</span><span class="token string">'ls -a'</span>
+<span class="token builtin class-name">alias</span> <span class="token assign-left variable">ll</span><span class="token operator">=</span><span class="token string">'ls -l'</span>
+<span class="token builtin class-name">alias</span> <span class="token assign-left variable">lla</span><span class="token operator">=</span><span class="token string">'ls -la'</span>
+<span class="token builtin class-name">alias</span> <span class="token assign-left variable">lal</span><span class="token operator">=</span><span class="token string">'ls -la'</span>
+
+<span class="token comment"># Cd</span>
+<span class="token builtin class-name">alias</span> <span class="token punctuation">..</span><span class="token operator">=</span><span class="token string">'cdd ..'</span>
+<span class="token builtin class-name">alias</span> <span class="token punctuation">..</span>.<span class="token operator">=</span><span class="token string">'cdd ../..'</span>
+<span class="token builtin class-name">alias</span> -- -<span class="token operator">=</span><span class="token string">'cd - &#x26;&#x26; ls'</span>
+<span class="token builtin class-name">alias</span> -- --<span class="token operator">=</span><span class="token string">'cd - &#x26;&#x26; ls'</span>
+
+<span class="token comment"># Grep : 検索文字列を色付けする</span>
+<span class="token builtin class-name">alias</span> <span class="token assign-left variable">grep</span><span class="token operator">=</span><span class="token string">'grep --color'</span>
+<span class="token builtin class-name">alias</span> <span class="token assign-left variable">grepinr</span><span class="token operator">=</span><span class="token string">'grep -inR'</span>
+
+<span class="token comment"># Df : バイト表示を単位変換する</span>
+<span class="token builtin class-name">alias</span> <span class="token assign-left variable">df</span><span class="token operator">=</span><span class="token string">'df -h'</span>
+
+<span class="token comment"># PostgreSQL : パスワードは .pgpass (pgpass.conf) で設定</span>
+<span class="token builtin class-name">alias</span> <span class="token assign-left variable">mpsql</span><span class="token operator">=</span><span class="token string">'psql -U postgres --dbname=my_local_db'</span>
+
+<span class="token comment"># Edit .bash_profile</span>
+<span class="token builtin class-name">alias</span> <span class="token assign-left variable">ebp</span><span class="token operator">=</span><span class="token string">'vi ~/.bash_profile'</span>
+<span class="token builtin class-name">alias</span> <span class="token assign-left variable">bp</span><span class="token operator">=</span><span class="token string">'. ~/.bash_profile'</span>
+
+<span class="token comment"># Edit .bashrc</span>
+<span class="token builtin class-name">alias</span> <span class="token assign-left variable">erc</span><span class="token operator">=</span><span class="token string">'vi ~/.bashrc'</span>
+<span class="token builtin class-name">alias</span> <span class="token assign-left variable">rc</span><span class="token operator">=</span><span class="token string">'. ~/.bashrc'</span>
+
+<span class="token comment"># Alias : Git</span>
+<span class="token comment"># ================================================================================</span>
+
+<span class="token builtin class-name">alias</span> <span class="token assign-left variable">g</span><span class="token operator">=</span><span class="token string">'git'</span>
+
+<span class="token builtin class-name">alias</span> <span class="token assign-left variable">ga</span><span class="token operator">=</span><span class="token string">'git add'</span>
+<span class="token builtin class-name">alias</span> <span class="token assign-left variable">gb</span><span class="token operator">=</span><span class="token string">'git branch'</span>
+<span class="token builtin class-name">alias</span> <span class="token assign-left variable">gba</span><span class="token operator">=</span><span class="token string">'git branch -a'</span>
+<span class="token builtin class-name">alias</span> <span class="token assign-left variable">gbd</span><span class="token operator">=</span><span class="token string">'git branch -D'</span>
+<span class="token builtin class-name">alias</span> <span class="token assign-left variable">gco</span><span class="token operator">=</span><span class="token string">'git checkout'</span>
+<span class="token builtin class-name">alias</span> <span class="token assign-left variable">gcob</span><span class="token operator">=</span><span class="token string">'git checkout -b'</span>
+<span class="token builtin class-name">alias</span> <span class="token assign-left variable">gc</span><span class="token operator">=</span><span class="token string">'git commit'</span>
+<span class="token builtin class-name">alias</span> <span class="token assign-left variable">gce</span><span class="token operator">=</span><span class="token string">'git commit --allow-empty'</span>
+<span class="token builtin class-name">alias</span> <span class="token assign-left variable">gcem</span><span class="token operator">=</span><span class="token string">'git commit --allow-empty -m'</span>
+<span class="token builtin class-name">alias</span> <span class="token assign-left variable">gcm</span><span class="token operator">=</span><span class="token string">'git commit -m'</span>
+<span class="token builtin class-name">alias</span> <span class="token assign-left variable">gdf</span><span class="token operator">=</span><span class="token string">'git diff'</span>
+<span class="token builtin class-name">alias</span> <span class="token assign-left variable">gdfc</span><span class="token operator">=</span><span class="token string">'git diff --cached'</span>
+<span class="token builtin class-name">alias</span> <span class="token assign-left variable">gdfn</span><span class="token operator">=</span><span class="token string">'git diff --name-only'</span>
+<span class="token builtin class-name">alias</span> <span class="token assign-left variable">gdfnc</span><span class="token operator">=</span><span class="token string">'git diff --name-only --cached'</span>
+<span class="token builtin class-name">alias</span> <span class="token assign-left variable">gdfw</span><span class="token operator">=</span><span class="token string">'git diff --color-words --word-diff-regex='</span><span class="token punctuation">\</span>'<span class="token string">'<span class="token entity" title="\\">\\</span>w+|[^[:space:]]'</span><span class="token punctuation">\</span>'<span class="token string">''</span>
+<span class="token builtin class-name">alias</span> <span class="token assign-left variable">gdfwc</span><span class="token operator">=</span><span class="token string">'git diff --color-words --word-diff-regex='</span><span class="token punctuation">\</span>'<span class="token string">'<span class="token entity" title="\\">\\</span>w+|[^[:space:]]'</span><span class="token punctuation">\</span>'<span class="token string">' --cached'</span>
+<span class="token builtin class-name">alias</span> <span class="token assign-left variable">gdfwo</span><span class="token operator">=</span><span class="token string">'git diff --word-diff'</span>
+<span class="token builtin class-name">alias</span> <span class="token assign-left variable">gdfwoc</span><span class="token operator">=</span><span class="token string">'git diff --word-diff --cached'</span>
+<span class="token builtin class-name">alias</span> <span class="token assign-left variable">gfe</span><span class="token operator">=</span><span class="token string">'git fetch'</span>
+<span class="token builtin class-name">alias</span> <span class="token assign-left variable">gl</span><span class="token operator">=</span><span class="token string">' git log -10 --date=short --pretty=format:"%C(Yellow)%h %C(Cyan)%cd %C(Reset)%s %C(Blue)[%cn]%C(Red)%d"'</span>
+<span class="token builtin class-name">alias</span> <span class="token assign-left variable">glf</span><span class="token operator">=</span><span class="token string">'git log --pretty=fuller'</span>
+<span class="token builtin class-name">alias</span> <span class="token assign-left variable">glo</span><span class="token operator">=</span><span class="token string">'git log'</span>
+<span class="token builtin class-name">alias</span> <span class="token assign-left variable">glr</span><span class="token operator">=</span><span class="token string">'git log -10 --date=short --pretty=format:"%C(Yellow)%h %C(Cyan)%cd %C(Reset)%s %C(Blue)[%cn]%C(Red)%d" --graph'</span>
+<span class="token builtin class-name">alias</span> <span class="token assign-left variable">gm</span><span class="token operator">=</span><span class="token string">'git merge'</span>
+<span class="token builtin class-name">alias</span> <span class="token assign-left variable">gpl</span><span class="token operator">=</span><span class="token string">'git pull'</span>
+<span class="token builtin class-name">alias</span> <span class="token assign-left variable">gps</span><span class="token operator">=</span><span class="token string">'git push'</span>
+<span class="token builtin class-name">alias</span> <span class="token assign-left variable">gre</span><span class="token operator">=</span><span class="token string">'git reset'</span>
+<span class="token builtin class-name">alias</span> <span class="token assign-left variable">greh</span><span class="token operator">=</span><span class="token string">'git reset --hard'</span>
+<span class="token builtin class-name">alias</span> <span class="token assign-left variable">gst</span><span class="token operator">=</span><span class="token string">'git status'</span>
+<span class="token builtin class-name">alias</span> <span class="token assign-left variable">gs</span><span class="token operator">=</span><span class="token string">'git status -s -b'</span>
+
+<span class="token comment"># Show Git Alias</span>
+<span class="token builtin class-name">alias</span> <span class="token assign-left variable">galias</span><span class="token operator">=</span><span class="token string">'git config --global -l | grep alias'</span>
+
+<span class="token comment"># Tig</span>
+<span class="token builtin class-name">alias</span> <span class="token assign-left variable">tiga</span><span class="token operator">=</span><span class="token string">'tig --all'</span>
+
+<span class="token comment"># Alias : Node</span>
+<span class="token comment"># ================================================================================</span>
+
+<span class="token builtin class-name">alias</span> <span class="token assign-left variable">n</span><span class="token operator">=</span><span class="token string">'npm'</span>
+
+<span class="token builtin class-name">alias</span> <span class="token assign-left variable">ni</span><span class="token operator">=</span><span class="token string">'npm install --progress=true'</span>
+<span class="token builtin class-name">alias</span> <span class="token assign-left variable">nl</span><span class="token operator">=</span><span class="token string">'npm list --depth=0'</span>
+<span class="token builtin class-name">alias</span> <span class="token assign-left variable">nls</span><span class="token operator">=</span><span class="token string">'npm list --depth=0'</span>
+<span class="token builtin class-name">alias</span> <span class="token assign-left variable">nlg</span><span class="token operator">=</span><span class="token string">'npm list --depth=0 -g'</span>
+<span class="token builtin class-name">alias</span> <span class="token assign-left variable">nlsg</span><span class="token operator">=</span><span class="token string">'npm list --depth=0 -g'</span>
+<span class="token builtin class-name">alias</span> <span class="token assign-left variable">nr</span><span class="token operator">=</span><span class="token string">'npm run'</span>
+<span class="token builtin class-name">alias</span> <span class="token assign-left variable">ns</span><span class="token operator">=</span><span class="token string">'npm start || npm run dev'</span>
+<span class="token builtin class-name">alias</span> <span class="token assign-left variable">nt</span><span class="token operator">=</span><span class="token string">'npm test'</span>
+<span class="token builtin class-name">alias</span> <span class="token assign-left variable">nu</span><span class="token operator">=</span><span class="token string">'npm uninstall --progress=true'</span>
+
+<span class="token comment"># For Angular CLI</span>
+<span class="token builtin class-name">alias</span> <span class="token assign-left variable">nn</span><span class="token operator">=</span><span class="token string">'npm run ng'</span>
+
+<span class="token comment"># Alias : Vagrant</span>
+<span class="token comment"># ================================================================================</span>
+
+<span class="token builtin class-name">alias</span> <span class="token assign-left variable">v</span><span class="token operator">=</span><span class="token string">'vagrant'</span>
+
+<span class="token builtin class-name">alias</span> <span class="token assign-left variable">vup</span><span class="token operator">=</span><span class="token string">'vagrant up'</span>
+<span class="token builtin class-name">alias</span> <span class="token assign-left variable">vsh</span><span class="token operator">=</span><span class="token string">'vagrant ssh'</span>
+<span class="token builtin class-name">alias</span> <span class="token assign-left variable">vha</span><span class="token operator">=</span><span class="token string">'vagrant halt'</span>
+
+<span class="token comment"># --------------------------------------------------------------------------------</span>
+<span class="token comment"># Function</span>
+<span class="token comment"># --------------------------------------------------------------------------------</span>
+
+<span class="token comment"># Function : mkdir したディレクトリに cd する</span>
+<span class="token comment">#   http://qiita.com/0x60df/items/303666033788b937c578</span>
+<span class="token comment"># ================================================================================</span>
+
+<span class="token keyword">function</span> <span class="token function-name function">mkcd</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token builtin class-name">exec</span> <span class="token operator"><span class="token file-descriptor important">3</span>></span><span class="token file-descriptor important">&#x26;1</span>
+  <span class="token builtin class-name">cd</span> <span class="token string">"<span class="token variable"><span class="token variable">`</span>
+  <span class="token keyword">if</span> <span class="token function">mkdir</span> <span class="token string">"<span class="token variable">$@</span>"</span> <span class="token operator"><span class="token file-descriptor important">1</span>></span><span class="token file-descriptor important">&#x26;3</span><span class="token punctuation">;</span> <span class="token keyword">then</span>
+    <span class="token keyword">while</span> <span class="token punctuation">[</span> $# -gt <span class="token number">0</span> <span class="token punctuation">]</span>
+    <span class="token keyword">do</span>
+      <span class="token keyword">case</span> <span class="token string">"<span class="token variable">$1</span>"</span> <span class="token keyword">in</span>
+        -- <span class="token punctuation">)</span> <span class="token builtin class-name">printf</span> <span class="token string">'%s'</span> <span class="token string">"<span class="token variable">$2</span>"</span><span class="token punctuation">;</span> <span class="token builtin class-name">exit</span> <span class="token number">0</span><span class="token punctuation">;</span><span class="token punctuation">;</span>
+        -* <span class="token punctuation">)</span> <span class="token builtin class-name">shift</span><span class="token punctuation">;</span><span class="token punctuation">;</span>
+        * <span class="token punctuation">)</span> <span class="token builtin class-name">printf</span> <span class="token string">'%s'</span> <span class="token string">"<span class="token variable">$1</span>"</span><span class="token punctuation">;</span> <span class="token builtin class-name">exit</span> <span class="token number">0</span><span class="token punctuation">;</span><span class="token punctuation">;</span>
+      <span class="token keyword">esac</span>
+    <span class="token keyword">done</span>
+    <span class="token builtin class-name">printf</span> <span class="token string">'.'</span>
+    <span class="token builtin class-name">exit</span> <span class="token number">0</span>
+  <span class="token keyword">else</span>
+    <span class="token builtin class-name">printf</span> <span class="token string">'.'</span>
+    <span class="token builtin class-name">exit</span> <span class="token number">1</span>
+  <span class="token keyword">fi</span>
+  <span class="token variable">`</span></span>"</span>
+  <span class="token builtin class-name">exec</span> <span class="token operator"><span class="token file-descriptor important">3</span>>&#x26;</span>-
+<span class="token punctuation">}</span>
+
+<span class="token comment"># Function : cd したあと ls する</span>
+<span class="token comment">#   http://thehacker.jp/alias-settings/</span>
+<span class="token comment"># ================================================================================</span>
+
+<span class="token keyword">function</span> <span class="token function-name function">cdd</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token punctuation">\</span>cd <span class="token string">"<span class="token variable">$@</span>"</span> <span class="token operator">&#x26;&#x26;</span> <span class="token builtin class-name">pwd</span> <span class="token operator">&#x26;&#x26;</span> <span class="token function">ls</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>今回作成した関数は、<code>.bash_profile</code> 内の Windows 向けの <code>if</code> 文の中に定義している。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># 抜粋・再掲</span>
+
+<span class="token comment"># Git Prompt : 標準の __git_ps1 は未使用</span>
+<span class="token comment"># test -r ~/.git-prompt.sh &#x26;&#x26; . ~/.git-prompt.sh</span>
+<span class="token comment"># GIT_PS1_SHOWDIRTYSTATE=true</span>
+<span class="token comment"># GIT_PS1_SHOWUNTRACKEDFILES=true</span>
+
+<span class="token comment"># Neo's __git_ps1 : 標準の __git_ps1 が Windows 環境で遅いので簡易版を自作した</span>
+<span class="token keyword">function</span> <span class="token function-name function">__git_ps1</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token comment"># ブランチ名 : symbolic-ref はブランチ名しか出せないが、タグなどにも対応している describe よりは若干高速</span>
+  <span class="token builtin class-name">local</span> <span class="token assign-left variable">branch_name</span><span class="token operator">=</span><span class="token string">"<span class="token variable"><span class="token variable">$(</span><span class="token function">git</span> symbolic-ref --short HEAD <span class="token operator"><span class="token file-descriptor important">2</span>></span> /dev/null<span class="token variable">)</span></span>"</span>  <span class="token comment"># "$(git describe --all 2> /dev/null | sed 's/heads\///' 2> /dev/null)"</span>
+  
+  <span class="token comment"># ブランチ名がなければ Git リポジトリ配下ではないと見なす・何も出力せず中断する</span>
+  <span class="token keyword">if</span> <span class="token punctuation">[</span> -z <span class="token string">"<span class="token variable">$branch_name</span>"</span> <span class="token punctuation">]</span><span class="token punctuation">;</span> <span class="token keyword">then</span>
+    <span class="token builtin class-name">exit</span> <span class="token number">0</span>
+  <span class="token keyword">fi</span>
+  
+  <span class="token comment"># どうしてもパフォーマンスが出ないのでブランチ名だけ出すことにする</span>
+  <span class="token builtin class-name">echo</span> <span class="token string">" [<span class="token variable">$branch_name</span>]"</span>
+  <span class="token builtin class-name">exit</span> <span class="token number">0</span>
+<span class="token punctuation">}</span>
+
+<span class="token builtin class-name">export</span> <span class="token assign-left variable"><span class="token environment constant">PS1</span></span><span class="token operator">=</span><span class="token string">'<span class="token entity" title="\n">\n</span>\[<span class="token entity" title="\033">\033</span>[32m\]\u@\h \[<span class="token entity" title="\033">\033</span>[33m\]\w\[<span class="token entity" title="\033">\033</span>[36m\]<span class="token variable"><span class="token variable">`</span>__git_ps1<span class="token variable">`</span></span>\[<span class="token entity" title="\033">\033</span>[0m\]<span class="token entity" title="\n">\n</span>$ '</span>
+</code></pre>
+<p><code>~/.git-prompt.sh</code> の <code>source</code> 部分はコメントアウトして残してある。必要になったら呼び出せるように。この <code>.git-prompt.sh</code> は、公式の最新の <code>git=prompt.sh</code> を自前で配置しているだけ。Mac で Xcode Command Line Tools や Homebrew 経由でインストールされたモノがうまく参照できなくても動いてほしいので自分で持っておくことにした。</p>
+<p>自前の関数は <code>__git_ps1</code> と同名で定義しているので、実は <code>export PS1</code> 部分は Mac 版と同一のモノが指定できる。</p>
+<hr>
+<p>この他に、<code>.git-completion.bash</code> というファイルも読み込んでいるが、コレも <code>.git-prompt.sh</code> と同様、公式の最新のファイルそのまんまを持っているだけ。<code>.bash_profile</code> 側で <code>.git-completion.bash</code> を読み込んだあと、エイリアス用のタブ補完を設定しているが、コレは <code>.bashrc</code> 側の <code>alias git</code> 系のところに並べて書いておく方が良いかしら…？ココらへん <code>.bash_profile</code> に書くべきか <code>.bashrc</code> に書くべきか悩ましい…。</p>
+<ul>
+  <li>参考：<a href="http://syohex.hatenablog.com/entry/20121006/1349487493">シェルスクリプトで関数が未定義かどうか確認する - syohex's diary</a>
+    <ul>
+      <li>エイリアス用の Completion 設定時、関数が定義済か調べるために <code>type</code> ビルトイン関数を使った。</li>
+    </ul>
+  </li>
+</ul>
+<h2 id="以上"><a class="header-link" href="#以上"><span class="header-link-mark"></span></a>以上</h2>
+<p>というワケで、2018年はコレにて終了です。2018年もお世話になりました。</p>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2018-12-31</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2018-12-31</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

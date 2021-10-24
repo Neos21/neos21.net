@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>frp でセルフホスティング ngrok 風環境を作る - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2021/06/05-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2021/index.html">2021年</a></li>
+            <li><a href="/blog/2021/06/index.html">06月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2021-06-05</time></div>
+        <h1 id="page-title">frp でセルフホスティング ngrok 風環境を作る</h1>
+
+<p>以前、<em>ngrok</em> というサービスを紹介した。ローカルマシン上で公開しているポートをインターネット上に公開できるというサービスだ。</p>
+<ul>
+  <li><a href="/blog/2020/12/17-01.html">ngrok を使ってローカル環境を一時的に公開してみる</a></li>
+  <li><a href="/blog/2021/04/13-01.html">ngrok をセルフホストできる・でも DNS が大事</a></li>
+</ul>
+<p>ngrok はツール名であり、ウェブサービス名でもある。無料アカウントでもとりあえず HTTPS 公開ができるが、ngrok から付与される URL 文字列がランダムだったりして使い勝手が悪い。ngrok をセルフホスティングすることもできるが、ワイルドカード対応の DNS と SSL 証明書が必要で面倒臭い。</p>
+<p>そこで、ngrok と同様の機能を提供してくれる <strong>frp</strong> というツールがあったので、コチラを使って、ローカル上のウェブアプリをインターネット公開してみる。</p>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#%E4%BB%95%E7%B5%84%E3%81%BF%E3%81%8A%E3%81%95%E3%82%89%E3%81%84">仕組みおさらい</a></li>
+  <li><a href="#%E3%82%A4%E3%83%B3%E3%82%BF%E3%83%BC%E3%83%8D%E3%83%83%E3%83%88%E4%B8%8A%E3%81%AB%E5%85%AC%E9%96%8B%E3%81%95%E3%82%8C%E3%81%A6%E3%81%84%E3%82%8B%E3%82%B5%E3%83%BC%E3%83%90%E3%82%92%E7%94%A8%E6%84%8F%E3%81%99%E3%82%8B">インターネット上に公開されているサーバを用意する</a></li>
+  <li><a href="#%E3%82%B5%E3%83%BC%E3%83%90%E3%81%AB-frps-%E3%82%92%E7%94%A8%E6%84%8F%E3%81%99%E3%82%8B">サーバに frps を用意する</a></li>
+  <li><a href="#%E3%83%AD%E3%83%BC%E3%82%AB%E3%83%AB%E3%83%9E%E3%82%B7%E3%83%B3%E3%81%AB-frpc-%E3%82%92%E7%94%A8%E6%84%8F%E3%81%99%E3%82%8B">ローカルマシンに frpc を用意する</a></li>
+  <li><a href="#%E5%AE%9F%E9%9A%9B%E3%81%AB%E3%82%A2%E3%82%AF%E3%82%BB%E3%82%B9%E3%81%97%E3%81%A6%E3%81%BF%E3%82%8B">実際にアクセスしてみる</a></li>
+  <li><a href="#%E4%BB%A5%E4%B8%8A">以上</a></li>
+</ul>
+<h2 id="仕組みおさらい"><a class="header-link" href="#仕組みおさらい"><span class="header-link-mark"></span></a>仕組みおさらい</h2>
+<p>ngrok や frp がどういう仕組みで、何をしてくれるのか、改めておさらいしておこう。いわゆる「リバースプロキシ」の仕組みであるが、それがどういうモノかを押さえておこう。</p>
+<p>使い方の一つは、ローカルマシンに SSH 接続するためのプロキシ的な役割で使う方法がある。</p>
+<ol>
+  <li>同じ LAN 内で、プライベート IP を指定すれば SSH 接続できる状態の<em>パソコン A</em> があるとする
+    <ul>
+      <li>このパソコンには Public IP が付与されておらず、直接 SSH 接続ができない</li>
+    </ul>
+  </li>
+  <li><em>パソコン A</em> に、frp のクライアント用ソフトである <em>frpc</em> を導入する</li>
+  <li>Public IP を持ち、インターネット上から接続できる<strong>サーバ B</strong> を用意する</li>
+  <li><strong>サーバ B</strong> に、frp のサーバ用ソフトである <strong>frps</strong> を導入する</li>
+  <li>frpc と frps が通信を確立する</li>
+  <li>上2台とは全く別のネット環境から、<strong>サーバ B</strong> の Public IP を指定して SSH 接続すると、<em>パソコン A</em> に接続できる</li>
+</ol>
+<p>こんな手順で、<em>パソコン A</em> には直接 SSH 接続できない場合に、<strong>サーバ B</strong> を中継して SSH 接続することができるようになる。今回はこの手順は紹介しないが、frp の公式 README で詳しく説明されている。</p>
+<p>今回紹介するのは、手元の<em>パソコン A</em> で立ち上げたウェブサーバを公開する使い方だ。</p>
+<ol>
+  <li><em>パソコン A</em> 上で、開発用のウェブサーバを起動する
+    <ul>
+      <li>Express.js でも、Rails でも、Flask でも何でも良い。<code>npm run dev</code> で起動するような開発サーバであっても問題はない</li>
+      <li><code>http://localhost:8080/</code> などで対象のサーバにアクセスできるが、Public IP がないためインターネットからのアクセスはできない状態</li>
+    </ul>
+  </li>
+  <li><em>パソコン A</em> に、frp のクライアント用ソフトである <em>frpc</em> を導入する</li>
+  <li>Public IP を持ち、インターネット上から接続できる<strong>サーバ B</strong> を用意する</li>
+  <li><strong>サーバ B</strong> に、frp のサーバ用ソフトである <strong>frps</strong> を導入する</li>
+  <li>frpc と frps が通信を確立する</li>
+  <li>上2台とは全く別のネット環境から、<strong>サーバ B</strong> の Public IP ないしはドメインにアクセスすると、<em>パソコン A</em> で起動しているウェブサーバの内容がレスポンスされる</li>
+</ol>
+<p>やっていることは SSH 接続の場合とほぼ同じで、TCP 接続な点が違うぐらい。イメージ的には <strong>サーバ B</strong> がプロキシサーバ的なポジションに位置していて、<strong>サーバ B</strong> はユーザと<em>パソコン A</em> との通信を横流ししているだけである。</p>
+<p>いずれも、Public IP を持っている<strong>サーバ B</strong> をフロントに立たせることで、Public IP がないマシンであってもインターネット上に露出させられるというワケだ。</p>
+<h2 id="インターネット上に公開されているサーバを用意する"><a class="header-link" href="#インターネット上に公開されているサーバを用意する"><span class="header-link-mark"></span></a>インターネット上に公開されているサーバを用意する</h2>
+<p>ローカルホストをインターネット公開するには、当然ながら<em>「インターネット上に公開されている = Public IP を持つサーバ」</em>が必要になる。ngrok の場合は ngrok サービスが肩代わりしてくれていたのでコチラでサーバを用意する必要はなかったが、今回 frp を使うにあたっては、自分でサーバを用意する必要がある。</p>
+<p>自分はかねてより、GCP (Google Cloud Platform) の <em>GCE (Google Compute Engine)</em> インスタンスや、<strong>OCI (Oracle Cloud Infrastructure)</strong> の Compute インスタンスを使っている。いずれも永久無料で利用できるクラウド VM で、Apache や nginx を導入してウェブサーバを立て、同じく無料の Freenom というサービスで独自ドメインを取得し、Let's Encrypt を使って無料の SSL 証明書を作成しているので、HTTPS 接続ができる状態にしてある。</p>
+<p>何らかのクラウド VM や VPS を持っていない人は、以下に過去記事へのリンクを貼っておくので、これらを参考に GCE や OCI で無料のインスタンスを立てて、Public IP を取得しておこう。</p>
+<ul>
+  <li>GCE
+    <ul>
+      <li><a href="/blog/2019/08/01-01.html">永久無料枠で Google Compute Engine (GCE) インスタンスを立ち上げる : その1</a></li>
+      <li><a href="/blog/2019/08/02-01.html">永久無料枠で Google Compute Engine (GCE) インスタンスを立ち上げる : その2</a></li>
+      <li><a href="/blog/2019/12/13-01.html">GCE インスタンスに Apache と PHP をインストールして Web サーバを公開してみた</a></li>
+      <li><a href="/blog/2020/06/15-01.html">完全無料。GCE で公開している HTTP サーバを Freenom 独自ドメイン + Let's Encrypt で HTTPS 化した</a></li>
+    </ul>
+  </li>
+  <li>OCI
+    <ul>
+      <li><a href="/blog/2019/10/19-01.html">Oracle Cloud が Always Free (永久無料枠) を発表したのでアカウント登録してみたが、無料枠が少ない</a></li>
+      <li><a href="/blog/2020/02/06-03.html">OCI Always Free Compute (Oracle Linux・CentOS 7) に nginx をインストールする</a></li>
+    </ul>
+  </li>
+  <li>Freenom
+    <ul>
+      <li><a href="/blog/2018/12/03-01.html">独自ドメインを無料で取得できる Freenom を使ってみた</a></li>
+    </ul>
+  </li>
+  <li>Let's Encrypt
+    <ul>
+      <li><a href="/blog/2020/10/07-01.html">Ubuntu + nginx 上で Freenom + Let's Encrypt を使って HTTPS 化する</a></li>
+      <li><a href="/blog/2020/10/09-01.html">Freenom ドメイン・Let's Encrypt 証明書の有効期限を確認・通知する仕組みを作った</a></li>
+    </ul>
+  </li>
+</ul>
+<p>OCI ではコレまで無料で2台の VM が立てられたが、<em>2021年6月現在、 ARM ベースの Always Free インスタンスがさらに複数台立てられる</em>ようになっている。GCE では海外リージョンの低速な VM が1台しか立てられないので、今回初めてクラウド VM を立てるという人は、OCI の無料枠を利用するのが良いだろう。</p>
+<p>今回 frp を利用するにあたっては、最低限 Public IP があれば良い。分かりやすくするために Freenom などを使って独自ドメインを取得しても良いだろう (DNS 設定は Freenom が提供する無料 DNS を利用)。VM 自体に Apache や nginx といったサーバを立てる必要はなく、HTTPS 接続も今回に関しては検証しないので、Let's Encrypt の導入も省略しても良い。</p>
+<p>クラウドサービスごとに設定方法が異なるが、仮想ネットワークのファイアウォール設定で、インターネットからの <strong>7000 番ポート</strong>や 7500 番ポートへのアクセスを許可しておくこと。ココで使用するポートは後で設定変更可能だ。</p>
+<h2 id="サーバに-frps-を用意する"><a class="header-link" href="#サーバに-frps-を用意する"><span class="header-link-mark"></span></a>サーバに frps を用意する</h2>
+<p>クラウド VM や VPS を用意したら、frp のサーバ用ソフトである <strong>frps</strong> を用意しよう。</p>
+<p>GitHub の Releases ページで、frps と frpc が両方まとめて一つのアーカイブとして配信されている。今回は v0.36.2 の Linux 用をダウンロードした。</p>
+<p>今回検証に使ったのは、OCI で立てた Ubuntu 18.04 OS の Compute インスタンスだが、Linux 系のサーバであればほぼ同様に設定できるだろう。</p>
+<ul>
+  <li><a href="https://github.com/fatedier/frp/releases">Releases · fatedier/frp</a></li>
+  <li><a href="https://github.com/fatedier/frp/releases/tag/v0.36.2">Release v0.36.2 · fatedier/frp</a>
+    <ul>
+      <li><a href="https://github.com/fatedier/frp/releases/download/v0.36.2/frp_0.36.2_linux_386.tar.gz">https://github.com/fatedier/frp/releases/download/v0.36.2/frp_0.36.2_linux_386.tar.gz</a></li>
+    </ul>
+  </li>
+</ul>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># アーカイブをダウンロードする</span>
+$ <span class="token function">wget</span> https://github.com/fatedier/frp/releases/download/v0.36.2/frp_0.36.2_linux_386.tar.gz
+<span class="token comment"># アーカイブを解凍する</span>
+$ <span class="token function">tar</span> xvf ./frp_0.36.2_linux_386.tar.gz
+<span class="token comment"># 解凍したファイル群のうち、「frps」と「frps.ini」だけ取り出して利用する</span>
+$ <span class="token function">cp</span> ./frp_0.36.2_linux_386/frps ./
+$ <span class="token function">cp</span> ./frp_0.36.2_linux_386/frps.ini ./
+<span class="token comment"># frps のバージョンを確認する</span>
+$ ./frps -v
+<span class="token number">0.36</span>.2
+
+<span class="token comment"># 「frps.ini」設定ファイルの内容を編集する (後述)</span>
+$ <span class="token function">vi</span> ./frps.ini
+
+<span class="token comment"># frps を起動する</span>
+$ ./frps -c ./frps.ini
+</code></pre>
+<p>設定ファイルである <code>frps.ini</code> は、以下のように記述する。</p>
+<ul>
+  <li><code>frps.ini</code></li>
+</ul>
+<pre class="language-ini"><code class="language-ini"><span class="token selector">[common]</span>
+<span class="token comment"># クライアントとトークン = パスワード文字列による認証をする</span>
+<span class="token constant">token</span> <span class="token attr-value"><span class="token punctuation">=</span> mytoken</span>
+<span class="token comment"># このサーバが公開するポートとして 7000 番を指定する</span>
+<span class="token constant">bind_port</span> <span class="token attr-value"><span class="token punctuation">=</span> 7000</span>
+<span class="token comment"># ウェブサーバを公開するポートに 7000 番を利用する (上の bind_port と同じ番号で良い)</span>
+<span class="token constant">vhost_http_port</span> <span class="token attr-value"><span class="token punctuation">=</span> 7000</span>
+<span class="token comment"># ダッシュボードを公開する場合は以下3行を追加する</span>
+<span class="token constant">dashboard_port</span> <span class="token attr-value"><span class="token punctuation">=</span> 7500</span>
+<span class="token constant">dashboard_user</span> <span class="token attr-value"><span class="token punctuation">=</span> adminuser</span>
+<span class="token constant">dashboard_pwd</span> <span class="token attr-value"><span class="token punctuation">=</span> adminpass</span>
+</code></pre>
+<p><code>token</code> プロパティでパスワード文字列を設定しておく。サーバとクライアントを簡易認証するためのモノだ。<code>bind_port</code> は、このサーバがインターネット上に公開するポートを指定する。ココではデフォルトどおり 7000 番にしておく。</p>
+<p>今回、ローカルマシンの開発サーバを公開しようとしているので、<code>vhost_http_port</code> というプロパティを指定する。接続したクライアントのポートを、どのポートで公開するか、という設定になる。今回は <code>bind_port</code> と同じ 7000 番にしておく。</p>
+<p>下3行はオプションで、frps がどんなクライアントとどんな接続をしているかが Web UI で確認できる、ダッシュボードを公開するための設定。ココでは 7500 番を指定している。<code>http://example.com:7500/</code> にアクセスすると BASIC 認証のプロンプトが表示されるので、この設定ファイルで指定しているユーザ名とパスワードで認証してやる。接続状況が確認できて分かりやすいが、あまりアレコレ公開したくない場合は下3行を削れば良い。</p>
+<p>サーバ用の設定ファイルに記述するのはこのぐらい。設定ファイルを用意したら、frps を起動して待機させておこう。クライアントサイドの準備ができていなくても、構わず立ち上げっぱなしで良い。バックグラウンドで立ち上げっぱなしにしておく場合は <code>nohup</code> と <code>&#x26;</code> を使うと良いだろう。アーカイブには <code>systemd</code> 用の設定ファイルも同梱されている。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">nohup</span> ./frps -c ./frps.ini <span class="token operator">&#x26;</span>
+</code></pre>
+<h2 id="ローカルマシンに-frpc-を用意する"><a class="header-link" href="#ローカルマシンに-frpc-を用意する"><span class="header-link-mark"></span></a>ローカルマシンに frpc を用意する</h2>
+<p>続いて、クライアント側に frp のクライアント用ソフトである <em>frpc</em> を用意する。</p>
+<p>Linux マシンで作業する場合は、上で紹介したサーバ用と同じアーカイブファイルをダウンロードすれば、中に <code>frpc</code> および <code>frpc.ini</code> が入っているので、コレを使えば良い。GitHub では同様に、Windows 版や Mac 版のアーカイブも用意されている。</p>
+<p>今回は、MacOS で <em>Homebrew</em> を使って <em>frpc</em> を用意してみた。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># Homebrew では frps と frpc が別々に配信されている</span>
+$ brew <span class="token function">install</span> frps frpc
+$ frps -v
+<span class="token number">0.36</span>.2
+<span class="token comment"># 今回使うのはコッチ、frpc のみ</span>
+$ frpc -v
+<span class="token number">0.36</span>.2
+
+<span class="token comment"># 設定ファイルを新規作成し編集する (後述)</span>
+$ <span class="token function">touch</span> ./frpc.ini
+$ <span class="token function">vi</span> ./frpc.ini
+
+<span class="token comment"># クライアントツールを起動する</span>
+$ frpc -c ./frpc.ini
+</code></pre>
+<p>設定ファイルの内容は次のようにする。</p>
+<ul>
+  <li><code>frpc.ini</code></li>
+</ul>
+<pre class="language-ini"><code class="language-ini"><span class="token selector">[common]</span>
+<span class="token comment"># frps.ini で指定したモノと同じトークン文字列を書いておく</span>
+<span class="token constant">token</span> <span class="token attr-value"><span class="token punctuation">=</span> mytoken</span>
+<span class="token comment"># 接続先サーバの Public IP かドメインを指定する</span>
+<span class="token constant">server_addr</span> <span class="token attr-value"><span class="token punctuation">=</span> example.com</span>
+<span class="token comment"># 接続先サーバのポートを指定する (frps.ini の bind_port プロパティと同じ値)</span>
+<span class="token constant">server_port</span> <span class="token attr-value"><span class="token punctuation">=</span> 7000</span>
+<span class="token comment"># ローカルマシン上でダッシュボード UI を有効にするには以下の4行を用意する</span>
+<span class="token constant">admin_addr</span> <span class="token attr-value"><span class="token punctuation">=</span> 127.0.0.1</span>
+<span class="token constant">admin_port</span> <span class="token attr-value"><span class="token punctuation">=</span> 7400</span>
+<span class="token constant">admin_user</span> <span class="token attr-value"><span class="token punctuation">=</span> adminuser</span>
+<span class="token constant">admin_pwd</span> <span class="token attr-value"><span class="token punctuation">=</span> adminpass</span>
+
+<span class="token comment"># ローカルの 8080 番ポートの内容を配信する</span>
+<span class="token selector">[web]</span>
+<span class="token constant">type</span> <span class="token attr-value"><span class="token punctuation">=</span> http</span>
+<span class="token constant">local_port</span> <span class="token attr-value"><span class="token punctuation">=</span> 8080</span>
+<span class="token constant">custom_domains</span> <span class="token attr-value"><span class="token punctuation">=</span> example.com</span>
+</code></pre>
+<p><code>server_addr</code>・<code>server_port</code> の2つで、接続先サーバを特定して通信するイメージだ。<code>token</code> プロパティによって簡易的な認証もできている、というワケ。トークン文字列が合わないと <code>frpc</code> を起動してもすぐに異常終了するので、問題に気が付けるはずだ。</p>
+<p><code>admin_</code> で始まる4つの項目はオプション。frps (サーバサイド) にもあったダッシュボード UI のクライアント版で、<code>http://localhost:7400/</code> にアクセスして設定内容が確認できるようになる。コチラは frps のダッシュボードと比べて確認できる内容が少ないので、あまり必要性・有用性は感じないかな。</p>
+<p>今回、ローカルの 8080 番ポートで開発サーバを起動しているテイなので、その設定が <code>[web]</code> セクションに書かれている。Mac の場合は Apache が標準インストールされているので、とりあえず接続できるか試すだけであれば、<code>$ sudo apachectl start</code> (<code>$ sudo httpd start</code>) でサーバを起動し、80 番ポート (<code>http://localhost/</code>) で公開されたサーバを利用しても良いだろう。<code>custom_domains</code> は、サブドメインを利用したりするつもりがなければ、とりあえず <code>server_addr</code> に指定したドメインと同じで良い。</p>
+<p>この状態で frpc を起動すると、自動的に frps との接続を確立してくれる。先に frps (サーバ側) が起動していないと、frpc は接続先が見つからず異常終了してしまうので注意。</p>
+<h2 id="実際にアクセスしてみる"><a class="header-link" href="#実際にアクセスしてみる"><span class="header-link-mark"></span></a>実際にアクセスしてみる</h2>
+<p>以上の設定内容でいけば、次の URL で、ローカルサーバにアクセスできるはずだ。</p>
+<ul>
+  <li><code>http://example.com:7000/</code></li>
+</ul>
+<p>めっちゃお手軽！</p>
+<h2 id="以上"><a class="header-link" href="#以上"><span class="header-link-mark"></span></a>以上</h2>
+<p>frp はサーバサイド用の <code>frps</code> と、クライアントサイド用の <code>frpc</code> とで、実行ファイルと設定ファイルが別れているので、どのマシンがどちらの立場で使われているのかが一目瞭然だ。Go 言語製の特徴でもあるシングルバイナリ形式なので、インストールが簡単なのも嬉しい点。</p>
+<p>設定ファイルに全ての情報が記述されるので、コマンドオプションなんかを暗記する必要がなく、設定ファイルさえ見れば状況が確認できて分かりやすい。OS ごとにバイナリファイルは異なるものの、設定ファイルの書式は同じなので迷うことが少ない。</p>
+<p>シンプルなインターフェイスなのに機能やオプションは豊富で、1台のサーバが複数のマシンへの SSH 接続のトンネルを提供したり、複数のウェブサーバをそれぞれサブドメイン形式で公開したり、といったこともできる。Raspberry Pi + Web カメラ + MJPG-Streamer などで構築した監視カメラアプリなんかを、frpc でインターネット公開してやれば、自宅の様子を外で確認したりできるし、必要な時だけ SSH 接続できる自宅サーバを用意したりできるだろう。クライアント側の frpc の接続状況が変化しても、サーバ側の frps は再起動等が不要なので、扱いやすい。</p>
+<p><em>frp</em> は <strong>Fast Reverse Proxy</strong> の略らしいが、その名のとおり、簡単な設定ファイルですぐにリバースプロキシが構築できて良い。</p><div class="ad-rakuten">
+  <div class="ad-rakuten-image">
+    <a href="https://hb.afl.rakuten.co.jp/hgc/g00q0722.waxyc9ff.g00q0722.waxyd017/?pc=https%3A%2F%2Fitem.rakuten.co.jp%2Fbook%2F16595756%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Fbook%2Fi%2F20246424%2F">
+      <img src="https://thumbnail.image.rakuten.co.jp/@0_mall/book/cabinet/9256/9784297119256.jpg?_ex=128x128">
+    </a>
+  </div>
+  <div class="ad-rakuten-info">
+    <div class="ad-rakuten-title">
+      <a href="https://hb.afl.rakuten.co.jp/hgc/g00q0722.waxyc9ff.g00q0722.waxyd017/?pc=https%3A%2F%2Fitem.rakuten.co.jp%2Fbook%2F16595756%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Fbook%2Fi%2F20246424%2F">Web配信の技術ーHTTPキャッシュ・リバースプロキシ・CDNを活用する [ 田中 祥平 ]</a>
+    </div>
+    <div class="ad-rakuten-shop">
+      <a href="https://hb.afl.rakuten.co.jp/hgc/g00q0722.waxyc9ff.g00q0722.waxyd017/?pc=https%3A%2F%2Fwww.rakuten.co.jp%2Fbook%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Fbook%2F">楽天ブックス</a>
+    </div>
+    <div class="ad-rakuten-price">価格 : 3586円</div>
+  </div>
+</div>
+<div class="ad-rakuten">
+  <div class="ad-rakuten-image">
+    <a href="https://hb.afl.rakuten.co.jp/hgc/g00reb42.waxycf23.g00reb42.waxyd080/?pc=https%3A%2F%2Fitem.rakuten.co.jp%2Frakutenkobo-ebooks%2F5c1f7f52096c39a0a0a12d0d55bd600f%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Frakutenkobo-ebooks%2Fi%2F19865890%2F">
+      <img src="https://thumbnail.image.rakuten.co.jp/@0_mall/rakutenkobo-ebooks/cabinet/1152/2000009411152.jpg?_ex=128x128">
+    </a>
+  </div>
+  <div class="ad-rakuten-info">
+    <div class="ad-rakuten-title">
+      <a href="https://hb.afl.rakuten.co.jp/hgc/g00reb42.waxycf23.g00reb42.waxyd080/?pc=https%3A%2F%2Fitem.rakuten.co.jp%2Frakutenkobo-ebooks%2F5c1f7f52096c39a0a0a12d0d55bd600f%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Frakutenkobo-ebooks%2Fi%2F19865890%2F">Web配信の技術ーHTTPキャッシュ・リバースプロキシ・CDNを活用する【電子書籍】[ 田中祥平 ]</a>
+    </div>
+    <div class="ad-rakuten-shop">
+      <a href="https://hb.afl.rakuten.co.jp/hgc/g00reb42.waxycf23.g00reb42.waxyd080/?pc=https%3A%2F%2Fwww.rakuten.co.jp%2Frakutenkobo-ebooks%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Frakutenkobo-ebooks%2F">楽天Kobo電子書籍ストア</a>
+    </div>
+    <div class="ad-rakuten-price">価格 : 3586円</div>
+  </div>
+</div>
+<ul>
+  <li><a href="https://github.com/fatedier/frp">fatedier/frp: A fast reverse proxy to help you expose a local server behind a NAT or firewall to the internet.</a></li>
+  <li><a href="https://blog.tumf.dev/posts/diary/2021/1/2021-1-12/">ngrokに飽きたらFRPもね!〜紹介とインストール編</a></li>
+  <li><a href="https://blog.tumf.dev/posts/diary/2021/1/2021-1-15/">ngrokに飽きたらFRPもね!〜FRP実践編その1 ローカルサーバを晒す</a></li>
+  <li><a href="https://blog.tumf.dev/posts/diary/2021/1/2021-1-20/">ngrokに飽きたらFRPもね!〜FRP実践編その2 sshトンネルを作る</a></li>
+</ul>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2021-06-05</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2021-06-05</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

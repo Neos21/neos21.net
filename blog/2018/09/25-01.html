@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>Redmine API を利用してチケット ID からチケット情報を出力するシェルスクリプトを書いた - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2018/09/25-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2018/index.html">2018年</a></li>
+            <li><a href="/blog/2018/09/index.html">09月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2018-09-25</time></div>
+        <h1 id="page-title">Redmine API を利用してチケット ID からチケット情報を出力するシェルスクリプトを書いた</h1>
+
+<p>Redmine API を利用して、<code>curl</code> でチケット情報を取得し、<code>jq</code> で整形して出力するシェルスクリプトを書いた。引数チェックとかもするようにした。</p>
+<p>以下のスクリプトを <strong><code>red</code></strong> とかいうファイル名で保存して、PATH が通っているところに置いて実行権限を付ければ OK。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token shebang important">#!/bin/sh</span>
+
+<span class="token comment"># ================================================================================</span>
+<span class="token comment"># red : Redmine API を利用してチケット情報を出力する</span>
+<span class="token comment"># </span>
+<span class="token comment"># - 前提事項</span>
+<span class="token comment">#     jq コマンドがインストールされていること</span>
+<span class="token comment"># - インストール方法</span>
+<span class="token comment">#     PATH が通っている場所にこのファイルを置き</span>
+<span class="token comment">#     $ chmod a+x red</span>
+<span class="token comment">#     で実行権限を付与する</span>
+<span class="token comment"># - 使用例</span>
+<span class="token comment">#     $ red 42</span>
+<span class="token comment">#     42:生命、宇宙、そして万物についての究極の疑問の答えを探す</span>
+<span class="token comment">#     担当　：ディープ・ソート</span>
+<span class="token comment">#     状況　：作業中</span>
+<span class="token comment">#     開始日：2018-01-01</span>
+<span class="token comment">#     期日　：2018-12-31</span>
+<span class="token comment"># ================================================================================</span>
+
+<span class="token comment"># 定数宣言</span>
+<span class="token comment"># --------------------------------------------------------------------------------</span>
+
+<span class="token comment"># Redmine アドレス : 最後の「/」は抜きで書く</span>
+<span class="token assign-left variable">REDMINE_URL</span><span class="token operator">=</span><span class="token string">'http://my-server.com/redmine'</span>
+
+<span class="token comment"># API キー : 個人設定ページで確認できるものを書いておく</span>
+<span class="token assign-left variable">REDMINE_API_KEY</span><span class="token operator">=</span><span class="token string">'0089b123d7ddf138ece4f66871c47e6f43cc4b01'</span>
+
+<span class="token comment"># チケット番号 : 引数1</span>
+<span class="token assign-left variable">REDMINE_ISSUE_ID</span><span class="token operator">=</span><span class="token string">"<span class="token variable">$1</span>"</span>
+
+<span class="token comment"># 引数チェック : 引数1がなければ中止する</span>
+<span class="token comment"># --------------------------------------------------------------------------------</span>
+
+<span class="token keyword">if</span> <span class="token punctuation">[</span> <span class="token string">"<span class="token variable">$REDMINE_ISSUE_ID</span>"</span> <span class="token operator">=</span> <span class="token string">""</span> <span class="token punctuation">]</span> <span class="token punctuation">;</span> <span class="token keyword">then</span>
+  <span class="token builtin class-name">echo</span> <span class="token string">'引数でチケット番号を指定してください'</span>
+  <span class="token builtin class-name">echo</span> <span class="token string">"  Usage : <span class="token variable"><span class="token variable">$(</span><span class="token function">basename</span> $0<span class="token variable">)</span></span> 42"</span>
+  
+  <span class="token builtin class-name">exit</span> <span class="token number">1</span>
+<span class="token keyword">fi</span>
+
+<span class="token comment"># チケット情報取得:  curl で JSON を取得後、jq コマンドで整形する</span>
+<span class="token comment"># --------------------------------------------------------------------------------</span>
+
+<span class="token assign-left variable">RESULT</span><span class="token operator">=</span><span class="token variable"><span class="token variable">$(</span><span class="token function">curl</span> -sS <span class="token string">"<span class="token variable">$REDMINE_URL</span>/issues/<span class="token variable">$REDMINE_ISSUE_ID</span>.json?key=<span class="token variable">$REDMINE_API_KEY</span>"</span> <span class="token operator">|</span> jq -r <span class="token string">'.issue | (.id|tostring) + ":" + .subject, "担当　：" + .assigned_to.name, "状況　：" + .status.name, "開始日：" + .start_date, "期日　：" + .due_date'</span><span class="token variable">)</span></span>
+
+<span class="token keyword">if</span> <span class="token punctuation">[</span> <span class="token string">"<span class="token variable">$RESULT</span>"</span> <span class="token operator">=</span> <span class="token string">""</span> <span class="token punctuation">]</span> <span class="token punctuation">;</span> <span class="token keyword">then</span>
+  <span class="token builtin class-name">echo</span> <span class="token string">"<span class="token variable">$REDMINE_ISSUE_ID</span> : 取得失敗"</span>
+  <span class="token builtin class-name">echo</span> <span class="token string">"  当該チケットが参照できるか確認してください"</span>
+  <span class="token builtin class-name">echo</span> <span class="token string">"  <span class="token variable">$REDMINE_URL</span>/issues/<span class="token variable">$REDMINE_ISSUE_ID</span>"</span>
+  
+  <span class="token builtin class-name">exit</span> <span class="token number">1</span>
+<span class="token keyword">fi</span>
+
+<span class="token builtin class-name">echo</span> <span class="token string">"<span class="token variable">$RESULT</span>"</span>
+</code></pre>
+<p>こんな感じ。</p>
+<ul>
+  <li>シェルスクリプトで引数を受け取るため、<code>$1</code> を取得した。<code>if</code> でチェックする時などはダブルクォートで囲み、未入力の際に構文エラーにならないようにする。</li>
+  <li>自分が試した限りだと、<code>curl</code> に渡す Redmine API の URL は、シングルクォートかダブルクォートで囲んでおかないと、<em>レスポンスが返された後にプロンプトに戻らない</em>という問題が起きた。
+    <ul>
+      <li>参考：<a href="https://teratail.com/questions/16396">Linux - curlが最後で止まる原因について(16396)｜teratail</a> … 事象はこれに近い感じ。</li>
+      <li>Redmine API も Transfer-Encoding が chunked だったので、ゼロ終端を待っている感じだったのかしら。なぜクォートで囲むと結果が変わるのかはよく分からなかった。</li>
+    </ul>
+  </li>
+  <li><strong><code>jq</code></strong> をバリバリ使ってみた。
+    <ul>
+      <li><code>jq -r</code> オプションで生データを取得。コレにより文字列がダブルクォートで囲まれずに出力される。</li>
+      <li><code>.issue</code> を抽出した後、その中身を掘り下げていくため、パイプ <code>|</code> を利用。コレにより、<code>.issue.id, .issue.subject</code> と毎回 <code>.issue</code> を書かずに、<code>.issue | .id, .subject</code> と書けるようになった。</li>
+      <li>文字列結合は <code>"固定文言" + .title</code> のように <code>+</code> 記号で行える。その際、<code>.issue.id</code> のように数値が返されるフィールドについては、<strong><code>(.issue.id|tostring)</code></strong> と、カッコ <code>()</code> で囲んで <strong><code>|tostring</code> (<code>s</code> は小文字！)</strong> パイプに繋いで文字列化する。</li>
+      <li>参考：<a href="https://stackoverflow.com/questions/35365769/how-do-i-use-jq-to-convert-number-to-string">json - How do I use jq to convert number to string? - Stack Overflow</a></li>
+    </ul>
+  </li>
+  <li><code>curl | jq</code> の結果を変数 <code>RESULT</code> に入れ、改行を出力するために <code>echo</code> 文で <code>"$RESULT"</code> とダブルクォートで囲んだ。<code>-e</code> オプションは <code>sh</code> シェルだと使えないっぽい？
+    <ul>
+      <li>参考：<a href="https://sota1235.hatenablog.com/entry/2015/08/07/235824">CentOS7とOS X Mavericksのechoコマンドの違いについて - はらへり日記</a></li>
+    </ul>
+  </li>
+</ul>
+<p>シェルスクリプト、なかなか楽しい。</p>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2018-09-25</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2018-09-25</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

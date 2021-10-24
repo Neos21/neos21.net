@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>Python + Selenium + ChromeDriver 環境を Docker Compose でまとめてみた - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2020/01/07-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2020/index.html">2020年</a></li>
+            <li><a href="/blog/2020/01/index.html">01月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2020-01-07</time></div>
+        <h1 id="page-title">Python + Selenium + ChromeDriver 環境を Docker Compose でまとめてみた</h1>
+
+<p>以前、Python + Selenium を使って Chrome ブラウザを操作する、スクレイピングのサンプルプロジェクトを紹介した。</p>
+<p>今回はこの環境を <strong>Docker Compose</strong> で構築して、ホスト OS 環境を汚すことなく動かせるようにしてみる。</p>
+<p>コード全量が置いてある GitHub リポジトリは以下。</p>
+<ul>
+  <li><a href="https://github.com/Neos21/practice-python-scraping">Neos21/practice-python-scraping</a></li>
+</ul>
+<h2 id="docker-compose-とは？"><a class="header-link" href="#docker-compose-とは？"><span class="header-link-mark"></span></a>Docker Compose とは？</h2>
+<p>Docker Compose とは、複数の Docker コンテナを組み合わせて使用する際に、うまいことまとめて実行してくれるツール。Docker 本体に同梱されているので、Docker をインストールしてあれば <code>docker-compose</code> コマンドが既に動作するはずだ。</p>
+<p>例えば、</p>
+<ol>
+  <li>Python を動かすコンテナ</li>
+  <li>Chrome ブラウザがインストールしてあるコンテナ</li>
+  <li>Python コンテナから Chrome コンテナを操作できるように仲介する Selenium Hub コンテナ</li>
+</ol>
+<p>というように、起動する順序やポートの関係性が重要な時に、それをシェルスクリプト等で実現するのではなく、Docker Compose の定義体 (YAML ファイル) に起こしておくことで、あとはよしなにやってもらえる、という便利なコマンドだ。</p>
+<ul>
+  <li>参考：<a href="https://github.com/sikkimtemi/selenium">GitHub - sikkimtemi/selenium</a>
+    <ul>
+      <li>上で述べたような構成を取っているサンプルプロジェクト。</li>
+    </ul>
+  </li>
+</ul>
+<p>今回自分が作った例では、複数のコンテナを扱うことはないのだが、Docker Compose を使うと</p>
+<ul>
+  <li><code>$ docker run -v `pwd`:/data -it python:3.7.5-buster /bin/bash</code></li>
+</ul>
+<p>などという長ったらしいコマンドを打つ必要がなくなり、</p>
+<ul>
+  <li><em><code>$ docker-compose up -d</code></em></li>
+</ul>
+<p>と打つだけで実行可能になって楽なので、使ってみた。</p>
+<h2 id="docker-イメージ環境をイメージ-想像-する"><a class="header-link" href="#docker-イメージ環境をイメージ-想像-する"><span class="header-link-mark"></span></a>Docker イメージ環境をイメージ (想像) する</h2>
+<p>さて、今回動かしたいプロジェクトは、</p>
+<ul>
+  <li>Python の実行環境</li>
+  <li>Chrome ないしは Chromium ブラウザ</li>
+  <li>Selenium</li>
+</ul>
+<p>が OS 上にインストールされていないと、サンプルコードだけ持ち込んでも動作させられない。</p>
+<p>愚直にやるとしたら、<code>Dockerfile</code> で</p>
+<ul>
+  <li>Ubuntu など適当な OS をベースイメージにする</li>
+  <li><code>apt-get</code> などを使って Python をインストール</li>
+  <li>Chromium ブラウザをインストール</li>
+  <li>pip で Selenium をインストール</li>
+</ul>
+<p>という感じに実装すると思う。勿論それでも良いのだが、今回は既に Python + Chromium + Selenium が揃っているベースイメージを見つけたので、それを利用しようと思う。</p>
+<h2 id="docker-コンテナ上に-chrome・chrome-driver・selenium-をインストールする"><a class="header-link" href="#docker-コンテナ上に-chrome・chrome-driver・selenium-をインストールする"><span class="header-link-mark"></span></a>Docker コンテナ上に Chrome・Chrome Driver・Selenium をインストールする</h2>
+<p>自分が使用したのは <code>joyzoursky/python-chromedriver:3.7-selenium</code> というイメージだ。</p>
+<ul>
+  <li><a href="https://hub.docker.com/r/joyzoursky/python-chromedriver/">Docker Hub</a></li>
+  <li><a href="https://github.com/joyzoursky/docker-python-chromedriver">GitHub - joyzoursky/docker-python-chromedriver: Dockerfile for running Python Selenium in headless Chrome (Python 2.7 / Python 3.6 / Python 3.7 / Alpine based Python / Chromedriver / Selenium / Xvfb included in different versions)</a></li>
+</ul>
+<p>何をやっているか調べるため、<code>Dockerfile</code> を読んでみる。</p>
+<ul>
+  <li>参考：<a href="https://github.com/joyzoursky/docker-python-chromedriver/blob/master/py3/py3.7-selenium/Dockerfile">docker-python-chromedriver/Dockerfile at master · joyzoursky/docker-python-chromedriver · GitHub</a></li>
+</ul>
+<p>中を読むと、<code>python:3.7</code> という公式イメージをベースに、Chrome と Chrome Driver をインストール、さらに pip で Selenium をインストールしている。なるほど、このぐらいなら自分で実装しても良いレベルだが、今回はコレをそのまま利用することにしよう。</p>
+<h2 id="docker-compose-ファイルを書く"><a class="header-link" href="#docker-compose-ファイルを書く"><span class="header-link-mark"></span></a>Docker Compose ファイルを書く</h2>
+<p>さて、自分のプロジェクトディレクトリで、<code>docker-compose.yaml</code> ファイルを書く。内容は以下のとおり。</p>
+<ul>
+  <li><a href="https://github.com/Neos21/practice-python-scraping/blob/master/docker-compose.yaml">practice-python-scraping/docker-compose.yaml at master · Neos21/practice-python-scraping · GitHub</a></li>
+</ul>
+<pre class="language-yaml"><code class="language-yaml"><span class="token key atrule">my-python</span><span class="token punctuation">:</span>
+  <span class="token comment"># ディレクトリを指定するとその配下の Dockerfile を取得して実行する</span>
+  <span class="token key atrule">build</span><span class="token punctuation">:</span> ./
+  <span class="token comment"># `$ docker ps` 時に NAME として見える名前</span>
+  <span class="token key atrule">container_name</span><span class="token punctuation">:</span> my<span class="token punctuation">-</span>python
+  <span class="token comment"># 勝手に終了しないよう設定しておく</span>
+  <span class="token key atrule">command</span><span class="token punctuation">:</span> tail <span class="token punctuation">-</span>f /dev/null
+  <span class="token comment"># `$ docker exec -it my-python bash` でアタッチした際のカレントディレクトリとなる</span>
+  <span class="token key atrule">working_dir</span><span class="token punctuation">:</span> /root/app/
+  <span class="token comment"># ボリュームのマウント</span>
+  <span class="token key atrule">volumes</span><span class="token punctuation">:</span>
+    <span class="token punctuation">-</span> ./<span class="token punctuation">:</span>/root/app/
+  <span class="token comment"># 環境変数</span>
+  <span class="token key atrule">environment</span><span class="token punctuation">:</span>
+    <span class="token punctuation">-</span> TZ=Asia/Tokyo
+</code></pre>
+<ul>
+  <li><code>build</code> で指定しているのは、ベースイメージとなる <code>Dockerfile</code> の所在
+    <ul>
+      <li>コレの代わりに <code>image</code> と書くと、既存の Docker イメージ名を指定してベースにできる</li>
+    </ul>
+  </li>
+  <li><code>command</code> で謎の <code>tail</code> を行っているのは、起動したコンテナを終了させずに置いておくためのイディオム</li>
+  <li><code>volumes</code> 部分で、共有ディレクトリをマウントしている。<code>docker run</code> 時に指定する <code>-v</code> (<code>--volume</code>) オプションと同等だ</li>
+</ul>
+<p>あとは読めば分かるレベルかと。</p>
+<p>さて、<code>build</code> プロパティではディレクトリを指定しているが、そのディレクトリの配下にある <code>Dockerfile</code> を探すようになっている。今回は単一の Docker イメージを使うので、プロジェクトルートディレクトリ直下にしたが、必要に応じて複数イメージ用のディレクトリを分けて置いておくと良い。</p>
+<p>その <code>Dockerfile</code> の内容は次のとおり。</p>
+<ul>
+  <li><a href="https://github.com/Neos21/practice-python-scraping/blob/master/Dockerfile">practice-python-scraping/Dockerfile at master · Neos21/practice-python-scraping · GitHub</a></li>
+</ul>
+<pre class="language-dockerfile"><code class="language-dockerfile"><span class="token comment"># ココで前述のベースイメージを指定している</span>
+<span class="token keyword">FROM</span> joyzoursky/python<span class="token punctuation">-</span>chromedriver<span class="token punctuation">:</span>3.7<span class="token punctuation">-</span>selenium
+
+<span class="token comment"># - Vi・Vim が入っていないのでインストールする</span>
+<span class="token comment"># - pip をアップデートして pipienv をインストールする</span>
+<span class="token keyword">RUN</span> set <span class="token punctuation">-</span>x &#x26;&#x26; \
+  apt<span class="token punctuation">-</span>get update &#x26;&#x26; \
+  apt<span class="token punctuation">-</span>get install <span class="token punctuation">-</span>y vim &#x26;&#x26; \
+  pip install <span class="token punctuation">-</span><span class="token punctuation">-</span>upgrade pip &#x26;&#x26; \
+  pip install pipenv
+</code></pre>
+<p>このプロジェクトがすぐに動かせるよう、<code>pipenv</code> をインストールしてある。また、コンテナ内でちょっとした編集ができるように <code>vim</code> も入れているというワケ。</p>
+<h2 id="docker-compose-で起動してみる"><a class="header-link" href="#docker-compose-で起動してみる"><span class="header-link-mark"></span></a>Docker Compose で起動してみる</h2>
+<p>このような設定ファイルを用意したら、次のコマンドを実行する。</p>
+<pre class="language-bash"><code class="language-bash">$ docker-compose up -d
+Building my-python
+<span class="token comment"># …中略…</span>
+Creating my-python <span class="token punctuation">..</span>. <span class="token keyword">done</span>
+</code></pre>
+<p><code>-d</code> は <code>--detach</code> (デタッチ) の意味。対象のイメージが存在しなければその場で <code>docker pull</code> および <code>docker build</code> を行い、そのまま <code>docker run</code> してくれるのだが、すぐにアタッチする必要はないので、<code>-d</code> を付けている。</p>
+<p>このコマンドで <code>Dockerfile</code> をベースにしたビルドまでが完了し、コンテナが起動していることが確認できるだろう。</p>
+<pre class="language-bash"><code class="language-bash">$ docker <span class="token function">ps</span>
+CONTAINER ID        IMAGE                                COMMAND               CREATED             STATUS              PORTS               NAMES
+81526a50b822        practice-python-scraping_my-python   <span class="token string">"tail -f /dev/null"</span>   <span class="token number">10</span> seconds ago      Up <span class="token number">9</span> seconds                            my-python
+</code></pre>
+<p>それではこのコンテナにアタッチしてみる。</p>
+<pre class="language-bash"><code class="language-bash">$ docker <span class="token builtin class-name">exec</span> -it my-python <span class="token function">bash</span>
+</code></pre>
+<p><code>docker-dompose.yaml</code> の <code>working_dir</code> プロパティで指定したディレクトリにいる状態で、<code>bash</code> 接続できる。</p>
+<p>ココからサンプルプロジェクトを動かしていくには、以下のように実行していく。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># 環境構築</span>
+<span class="token variable">$$</span> pipenv <span class="token function">install</span> --dev
+
+<span class="token comment"># スクリプト実行</span>
+<span class="token variable">$$</span> pipenv run crawl
+<span class="token variable">$$</span> pipenv run scrape
+</code></pre>
+<p>共有ディレクトリを設定しているので、結果はホスト OS からも確認できるだろう。</p>
+<h2 id="以上"><a class="header-link" href="#以上"><span class="header-link-mark"></span></a>以上</h2>
+<p><code>docker</code> コマンドにオプションをたくさん付けて何個もコンテナを起動したりしていたのが、全てを設定ファイルに書いておいてコマンド一発で起動できるようになった。</p>
+<p>複数コンテナを扱わなくても楽になることが多いので、Docker Compose はぜひ覚えておきたい。</p>
+<p>Chrome や Chrome Driver をどのようにコンテナ化するかという方法は他にも考えられ、今回の方法だけが唯一の正解というワケではないので、各自「ビルド時間が短く済法」だったり「イメージサイズが小さく済む構成」だったり「スケールしやすい構成」だったりを考えてみて欲しい。</p>
+<ul>
+  <li>参考：<a href="https://lifedevops.com/?p=173">Docker, Python, Selenium, Headless Chromeを用いたスクレイピング | Cloud Nativeな人生</a></li>
+  <li>参考：<a href="https://oliversi.com/2019/01/07/python-docker-selenium-chrome/">Docker上で、Python + Selenium + Headless Chromeを使用してWEBスクレイピング – バイオインフォマティクスの備忘録</a></li>
+</ul>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2020-01-07</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2020-01-07</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

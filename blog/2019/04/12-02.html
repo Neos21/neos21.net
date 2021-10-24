@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>他人の LINE ユーザ情報を curl で取得する - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2019/04/12-02.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2019/index.html">2019年</a></li>
+            <li><a href="/blog/2019/04/index.html">04月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2019-04-12</time></div>
+        <h1 id="page-title">他人の LINE ユーザ情報を curl で取得する</h1>
+
+<p>LINE Messaging API を使うと、LINE のユーザ情報が簡単に拾える。<em>自分のユーザ情報が検索に表示されないように設定していても、ユーザ名とプロフィール画像、ステータスメッセージが確認できる。</em></p>
+<p>…とだけ書くとなんだか恐ろしく聞こえるが、ちゃんと条件があって、簡単には盗み見などできないのでご安心を。</p>
+<p>今回はこの条件と、その上での取得方法を紹介する。</p>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#%E3%83%A6%E3%83%BC%E3%82%B6%E6%83%85%E5%A0%B1%E3%82%92%E5%8F%96%E5%BE%97%E3%81%A7%E3%81%8D%E3%82%8B%E6%9D%A1%E4%BB%B6">ユーザ情報を取得できる条件</a></li>
+  <li><a href="#%E3%83%A6%E3%83%BC%E3%82%B6-id-%E3%82%92%E6%8B%BE%E3%81%86">ユーザ ID を拾う</a></li>
+  <li><a href="#curl-%E3%81%A7%E3%83%97%E3%83%AD%E3%83%95%E3%82%A3%E3%83%BC%E3%83%AB%E3%82%92%E5%8F%96%E5%BE%97%E3%81%99%E3%82%8B"><code>curl</code> でプロフィールを取得する</a></li>
+</ul>
+<h2 id="ユーザ情報を取得できる条件"><a class="header-link" href="#ユーザ情報を取得できる条件"><span class="header-link-mark"></span></a>ユーザ情報を取得できる条件</h2>
+<p>ユーザ情報を取得するには、<strong>自分が作った Messaging API チャネルを、そのユーザが友だち登録</strong>していないといけない。自分が友だちに追加していないチャネルが勝手にプロフィールを抜き取る、といったことはできない。</p>
+<p>また、ユーザ情報取得 API をコールする際にはその Messaging API チャネルのチャネルアクセストークンが必要になるし、調べたいユーザを指定する <em><code>userId</code> はプロバイダごとに異なる</em>文字列が用意される。だから「よそのチャネルで収集した <code>userId</code> を基に、プロフィール情報を盗んでやろう」といったことはできない。あくまでそのチャネルの管理者だけが、友だちになっている人の情報を簡単に見られるだけである。</p>
+<p>チャネルを友だちにしてもらう障壁を乗り越えて、管理者が見られる情報というのも、ユーザ名、プロフィール画像、ステータスメッセージまでだ。それ以上の情報は拾えないので、プロフィールを実名・顔写真アイコンにしていなければ気にならないかと。</p>
+<p>とはいえ、ユーザとしては、不用意に Messaging API チャネルを友だち登録しまくらない方が心理的に安心できそう。</p>
+<h2 id="ユーザ-id-を拾う"><a class="header-link" href="#ユーザ-id-を拾う"><span class="header-link-mark"></span></a>ユーザ ID を拾う</h2>
+<p>ひとまずやり方を説明する。</p>
+<p>まずはユーザ情報を拾うための<em>ユーザ ID</em> を調べる必要がある。コレは、チャネルを友だち追加してもらったり、チャネルにメッセージを投稿してもらったりした時に発生する Webhook イベントから取得できるだろう。Webhook イベントのリクエストボディはこんな感じ。</p>
+<pre class="language-json"><code class="language-json"><span class="token punctuation">{</span>
+  <span class="token property">"events"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
+    <span class="token punctuation">{</span>
+      <span class="token property">"type"</span><span class="token operator">:</span> <span class="token string">"message"</span><span class="token punctuation">,</span>
+      <span class="token property">"replyToken"</span><span class="token operator">:</span> <span class="token string">"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"</span><span class="token punctuation">,</span>
+      <span class="token property">"source"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+        <span class="token property">"userId"</span><span class="token operator">:</span> <span class="token string">"Uuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu"</span><span class="token punctuation">,</span>
+        <span class="token property">"type"</span><span class="token operator">:</span> <span class="token string">"user"</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token property">"timestamp"</span><span class="token operator">:</span> <span class="token number">1000000000000</span><span class="token punctuation">,</span>
+      <span class="token property">"message"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+        <span class="token property">"type"</span><span class="token operator">:</span> <span class="token string">"text"</span><span class="token punctuation">,</span>
+        <span class="token property">"id"</span><span class="token operator">:</span> <span class="token string">"9999999999999"</span><span class="token punctuation">,</span>
+        <span class="token property">"text"</span><span class="token operator">:</span> <span class="token string">"こんにちは"</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">]</span><span class="token punctuation">,</span>
+  <span class="token property">"destination"</span><span class="token operator">:</span> <span class="token string">"Uzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz"</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>この中の <code>events[].source.userId</code> から拾える <code>Uuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu</code> がユーザ ID だ。</p>
+<h2 id="curl-でプロフィールを取得する"><a class="header-link" href="#curl-でプロフィールを取得する"><span class="header-link-mark"></span></a><code>curl</code> でプロフィールを取得する</h2>
+<p>ユーザ ID が分かったら、<code>curl</code> で取得してみよう。取得する際は当該チャネルのチャネルアクセストークンが必要になる。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># コマンドを簡潔にするため、チャネルアクセストークン・ユーザ ID を変数定義する</span>
+$ <span class="token assign-left variable">channel_access_token</span><span class="token operator">=</span><span class="token string">'Ssssssssssssssssssssssssssssssssssssssssssssss...'</span>
+$ <span class="token assign-left variable">user_id</span><span class="token operator">=</span><span class="token string">'Uuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu'</span>
+
+<span class="token comment"># curl で GET する</span>
+$ <span class="token function">curl</span> <span class="token string">"https://api.line.me/v2/bot/profile/<span class="token variable">${user_id}</span>"</span> -H <span class="token string">"Authorization: Bearer <span class="token variable">${channel_access_token}</span>"</span>
+
+<span class="token punctuation">{</span><span class="token string">"userId"</span><span class="token builtin class-name">:</span><span class="token string">"Uuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu"</span>,<span class="token string">"displayName"</span><span class="token builtin class-name">:</span><span class="token string">"Neos21"</span>,<span class="token string">"pictureUrl"</span><span class="token builtin class-name">:</span><span class="token string">"https://profile.line-scdn.net/0000000000000000000000000000000000000"</span>,<span class="token string">"statusMessage"</span><span class="token builtin class-name">:</span><span class="token string">"どうも Neo です。"</span><span class="token punctuation">}</span>
+</code></pre>
+<p>こんな風に JSON 文字列が拾えるので、<code>jq</code> にでもパイプすると読みやすくなるだろう。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">curl</span> <span class="token string">"https://api.line.me/v2/bot/profile/<span class="token variable">${user_id}</span>"</span> -H <span class="token string">"Authorization: Bearer <span class="token variable">${channel_access_token}</span>"</span> <span class="token operator">|</span> jq <span class="token builtin class-name">.</span>
+
+<span class="token punctuation">{</span>
+  <span class="token string">"userId"</span><span class="token builtin class-name">:</span> <span class="token string">"Uuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu"</span>,
+  <span class="token string">"displayName"</span><span class="token builtin class-name">:</span> <span class="token string">"Neos21"</span>,
+  <span class="token string">"pictureUrl"</span><span class="token builtin class-name">:</span> <span class="token string">"https://profile.line-scdn.net/0000000000000000000000000000000000000"</span>,
+  <span class="token string">"statusMessage"</span><span class="token builtin class-name">:</span> <span class="token string">"どうも Neo です。"</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p><code>pictureUrl</code> はブラウザからアクセスすると普通に画像が拾えてしまう。コレだけはトークン認証などが不要なので、URL さえ割れてしまえば画像が見えてしまう危険性がある。やはりプロフィール画像に顔写真は止めよう。ｗ</p>
+<p>以上！</p>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2019-04-12</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2019-04-12</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

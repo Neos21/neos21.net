@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>MacOS 同梱の Apache が参照するドキュメントルートを変更する - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2019/01/27-02.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2019/index.html">2019年</a></li>
+            <li><a href="/blog/2019/01/index.html">01月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2019-01-27</time></div>
+        <h1 id="page-title">MacOS 同梱の Apache が参照するドキュメントルートを変更する</h1>
+
+<p>前回の記事で、MacOS に同梱されている Apache の設定を変更して、ローカルで CGI が動かせるようになった。</p>
+<ul>
+  <li><a href="/blog/2019/01/26-02.html">Mac 内蔵の Apache で Perl CGI を動かせるようにするまで</a></li>
+</ul>
+<p>この時、CGI ファイルを格納しているのは</p>
+<ul>
+  <li><code>/Library/WebServer/Documents/</code> (ドキュメントルート、URL は <code>http://localhost/</code> となる)</li>
+  <li><code>/Library/WebServer/CGI-Executables/</code> (CGI がデフォルトで有効になるディレクトリ、URL は <code>http://localhost/cgi-bin/</code> となる)</li>
+</ul>
+<p>とかいうディレクトリで、この <code>/Library/WebServer/</code> 以下でのファイルの操作に毎回ルート権限が必要になり、何をするにも <code>sudo</code> しないといけないのが面等だ。</p>
+<p>そこで今回は、ココで利用される<em>ドキュメントルート</em>のディレクトリを変更して、ユーザホーム配下に作ったディレクトリを利用できるようにする。そうすれば <code>sudo</code> が不要になる。</p>
+<h2 id="ユーザホーム直下にドキュメントルートディレクトリを作る"><a class="header-link" href="#ユーザホーム直下にドキュメントルートディレクトリを作る"><span class="header-link-mark"></span></a>ユーザホーム直下にドキュメントルートディレクトリを作る</h2>
+<p>まずは、参照させるドキュメントルートとなるディレクトリを作っておこう。<code>~/</code> (= <code>/Users/【ユーザ名】/</code>) の直下に、<code>Sites/</code> というディレクトリを作っておこう。</p>
+<p><code>Sites</code> というディレクトリ名は慣例なので、別に <code>Apache/</code> でも <code>DocumentRoot/</code> でも、任意のディレクトリ名にして良い。場所も分かりやすくするために「ユーザホームディレクトリ直下」としたが、好きなところで大丈夫。</p>
+<p>このあと、ココで作成したディレクトリのフルパスを指定するので、フルパスを控えておこう。今回は <code>/Users/Neos21/Apache/</code> というディレクトリを作ったモノとして以降説明する。</p>
+<h2 id="テスト用に-indexhtml-を用意しておく"><a class="header-link" href="#テスト用に-indexhtml-を用意しておく"><span class="header-link-mark"></span></a>テスト用に <code>index.html</code> を用意しておく</h2>
+<p>あとで設定を変更した時に、違いが分かるようにするため、とりあえずの <code>index.html</code> を作って、先程のドキュメントルート直下に置いておこう。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token builtin class-name">cd</span> ~/Apache/
+$ <span class="token function">touch</span> index.html
+</code></pre>
+<p>内容は以下のような感じで、適当に。</p>
+<pre class="language-html"><code class="language-html"><span class="token doctype"><span class="token punctuation">&#x3C;!</span><span class="token doctype-tag">DOCTYPE</span> <span class="token name">html</span><span class="token punctuation">></span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>html</span> <span class="token attr-name">lang</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>ja<span class="token punctuation">"</span></span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>head</span><span class="token punctuation">></span></span>
+    <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>meta</span> <span class="token attr-name">charset</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>UTF-8<span class="token punctuation">"</span></span><span class="token punctuation">></span></span>
+    <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>title</span><span class="token punctuation">></span></span>Apache<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>title</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>head</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>body</span><span class="token punctuation">></span></span>
+    <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>h1</span><span class="token punctuation">></span></span>It works on /Users/【USER_NAME】/Apache/<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>h1</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>body</span><span class="token punctuation">></span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>html</span><span class="token punctuation">></span></span>
+</code></pre>
+<p><code>It works on /Users/【USER_NAME】/Apache/</code> と画面に表示されるだけの HTML ファイルだ。</p>
+<h2 id="httpdconf-を変更する"><a class="header-link" href="#httpdconf-を変更する"><span class="header-link-mark"></span></a><code>httpd.conf</code> を変更する</h2>
+<p>ディレクトリの用意ができたら、ターミナルを開いて以下のコマンドで <code>httpd.conf</code> を開く。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">sudo</span> <span class="token function">vi</span> /etc/apache2/httpd.conf
+</code></pre>
+<p>ファイルの中から以下のような箇所を探す。</p>
+<pre class="language-apacheconf"><code class="language-apacheconf"><span class="token comment"># L244・L245 付近</span>
+<span class="token directive-inline property">DocumentRoot</span> <span class="token string">"/Library/WebServer/Documents"</span>
+<span class="token directive-block tag"><span class="token directive-block tag"><span class="token punctuation">&#x3C;</span>Directory</span><span class="token directive-block-parameter attr-value"> <span class="token string">"/Library/WebServer/Documents"</span></span><span class="token punctuation">></span></span>
+</code></pre>
+<p>この2行で示されているパスを、先程作成したディレクトリに変更する。</p>
+<pre class="language-apacheconf"><code class="language-apacheconf"><span class="token directive-inline property">DocumentRoot</span> <span class="token string">"/Users/Neos21/Apache"</span>
+<span class="token directive-block tag"><span class="token directive-block tag"><span class="token punctuation">&#x3C;</span>Directory</span><span class="token directive-block-parameter attr-value"> <span class="token string">"/Users/Neos21/Apache"</span></span><span class="token punctuation">></span></span>
+</code></pre>
+<p>こんな感じ。変更できたら保存して終了する。</p>
+<h2 id="ユーザごとの設定ファイルも変更する"><a class="header-link" href="#ユーザごとの設定ファイルも変更する"><span class="header-link-mark"></span></a>ユーザごとの設定ファイルも変更する</h2>
+<p>次に、似たような設定を、ユーザごとの設定ファイルにも行う。ユーザごとの設定ファイルは、前述の <code>httpd.conf</code> があるディレクトリの下、<code>/etc/apache2/users/</code> 配下に、<code>【ユーザ名】.conf</code> というファイルがある。</p>
+<p>今回の例では <code>Neos21</code> というユーザ名ということにして、<code>/etc/apache2/users/Neos21.conf</code> というファイルを見つけて編集することにする。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">sudo</span> <span class="token function">vi</span> /etc/apache2/users/Neos21.conf
+</code></pre>
+<p>内容は恐らく以下の4行だと思われる。</p>
+<pre class="language-apacheconf"><code class="language-apacheconf"><span class="token directive-block tag"><span class="token directive-block tag"><span class="token punctuation">&#x3C;</span>Directory</span><span class="token directive-block-parameter attr-value"> <span class="token string">"/Users/Neos21/Sites/"</span></span><span class="token punctuation">></span></span>
+  <span class="token directive-inline property">Options</span> Indexes MultiViews
+  <span class="token directive-inline property">Require</span> all granted
+<span class="token directive-block tag"><span class="token directive-block tag"><span class="token punctuation">&#x3C;/</span>Directory</span><span class="token punctuation">></span></span>
+</code></pre>
+<p>1行目を見ると、最初から、<code>/Users/Neos21/Sites/</code> というフルパスが記載されている。コレが最初に「慣例」と表現した理由だ。今回はココを <code>/Users/Neos21/Apache/</code> に変更する。</p>
+<pre class="language-apacheconf"><code class="language-apacheconf"><span class="token directive-block tag"><span class="token directive-block tag"><span class="token punctuation">&#x3C;</span>Directory</span><span class="token directive-block-parameter attr-value"> <span class="token string">"/Users/Neos21/Apache/"</span></span><span class="token punctuation">></span></span>  <span class="token comment"># ← 変更。ちなみにタグで囲まれている場所の場合、このように行末に合わせてコメントを書いても大丈夫だった</span>
+  <span class="token directive-inline property">Options</span> Indexes MultiViews
+  <span class="token directive-inline property">Require</span> all granted
+<span class="token directive-block tag"><span class="token directive-block tag"><span class="token punctuation">&#x3C;/</span>Directory</span><span class="token punctuation">></span></span>
+</code></pre>
+<p>これで保存して終了。</p>
+<h2 id="apache-を再起動して動作確認"><a class="header-link" href="#apache-を再起動して動作確認"><span class="header-link-mark"></span></a>Apache を再起動して動作確認</h2>
+<p>コレで設定変更ができたので、Apache を再起動して動作確認してみよう。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">sudo</span> apachectl restart
+</code></pre>
+<p>ブラウザで <code>http://localhost/</code> を開き、<code>/Users/Neos21/Apache/index.html</code> の内容が表示されれば OK。</p>
+<h2 id="以上"><a class="header-link" href="#以上"><span class="header-link-mark"></span></a>以上</h2>
+<p>前回の記事に沿って、<code>httpd.conf</code> で変更した <code>DocumentRoot</code> の <code>&#x3C;Directory></code> タグの配下で <code>Options FollowSymLinks Multiviews ExecCGI</code> と設定していれば、このディレクトリ配下に CGI ファイルを置いて CGI を動かすこともできる。ユーザホーム配下なら <code>sudo</code> の必要もないので、例えば Perl CGI スクリプトから新規ファイルを生成させたりすることもできる。</p>
+<p>コレで、<code>/Library/WebServer/</code> 配下よりもソースファイルを編集しやすい環境ができた。</p>
+<ul>
+  <li>参考：<a href="https://dackdive.hateblo.jp/entry/2013/12/14/012627">macのapache環境で使うファイル置き場を変更する - dackdive's blog</a></li>
+</ul>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2019-01-27</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2019-01-27</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

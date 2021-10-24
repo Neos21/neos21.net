@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>Git Reset・Revert・Rebase を実際に叩いて覚えてみた - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2017/04/05-02.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2017/index.html">2017年</a></li>
+            <li><a href="/blog/2017/04/index.html">04月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2017-04-05</time></div>
+        <h1 id="page-title">Git Reset・Revert・Rebase を実際に叩いて覚えてみた</h1>
+
+<p><code>git reset</code>・<code>git revert</code>・<code>git rebase</code> といった、過去のコミットを操作するコマンドを実際に叩いて勉強した結果を残す。</p>
+<h2 id="git-init--お試しブランチを作る"><a class="header-link" href="#git-init--お試しブランチを作る"><span class="header-link-mark"></span></a><code>git init</code> … お試しブランチを作る</h2>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># 適当な作業用ディレクトリを作る</span>
+$ <span class="token function">mkdir</span> Test
+$ <span class="token builtin class-name">cd</span> Test
+<span class="token comment"># Git でのバージョン管理を始める</span>
+$ <span class="token function">git</span> init
+<span class="token comment"># master ブランチを作成する</span>
+$ <span class="token function">git</span> checkout -b master
+</code></pre>
+<p>これで適当なディレクトリにローカルブランチを作ることができた。以降はこのローカルブランチ内でアレコレ叩くだけなので、どこにも影響ない。気が済んだら「Test」ディレクトリごと消してしまえばいい。</p>
+<h2 id="git-reset--過去のコミットを削除してなかったことにする"><a class="header-link" href="#git-reset--過去のコミットを削除してなかったことにする"><span class="header-link-mark"></span></a><code>git reset</code> … 過去のコミットを削除してなかったことにする</h2>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># 適当にテキストファイルを作ったり変更したりしてコミット履歴をいくつか作る。</span>
+
+<span class="token comment"># ローカルブランチでこういう状態だとして、以下を進める。</span>
+$ <span class="token function">git</span> log --oneline
+2297cd1 <span class="token number">2017</span>-03-08 Edit <span class="token number">2</span> <span class="token punctuation">[</span>Neos21<span class="token punctuation">]</span> <span class="token punctuation">(</span>HEAD -<span class="token operator">></span> master<span class="token punctuation">)</span>
+8a15f33 <span class="token number">2017</span>-03-08 Edit <span class="token number">1</span> <span class="token punctuation">[</span>Neos21<span class="token punctuation">]</span>
+d5dc6fe <span class="token number">2017</span>-03-08 First Commit <span class="token punctuation">[</span>Neos21<span class="token punctuation">]</span>
+</code></pre>
+<p><strong><code>git reset</code> は過去のコミットを削除し、そのコミットをなかったことにできる。</strong></p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">git</span> reset --soft HEAD^
+</code></pre>
+<p>これで<em>1つ前のコミット (= 先程のコミット履歴でいうと「Edit 2」) が削除され、そのコミットの内容が取り消される</em>。</p>
+<p><code>--soft</code> オプションを指定しているので、「Edit 2」にコミットしていた分のファイルの変更は保持され、現在のローカルブランチ内に残っている。直後に <code>git status</code> を確認すると、「Edit 2」でコミットしていたはずの内容が差分として見える。</p>
+<p>このとき、未コミット状態となるファイルは <code>git add</code> した状態になっているので、このまままた <code>git commit</code> すれば、「Edit 2」と同じ内容を再度コミットできる。</p>
+<p>つまり、<code>git reset --soft</code> で直前のコミットを削除すれば、コミットコメントだけ直して再コミットしたり、コミット漏れしていたファイルを追加で <code>git add</code> して再コミットしたり、といった操作ができる。</p>
+<p>一方、<code>--hard</code> オプションを付けてやると、戻したコミット時点のファイルたちに書き換えられる。つまり「Edit 2」でコミットしていたファイルの変更は全て破棄され、「Edit 1」をコミットした直後の時点に完全に戻る。</p>
+<p><code>--soft</code>、<code>--hard</code> は取り消したコミットの変更内容をステージングに保持するか否かの違いだけで、どちらの場合もコミット自体は削除されるので、以下のようなログになっているはずである。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># git reset したあとは以下のようになっているはず</span>
+$ <span class="token function">git</span> log --oneline
+8a15f33 <span class="token number">2017</span>-03-08 Edit <span class="token number">1</span> <span class="token punctuation">[</span>Neos21<span class="token punctuation">]</span> <span class="token punctuation">(</span>HEAD -<span class="token operator">></span> master<span class="token punctuation">)</span>
+d5dc6fe <span class="token number">2017</span>-03-08 First Commit <span class="token punctuation">[</span>Neos21<span class="token punctuation">]</span>
+</code></pre>
+<p>別のやり方を紹介。先程と同じ「Edit 2」までコミットしていた状態だとして…。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># またこの状態にしたとして。</span>
+$ <span class="token function">git</span> log --oneline
+2297cd1 <span class="token number">2017</span>-03-08 Edit <span class="token number">2</span> <span class="token punctuation">[</span>Neos21<span class="token punctuation">]</span> <span class="token punctuation">(</span>HEAD -<span class="token operator">></span> master<span class="token punctuation">)</span>
+8a15f33 <span class="token number">2017</span>-03-08 Edit <span class="token number">1</span> <span class="token punctuation">[</span>Neos21<span class="token punctuation">]</span>
+d5dc6fe <span class="token number">2017</span>-03-08 First Commit <span class="token punctuation">[</span>Neos21<span class="token punctuation">]</span>
+
+<span class="token comment"># 「Edit 1」のコミット ID を書く</span>
+$ <span class="token function">git</span> reset --soft 8a15f33
+</code></pre>
+<p>このようにコミット ID を指定してやることでも、「Edit 2」を取り消した同じ状態にできる。「<code>8a15f33</code>」は「Edit 1」のハッシュなので、<strong>「Edit 1」のコミット直後の時点まで戻す = 「Edit 2」のコミットを削除する</strong>、という動きになる。</p>
+<p>「Edit 2」のコミットを消そうとして、「Edit 2」自体のコミット ID を入力してもうまくいかないので注意。「Edit 2」は「HEAD」自体なので、「<em>1つ前のコミット『Edit 1』のコミット ID を指定する」=「『HEAD<strong>^</strong>』で1つ前のコミットを指定する</em>」と覚えよう。</p>
+<h3 id="直前より以前のコミットを指定したらどうなる？"><a class="header-link" href="#直前より以前のコミットを指定したらどうなる？"><span class="header-link-mark"></span></a>直前より以前のコミットを指定したらどうなる？</h3>
+<p>「Edit 2」までのコミットがある状態で、その2つ前の「First Commit」のコミットまで戻すとどうなるか。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># またこの状態にしたとして。</span>
+$ <span class="token function">git</span> log --oneline
+2297cd1 <span class="token number">2017</span>-03-08 Edit <span class="token number">2</span> <span class="token punctuation">[</span>Neos21<span class="token punctuation">]</span> <span class="token punctuation">(</span>HEAD -<span class="token operator">></span> master<span class="token punctuation">)</span>
+8a15f33 <span class="token number">2017</span>-03-08 Edit <span class="token number">1</span> <span class="token punctuation">[</span>Neos21<span class="token punctuation">]</span>
+d5dc6fe <span class="token number">2017</span>-03-08 First Commit <span class="token punctuation">[</span>Neos21<span class="token punctuation">]</span>
+
+<span class="token comment"># 以下の2つのコマンドは同じ動きをする</span>
+
+<span class="token comment"># 2つ前のコミット (=「First Commit」) まで戻す</span>
+$ <span class="token function">git</span> reset --soft HEAD^^
+
+<span class="token comment"># 2つ前のコミットのコミット ID (=「First Commit」のコミット ID) を指定してそこまで戻す</span>
+$ <span class="token function">git</span> reset --soft d5dc6fe
+</code></pre>
+<p>このようにすると、「Edit 2」と「Edit 1」のコミットがなかったことにされている。<code>--soft</code> 指定の時はステージングに「Edit 2」と「Edit 1」でそれぞれコミットしていたファイルが混在した状態になる。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># 2つ前のコミットまで戻すとこんなコミットログになる</span>
+$ <span class="token function">git</span> log --oneline
+d5dc6fe <span class="token number">2017</span>-03-08 First Commit <span class="token punctuation">[</span>Neos21<span class="token punctuation">]</span>
+</code></pre>
+<p><code>git reset</code> はココまで。</p>
+<h2 id="git-revert--リセットしたコミットを残す"><a class="header-link" href="#git-revert--リセットしたコミットを残す"><span class="header-link-mark"></span></a><code>git revert</code> … リセットしたコミットを残す</h2>
+<p><code>git reset</code> はコミット自体が削除されるのに対し、<strong><code>git revert</code> は「あるコミットの内容を取り消して、その前の時点に戻しましたよ」というコミットを新たに作り出す。</strong></p>
+<p>「戻したい時点のソースコードの状態に手動で戻して、変更を相殺するためのコミットを打つ」というのと同じことをしてくれる。</p>
+<p>特にチーム開発などしている時に、「あのコミットを取りやめた」という履歴を残すために使えるだろう。</p>
+<p><code>git revert --no-commit</code> とすると、「戻したい時点のソースコードの状態に手動で戻して、」という部分を自動的にやってくれる。つまり、相殺する差分だけを作ってくれる。</p>
+<ul>
+  <li>参考：<a href="http://akiyoko.hatenablog.jp/entry/2014/08/21/220255">Git で コミットを無かったことにする方法 （git revert の使い方） - akiyoko blog</a></li>
+</ul>
+<p>個人でやっている分にはそう使わないかな？と思って調べただけで特に試さなかった。スンマセン;;</p>
+<h2 id="git-rebase--コミットログを詳細に変更する"><a class="header-link" href="#git-rebase--コミットログを詳細に変更する"><span class="header-link-mark"></span></a><code>git rebase</code> … コミットログを詳細に変更する</h2>
+<p>今度は例のために「Edit 3」までのコミット履歴を作った。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># コミット履歴がこんな状態だとして。</span>
+$ <span class="token function">git</span> log --oneline
+657475f <span class="token number">2017</span>-03-08 Edit <span class="token number">3</span> <span class="token punctuation">[</span>Neos21<span class="token punctuation">]</span> <span class="token punctuation">(</span>HEAD -<span class="token operator">></span> master<span class="token punctuation">)</span>
+ec65417 <span class="token number">2017</span>-03-08 Edit <span class="token number">2</span> <span class="token punctuation">[</span>Neos21<span class="token punctuation">]</span>
+a87e4d1 <span class="token number">2017</span>-03-08 Edit <span class="token number">1</span> <span class="token punctuation">[</span>Neos21<span class="token punctuation">]</span>
+d5dc6fe <span class="token number">2017</span>-03-08 First Commit <span class="token punctuation">[</span>Neos21<span class="token punctuation">]</span>
+</code></pre>
+<p><strong><code>git rebase</code> はコマンドライン上で対話形式で過去のコミットを操作できる</strong>。<em>コミット自体の削除だけでなく、コミット内容の変更やコミットコメントの訂正だけなど、様々な操作ができる。</em></p>
+<p>ここでは、上のコミットログのうち<em>「Edit 1」のコミット内容を修正し、それ以外のコミットはそのまま保持する</em>といったことをやってみようと思う。</p>
+<p>「Edit 1」のコミットを修正するには、その手前のコミット「First Commit」のハッシュを選択する。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># 「First Commit」のハッシュを指定する</span>
+$ <span class="token function">git</span> rebase -i d5dc6fe
+</code></pre>
+<p>するとテキストエディタ (たいていは Vim) が開き、以下のような内容が表示される。</p>
+<pre class="language-bash"><code class="language-bash">pick a87e4d1 Edit <span class="token number">1</span>
+pick ec65417 Edit <span class="token number">2</span>
+pick 657475f Edit <span class="token number">3</span>
+
+<span class="token comment"># Rebase d5dc6fe..657475f onto d5dc6fe (3 commands)</span>
+<span class="token comment">#</span>
+<span class="token comment"># Commands:</span>
+<span class="token comment"># p, pick = use commit</span>
+<span class="token comment"># r, reword = use commit, but edit the commit message</span>
+<span class="token comment"># e, edit = use commit, but stop for amending</span>
+<span class="token comment"># s, squash = use commit, but meld into previous commit</span>
+<span class="token comment"># f, fixup = like "squash", but discard this commit's log message</span>
+<span class="token comment"># x, exec = run command (the rest of the line) using shell</span>
+<span class="token comment"># d, drop = remove commit</span>
+<span class="token comment">#</span>
+<span class="token comment"># These lines can be re-ordered; they are executed from top to bottom.</span>
+<span class="token comment">#</span>
+<span class="token comment"># If you remove a line here THAT COMMIT WILL BE LOST.</span>
+<span class="token comment">#</span>
+<span class="token comment"># However, if you remove everything, the rebase will be aborted.</span>
+<span class="token comment">#</span>
+<span class="token comment"># Note that empty commits are commented out</span>
+</code></pre>
+<p>最初の「pick」から始まる3行が、<em>コミットログを操作するための場所</em>で、それ以下はコメントなので無視。<strong>この画面では、「どのコミットに何の操作をするのか」をテキスト編集によって指定する</strong>。</p>
+<p>今回は「Edit 1」のコミットコメントを変えようと思うので、以下のように「Edit 1」の「<code>pick</code>」部分を「<code>reword</code>」に書き換える。Vim の操作なので、「<code>a</code>」で挿入モードにして書き換える。</p>
+<pre class="language-bash"><code class="language-bash">reword a87e4d1 Edit <span class="token number">1</span>
+pick ec65417 Edit <span class="token number">2</span>
+pick 657475f Edit <span class="token number">3</span>
+</code></pre>
+<p>書き換えたら「<code>Esc</code>→ <code>:wq</code>」で閉じる。するとまた Vim が起動し、以下のような内容が表示される。</p>
+<pre class="language-bash"><code class="language-bash">Edit <span class="token number">1</span>
+
+<span class="token comment"># Please enter the commit message for your changes. Lines starting</span>
+<span class="token comment"># with '#' will be ignored, and an empty message aborts the commit.</span>
+<span class="token comment">#</span>
+<span class="token comment"># Date:      Wed Mar 8 09:56:57 2017 +0900</span>
+<span class="token comment">#</span>
+<span class="token comment"># interactive rebase in progress; onto d5dc6fe</span>
+<span class="token comment"># Last command done (1 command done):</span>
+<span class="token comment">#    reword a87e4d1 Edit 1</span>
+<span class="token comment"># Next commands to do (2 remaining commands):</span>
+<span class="token comment">#    pick ec65417 Edit 2</span>
+<span class="token comment">#    pick 657475f Edit 3</span>
+<span class="token comment"># You are currently editing a commit while rebasing branch 'master' on 'd5dc6fe'.</span>
+<span class="token comment">#</span>
+<span class="token comment"># Changes to be committed:</span>
+<span class="token comment">#       modified:   Test1.txt</span>
+<span class="token comment">#       new file:   Test2.txt</span>
+<span class="token comment">#</span>
+</code></pre>
+<p>この画面で、「Edit 1」のコミットコメントを書き換えられる。ここでも、<code>#</code> 始まりの行はコメントなので無視して良い。</p>
+<p>1行目の「Edit 1」が実際のコミットコメント部分なので、ここを「Edit 1 Rebase!」のように書き換える。改行も入れられると思う。</p>
+<p>「<code>:wq</code>」で保存終了すると元のターミナルに戻り、以下のように表示されている。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">git</span> rebase -i d5dc6fe
+<span class="token punctuation">[</span>detached HEAD <span class="token number">4992001</span><span class="token punctuation">]</span> Edit <span class="token number">1</span> Rebase<span class="token operator">!</span>
+ Date: Wed Mar <span class="token number">8</span> 09:56:57 <span class="token number">2017</span> +0900
+ <span class="token number">2</span> files changed, <span class="token number">4</span> insertions<span class="token punctuation">(</span>+<span class="token punctuation">)</span>
+ create mode <span class="token number">100644</span> Test2.txt
+Successfully rebased and updated refs/heads/master.
+
+<span class="token comment"># コミットログを確認する</span>
+$ <span class="token function">git</span> log --oneline
+<span class="token number">7110995</span> <span class="token number">2017</span>-03-08 Edit <span class="token number">3</span> <span class="token punctuation">[</span>Neos21<span class="token punctuation">]</span> <span class="token punctuation">(</span>HEAD -<span class="token operator">></span> master<span class="token punctuation">)</span>
+bbccb70 <span class="token number">2017</span>-03-08 Edit <span class="token number">2</span> <span class="token punctuation">[</span>Neos21<span class="token punctuation">]</span>
+<span class="token number">4992001</span> <span class="token number">2017</span>-03-08 Edit <span class="token number">1</span> Rebase<span class="token operator">!</span> <span class="token punctuation">[</span>Neos21<span class="token punctuation">]</span>
+d5dc6fe <span class="token number">2017</span>-03-08 First Commit <span class="token punctuation">[</span>Neos21<span class="token punctuation">]</span>
+</code></pre>
+<p>「Edit 1」だったコミットコメントが「Edit 1 Rebase!」になっている。</p>
+<p>ただし、1つ注意点がある。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># 以下は rebase 前のログ。rebase 後のコミットログと見比べてみると…？</span>
+657475f <span class="token number">2017</span>-03-08 Edit <span class="token number">3</span> <span class="token punctuation">[</span>Neos21<span class="token punctuation">]</span> <span class="token punctuation">(</span>HEAD -<span class="token operator">></span> master<span class="token punctuation">)</span>
+ec65417 <span class="token number">2017</span>-03-08 Edit <span class="token number">2</span> <span class="token punctuation">[</span>Neos21<span class="token punctuation">]</span>
+a87e4d1 <span class="token number">2017</span>-03-08 Edit <span class="token number">1</span> <span class="token punctuation">[</span>Neos21<span class="token punctuation">]</span>
+d5dc6fe <span class="token number">2017</span>-03-08 First Commit <span class="token punctuation">[</span>Neos21<span class="token punctuation">]</span>
+</code></pre>
+<p><code>git rebase</code> する前のログと比べると、<em>変更した「Edit 1」のコミット以降のハッシュが全て書き変わっている</em>。</p>
+<p>コミット内容の編集によって「Edit 1」のハッシュが変わり、その後のコミットは手前のコミットとの繋がりの情報を保持しているので、変更された「Edit 1」のハッシュを保持するために後ろのコミットもハッシュが変わる。GitHub などにプッシュしてしまったコミットを後から編集すると、色々と不整合が起こるので、プッシュ済みのコミットの Rebase は避けた方が良い。</p>
+<h2 id="以上"><a class="header-link" href="#以上"><span class="header-link-mark"></span></a>以上</h2>
+<p>実際に操作してみてかなり感覚が掴めた。「こうしたいんだけどどうやるんだろう？」というインデックスは出来た気がする。</p>
+<h2 id="参考"><a class="header-link" href="#参考"><span class="header-link-mark"></span></a>参考</h2>
+<ul>
+  <li><a href="http://tweeeety.hateblo.jp/entry/2015/06/10/214419">【git】git commitを取り消す - tweeeetyのぶろぐ的めも</a></li>
+  <li><a href="http://www.karakaram.com/git-rebase-i-usage">あのコミットをなかった事に。git rebase -i の使い方 – karakaram-blog</a></li>
+</ul>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2017-04-05</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2017-04-05</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

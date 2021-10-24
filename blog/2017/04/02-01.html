@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>「im4java」を使って Java から ImageMagick を呼び出して画像変換や画像情報取得をする - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2017/04/02-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2017/index.html">2017年</a></li>
+            <li><a href="/blog/2017/04/index.html">04月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2017-04-02</time></div>
+        <h1 id="page-title">「im4java」を使って Java から ImageMagick を呼び出して画像変換や画像情報取得をする</h1>
+
+<p>前回紹介した、コマンドラインから画像の変換処理などができる ImageMagick。</p>
+<ul>
+  <li><a href="/blog/2017/04/01-02.html">今更「ImageMagick」というモノを知った</a></li>
+</ul>
+<p>今回はこの ImageMagick を Java プログラムから呼び出す時に使える、<strong>im4java</strong> というライブラリを紹介する。</p>
+<ul>
+  <li><a href="http://im4java.sourceforge.net/">im4java</a></li>
+</ul>
+<p>im4java は、ImageMagick のコマンドファイル (<code>convert.exe</code> や <code>identify.exe</code> など) を呼び出すためのラッパーである。つまり_ im4java 単体では動作せず、利用する環境には ImageMagick をインストールしておく必要がある_。</p>
+<h2 id="im4java-のダウンロードと環境構築"><a class="header-link" href="#im4java-のダウンロードと環境構築"><span class="header-link-mark"></span></a>im4java のダウンロードと環境構築</h2>
+<p>im4java は以下からダウンロードできる。最新版は Ver.1.4.0 で、ImageMagick 7系にも対応しているが、Convert コマンドに関しては <code>magick.exe</code> だけでなく <code>convert.exe</code> もインストールしておかないと恐らく動かない。</p>
+<ul>
+  <li><a href="https://sourceforge.net/projects/im4java/files/">im4java - Browse Files at SourceForge.net</a></li>
+</ul>
+<p>ダウンロードしたアーカイブを解凍すると、<code>im4java-1.4.0.jar</code> というファイルが入っているので、これを Java プロジェクトのビルドパスに通す。他に依存するライブラリがなく、JAR ファイル1つで完結するのはありがたい。</p>
+<h2 id="im4java-の使い方"><a class="header-link" href="#im4java-の使い方"><span class="header-link-mark"></span></a>im4java の使い方</h2>
+<p>im4java は ImageMagick のコマンドライン・オプションがほとんどそのままの形で記述できるので、変換内容に関しては記述しやすいと思う。が、入力ファイルや出力ファイルの指定方法が少々分かりづらかったので、色々と調べながら組み上げた。</p>
+<p><strong>以下に <code>Convert</code> と <code>Identify</code> のコマンドを im4java から呼び出すサンプルを用意した。</strong>それぞれのコマンドで、ファイルのフルパスを文字列で指定する方法と、BufferedImage オブジェクトとして画像を受け渡しする方法を作成した。</p>
+<p>ほとんどコード中にコメントで記述したが、注意したいところを以下にまとめておく。</p>
+<ul>
+  <li>im4java が ImageMagick を利用できるように、ImageMagick のインストール先ディレクトリを指定する必要がある。</li>
+</ul>
+<pre class="language-java"><code class="language-java"><span class="token comment">// ImageMagick のパスを指定する方法は2通り</span>
+
+<span class="token comment">// コマンドクラスに直接指定する方法</span>
+<span class="token class-name">ConvertCmd</span> convert <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">ConvertCmd</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+convert<span class="token punctuation">.</span><span class="token function">setSearchPath</span><span class="token punctuation">(</span><span class="token string">"C:/Program Files/ImageMagick-7.0.5-Q16"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// 事前に im4java が全体で使えるように指定する方法</span>
+<span class="token class-name">ProcessStarter</span><span class="token punctuation">.</span><span class="token function">setGlobalSearchPath</span><span class="token punctuation">(</span><span class="token string">"C:/Program Files/ImageMagick-7.0.5-Q16"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>どちらで書いても特に変わらない。</p>
+<ul>
+  <li>引数を指定する <code>IMOperation</code> の <code>#addImage()</code> は、入力ファイルや出力先のフルパスを文字列で指定する。</li>
+  <li>入力ファイルを BufferedImage オブジェクトにしたい場合は、プレースホルダとして引数なしの <code>IMOperation#addImage()</code> を記述しておき、BufferedImage オブジェクトは <code>ConvertCmd#run()</code> や <code>IdentifyCmd#run()</code> の第2引数に指定する。</li>
+  <li><code>ConvertCmd</code> の結果である変換後のファイルを BufferedImage で受け取る場合は、<code>Stream2BufferedImage</code> というヘルパークラスを利用する。このクラスを <code>ConvertCmd#setOutputConsumer()</code> で結果情報の出力先にセットしておくことで、BufferedImage オブジェクトとして出力することができる (<code>Stream2BufferedImage#getImage()</code>)。</li>
+  <li><code>IdentifyCmd</code> の場合は、標準出力に出力される文字列を受け取るために <code>ArrayListOutputConsumer</code> というヘルパークラスを利用する。<code>ArrayListOutputConsumer#getOutput()</code> で、標準出力の結果1行を1要素とした <code>ArrayList&#x3C;String></code> を返却してくれる。</li>
+  <li>サンプルでは Format 指定により、Identify の結果は1行しかないので、<code>StringUtils#join()</code> や、Java8 以降で使える <code>String#join()</code> で結果の <code>List</code> を1つの <code>String</code> にまとめてしまっている。</li>
+</ul>
+<p>ImageMagick とこの im4java ライブラリを使えば、ウェブアプリからアップロードされた画像をサーバサイドで変換し、圧縮版をレスポンスで返す、といったことが可能になる。</p>
+<p>im4java の動きがよく分からない場合は、公式の API Docs と、StackOverflow での既出の質問が参考になる。</p>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2017-04-02</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2017-04-02</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

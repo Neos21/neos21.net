@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>Netlify Functions を使って複数の SNS にマルチポストする Function を作った - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2020/05/28-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2020/index.html">2020年</a></li>
+            <li><a href="/blog/2020/05/index.html">05月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2020-05-28</time></div>
+        <h1 id="page-title">Netlify Functions を使って複数の SNS にマルチポストする Function を作った</h1>
+
+<p>AWS Lambda とほぼ同等の機能を無料で利用できる、Netlify Functions。</p>
+<p>今回はコレを使って、<strong>ブックマークレット形式</strong>で呼び出せる Function と、<em>Slack の Slash Command</em> として呼び出せる Function を2つ作ってみた。</p>
+<p>どちらも、「オレオレマイクロブログ」「Mastodon」「Misskey」など複数の SNS に同じ投稿を行える、マルチポスト機能を実現した Function として作った。</p>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#function-%E3%82%92%E4%BD%9C%E3%82%8B%E3%81%AB%E3%81%82%E3%81%9F%E3%81%A3%E3%81%A6%E3%81%AE%E6%BA%96%E5%82%99">Function を作るにあたっての準備</a></li>
+  <li><a href="#%E3%83%96%E3%83%83%E3%82%AF%E3%83%9E%E3%83%BC%E3%82%AF%E3%83%AC%E3%83%83%E3%83%88%E3%81%A8%E3%81%97%E3%81%A6%E5%91%BC%E3%81%B3%E5%87%BA%E3%81%9B%E3%82%8B%E3%83%9E%E3%83%AB%E3%83%81%E3%83%9D%E3%82%B9%E3%83%88-function">ブックマークレットとして呼び出せるマルチポスト Function</a>
+    <ul>
+      <li><a href="#%E3%83%96%E3%83%83%E3%82%AF%E3%83%9E%E3%83%BC%E3%82%AF%E3%83%AC%E3%83%83%E3%83%88%E5%81%B4%E3%81%8B%E3%82%89%E4%BB%95%E6%A7%98%E3%82%92%E6%B1%BA%E3%82%81%E3%82%8B">ブックマークレット側から仕様を決める</a></li>
+      <li><a href="#function-%E3%82%92%E4%BD%9C%E3%82%8B">Function を作る</a></li>
+    </ul>
+  </li>
+  <li><a href="#slack-%E3%81%AE-slash-command-%E3%81%8B%E3%82%89%E3%83%9E%E3%83%AB%E3%83%81%E3%83%9D%E3%82%B9%E3%83%88%E3%81%99%E3%82%8B">Slack の Slash Command からマルチポストする</a></li>
+  <li><a href="#%E4%BB%A5%E4%B8%8A">以上</a></li>
+</ul>
+<h2 id="function-を作るにあたっての準備"><a class="header-link" href="#function-を作るにあたっての準備"><span class="header-link-mark"></span></a>Function を作るにあたっての準備</h2>
+<p>前回の記事で紹介した Netlify Functions の登録が済んでいていることを前提とする。</p>
+<p>今回は POST 時のクエリストリングのパースに <code>querystring</code>、SNS への POST 送信を行うために <code>axios</code> という npm パッケージを使うので、これらをインストールしておく。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">npm</span> <span class="token function">install</span> --save querystring axios
+</code></pre>
+<h2 id="ブックマークレットとして呼び出せるマルチポスト-function"><a class="header-link" href="#ブックマークレットとして呼び出せるマルチポスト-function"><span class="header-link-mark"></span></a>ブックマークレットとして呼び出せるマルチポスト Function</h2>
+<p>まずはブックマークレットとして呼び出して使う Function を用意してみる。</p>
+<h3 id="ブックマークレット側から仕様を決める"><a class="header-link" href="#ブックマークレット側から仕様を決める"><span class="header-link-mark"></span></a>ブックマークレット側から仕様を決める</h3>
+<p>ブックマークレットとしては、以下のように任意のテキストを GET パラメータで送信することにする。同時に、<code>credential</code> パラメータを用意することで、簡易的なパスワード認証をかけることにした。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token comment">// 現在見ているページのタイトルと URL をマルチポストするブックマークレット</span>
+javascript<span class="token operator">:</span><span class="token punctuation">(</span><span class="token parameter">d</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token keyword control-flow">if</span><span class="token punctuation">(</span><span class="token dom variable">location</span><span class="token punctuation">.</span><span class="token property-access">href</span><span class="token punctuation">.</span><span class="token method function property-access">includes</span><span class="token punctuation">(</span><span class="token string">'netlify.app'</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token keyword control-flow">return</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  
+  <span class="token function">open</span><span class="token punctuation">(</span><span class="token string">'https://EXAMPLE.netlify.app/.netlify/functions/my-bookmarklet?credential=MY-PASSWORD&#x26;text='</span> <span class="token operator">+</span> <span class="token function">encodeURIComponent</span><span class="token punctuation">(</span>d<span class="token punctuation">.</span><span class="token property-access">title</span> <span class="token operator">+</span> <span class="token string">' '</span> <span class="token operator">+</span> d<span class="token punctuation">.</span><span class="token constant">URL</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token string">''</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">(</span><span class="token dom variable">document</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>手前の <code>if</code> 文は、<code>window.open()</code> 後の画面でうっかり多重実行しないようにするためのガード句。実際はコレを1行にして使用する。</p>
+<p>ということで、Function 側は <code>credential</code> パラメータと <code>text</code> パラメータを受け取って処理できれば良いことになる。</p>
+<h3 id="function-を作る"><a class="header-link" href="#function-を作る"><span class="header-link-mark"></span></a>Function を作る</h3>
+<p>上述のリクエスト仕様に合わせて、Function を作り込んでいく。以下の例ではパラメータの存在チェックなどを省いているので、実運用のためにはもう少し手を入れること。</p>
+<ul>
+  <li><code>src/my-bookmarklet.js</code></li>
+</ul>
+<pre class="language-javascript"><code class="language-javascript"><span class="token comment">// POST 送信を行うために axios を使用する</span>
+<span class="token keyword">const</span> axios <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'axios'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token doc-comment comment">/** オレオレマイクロブログに投稿する */</span>
+<span class="token keyword">function</span> <span class="token function">postMicroBlog</span><span class="token punctuation">(</span><span class="token parameter">text</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token comment">// オレオレマイクロブログは JSON ではなく x-www-form-urlencoded 形式で送信する必要があるため、以下のように書く</span>
+  <span class="token keyword">const</span> params <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">URLSearchParams</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  params<span class="token punctuation">.</span><span class="token method function property-access">append</span><span class="token punctuation">(</span><span class="token string">'api_key'</span><span class="token punctuation">,</span> process<span class="token punctuation">.</span><span class="token property-access">env</span><span class="token punctuation">.</span><span class="token constant">MICRO_BLOG_API_KEY</span><span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment">// 環境変数からトークンを読み取るようにしておく</span>
+  params<span class="token punctuation">.</span><span class="token method function property-access">append</span><span class="token punctuation">(</span><span class="token string">'text'</span>   <span class="token punctuation">,</span> text<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  
+  <span class="token keyword control-flow">return</span> axios<span class="token punctuation">.</span><span class="token method function property-access">post</span><span class="token punctuation">(</span><span class="token string">'https://example.com/post.php'</span><span class="token punctuation">,</span> params<span class="token punctuation">)</span>
+    <span class="token punctuation">.</span><span class="token method function property-access">then</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token parameter">result</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+      <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'Micro Blog : Success : '</span><span class="token punctuation">,</span> result<span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token keyword control-flow">return</span> <span class="token punctuation">{</span> success<span class="token operator">:</span> <span class="token string">'Micro Blog'</span> <span class="token punctuation">}</span><span class="token punctuation">;</span>  <span class="token comment">// 成功したサービス名を返す</span>
+    <span class="token punctuation">}</span><span class="token punctuation">)</span>
+    <span class="token punctuation">.</span><span class="token keyword control-flow">catch</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token parameter">error</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+      <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">error</span><span class="token punctuation">(</span><span class="token string">'Micro Blog : Error : '</span><span class="token punctuation">,</span> error<span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token keyword control-flow">return</span> <span class="token punctuation">{</span> failed<span class="token operator">:</span> <span class="token string">'Micro Blog'</span> <span class="token punctuation">}</span><span class="token punctuation">;</span>  <span class="token comment">// 失敗したサービス名を返す</span>
+    <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+
+<span class="token doc-comment comment">/** Misskey に POST する */</span>
+<span class="token keyword">function</span> <span class="token function">postMisskey</span><span class="token punctuation">(</span><span class="token parameter">text</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token keyword control-flow">return</span> axios<span class="token punctuation">.</span><span class="token method function property-access">post</span><span class="token punctuation">(</span><span class="token string">'https://misskey.io/api/notes/create'</span><span class="token punctuation">,</span> <span class="token punctuation">{</span>
+    i   <span class="token operator">:</span> process<span class="token punctuation">.</span><span class="token property-access">env</span><span class="token punctuation">.</span><span class="token constant">MISSKEY_API_KEY</span><span class="token punctuation">,</span>
+    text<span class="token operator">:</span> text
+  <span class="token punctuation">}</span><span class="token punctuation">)</span>
+    <span class="token punctuation">.</span><span class="token method function property-access">then</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token parameter">result</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+      <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'Misskey : Success : '</span><span class="token punctuation">,</span> result<span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token keyword control-flow">return</span> <span class="token punctuation">{</span> success<span class="token operator">:</span> <span class="token string">'Misskey'</span> <span class="token punctuation">}</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span><span class="token punctuation">)</span>
+    <span class="token punctuation">.</span><span class="token keyword control-flow">catch</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token parameter">error</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+      <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">error</span><span class="token punctuation">(</span><span class="token string">'Misskey : Error : '</span><span class="token punctuation">,</span> error<span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token keyword control-flow">return</span> <span class="token punctuation">{</span> failed<span class="token operator">:</span> <span class="token string">'Misskey'</span> <span class="token punctuation">}</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+
+<span class="token doc-comment comment">/** Mastodon に POST する */</span>
+<span class="token keyword">function</span> <span class="token function">postMastodon</span><span class="token punctuation">(</span><span class="token parameter">text</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token keyword control-flow">return</span> axios<span class="token punctuation">.</span><span class="token method function property-access">post</span><span class="token punctuation">(</span><span class="token string">'https://mstdn.jp/api/v1/statuses'</span><span class="token punctuation">,</span> <span class="token punctuation">{</span>
+    access_token<span class="token operator">:</span> process<span class="token punctuation">.</span><span class="token property-access">env</span><span class="token punctuation">.</span><span class="token constant">MASTODON_API_KEY</span><span class="token punctuation">,</span>
+    status      <span class="token operator">:</span> text<span class="token punctuation">,</span>
+    visibility  <span class="token operator">:</span> <span class="token string">'public'</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span>
+    <span class="token punctuation">.</span><span class="token method function property-access">then</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token parameter">result</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+      <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'Mastodon : Success : '</span><span class="token punctuation">,</span> result<span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token keyword control-flow">return</span> <span class="token punctuation">{</span> success<span class="token operator">:</span> <span class="token string">'Mastodon'</span> <span class="token punctuation">}</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span><span class="token punctuation">)</span>
+    <span class="token punctuation">.</span><span class="token keyword control-flow">catch</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token parameter">error</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+      <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">error</span><span class="token punctuation">(</span><span class="token string">'Mastodon : Error : '</span><span class="token punctuation">,</span> error<span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token keyword control-flow">return</span> <span class="token punctuation">{</span> failed<span class="token operator">:</span> <span class="token string">'Mastodon'</span> <span class="token punctuation">}</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+
+<span class="token doc-comment comment">/** エントリポイント */</span>
+exports<span class="token punctuation">.</span><span class="token method-variable function-variable method function property-access">handler</span> <span class="token operator">=</span> <span class="token keyword">async</span> <span class="token punctuation">(</span><span class="token parameter">event<span class="token punctuation">,</span> context<span class="token punctuation">,</span> callback</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token comment">// クエリ文字列から2つのパラメータを取得する</span>
+  <span class="token keyword">const</span> credential <span class="token operator">=</span> event<span class="token punctuation">.</span><span class="token property-access">queryStringParameters</span><span class="token punctuation">.</span><span class="token property-access">credential</span><span class="token punctuation">;</span>
+  <span class="token keyword">const</span> text       <span class="token operator">=</span> event<span class="token punctuation">.</span><span class="token property-access">queryStringParameters</span><span class="token punctuation">.</span><span class="token property-access">text</span><span class="token punctuation">;</span>
+  
+  <span class="token comment">// パラメータの存在チェックをするとしたらこんな感じで書く</span>
+  <span class="token keyword control-flow">if</span><span class="token punctuation">(</span>credential <span class="token operator">===</span> <span class="token keyword nil">undefined</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token keyword control-flow">return</span> <span class="token punctuation">{</span> statusCode<span class="token operator">:</span> <span class="token number">400</span><span class="token punctuation">,</span> body<span class="token operator">:</span> <span class="token string">'Credential Is Null'</span> <span class="token punctuation">}</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  
+  <span class="token comment">// クレデンシャルのチェック (正しくなければ一括送信を行わない)</span>
+  <span class="token keyword control-flow">if</span><span class="token punctuation">(</span>credential <span class="token operator">!==</span> process<span class="token punctuation">.</span><span class="token property-access">env</span><span class="token punctuation">.</span><span class="token constant">CREDENTIAL</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token keyword control-flow">return</span> <span class="token punctuation">{</span> statusCode<span class="token operator">:</span> <span class="token number">400</span><span class="token punctuation">,</span> body<span class="token operator">:</span> <span class="token string">'Invalid Credential'</span> <span class="token punctuation">}</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  
+  <span class="token comment">// Promise.all を使って一括送信する</span>
+  <span class="token keyword control-flow">return</span> <span class="token known-class-name class-name">Promise</span><span class="token punctuation">.</span><span class="token method function property-access">all</span><span class="token punctuation">(</span><span class="token punctuation">[</span> <span class="token function">postMicroBlog</span><span class="token punctuation">(</span>text<span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token function">postMisskey</span><span class="token punctuation">(</span>text<span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token function">postMastodon</span><span class="token punctuation">(</span>text<span class="token punctuation">)</span> <span class="token punctuation">]</span><span class="token punctuation">)</span>
+    <span class="token punctuation">.</span><span class="token method function property-access">then</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token parameter">results</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+      <span class="token comment">// 投稿に成功したサービス、失敗したサービスの情報をまとめてレスポンス文字列に渡す</span>
+      <span class="token keyword">const</span> success <span class="token operator">=</span> results<span class="token punctuation">.</span><span class="token method function property-access">filter</span><span class="token punctuation">(</span><span class="token parameter">r</span> <span class="token arrow operator">=></span> r<span class="token punctuation">.</span><span class="token property-access">success</span> <span class="token operator">!==</span> <span class="token keyword nil">undefined</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">map</span><span class="token punctuation">(</span><span class="token parameter">r</span> <span class="token arrow operator">=></span> r<span class="token punctuation">.</span><span class="token property-access">success</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">join</span><span class="token punctuation">(</span><span class="token string">', '</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token keyword">const</span> failed  <span class="token operator">=</span> results<span class="token punctuation">.</span><span class="token method function property-access">filter</span><span class="token punctuation">(</span><span class="token parameter">r</span> <span class="token arrow operator">=></span> r<span class="token punctuation">.</span><span class="token property-access">failed</span>  <span class="token operator">!==</span> <span class="token keyword nil">undefined</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">map</span><span class="token punctuation">(</span><span class="token parameter">r</span> <span class="token arrow operator">=></span> r<span class="token punctuation">.</span><span class="token property-access">failed</span> <span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">join</span><span class="token punctuation">(</span><span class="token string">', '</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">Success : [</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>success<span class="token interpolation-punctuation punctuation">}</span></span><span class="token string">]  Failed : [</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>failed<span class="token interpolation-punctuation punctuation">}</span></span><span class="token string">]</span><span class="token template-punctuation string">`</span></span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token keyword control-flow">return</span> <span class="token punctuation">{</span> statusCode<span class="token operator">:</span> <span class="token number">200</span><span class="token punctuation">,</span> body<span class="token operator">:</span> <span class="token punctuation">(</span>success <span class="token operator">?</span> <span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">Success : [</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>success<span class="token interpolation-punctuation punctuation">}</span></span><span class="token string">]</span><span class="token template-punctuation string">`</span></span> <span class="token operator">:</span> <span class="token string">''</span><span class="token punctuation">)</span> <span class="token operator">+</span> <span class="token punctuation">(</span>success <span class="token operator">&#x26;&#x26;</span> failed <span class="token operator">?</span> <span class="token string">'  '</span> <span class="token operator">:</span> <span class="token string">''</span><span class="token punctuation">)</span> <span class="token operator">+</span> <span class="token punctuation">(</span>failed <span class="token operator">?</span> <span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">Failed : [</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>failed<span class="token interpolation-punctuation punctuation">}</span></span><span class="token string">]</span><span class="token template-punctuation string">`</span></span> <span class="token operator">:</span> <span class="token string">''</span><span class="token punctuation">)</span> <span class="token punctuation">}</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span><span class="token punctuation">)</span>
+    <span class="token punctuation">.</span><span class="token keyword control-flow">catch</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token parameter">error</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+      <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">error</span><span class="token punctuation">(</span><span class="token string">'Error : '</span><span class="token punctuation">,</span> error<span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token keyword control-flow">return</span> <span class="token punctuation">{</span> statusCode<span class="token operator">:</span> <span class="token number">400</span><span class="token punctuation">,</span> body<span class="token operator">:</span> <span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">Failed To Post : </span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>error<span class="token interpolation-punctuation punctuation">}</span></span><span class="token template-punctuation string">`</span></span> <span class="token punctuation">}</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+</code></pre>
+<p>少々長くなったが、こんな風に実装してみた。</p>
+<ul>
+  <li><code>event.queryStringParameters</code> からクエリ文字列を取得する
+    <ul>
+      <li><code>encodeURIComponent()</code> でパーセント・エンコードした文字列もデコードされて届くので、特に処理せずとも良い</li>
+    </ul>
+  </li>
+  <li>SNS への POST は axios を使って普通に…
+    <ul>
+      <li>async も使えるので非同期処理のハンドリングは思いどおりに行える</li>
+    </ul>
+  </li>
+  <li>レスポンスは連想配列で <code>statusCode</code> と <code>body</code> を渡せば良い</li>
+  <li>API トークンなどは <code>process.env</code> で環境変数を注入するようにしておく</li>
+</ul>
+<p>環境変数は、Netlify 管理画面から「Settings」→「Build &#x26; deploy」→「Environment」と移動し、<em>「Environment variables」</em>欄にて設定できるので、ココに各種トークンを入れておく。</p>
+<p>コレで、現在見ているページのタイトルと URL を複数の SNS にマルチポストするコードができた。ブックマークレットを起動すると Netlify Functions が処理を行い、</p>
+<pre><code>Success : [Micro Blog, Misskey, Mastodon]
+</code></pre>
+<p>というように、投稿が成功したサービス名が列挙される。もしも投稿に失敗したサービスがあった時は、</p>
+<pre><code>Success : [Micro Blog, Misskey]  Failed : [Mastodon]
+</code></pre>
+<p>というようなレスポンスになるようにしてある。</p>
+<h2 id="slack-の-slash-command-からマルチポストする"><a class="header-link" href="#slack-の-slash-command-からマルチポストする"><span class="header-link-mark"></span></a>Slack の Slash Command からマルチポストする</h2>
+<p>続いて、Slack の Slash Command として作る Webhook。以前、Google Apps Script (GAS) で同様のモノを作ったことがあるので、Slash Command 側の設定の説明は色々省く。</p>
+<ul>
+  <li><a href="/blog/2019/09/04-02.html">Google Apps Script を使って Slack のスラッシュコマンドを作る</a></li>
+  <li><a href="/blog/2019/09/06-01.html">Google Apps Script を使って Slack から Twitter 投稿を行うスラッシュコマンドを作る</a></li>
+  <li><a href="/blog/2020/02/07-02.html">GAS を使って Slack コマンドが受け取った文字列を別のサーバに POST 送信する</a></li>
+</ul>
+<p>Slack とのやり取りにおいては、POST メソッドが使われること、それでいてクエリ文字列のパースが必要なこと、そしてレスポンスの仕方を工夫しないと上手く Slack 側に応答が返せないことで詰まったので、そこを重点的に紹介する。</p>
+<ul>
+  <li><code>src/my-slack.js</code></li>
+</ul>
+<pre class="language-javascript"><code class="language-javascript"><span class="token comment">// POST パラメータをパースするために使用する</span>
+<span class="token keyword">const</span> querystring <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'querystring'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token comment">// POST 送信を行うために axios を使用する</span>
+<span class="token keyword">const</span> axios <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'axios'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// 以下の投稿メソッドはブックマークレット版と同じなので省略する</span>
+<span class="token comment">// --------------------------------------------------</span>
+
+<span class="token doc-comment comment">/** オレオレマイクロブログに投稿する */</span>
+<span class="token keyword">function</span> <span class="token function">postMicroBlog</span><span class="token punctuation">(</span><span class="token parameter">text</span><span class="token punctuation">)</span> <span class="token punctuation">{</span> <span class="token punctuation">}</span>
+
+<span class="token doc-comment comment">/** Misskey に POST する */</span>
+<span class="token keyword">function</span> <span class="token function">postMisskey</span><span class="token punctuation">(</span><span class="token parameter">text</span><span class="token punctuation">)</span> <span class="token punctuation">{</span> <span class="token punctuation">}</span>
+
+<span class="token doc-comment comment">/** Mastodon に POST する */</span>
+<span class="token keyword">function</span> <span class="token function">postMastodon</span><span class="token punctuation">(</span><span class="token parameter">text</span><span class="token punctuation">)</span> <span class="token punctuation">{</span> <span class="token punctuation">}</span>
+
+<span class="token comment">// --------------------------------------------------</span>
+
+<span class="token doc-comment comment">/** エントリポイント */</span>
+exports<span class="token punctuation">.</span><span class="token method-variable function-variable method function property-access">handler</span> <span class="token operator">=</span> <span class="token keyword">async</span> <span class="token punctuation">(</span><span class="token parameter">event<span class="token punctuation">,</span> context<span class="token punctuation">,</span> callback</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token comment">// レスポンスの雛形を作っておく</span>
+  <span class="token keyword">const</span> response <span class="token operator">=</span> <span class="token punctuation">{</span>
+    statusCode<span class="token operator">:</span> <span class="token number">400</span><span class="token punctuation">,</span>
+    headers<span class="token operator">:</span> <span class="token punctuation">{</span> <span class="token string">'Content-Type'</span><span class="token operator">:</span> <span class="token string">'application/json'</span> <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span><span class="token punctuation">;</span>
+  
+  <span class="token comment">// POST メソッドでのリクエストでなければ中止する</span>
+  <span class="token keyword control-flow">if</span><span class="token punctuation">(</span>event<span class="token punctuation">.</span><span class="token property-access">httpMethod</span> <span class="token operator">!==</span> <span class="token string">'POST'</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    response<span class="token punctuation">.</span><span class="token property-access">body</span> <span class="token operator">=</span> <span class="token known-class-name class-name">JSON</span><span class="token punctuation">.</span><span class="token method function property-access">stringify</span><span class="token punctuation">(</span><span class="token punctuation">{</span> text<span class="token operator">:</span> <span class="token string">'Error : Method Not Allowed'</span> <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword control-flow">return</span> <span class="token function">callback</span><span class="token punctuation">(</span><span class="token keyword null nil">null</span><span class="token punctuation">,</span> response<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  
+  <span class="token comment">// パラメータを event.body から取得し、パースする</span>
+  <span class="token keyword">const</span> params <span class="token operator">=</span> querystring<span class="token punctuation">.</span><span class="token method function property-access">parse</span><span class="token punctuation">(</span>event<span class="token punctuation">.</span><span class="token property-access">body</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">const</span> token <span class="token operator">=</span> params<span class="token punctuation">.</span><span class="token property-access">token</span><span class="token punctuation">;</span>  <span class="token comment">// Slack Webhook のトークン文字列</span>
+  <span class="token keyword">const</span> text  <span class="token operator">=</span> params<span class="token punctuation">.</span><span class="token property-access">text</span><span class="token punctuation">;</span>   <span class="token comment">// Slash Command で送られてきた投稿文字列</span>
+  
+  <span class="token comment">// Slack のトークンチェック</span>
+  <span class="token keyword control-flow">if</span><span class="token punctuation">(</span>token <span class="token operator">!==</span> process<span class="token punctuation">.</span><span class="token property-access">env</span><span class="token punctuation">.</span><span class="token constant">SLACK_APP_TOKEN</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    response<span class="token punctuation">.</span><span class="token property-access">body</span> <span class="token operator">=</span> <span class="token known-class-name class-name">JSON</span><span class="token punctuation">.</span><span class="token method function property-access">stringify</span><span class="token punctuation">(</span><span class="token punctuation">{</span> text<span class="token operator">:</span> <span class="token string">'Error : Invalid Slack App Token'</span> <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword control-flow">return</span> <span class="token function">callback</span><span class="token punctuation">(</span><span class="token keyword null nil">null</span><span class="token punctuation">,</span> response<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  <span class="token comment">// あとは適宜 text 変数の Null チェックなども行っておく</span>
+  
+  <span class="token comment">// Promise.all を使って一括送信する</span>
+  <span class="token keyword control-flow">return</span> <span class="token known-class-name class-name">Promise</span><span class="token punctuation">.</span><span class="token method function property-access">all</span><span class="token punctuation">(</span><span class="token punctuation">[</span> <span class="token function">postMicroBlog</span><span class="token punctuation">(</span>text<span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token function">postMisskey</span><span class="token punctuation">(</span>text<span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token function">postMastodon</span><span class="token punctuation">(</span>text<span class="token punctuation">)</span> <span class="token punctuation">]</span><span class="token punctuation">)</span>
+    <span class="token punctuation">.</span><span class="token method function property-access">then</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token parameter">results</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+      <span class="token comment">// 投稿に成功したサービス、失敗したサービスの情報をまとめてレスポンス文字列に渡す</span>
+      <span class="token keyword">const</span> success <span class="token operator">=</span> results<span class="token punctuation">.</span><span class="token method function property-access">filter</span><span class="token punctuation">(</span><span class="token parameter">r</span> <span class="token arrow operator">=></span> r<span class="token punctuation">.</span><span class="token property-access">success</span> <span class="token operator">!==</span> <span class="token keyword nil">undefined</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">map</span><span class="token punctuation">(</span><span class="token parameter">r</span> <span class="token arrow operator">=></span> r<span class="token punctuation">.</span><span class="token property-access">success</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">join</span><span class="token punctuation">(</span><span class="token string">', '</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token keyword">const</span> failed  <span class="token operator">=</span> results<span class="token punctuation">.</span><span class="token method function property-access">filter</span><span class="token punctuation">(</span><span class="token parameter">r</span> <span class="token arrow operator">=></span> r<span class="token punctuation">.</span><span class="token property-access">failed</span>  <span class="token operator">!==</span> <span class="token keyword nil">undefined</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">map</span><span class="token punctuation">(</span><span class="token parameter">r</span> <span class="token arrow operator">=></span> r<span class="token punctuation">.</span><span class="token property-access">failed</span> <span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">join</span><span class="token punctuation">(</span><span class="token string">', '</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">Success : [</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>success<span class="token interpolation-punctuation punctuation">}</span></span><span class="token string">]  Failed : [</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>failed<span class="token interpolation-punctuation punctuation">}</span></span><span class="token string">]</span><span class="token template-punctuation string">`</span></span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      
+      <span class="token comment">// 成功時のレスポンスを組み立ててレスポンス (返答) する</span>
+      response<span class="token punctuation">.</span><span class="token property-access">statusCode</span> <span class="token operator">=</span> <span class="token number">200</span><span class="token punctuation">;</span>
+      response<span class="token punctuation">.</span><span class="token property-access">body</span> <span class="token operator">=</span> <span class="token known-class-name class-name">JSON</span><span class="token punctuation">.</span><span class="token method function property-access">stringify</span><span class="token punctuation">(</span><span class="token punctuation">{</span> text<span class="token operator">:</span> <span class="token punctuation">(</span>success <span class="token operator">?</span> <span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">Success : [</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>success<span class="token interpolation-punctuation punctuation">}</span></span><span class="token string">]</span><span class="token template-punctuation string">`</span></span> <span class="token operator">:</span> <span class="token string">''</span><span class="token punctuation">)</span> <span class="token operator">+</span> <span class="token punctuation">(</span>success <span class="token operator">&#x26;&#x26;</span> failed <span class="token operator">?</span> <span class="token string">'  '</span> <span class="token operator">:</span> <span class="token string">''</span><span class="token punctuation">)</span> <span class="token operator">+</span> <span class="token punctuation">(</span>failed <span class="token operator">?</span> <span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">Failed : [</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>failed<span class="token interpolation-punctuation punctuation">}</span></span><span class="token string">]</span><span class="token template-punctuation string">`</span></span> <span class="token operator">:</span> <span class="token string">''</span><span class="token punctuation">)</span> <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token keyword control-flow">return</span> <span class="token function">callback</span><span class="token punctuation">(</span><span class="token keyword null nil">null</span><span class="token punctuation">,</span> response<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span><span class="token punctuation">)</span>
+    <span class="token punctuation">.</span><span class="token keyword control-flow">catch</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token parameter">error</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+      <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">error</span><span class="token punctuation">(</span><span class="token string">'Error : '</span><span class="token punctuation">,</span> error<span class="token punctuation">)</span><span class="token punctuation">;</span>
+      response<span class="token punctuation">.</span><span class="token property-access">body</span> <span class="token operator">=</span> <span class="token known-class-name class-name">JSON</span><span class="token punctuation">.</span><span class="token method function property-access">stringify</span><span class="token punctuation">(</span><span class="token punctuation">{</span> text<span class="token operator">:</span> <span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">Error : Failed To Post : </span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>error<span class="token interpolation-punctuation punctuation">}</span></span><span class="token template-punctuation string">`</span></span> <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token keyword control-flow">return</span> <span class="token function">callback</span><span class="token punctuation">(</span><span class="token keyword null nil">null</span><span class="token punctuation">,</span> response<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+</code></pre>
+<ul>
+  <li>POST メソッドかどうかを判定するには <code>event.httpMethod</code> を見る</li>
+  <li>POST 時のクエリパラメータは <code>event.body</code> に入っている。<code>querystring</code> という npm パッケージにパースしてもらう</li>
+  <li>ブックマークレットの場合は <code>credential</code> という自前のリクエストパラメータで簡易認証を入れたが、Slash Command の場合は Slack App Token が飛んでくるので、コレを見る
+    <ul>
+      <li>チェックに使用するトークン情報は <code>process.env.SLACK_APP_TOKEN</code> と環境変数で参照しているので、Netlify の設定画面で環境変数を設定しておこう</li>
+    </ul>
+  </li>
+  <li>レスポンス時は <code>callback()</code> 関数を使用しないと、正しく Slack 上での返信として扱われない
+    <ul>
+      <li><code>response.body</code> に設定した JSON 文字列内の <code>text</code> プロパティが、Slack 上で応答文として表示されるメッセージテキストとなる</li>
+    </ul>
+  </li>
+</ul>
+<p>こんな感じ。</p>
+<p>あとはコレをデプロイして、</p>
+<ul>
+  <li><code>https://EXAMPLE.netlify.app/.netlify/functions/my-slack</code></li>
+</ul>
+<p>といたエンドポイント URL を取得したら、Slash Command の送信先に設定してやれば良い。</p>
+<h2 id="以上"><a class="header-link" href="#以上"><span class="header-link-mark"></span></a>以上</h2>
+<p>ホントに AWS Lambda と同じ感覚で利用できるし、メインで操作するのは GitHub などのリポジトリサービスへの Push だけで、めちゃくちゃお手軽。</p>
+<p>環境変数の注入など、セキュアな作りにすることもちゃんとできるし、デプロイも Git Push を契機に素早く行われて、とても快適だ。Netlify Functions、コレからも使っていこうと思う。</p>
+<ul>
+  <li>参考：<a href="https://qiita.com/hide2018/items/7734dbdcfb80b1b348b0">Slack Appを無料で運用する（Netlify Functions） - Qiita</a></li>
+</ul>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2020-05-28</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2020-05-28</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

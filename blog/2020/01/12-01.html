@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>docker-compose を使った Node.js・npm 開発環境構築例 - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2020/01/12-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2020/index.html">2020年</a></li>
+            <li><a href="/blog/2020/01/index.html">01月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2020-01-12</time></div>
+        <h1 id="page-title">docker-compose を使った Node.js・npm 開発環境構築例</h1>
+
+<p><code>docker-compose</code> を使って、Node.js・npm の開発環境を構築してみる。Docker さえインストールしてあれば、ローカルに Node.js や npm をインストールすることなく、開発が進められるようになる。</p>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#%E3%83%97%E3%83%AD%E3%82%B8%E3%82%A7%E3%82%AF%E3%83%88%E4%BE%8B">プロジェクト例</a></li>
+  <li><a href="#docker-composeyaml-%E3%82%92%E4%BD%9C%E6%88%90%E3%81%99%E3%82%8B"><code>docker-compose.yaml</code> を作成する</a></li>
+  <li><a href="#packagejson-%E3%82%92%E7%94%9F%E6%88%90%E3%81%99%E3%82%8B"><code>package.json</code> を生成する</a></li>
+  <li><a href="#express-%E3%81%AE%E3%82%A4%E3%83%B3%E3%82%B9%E3%83%88%E3%83%BC%E3%83%AB">Express のインストール</a></li>
+  <li><a href="#%E3%82%B5%E3%83%BC%E3%83%90%E3%82%92%E5%AE%9F%E8%A3%85%E3%81%97%E3%81%A6%E5%8B%95%E3%81%8B%E3%81%97%E3%81%A6%E3%81%BF%E3%82%8B">サーバを実装して動かしてみる</a></li>
+  <li><a href="#%E3%83%86%E3%82%B9%E3%83%88%E3%82%92%E6%9B%B8%E3%81%8D%E3%81%9F%E3%81%8F%E3%81%AA%E3%81%A3%E3%81%9F%E3%82%89%EF%BC%9F">テストを書きたくなったら…？</a></li>
+  <li><a href="#%E4%BB%A5%E4%B8%8A">以上</a></li>
+</ul>
+<h2 id="プロジェクト例"><a class="header-link" href="#プロジェクト例"><span class="header-link-mark"></span></a>プロジェクト例</h2>
+<p>今回のプロジェクト例は、Express を使って簡易サーバを構築するという例だ。最終的なファイル構成は次のようになる予定。</p>
+<pre><code>./my-npm/
+├ docker-compose.yaml
+├ package.json
+├ main.js (などなど)
+└ node_modules/
+</code></pre>
+<p>以下の解説からは若干手直ししてあるので名前などが変わっているところもあるが、動作するプロジェクト全体を以下の GitHub リポジトリにて公開しているので、参考にされたし。</p>
+<ul>
+  <li><a href="https://github.com/Neos21/practice-docker-compose-nodejs-npm">Neos21/practice-docker-compose-nodejs-npm</a></li>
+</ul>
+<h2 id="docker-composeyaml-を作成する"><a class="header-link" href="#docker-composeyaml-を作成する"><span class="header-link-mark"></span></a><code>docker-compose.yaml</code> を作成する</h2>
+<p>それでは開発環境を構築していこう。</p>
+<p>予め、次のような <code>docker-compose.yaml</code> ファイルを作っておく。</p>
+<ul>
+  <li><code>docker-compose.yaml</code>
+    <ul>
+      <li><code>image</code> で Node.js 公式のイメージを指定している。コレにより <code>node</code>・<code>npm</code> コマンドが実行できる環境を用意している</li>
+      <li><code>container_name</code> を指定しているので、<code>docker start</code> などする時にコンテナ ID ではなくこのコンテナ名を指定して操作できるようになる。操作がしやすくなる</li>
+      <li><code>stdin_open</code> と <code>tty</code> は、起動後のコンテナを終了させないようにするため記載している</li>
+      <li><code>command</code> で <code>docker-compose up</code> 時に実行するコマンドを定義しておく。ココでは <code>npm start</code> を実行し、Express サーバを起動させるつもり</li>
+      <li><code>volumes</code> でこのプロジェクトディレクトリを <code>/root/project</code> にマウントする</li>
+      <li>ホストの <code>~/.npmrc</code> をマウントしておくと <code>npm install</code> を実行する時とかに参照できるようになるので設定しておく</li>
+      <li><code>bash</code> でアタッチした時の作業ディレクトリが、マウントした <code>/root/project</code> になるよう <code>working_dir</code> を指定しておく</li>
+      <li><code>ports</code> で npm が公開するポートをホスト側と紐付けておく。Express サーバが 8080 ポートを使うので、そのままホスト側の <code>http://localhost:8080/</code> でアクセスできるようにしてある</li>
+    </ul>
+  </li>
+</ul>
+<pre class="language-yaml"><code class="language-yaml"><span class="token key atrule">my-npm</span><span class="token punctuation">:</span>
+  <span class="token key atrule">image</span><span class="token punctuation">:</span> node<span class="token punctuation">:</span>latest
+  <span class="token key atrule">container_name</span><span class="token punctuation">:</span> my<span class="token punctuation">-</span>npm
+  <span class="token key atrule">stdin_open</span><span class="token punctuation">:</span> <span class="token boolean important">true</span>
+  <span class="token key atrule">tty</span><span class="token punctuation">:</span> <span class="token boolean important">true</span>
+  <span class="token key atrule">command</span><span class="token punctuation">:</span> npm start
+  <span class="token key atrule">volumes</span><span class="token punctuation">:</span>
+    <span class="token punctuation">-</span> .<span class="token punctuation">:</span>/root/project
+    <span class="token punctuation">-</span> ~/.npmrc<span class="token punctuation">:</span>/root/.npmrc
+  <span class="token key atrule">working_dir</span><span class="token punctuation">:</span> /root/project
+  <span class="token key atrule">ports</span><span class="token punctuation">:</span>
+    <span class="token punctuation">-</span> 8080<span class="token punctuation">:</span><span class="token number">8080</span>
+</code></pre>
+<h2 id="packagejson-を生成する"><a class="header-link" href="#packagejson-を生成する"><span class="header-link-mark"></span></a><code>package.json</code> を生成する</h2>
+<p><code>docker-compose.yaml</code> ファイルを用意したので、コレを利用して <code>npm init</code> を実行してみる。</p>
+<pre class="language-bash"><code class="language-bash">$ docker-compose run --rm my-npm <span class="token function">npm</span> init -y
+
+Wrote to /root/project/package.json:
+
+<span class="token punctuation">{</span>
+  <span class="token string">"name"</span><span class="token builtin class-name">:</span> <span class="token string">"project"</span>,
+  <span class="token string">"version"</span><span class="token builtin class-name">:</span> <span class="token string">"1.0.0"</span>,
+  <span class="token string">"main"</span><span class="token builtin class-name">:</span> <span class="token string">"main.js"</span>,
+  <span class="token string">"dependencies"</span><span class="token builtin class-name">:</span> <span class="token punctuation">{</span>
+    <span class="token string">"express"</span><span class="token builtin class-name">:</span> <span class="token string">"4.17.1"</span>
+  <span class="token punctuation">}</span>,
+  <span class="token string">"devDependencies"</span><span class="token builtin class-name">:</span> <span class="token punctuation">{</span><span class="token punctuation">}</span>,
+  <span class="token string">"scripts"</span><span class="token builtin class-name">:</span> <span class="token punctuation">{</span>
+    <span class="token string">"test"</span><span class="token builtin class-name">:</span> <span class="token string">"echo <span class="token entity" title="\&#x22;">\"</span>Error: no test specified<span class="token entity" title="\&#x22;">\"</span> &#x26;&#x26; exit 1"</span>
+  <span class="token punctuation">}</span>,
+  <span class="token string">"author"</span><span class="token builtin class-name">:</span> <span class="token string">""</span>,
+  <span class="token string">"license"</span><span class="token builtin class-name">:</span> <span class="token string">"MIT"</span>,
+  <span class="token string">"keywords"</span><span class="token builtin class-name">:</span> <span class="token punctuation">[</span><span class="token punctuation">]</span>,
+  <span class="token string">"description"</span><span class="token builtin class-name">:</span> <span class="token string">""</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<ul>
+  <li><code>docker-compose run</code> は、コンテナを1度だけ生成して処理を実行するためのコマンド</li>
+  <li>実行後にコンテナを破棄するため <code>--rm</code> オプションを付けている。付けないで実行した場合は、<code>$ docker ps -a</code> で一覧を見た時に、終了したコンテナとしてゴミが残る。後で消すこともできるので、付け忘れても気にしない</li>
+  <li><code>docker-compose.yaml</code> に記載されている <code>my-npm</code> というサービスを起動している</li>
+  <li>コマンド末尾の <code>npm init -y</code> 部分が実行したいコマンド。<code>-y</code> オプションを付けたが、付けずに対話形式で <code>package.json</code> を生成しても良い。</li>
+</ul>
+<p>コレでプロジェクトディレクトリ直下に <code>package.json</code> が生成できたはずだ。</p>
+<h2 id="express-のインストール"><a class="header-link" href="#express-のインストール"><span class="header-link-mark"></span></a>Express のインストール</h2>
+<p>続いて Express をインストールし、<code>package.json</code> に記載してみる。</p>
+<pre class="language-bash"><code class="language-bash">$ docker-compose run --rm my-npm <span class="token function">npm</span> <span class="token function">install</span> -S express
+
++ express@4.17.1
+updated <span class="token number">1</span> package and audited <span class="token number">126</span> packages <span class="token keyword">in</span> <span class="token number">4</span>.677s
+found <span class="token number">0</span> vulnerabilities
+</code></pre>
+<p><code>npm install</code> もコンテナ経由で実行する。プロジェクトディレクトリがそのままマウントしてあるので、<code>package.json</code> の <code>dependencies</code> に <code>"express": "4.17.1"</code> が追記されるというワケ。</p>
+<p>このように、<strong><code>npm</code> コマンドを実行したい場合は <code>docker-compose run</code> を使用する</strong>ことで、ローカルに <code>npm</code> コマンドをインストールした時と同様に作業できる。</p>
+<h2 id="サーバを実装して動かしてみる"><a class="header-link" href="#サーバを実装して動かしてみる"><span class="header-link-mark"></span></a>サーバを実装して動かしてみる</h2>
+<p>それでは、Express を使った簡単なサーバを構築してみる。ホスト OS 側で良いので、VSCode などを使って次のようなファイルを実装する。</p>
+<ul>
+  <li><code>main.js</code></li>
+</ul>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword">const</span> express <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'express'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">const</span> app <span class="token operator">=</span> <span class="token function">express</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+app<span class="token punctuation">.</span><span class="token method function property-access">get</span><span class="token punctuation">(</span><span class="token string">'/'</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token parameter">req<span class="token punctuation">,</span> res</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token keyword">new</span> <span class="token class-name">Date</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">toISOString</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token string">'[/]'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  res<span class="token punctuation">.</span><span class="token method function property-access">send</span><span class="token punctuation">(</span><span class="token string">'Hello World'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+app<span class="token punctuation">.</span><span class="token method function property-access">listen</span><span class="token punctuation">(</span><span class="token number">8080</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'Server Started'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>ファイルの準備ができたら、サーバを起動して動作確認してみよう。ココで <em><code>docker-compose up</code></em> を使うことになる。 - サーバを起動して動作確認する</p>
+<pre class="language-bash"><code class="language-bash">$ docker-compose up
+
+<span class="token comment"># こんな風にログが見える</span>
+Creating my-npm <span class="token punctuation">..</span>. <span class="token keyword">done</span>
+Attaching to my-npm
+my-npm    <span class="token operator">|</span>
+my-npm    <span class="token operator">|</span> <span class="token operator">></span> docker-node@0.0.0 start /root/project
+my-npm    <span class="token operator">|</span> <span class="token operator">></span> node main.js
+my-npm    <span class="token operator">|</span>
+my-npm    <span class="token operator">|</span> Server Started
+
+<span class="token comment"># ホスト側のブラウザで http://localhost:8080/ にアクセスすると、以下のようにログが出力される</span>
+my-npm    <span class="token operator">|</span> <span class="token number">2019</span>-11-18T01:43:56.567Z <span class="token punctuation">[</span>/<span class="token punctuation">]</span>
+
+<span class="token comment"># 終了する場合は Ctrl + C で切る</span>
+Gracefully stopping<span class="token punctuation">..</span>. <span class="token punctuation">(</span>press Ctrl+C again to force<span class="token punctuation">)</span>
+Killing my-npm  <span class="token punctuation">..</span>. <span class="token keyword">done</span>
+</code></pre>
+<p>サーバログは見えなくて良い、という場合はバックグラウンド起動すれば良い。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># --detach は -d と記載可能</span>
+$ docker-compose up --detach
+Creating my-npm <span class="token punctuation">..</span>. <span class="token keyword">done</span>
+
+<span class="token comment"># docker ps</span>
+CONTAINER ID        IMAGE               COMMAND                  CREATED             STATUS              PORTS                    NAMES
+7ef4b7941a9d        node:latest         <span class="token string">"docker-entrypoint.s…"</span>   <span class="token number">17</span> seconds ago      Up <span class="token number">16</span> seconds       <span class="token number">0.0</span>.0.0:8080-<span class="token operator">></span><span class="token number">8080</span>/tcp   my-npm
+</code></pre>
+<p>この状態でもホストのブラウザで <code>http://localhost:8080/</code> にアクセスすると、この Docker コンテナと通信が行われる。</p>
+<p>このようにバックグラウンド起動しているコンテナのサーバログを見るには、次のようにアタッチする。</p>
+<pre class="language-bash"><code class="language-bash">$ docker attach my-npm
+
+<span class="token comment"># このあとホストのブラウザでアクセスしてみると、サーバログが出力される</span>
+<span class="token number">2019</span>-11-18T01:50:41.509Z <span class="token punctuation">[</span>/<span class="token punctuation">]</span>
+
+<span class="token comment"># プロセスを終了せずに抜けるには Ctrl + P → Ctrl + Q と入力する</span>
+<span class="token comment"># Ctrl + C で終了してしまうとプロセスが終了してしまう</span>
+</code></pre>
+<p><code>Ctrl + C</code> で終了したりした場合は、プロセスは次のように <code>Exited</code> というステータスになっているかと思う。</p>
+<pre class="language-bash"><code class="language-bash">$ docker <span class="token function">ps</span> --all
+CONTAINER ID        IMAGE               COMMAND                  CREATED             STATUS                    PORTS               NAMES
+a7b6ba061fd4        node:latest         <span class="token string">"docker-entrypoint.s…"</span>   <span class="token number">6</span> seconds ago       Exited <span class="token punctuation">(</span><span class="token number">0</span><span class="token punctuation">)</span> <span class="token number">1</span> second ago                       my-npm
+</code></pre>
+<p>終了させてしまったプロセスを再起動するには、<code>docker start</code> か <code>docker-compose start</code> を使う。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># もしくは `docker start my-npm` でも良い</span>
+$ docker-compose start my-npm
+Starting my-npm <span class="token punctuation">..</span>. <span class="token keyword">done</span>
+
+$ docker <span class="token function">ps</span>
+CONTAINER ID        IMAGE               COMMAND                  CREATED             STATUS              PORTS                    NAMES
+7ef4b7941a9d        node:latest         <span class="token string">"docker-entrypoint.s…"</span>   <span class="token number">3</span> minutes ago       Up <span class="token number">1</span> second         <span class="token number">0.0</span>.0.0:8080-<span class="token operator">></span><span class="token number">8080</span>/tcp   my-npm
+</code></pre>
+<p><code>docker-compose up</code> で起動したサービスを停止・破棄するにはこのようにする。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># オプションは -sf と省略可能</span>
+$ docker-compose <span class="token function">rm</span> --stop --force
+
+Stopping my-npm <span class="token punctuation">..</span>. <span class="token keyword">done</span>
+Going to remove my-npm
+Removing my-npm <span class="token punctuation">..</span>. <span class="token keyword">done</span>
+</code></pre>
+<p>コードの編集はホスト側でやればいいし、<code>npm</code> コマンドを実行する場合も <code>docker-compose run</code> を使えば良いが、もしコンテナの Bash セッションに接続したい場合は、次のように叩く。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># サービスとして起動し、そのコンテナに接続する場合</span>
+$ docker-compose up -d
+$ docker <span class="token builtin class-name">exec</span> -it my-npm <span class="token function">bash</span>
+
+<span class="token comment"># とにかく Bash 環境に入る場合</span>
+$ docker-compos run --rm my-npm <span class="token function">bash</span>
+</code></pre>
+<p><code>node:latest</code> は Debian 9 (Stretch) ベースなので、<code>bash</code> は勿論、基本的なコマンドは動作するので、必要な場合はこのように実行すれば良い。</p>
+<h2 id="テストを書きたくなったら？"><a class="header-link" href="#テストを書きたくなったら？"><span class="header-link-mark"></span></a>テストを書きたくなったら…？</h2>
+<p>ユニットテストを書きたくなったとしたら、例えば次のように操作すれば良い。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># mocha をインストールして devDependencies に追記させる</span>
+$ docker-compose run --rm my-npm <span class="token function">npm</span> <span class="token function">install</span> -D mocha
+
+<span class="token comment"># ホスト OS で良いので、テストコードを書く</span>
+$ <span class="token function">vi</span> test.js
+
+<span class="token comment"># package.json の npm-scripts に test 項目を記述する</span>
+$ <span class="token function">vi</span> package.json
+
+<span class="token comment"># テストを実行する</span>
+$ docker-compose run --rm my-npm <span class="token function">npm</span> <span class="token builtin class-name">test</span>
+</code></pre>
+<p>やはり <code>docker-compose run</code> を使う。</p>
+<p>ココまで多用すると <code>docker-compose</code> という文字数が多くて大変なので、自分はこんなエイリアスを作って <code>~/.bashrc</code> に記載している。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token builtin class-name">alias</span> <span class="token assign-left variable">d</span><span class="token operator">=</span><span class="token string">'docker'</span>
+<span class="token builtin class-name">alias</span> <span class="token assign-left variable">da</span><span class="token operator">=</span><span class="token string">'docker attach'</span>
+<span class="token builtin class-name">alias</span> <span class="token assign-left variable">db</span><span class="token operator">=</span><span class="token string">'docker build --no-cache --tag'</span>
+<span class="token builtin class-name">alias</span> <span class="token assign-left variable">di</span><span class="token operator">=</span><span class="token string">'docker images'</span>
+<span class="token builtin class-name">alias</span> <span class="token assign-left variable">dit</span><span class="token operator">=</span><span class="token string">'docker image tag'</span>
+<span class="token builtin class-name">alias</span> <span class="token assign-left variable">dpl</span><span class="token operator">=</span><span class="token string">'docker pull'</span>
+<span class="token builtin class-name">alias</span> <span class="token assign-left variable">dps</span><span class="token operator">=</span><span class="token string">'docker ps -a'</span>
+<span class="token builtin class-name">alias</span> <span class="token assign-left variable">dpush</span><span class="token operator">=</span><span class="token string">'docker push'</span>
+<span class="token builtin class-name">alias</span> <span class="token assign-left variable">dr</span><span class="token operator">=</span><span class="token string">'docker run -it'</span>  <span class="token comment"># ex. docker run -it -v "$(pwd):/tmp/shared" -p 8080:8080 【Image Name】 bash</span>
+<span class="token builtin class-name">alias</span> <span class="token assign-left variable">drm</span><span class="token operator">=</span><span class="token string">'docker rm -f'</span>
+<span class="token builtin class-name">alias</span> <span class="token assign-left variable">drma</span><span class="token operator">=</span><span class="token string">'docker rm -f <span class="token variable"><span class="token variable">$(</span>docker <span class="token function">ps</span> -aq<span class="token variable">)</span></span>'</span>
+<span class="token builtin class-name">alias</span> <span class="token assign-left variable">drmi</span><span class="token operator">=</span><span class="token string">'docker rmi'</span>
+<span class="token builtin class-name">alias</span> <span class="token assign-left variable">drun</span><span class="token operator">=</span><span class="token string">'docker run -it'</span>
+<span class="token builtin class-name">alias</span> <span class="token assign-left variable">ds</span><span class="token operator">=</span><span class="token string">'docker start'</span>
+<span class="token builtin class-name">alias</span> <span class="token assign-left variable">dsta</span><span class="token operator">=</span><span class="token string">'docker start'</span>
+<span class="token builtin class-name">alias</span> <span class="token assign-left variable">dsto</span><span class="token operator">=</span><span class="token string">'docker stop'</span>
+
+<span class="token comment"># 対象コンテナが止まっていても強制的に docker exec する</span>
+<span class="token keyword">function</span> <span class="token function-name function">de</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token keyword">if</span> <span class="token punctuation">[</span> <span class="token string">"<span class="token variable">$#</span>"</span> -eq <span class="token number">0</span> <span class="token punctuation">]</span><span class="token punctuation">;</span> <span class="token keyword">then</span>
+    <span class="token builtin class-name">echo</span> <span class="token string">'[de : docker exec function] Requires at least 1 argument.'</span>
+    <span class="token builtin class-name">return</span> <span class="token number">1</span>
+  <span class="token keyword">fi</span>
+  docker start <span class="token string">"<span class="token variable">$1</span>"</span> <span class="token operator">></span> /dev/null
+  <span class="token keyword">if</span> <span class="token punctuation">[</span> <span class="token string">"<span class="token variable">$#</span>"</span> -eq <span class="token number">1</span> <span class="token punctuation">]</span><span class="token punctuation">;</span> <span class="token keyword">then</span>
+    docker <span class="token builtin class-name">exec</span> -it <span class="token string">"<span class="token variable">$1</span>"</span> <span class="token string">'bash'</span>
+  <span class="token keyword">else</span>
+    docker <span class="token builtin class-name">exec</span> -it <span class="token string">"<span class="token variable">$@</span>"</span>  <span class="token comment"># ex. 【Container ID or Container Name】 bash</span>
+  <span class="token keyword">fi</span>
+<span class="token punctuation">}</span>
+
+<span class="token builtin class-name">alias</span> <span class="token assign-left variable">dc</span><span class="token operator">=</span><span class="token string">'docker-compose'</span>
+<span class="token builtin class-name">alias</span> <span class="token assign-left variable">dcb</span><span class="token operator">=</span><span class="token string">'docker-compose build --no-cache'</span>
+<span class="token builtin class-name">alias</span> <span class="token assign-left variable">dcup</span><span class="token operator">=</span><span class="token string">'docker-compose up'</span>
+<span class="token builtin class-name">alias</span> <span class="token assign-left variable">dcupd</span><span class="token operator">=</span><span class="token string">'docker-compose up -d'</span>
+<span class="token builtin class-name">alias</span> <span class="token assign-left variable">dcr</span><span class="token operator">=</span><span class="token string">'docker-compose run --rm'</span>
+<span class="token builtin class-name">alias</span> <span class="token assign-left variable">dcrm</span><span class="token operator">=</span><span class="token string">'docker-compose rm -sf'</span>
+<span class="token builtin class-name">alias</span> <span class="token assign-left variable">dcrun</span><span class="token operator">=</span><span class="token string">'docker-compose run --rm'</span>
+<span class="token builtin class-name">alias</span> <span class="token assign-left variable">dcsta</span><span class="token operator">=</span><span class="token string">'docker-compose start'</span>
+<span class="token builtin class-name">alias</span> <span class="token assign-left variable">dcsto</span><span class="token operator">=</span><span class="token string">'docker-compose stop'</span>
+</code></pre>
+<p>このようにエイリアスを作っておけば、</p>
+<ul>
+  <li><code>$ dcupd</code> で起動〜</li>
+  <li><code>$ da my-npm</code> でアタッチ〜</li>
+  <li><code>$ dcr my-npm npm test</code> でテストして〜</li>
+  <li><code>$ de my-npm</code> で Bash 接続〜</li>
+  <li><code>$ dcrm</code> で全サービス終了して〜</li>
+  <li><code>$ drma</code> で停止したコンテナ含めて全コンテナ破棄〜</li>
+</ul>
+<p>という感じで操作できるようになる。</p>
+<h2 id="以上"><a class="header-link" href="#以上"><span class="header-link-mark"></span></a>以上</h2>
+<p>共有ディレクトリとしてマウントしたプロジェクトディレクトリ配下に <code>node_modules/</code> などが格納されているので、コンテナはいくら生成・破棄してもそれを見てくれる。ホスト OS に Node.js や npm がインストールしてある必要はなく、ベースイメージで指定した Node.js のバージョンをそのまま利用できるので、環境を汚さずに済む。</p>
+<p><code>docker-compose</code> を使うと、素の <code>docker run</code> で煩雑になるオプション引数を設定ファイルに書いておけるようになるので、今回のように使用するコンテナが1つの場合でも、上手く活用してあげると良いだろう。</p>
+<p>今回は Node.js を例に挙げたが、同じ考え方で他の言語の開発環境も用意できるだろう。</p>
+<ul>
+  <li>参考：<a href="https://qiita.com/mom0tomo/items/f536e6759d3f42d58ffc">docker-compose &#x26;quot;up&#x26;quot; &#x26;quot; run&#x26;quot; &#x26;quot;start&#x26;quot; コマンド 違い - Qiita</a></li>
+  <li>参考：<a href="https://tkzo.jp/blog/difference-between-ports-and-expose-in-docker-compose/">【Docker Compose】ports / expose、書式別の挙動まとめ【version 3】 | taketiyo.log</a></li>
+</ul>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2020-01-12</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2020-01-12</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

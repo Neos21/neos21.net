@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>Node.js で排他制御。async-lock を使ってみた - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2020/07/14-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2020/index.html">2020年</a></li>
+            <li><a href="/blog/2020/07/index.html">07月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2020-07-14</time></div>
+        <h1 id="page-title">Node.js で排他制御。async-lock を使ってみた</h1>
+
+<p>Express サーバのとあるリクエストについて、同時にリクエストがあっても順に処理する必要が出た。すなわち、排他制御をかけ、同時に処理が行われないようにしたかったのだ。</p>
+<p>それを実現してくれる <strong>async-lock</strong> というライブラリを見つけたので、使い方を紹介する。</p>
+<ul>
+  <li><a href="https://github.com/rogierschouten/async-lock">GitHub - rogierschouten/async-lock: Lock on asynchronous code for Nodejs</a></li>
+</ul>
+<h2 id="async-lock-をインストールする"><a class="header-link" href="#async-lock-をインストールする"><span class="header-link-mark"></span></a>async-lock をインストールする</h2>
+<p>今回は TypeScript ベースで Express サーバを作っていて、そこに async-lock を追加するテイで紹介するので、Definitely Typed パッケージもインストールしておく。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">npm</span> init -y
+$ <span class="token function">npm</span> <span class="token function">install</span> --save express
+$ <span class="token function">npm</span> <span class="token function">install</span> --save-dev typescript ts-node @types/express
+
+<span class="token comment"># async-lock をインストールする</span>
+$ <span class="token function">npm</span> <span class="token function">install</span> --save async-lock
+$ <span class="token function">npm</span> <span class="token function">install</span> --save-dev @types/async-lock
+</code></pre>
+<h2 id="async-lock-を使ってみる"><a class="header-link" href="#async-lock-を使ってみる"><span class="header-link-mark"></span></a>async-lock を使ってみる</h2>
+<p>それでは async-lock を使ったリクエスト処理を実装してみよう。</p>
+<p><code>http://localhost:8000/</code> にリクエストが来たら、1つずつ順にカウンタを回し、その値をテキストファイルに書き出す、という API を作ってみる。この際、テキストファイルへの書き込みが同時に発生しないよう、<code>async-lock</code> を使用して排他制御をかける、というワケ。</p>
+<ul>
+  <li><code>app.ts</code></li>
+</ul>
+<pre class="language-typescript"><code class="language-typescript"><span class="token keyword">import</span> <span class="token imports">fs</span> <span class="token keyword">from</span> <span class="token string">'fs'</span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token imports">express</span> <span class="token keyword">from</span> <span class="token string">'express'</span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token imports"><span class="token maybe-class-name">AsyncLock</span></span> <span class="token keyword">from</span> <span class="token string">'async-lock'</span><span class="token punctuation">;</span>
+
+<span class="token comment">// サンプル用の関数</span>
+  <span class="token comment">// 指定秒数だけ待機する</span>
+  <span class="token keyword">const</span> <span class="token function-variable function">sleep</span> <span class="token operator">=</span> <span class="token punctuation">(</span>ms<span class="token operator">:</span> <span class="token builtin">number</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token keyword">new</span> <span class="token class-name"><span class="token known-class-name class-name">Promise</span></span><span class="token punctuation">(</span>resolve <span class="token arrow operator">=></span> <span class="token function">setTimeout</span><span class="token punctuation">(</span>resolve<span class="token punctuation">,</span> ms<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token comment">// 現在の分・秒・ミリ秒を返す</span>
+  <span class="token keyword">const</span> <span class="token function-variable function">now</span> <span class="token operator">=</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token keyword">new</span> <span class="token class-name"><span class="token known-class-name class-name">Date</span></span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">toISOString</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">substr</span><span class="token punctuation">(</span><span class="token number">14</span><span class="token punctuation">,</span> <span class="token number">9</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// グローバルにカウントしたいデータがあるとする</span>
+<span class="token keyword">let</span> counter <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span>
+
+<span class="token comment">// ロック用変数を定義する・タイムアウトを30秒に設定しておく</span>
+<span class="token keyword">const</span> lock <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name"><span class="token maybe-class-name">AsyncLock</span></span><span class="token punctuation">(</span><span class="token punctuation">{</span> timeout<span class="token operator">:</span> <span class="token number">1000</span> <span class="token operator">*</span> <span class="token number">30</span> <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// サーバ</span>
+<span class="token keyword">const</span> app <span class="token operator">=</span> <span class="token function">express</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+app<span class="token punctuation">.</span><span class="token keyword">get</span><span class="token punctuation">(</span><span class="token string">'/'</span><span class="token punctuation">,</span> <span class="token keyword">async</span> <span class="token punctuation">(</span>req<span class="token punctuation">,</span> res<span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token function">now</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token string">'[/] Start'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  
+  <span class="token comment">// 排他制御したい処理に 'my-lock' という名前を付ける</span>
+  lock<span class="token punctuation">.</span><span class="token method function property-access">acquire</span><span class="token punctuation">(</span><span class="token string">'my-lock'</span><span class="token punctuation">,</span> <span class="token keyword">async</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+    <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token function">now</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token string">'  Lock Function Start'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    
+    counter<span class="token operator">++</span><span class="token punctuation">;</span>  <span class="token comment">// カウンタをインクリメントする</span>
+    <span class="token keyword">let</span> text <span class="token operator">=</span> <span class="token template-string"><span class="token template-punctuation string">`</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>counter<span class="token interpolation-punctuation punctuation">}</span></span><span class="token template-punctuation string">`</span></span><span class="token punctuation">;</span>
+    
+    <span class="token keyword">await</span> <span class="token function">sleep</span><span class="token punctuation">(</span><span class="token number">3000</span><span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment">// 適当に待機させる</span>
+    <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token function">now</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token string">'    Counter : '</span><span class="token punctuation">,</span> counter<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    
+    <span class="token comment">// テキストファイルに追記する</span>
+    <span class="token keyword">if</span><span class="token punctuation">(</span>fs<span class="token punctuation">.</span><span class="token method function property-access">existsSync</span><span class="token punctuation">(</span><span class="token string">'./counts.txt'</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token keyword">const</span> original <span class="token operator">=</span> fs<span class="token punctuation">.</span><span class="token method function property-access">readFileSync</span><span class="token punctuation">(</span><span class="token string">'./counts.txt'</span><span class="token punctuation">,</span> <span class="token string">'utf-8'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      text <span class="token operator">=</span> <span class="token template-string"><span class="token template-punctuation string">`</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>original<span class="token interpolation-punctuation punctuation">}</span></span><span class="token string">\n</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>text<span class="token interpolation-punctuation punctuation">}</span></span><span class="token template-punctuation string">`</span></span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+    fs<span class="token punctuation">.</span><span class="token method function property-access">writeFileSync</span><span class="token punctuation">(</span><span class="token string">'./counts.txt'</span><span class="token punctuation">,</span> text<span class="token punctuation">,</span> <span class="token string">'utf-8'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    
+    <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token function">now</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token string">'  Lock Function End'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">return</span> <span class="token string">'Successful'</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span> <span class="token punctuation">(</span>error<span class="token punctuation">,</span> result<span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+    <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token function">now</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token string">'  Lock Result Start'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">if</span><span class="token punctuation">(</span>error<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token function">now</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token string">'    Failure : '</span><span class="token punctuation">,</span> error<span class="token punctuation">)</span><span class="token punctuation">;</span>
+      res<span class="token punctuation">.</span><span class="token method function property-access">send</span><span class="token punctuation">(</span><span class="token template-string"><span class="token template-punctuation string">`</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span><span class="token function">now</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token interpolation-punctuation punctuation">}</span></span><span class="token string"> : NG</span><span class="token template-punctuation string">`</span></span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+    <span class="token keyword">else</span> <span class="token punctuation">{</span>
+      <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token function">now</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token string">'    Success : '</span><span class="token punctuation">,</span> result<span class="token punctuation">)</span><span class="token punctuation">;</span>
+      res<span class="token punctuation">.</span><span class="token method function property-access">send</span><span class="token punctuation">(</span><span class="token template-string"><span class="token template-punctuation string">`</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span><span class="token function">now</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token interpolation-punctuation punctuation">}</span></span><span class="token string"> : OK</span><span class="token template-punctuation string">`</span></span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+    <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token function">now</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token string">'  Lock Result End'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  
+  <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token function">now</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token string">'[/] End'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+app<span class="token punctuation">.</span><span class="token method function property-access">listen</span><span class="token punctuation">(</span><span class="token number">8000</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'Server Started'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>通常は <code>res.send()</code> 部分を <code>return res.send()</code> とし、以降の行を処理しないようにすると思うが、今回は動作を把握するため <code>return</code> はせずに、最後の <code>[/] End</code> の行まで実行させてみる。</p>
+<h2 id="動作を確認する"><a class="header-link" href="#動作を確認する"><span class="header-link-mark"></span></a>動作を確認する</h2>
+<p>それではサーバを起動し、動作を確認してみよう。</p>
+<pre class="language-bash"><code class="language-bash">$ npx ts-node app.ts
+Server Started
+</code></pre>
+<p>この状態で、他に2つほどターミナルタブを開き、この Express サーバに対してリクエストを連続で投げてみる。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># タブ 1 とタブ 2 から、連続して次のような curl を叩く</span>
+$ <span class="token function">curl</span> http://localhost:8000/
+</code></pre>
+<p>するとサーバ側のログが次のように出力されていく。それぞれ解説コメントを間に入れていく。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># タブ 1 からの curl が処理される</span>
+<span class="token number">25</span>:57.500 <span class="token punctuation">[</span>/<span class="token punctuation">]</span> Start
+<span class="token number">25</span>:57.501   Lock Function Start
+<span class="token number">25</span>:57.502 <span class="token punctuation">[</span>/<span class="token punctuation">]</span> End
+  <span class="token comment"># sleep() 関数により後続処理が3秒ほど止まっている</span>
+
+<span class="token comment"># その間に、タブ 2 からの curl リクエストを受け付ける</span>
+<span class="token number">25</span>:58.144 <span class="token punctuation">[</span>/<span class="token punctuation">]</span> Start
+<span class="token number">25</span>:58.145 <span class="token punctuation">[</span>/<span class="token punctuation">]</span> End
+  <span class="token comment"># しかし、async-lock 内の関数はまだ実行されていない</span>
+
+<span class="token comment"># 3秒経過し、タブ 1 からの curl 処理の続きが開始される</span>
+<span class="token number">26</span>:00.502     Counter <span class="token builtin class-name">:</span>  <span class="token number">1</span>
+<span class="token number">26</span>:00.504   Lock Function End
+<span class="token number">26</span>:00.504   Lock Result Start
+<span class="token number">26</span>:00.504     Success <span class="token builtin class-name">:</span>  Successful
+<span class="token number">26</span>:00.508   Lock Result End
+<span class="token comment"># ↑ ココまででタブ 1 へのレスポンスが完了する</span>
+
+<span class="token comment"># ↓ その直後、タブ 2 からのリクエストに対する async-lock の処理が動き始める (上のログ行と同じ時刻 = すぐ直後に動作していることが分かる)</span>
+<span class="token number">26</span>:00.508   Lock Function Start
+  <span class="token comment"># 3秒待機</span>
+<span class="token number">26</span>:03.509     Counter <span class="token builtin class-name">:</span>  <span class="token number">2</span>
+<span class="token number">26</span>:03.510   Lock Function End
+<span class="token number">26</span>:03.510   Lock Result Start
+<span class="token number">26</span>:03.510     Success <span class="token builtin class-name">:</span>  Successful
+<span class="token number">26</span>:03.510   Lock Result End
+<span class="token comment"># タブ 2 へのレスポンスが完了する</span>
+</code></pre>
+<p>このように、後から来たリクエストに対する処理について、async-lock が制御をかけて、同時に実行されないように制御してくれていることが分かる。</p>
+<p>それぞれのターミナルタブのレスポンスは次のようになっている。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># タブ 1 の様子 … リクエストして3秒程度でレスポンスされる</span>
+$ <span class="token function">curl</span> http://localhost:8000/
+<span class="token number">26</span>:00.504 <span class="token builtin class-name">:</span> OK
+
+<span class="token comment"># タブ 2 の様子 … リクエストしてから5・6秒近く待たされている (タブ 1 の処理が完了するまで待っているため)</span>
+$ <span class="token function">curl</span> http://localhost:8000/
+<span class="token number">26</span>:03.510 <span class="token builtin class-name">:</span> OK
+</code></pre>
+<p>タブ 1 とタブ 2 とで、1秒以内に連続してリクエストしたが、タブ 2 の方のレスポンスは排他制御している分待たされたことが分かる。</p>
+<h2 id="エラーハンドリング"><a class="header-link" href="#エラーハンドリング"><span class="header-link-mark"></span></a>エラーハンドリング</h2>
+<p>というワケで、async-lock によるロックの掛け方が分かった。</p>
+<p>ついでに、ロックしたい処理の中で例外が発生した場合の動作も紹介しておこう。</p>
+<pre class="language-typescript"><code class="language-typescript">app<span class="token punctuation">.</span><span class="token keyword">get</span><span class="token punctuation">(</span><span class="token string">'/'</span><span class="token punctuation">,</span> <span class="token keyword">async</span> <span class="token punctuation">(</span>req<span class="token punctuation">,</span> res<span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  lock<span class="token punctuation">.</span><span class="token method function property-access">acquire</span><span class="token punctuation">(</span><span class="token string">'my-lock'</span><span class="token punctuation">,</span> <span class="token keyword">async</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+    <span class="token comment">// 読み込みたいファイルが存在せず、ココでエラーがスローされるとする</span>
+    <span class="token keyword">const</span> text <span class="token operator">=</span> fs<span class="token punctuation">.</span><span class="token method function property-access">readFileSync</span><span class="token punctuation">(</span><span class="token string">'./NOT-EXISTS.txt'</span><span class="token punctuation">,</span> <span class="token string">'utf-8'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    
+    <span class="token comment">// ファイルが存在する場合は、その内容を return するテイ</span>
+    <span class="token keyword">return</span> text<span class="token punctuation">;</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span> <span class="token punctuation">(</span>error<span class="token punctuation">,</span> result<span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+    <span class="token keyword">if</span><span class="token punctuation">(</span>error<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token comment">// エラーがスローされると、変数 error にエラーオブジェクトが格納されるので、ココでハンドリングする</span>
+      <span class="token keyword">return</span> res<span class="token punctuation">.</span><span class="token method function property-access">send</span><span class="token punctuation">(</span><span class="token string">'NG'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+    
+    <span class="token comment">// 成功時は、上の関数内で return した変数 text の内容が、変数 result として受け取れる</span>
+    <span class="token keyword">return</span> res<span class="token punctuation">.</span><span class="token method function property-access">send</span><span class="token punctuation">(</span>result<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p><code>lock.acquire()</code> の第2引数に渡している関数が、排他制御したい処理をラップした関数。この中の <code>fs.readFileSync()</code> が失敗するとエラーがスローされるが、<code>try / catch</code> などは用意していない。</p>
+<p>その代わりに、<code>lock.acquire()</code> の第3引数に渡した関数に処理が移り、ココの変数 <code>error</code> で、エラーをキャッチできるようになっている。</p>
+<p>要するに、Node.js コア API のコールバック関数なんかと同じ作りである。</p>
+<pre class="language-typescript"><code class="language-typescript">lock<span class="token punctuation">.</span><span class="token method function property-access">acquire</span><span class="token punctuation">(</span>lockName<span class="token punctuation">,</span> asyncFunction<span class="token punctuation">,</span> callbackFunction<span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>正常終了時は、<code>asyncFunction</code> が <code>return</code> した値が、<code>callbackFunction</code> における変数 <code>result</code> となっているので、そちらで <code>res.send()</code> なりを呼んでやると良いだろう。</p>
+<p>というワケで、<code>try / catch</code> を書かずに済むので、ネストが少なく済むのが嬉しい。</p>
+<ul>
+  <li>参考：<a href="https://qiita.com/KuwaK/items/60f137f2daf9b2650975">タイムアウトした時にちゃんとロックを解除してくれる async-lockを作る - Qiita</a></li>
+</ul>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2020-07-14</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2020-07-14</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

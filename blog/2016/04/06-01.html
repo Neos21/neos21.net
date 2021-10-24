@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>PreparedStatement を close しないとカーソルが close されない？：まずは PreparedStatement とカーソルをおさらい - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2016/04/06-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2016/index.html">2016年</a></li>
+            <li><a href="/blog/2016/04/index.html">04月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2016-04-06</time></div>
+        <h1 id="page-title">PreparedStatement を close しないとカーソルが close されない？：まずは PreparedStatement とカーソルをおさらい</h1>
+
+<p>Oracle DB に DBUtils を使う Java プログラムから接続していて、とある処理をさせていたら「<strong>ORA-01000 最大オープン・カーソル数を超えました</strong>」というエラーが出た。</p>
+<ul>
+  <li><a href="https://asteria.jp/faq/20090311-140000.html">Oracleを使用していると「ORA-01000 最大オープン・カーソル数を超えました」と表示されました – ASTERIA WARP サポートサイト-ADN</a></li>
+</ul>
+<p>よくよくプログラムを見ると、SELECT の時だけ DBUtils を使わず生の PreparedStatement を使って SELECT しており、その SELECT 処理が for ループの中で何度も呼び出されている間にエラーが発生していた (どういうプログラムなんだ、というツッコミはおいといて…全体的にクソコードなんです…)。</p>
+<p>んー、でも、PreparedStatement を使っているとカーソルも使うのか？</p>
+<p>イマイチ DB のこととか分かってなかったので勉強し直した。独自解釈で、今回の問題を解決するための範囲でしか調べてないので多分に誤解があるかも。</p>
+<h2 id="preparedstatement-とは"><a class="header-link" href="#preparedstatement-とは"><span class="header-link-mark"></span></a>PreparedStatement とは</h2>
+<p>Prepared、準備。Statement、構文。とでも訳すといいかな。事前にコンパイルしておいた問合せ文を保持したり、問合せ結果を使うためのオブジェクト。</p>
+<p>Statement と違って PreparedStatement はシングルクォートなどの文字列をエスケープしてくれるので、SQL インジェクション対策になる、程度の知識しかなかった。</p>
+<ul>
+  <li><a href="http://www.javadrive.jp/servlet/database/index6.html">データの取得(SELECT) - データベース接続 - サーブレット入門</a></li>
+  <li><a href="http://www.javadrive.jp/servlet/database/index10.html">prepareStatementの使用 - データベース接続 - サーブレット入門</a></li>
+  <li><a href="http://www.orquesta.org/takegata/Article/ArticleView.jsp?article_id=497">竹形誠司 ブログ:Java+MySQL+Tomcat:SQLの実行にはStatementよりPreparedStatementを使おう</a></li>
+  <li><a href="http://www.kab-studio.biz/Programing/JavaA2Z/Word/00000411.html">PreparedStatementとは : JavaA2Z</a></li>
+</ul>
+<h2 id="sql-実行時にカーソルというオブジェクトが作られる"><a class="header-link" href="#sql-実行時にカーソルというオブジェクトが作られる"><span class="header-link-mark"></span></a>SQL 実行時に<strong>カーソル</strong>というオブジェクトが作られる</h2>
+<p>この知識がなかった。</p>
+<p>普通の SQL で SELECT 文や UPDATE 文などを投げる時に、その検索条件だったり、探索位置だったりを保持するためのオブジェクトが自動的に DB にできているらしい。これが「<strong>カーソル</strong>」ってモノらしい。</p>
+<p>カーソルというと、PL/SQL でプログラムを作る時に SELECT 結果を回すためのモノ、と思ってたので、普通の SELECT 文にも関わってくると思ってなかった。よくよく考えたら PL/SQL におけるカーソルは、通常の SELECT 文を DB が自動的に実行してあれこれやってくれているところに横入りして、人間がカーソルを操作してるってことなんだね。</p>
+<ul>
+  <li><a href="http://wa3.i-3-i.info/word11582.html">カーソル【DB】 (cursor【DB】)とは｜「分かりそう」で「分からない」でも「分かった」気になれるIT用語辞典</a></li>
+</ul>
+<h2 id="preparedstatement-とカーソルがどう関係するのか？"><a class="header-link" href="#preparedstatement-とカーソルがどう関係するのか？"><span class="header-link-mark"></span></a>PreparedStatement とカーソルがどう関係するのか？</h2>
+<p>Java プログラムから PreparedStatement を使って SELECT する場合も、結局は DB に SQL 文を発行しているわけだから、DB の内部にはカーソルオブジェクトが生成される。だから、ダメなコードだとカーソルが開きっぱなしになってエラーが発生するようだ。</p>
+<p>実際にどうしてエラーが発生してしまうのか、どうしたら直せるのか、については次回。</p>
+<ul>
+  <li><a href="/blog/2016/04/07-01.html">PreparedStatement を close しないとカーソルが close されない？：PreparedStatement と ResultSet の関係</a></li>
+</ul>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2016-04-06</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2016-04-06</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

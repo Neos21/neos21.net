@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>WSL で Apache サーバを立ててみる - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2021/03/28-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2021/index.html">2021年</a></li>
+            <li><a href="/blog/2021/03/index.html">03月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2021-03-28</time></div>
+        <h1 id="page-title">WSL で Apache サーバを立ててみる</h1>
+
+<p>MacOS だとデフォルトで Apache サーバがインストールされていて、ちょっとした CGI の検証なんかがやりやすかったりする。Linux の場合も <code>yum</code> や <code>apt</code> で <code>httpd</code> をインストールしてやればすぐ用意できる。しかし、Windows での Apache HTTP Server のインストールはいつもなんだか面倒臭い感じがしていた。</p>
+<p>最近は WSL が進歩してきているので、WSL だったらすぐに Apache サーバがインストールできるかな？と思って、やってみた。</p><div class="ad-amazon">
+  <div class="ad-amazon-image">
+    <a href="https://www.amazon.co.jp/dp/B07QLJ19J4?tag=neos21-22&amp;linkCode=osi&amp;th=1&amp;psc=1">
+      <img src="https://m.media-amazon.com/images/I/41IenjjoIcL._SL160_.jpg" width="114" height="160">
+    </a>
+  </div>
+  <div class="ad-amazon-info">
+    <div class="ad-amazon-title">
+      <a href="https://www.amazon.co.jp/dp/B07QLJ19J4?tag=neos21-22&amp;linkCode=osi&amp;th=1&amp;psc=1">Windows Subsystem for Linux（WSL）によるLAMP環境簡単構築</a>
+    </div>
+  </div>
+</div>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#wsl-%E3%81%AB-apache-%E3%82%92%E3%82%A4%E3%83%B3%E3%82%B9%E3%83%88%E3%83%BC%E3%83%AB%E3%81%99%E3%82%8B">WSL に Apache をインストールする</a></li>
+  <li><a href="#windows-%E3%83%9B%E3%82%B9%E3%83%88%E5%81%B4%E3%81%A7%E9%96%B2%E8%A6%A7%E3%81%99%E3%82%8B">Windows ホスト側で閲覧する</a></li>
+  <li><a href="#apache2-%E3%81%AE%E8%A8%AD%E5%AE%9A%E3%83%95%E3%82%A1%E3%82%A4%E3%83%AB%E3%81%8C%E3%81%A1%E3%82%87%E3%81%A3%E3%81%A8%E9%81%95%E3%81%86%E6%B0%97%E3%81%8C%E3%81%99%E3%82%8B">Apache2 の設定ファイルがちょっと違う気がする</a></li>
+  <li><a href="#service-%E3%82%B3%E3%83%9E%E3%83%B3%E3%83%89%E3%81%A3%E3%81%A6%E4%BD%95"><code>service</code> コマンドって何</a></li>
+  <li><a href="#%E4%BB%A5%E4%B8%8A">以上</a></li>
+</ul>
+<h2 id="wsl-に-apache-をインストールする"><a class="header-link" href="#wsl-に-apache-をインストールする"><span class="header-link-mark"></span></a>WSL に Apache をインストールする</h2>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># Apache2 をインストールする</span>
+$ <span class="token function">sudo</span> <span class="token function">apt</span> <span class="token function">install</span> apache2
+<span class="token comment"># バージョン確認</span>
+$ apache2 -v
+
+<span class="token comment"># CGI モジュールと設定を有効にする</span>
+$ <span class="token function">sudo</span> a2enmod cgid
+$ <span class="token function">sudo</span> a2enconf serve-cgi-bin
+
+<span class="token comment"># 設定を反映するためサービスを再起動する</span>
+$ <span class="token function">sudo</span> <span class="token function">service</span> apache2 restart
+<span class="token comment"># 状態を確認する</span>
+$ <span class="token function">service</span> apache2 status
+
+<span class="token comment"># 自分自身でアクセスして確認してみる</span>
+$ <span class="token function">curl</span> http://localhost/
+</code></pre>
+<p>基本的にはコレだけ。続いて設定ファイルを見直していく。</p>
+<ul>
+  <li><code>/etc/apache2/apache2.conf</code>
+    <ul>
+      <li>ドキュメントルートを <code>/var/www/html/</code> にしたい</li>
+      <li>そのドキュメントルートから CGI を扱えるようにしたい</li>
+    </ul>
+  </li>
+</ul>
+<pre class="language-xml"><code class="language-xml"># ↓ 以下のような行がデフォルトで存在すると思うので、そこに修正を入れる
+&#x3C;Directory /var/www/>
+    # 以下1行を追加する
+    AddHandler cgi-script .cgi .pl .py .rb
+    # ↓ ExecCGI を追記する
+    Options Indexes FollowSymLinks ExecCGI
+    AllowOverride None
+    Require all granted
+<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>Directory</span><span class="token punctuation">></span></span>
+</code></pre>
+<p><code>+ExecCGI</code> とプラス記号 <code>+</code> を付けて書くと構文エラーになっちゃった。この辺、バージョンによって記号を付けろとか付けるなとかあるみたい。テキトーに。</p>
+<ul>
+  <li><code>/etc/apache2/conf-available/serve-cgi-bin.conf</code>
+    <ul>
+      <li>CGI モジュールに対応する設定。<code>/var/www/</code> とは全く違うディレクトリ配下が <code>http://localhost/cgi-bin/</code> で扱われるように設定されているので、必要に応じて直す</li>
+    </ul>
+  </li>
+</ul>
+<p>こんな感じ。修正したら <code>$ sudo service apache2 restart</code> コマンドで再起動して設定ファイルの変更を反映させてやる。</p>
+<p>テスト用に簡単な CGI スクリプトでも書いてやって、実行権限を付けてちゃんと動作するか見てやると良いだろう。</p>
+<ul>
+  <li>参考：<a href="https://qiita.com/sugao516/items/a4b15dc174889e27565b">WSL で apache を動かす - Qiita</a></li>
+  <li>参考：<a href="https://chayarokurokuro.hatenablog.com/entry/2019/11/14/022733">WSLのUbuntuにWebサーバーApache2とデータベースMySQLをインストール - よちよちpython</a></li>
+</ul>
+<h2 id="windows-ホスト側で閲覧する"><a class="header-link" href="#windows-ホスト側で閲覧する"><span class="header-link-mark"></span></a>Windows ホスト側で閲覧する</h2>
+<p>WSL 上の80番ポートで Apache サーバが起動しているので、WSL の CUI コンソールで <code>$ curl http://localhost/</code> と叩く分には、Apache サーバからのレスポンスがちゃんと得られるはずだ。しかし、Windows ホスト側では <code>localhost</code> では扱えない。</p>
+<p>そこで、<code>ifconfig</code> で WSL の Private IP (恐らく <code>172.</code> で始まる IP) を確認し、その IP を指定して Windows ホスト側からアクセスしてやれば、ブラウザなどから WSL Apache サーバの内容が閲覧できる。</p>
+<ul>
+  <li>参考：<a href="https://www.yokoweb.net/2020/06/03/windows10-wsl2-ip-address/">【Windows10】WSL2のイーサネットIPアドレス | The modern stone age.</a></li>
+  <li>参考：<a href="https://matsudamper.hatenablog.com/entry/2020/04/16/044357">WSL2へ外部PCからアクセスする - アプリ開発備忘録</a></li>
+</ul>
+<h2 id="apache2-の設定ファイルがちょっと違う気がする"><a class="header-link" href="#apache2-の設定ファイルがちょっと違う気がする"><span class="header-link-mark"></span></a>Apache2 の設定ファイルがちょっと違う気がする</h2>
+<p>これまで自分が触ってきた Apache と比べると、設定ファイルの位置やディレクトリ構成なんかが奇妙に感じたので、ちょっと整理してみた。以下は自分が扱ったことのある環境の情報を再確認してまとめ直したもの。</p>
+<table>
+  <thead>
+    <tr>
+      <th>OS</th>
+      <th>コマンド</th>
+      <th>バージョン表記</th>
+      <th>設定ディレクトリ</th>
+      <th>配下の構成</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>MacOS</td>
+      <td><code>httpd</code></td>
+      <td>v2.4.33 (Unix)</td>
+      <td><code>/etc/apache2/</code></td>
+      <td><code>conf-available/</code> などは存在しない</td>
+    </tr>
+    <tr>
+      <td>CentOS 7</td>
+      <td><code>httpd</code></td>
+      <td>v2.4.6 (CentOS)</td>
+      <td><code>/etc/httpd/</code></td>
+      <td><code>modules/</code> などがある</td>
+    </tr>
+    <tr>
+      <td>Ubuntu 18.04</td>
+      <td><code>apache2</code></td>
+      <td>v2.4.29 (Ubuntu)</td>
+      <td><code>/etc/apache2/</code></td>
+      <td><code>conf-available/</code> などがある</td>
+    </tr>
+  </tbody>
+</table>
+<p>…ほう。気持ち悪いな。ｗ 実行コマンドも <code>httpd</code> だったり <code>apache2</code> だったりするし、設定ファイルがあるディレクトリのルートもまちまち。さらには配下の設定ファイルの構成も異なっていて、なんなんだか。大まかなバージョンとしてはどれも「Apache HTTP Server v2.4 系」なのだろうが、その後ろにカッコで書かれている「(Unix)」とか「(CentOS)」とか「(Ubuntu)」とかいうところがキモになっているっぽい。ディストリビューションごとに Apache サーバのデフォルトの提供の仕方が異なるようである。</p>
+<p>WSL 環境は Ubuntu なだけあって、最後の「Ubuntu 18.04」とほぼ同じ構成なようだ。</p>
+<ul>
+  <li>参考：<a href="https://www.wegirls.tech/entry/2016/09/29/075200">apachectlコマンドとhttpdの違い - 女子WEBエンジニアのTechメモ</a>
+    <ul>
+      <li>同じだよ、とのこと</li>
+    </ul>
+  </li>
+  <li>参考：<a href="http://www.linux.net-japan.info/install08.html">Debian Apache2の設定(1)</a>
+    <ul>
+      <li><code>conf-available/</code> や <code>mods-enabled/</code> の扱い方</li>
+    </ul>
+  </li>
+  <li>参考：<a href="https://gist.github.com/Zeokat/3b5c1273a7da48e1ad94">/etc/apache2/apache2.conf</a>
+    <ul>
+      <li><code>httpd.conf</code> ではなく <code>apache2.conf</code> も、内容が結構違うのである</li>
+    </ul>
+  </li>
+</ul>
+<h2 id="service-コマンドって何"><a class="header-link" href="#service-コマンドって何"><span class="header-link-mark"></span></a><code>service</code> コマンドって何</h2>
+<p>CentOS 7 とかで <code>systemctl</code> コマンドはよく使っていたけど、<code>service</code> コマンドって何？</p>
+<ul>
+  <li>参考：<a href="https://snowsystem.net/other/windows/wsl2-ubuntu-systemctl/">Windows 10 Home（WSL2）のUbuntuでsystemctlを利用する方法（systemdをPID1で動作させる方法） | Snow System</a>
+    <ul>
+      <li>WSL は <code>systemctl</code> 非対応。<code>service</code> コマンドを使うのが定石</li>
+    </ul>
+  </li>
+  <li>参考：<a href="https://www.toumasu-program.net/qfr8l41pigu2v05ztwbc">Linuxのコマンド実行で使うserviceとsystemctlの違いとは何か？ | CodeLog | CodeLog</a></li>
+  <li>参考：<a href="https://www.it-swarm.jp.net/ja/service/service%E3%81%A8systemctl%E3%81%AE%E9%81%95%E3%81%84%E3%81%AF%E4%BD%95%E3%81%A7%E3%81%99%E3%81%8B%EF%BC%9F/960094386/">service — serviceとsystemctlの違いは何ですか？</a>
+    <ul>
+      <li><code>systemctl</code> の方が後発なだけあって手軽で高機能らしい</li>
+    </ul>
+  </li>
+  <li>参考：<a href="https://qiita.com/shotaTsuge/items/9f337bad9f73c3953af1">CentOS7系と6系のコマンドの違いについて - Qiita</a>
+    <ul>
+      <li>CentOS 7 の <code>service</code> コマンドは <code>systemctl</code> にリダイレクトするシェルスクリプトになっているらしい</li>
+    </ul>
+  </li>
+</ul>
+<p>…ということで、<code>systemctl</code> の方が高機能なんだけど、WSL ではデフォルトでは使えないので、<code>service</code> コマンドを使ってるってことみたい。</p>
+<h2 id="以上"><a class="header-link" href="#以上"><span class="header-link-mark"></span></a>以上</h2>
+<p>ひとまずこんな形で、WSL 上で Apache を動かして、CGI スクリプトなんかを動かすことはできた。よきよき。</p><div class="ad-amazon">
+  <div class="ad-amazon-image">
+    <a href="https://www.amazon.co.jp/dp/4798155306?tag=neos21-22&amp;linkCode=osi&amp;th=1&amp;psc=1">
+      <img src="https://m.media-amazon.com/images/I/515nBNa1xXL._SL160_.jpg" width="113" height="160">
+    </a>
+  </div>
+  <div class="ad-amazon-info">
+    <div class="ad-amazon-title">
+      <a href="https://www.amazon.co.jp/dp/4798155306?tag=neos21-22&amp;linkCode=osi&amp;th=1&amp;psc=1">ハッキング・ラボのつくりかた 仮想環境におけるハッカー体験学習</a>
+    </div>
+  </div>
+</div>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2021-03-28</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2021-03-28</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

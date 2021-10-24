@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>Express はレスポンスを返してからも処理が続行できる - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2019/03/13-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2019/index.html">2019年</a></li>
+            <li><a href="/blog/2019/03/index.html">03月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2019-03-13</time></div>
+        <h1 id="page-title">Express はレスポンスを返してからも処理が続行できる</h1>
+
+<p>Express において、<strong><code>res.json()</code> とか <code>res.send()</code> とかを呼んだ後も処理が継続できる</strong>ことを知った。リクエストに対するレスポンスの用意ができたら迅速に <code>res.send()</code> を呼んでレスポンスしてしまい、残処理はそのあとゆっくりやれる、というワケだ。てっきり <code>res.send()</code> とかしたらそのプロセスは終了してしまって後続の処理は動かないものと思っていたが、非同期処理でもきちんと動くし、問題なさげだった。</p>
+<p>経緯としては、LINE Messaging API からメッセージを受け取る Webhook サーバを作った時に、迅速にレスポンスを返す必要があって調べていた。</p>
+<blockquote>
+  <p>LINE developersから、件名：「<code>[LINE developers] BusinessConnect: Error detected</code>」で送られていくる <code>request_timeout - (Request timeout)</code> は、<strong>ボットアプリのサーバからレスポンスが１秒以内に返されなかった場合に通知されます。</strong></p>
+  <ul>
+    <li>参考：<a href="https://support2.karte.io/note/note-line/11834/">FAQ:LINE developersから送られてくるRequest timeoutはどのようなものですか？ | KARTEサポートサイト</a></li>
+  </ul>
+</blockquote>
+<p>上のサイトにも書かれているとおり、Webhook サーバは1秒以内にレスポンスを返さないと、LINE Developers からエラー検知のメールが飛んでしまうのだ。</p>
+<p>これまでは、</p>
+<ol>
+  <li>リクエストの署名などを検証する
+    <ul>
+      <li>不正なリクエストの場合は 400 を返して終了</li>
+    </ul>
+  </li>
+  <li>受け取ったメッセージは「応答処理用の別サーバ」に流す (ちゃんとメッセージを受け取れたことを検知したくて別サーバのレスポンスを待っていた)</li>
+  <li>メッセージの受け流しが終わったら <code>res.send()</code> を実行し終了</li>
+</ol>
+<p>という順番で処理していたが、これだと「応答処理用の別サーバ」との通信が完了するのを待ってからレスポンスするため、1秒近くかかることもあった。</p>
+<p>しかし、LINE からのリクエストに対しては、「メッセージを別サーバに横流しできたか」とか「メッセージに対して返信したかどうか」とかいった「処理結果」は一切関係がない。LINE に 400 などをレスポンスしたところで通信リトライしてくれるワケでもないので、メッセージの横流し処理が終了したかどうかは待たなくて良いのだ。</p>
+<p>というワケで、</p>
+<ol>
+  <li>リクエストの署名などを検証する
+    <ul>
+      <li>不正なリクエストの場合は 400 を返して終了</li>
+    </ul>
+  </li>
+  <li><strong>正常なリクエストを受け取れたので <code>res.send()</code> を実行する</strong></li>
+  <li>受け取ったメッセージを「応答処理用の別サーバ」に流す</li>
+</ol>
+<p>という処理順に変更し、リクエスト受信から0.1秒以内に LINE サーバにレスポンスすることにした。</p>
+<p>もっといえば、別にリクエストヘッダの署名が誤っている時に 400 とかを返したところで、LINE が再度メッセージを送ってくれたりするワケではないので、</p>
+<ol>
+  <li><strong>とりあえずリクエストが来たから <code>res.send()</code> を実行する</strong></li>
+  <li>リクエストの署名などを検証する
+    <ul>
+      <li>不正なリクエストの場合は異常終了とする</li>
+    </ul>
+  </li>
+  <li>受け取ったメッセージを「応答処理用の別サーバ」に流す</li>
+</ol>
+<p>という処理にしてしまっても良いかもしれない。</p>
+<p>よくあるリクエスト・レスポンスの関係とは違い、<em>リクエスト元に何のデータも返す必要がない「Webhook」な作り</em>なので、こういった処理にしてしまって問題がないのだ。</p>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2019-03-13</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2019-03-13</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

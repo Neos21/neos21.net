@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>git pull 時に --set-upstream-to とか言われるのを回避するコマンドを作る - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2019/10/02-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2019/index.html">2019年</a></li>
+            <li><a href="/blog/2019/10/index.html">10月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2019-10-02</time></div>
+        <h1 id="page-title">git pull 時に --set-upstream-to とか言われるのを回避するコマンドを作る</h1>
+
+<p><code>git pull</code> した時に <code>--set-upstream-to</code> しろみたいなコメントが出て、<code>git pull</code> 出来ない時がある。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">git</span> pull
+
+There is no tracking information <span class="token keyword">for</span> the current branch.
+Please specify <span class="token function">which</span> branch you want to merge with.
+See git-pull<span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">)</span> <span class="token keyword">for</span> details
+
+    <span class="token function">git</span> pull <span class="token operator">&#x3C;</span>remote<span class="token operator">></span> <span class="token operator">&#x3C;</span>branch<span class="token operator">></span>
+
+If you wish to <span class="token builtin class-name">set</span> tracking information <span class="token keyword">for</span> this branch you can <span class="token keyword">do</span> so with:
+
+    <span class="token function">git</span> branch --set-upstream-to<span class="token operator">=</span>origin/<span class="token operator">&#x3C;</span>branch<span class="token operator">></span> branch_name
+</code></pre>
+<p>恐らく以下の記事で触れた、<code>git push</code> 時の <code>--set-upstream</code> オプションを省くための作業を行ったことで、この問題が起こるようになったっぽい。</p>
+<ul>
+  <li><a href="/blog/2018/12/12-02.html">新規ブランチの Git Push 時に --set-upstream オプションを省略する</a></li>
+</ul>
+<p>ローカルで新規ブランチを作り、初めて <code>git push</code> した直後に <code>git pull</code> すると、「どこのリモートブランチと紐付いてるのか分からん」と言われてしまうっぽい。</p>
+<ul>
+  <li>参考：<a href="https://qiita.com/missyyy/items/e107b91a58f8250838da">git push --set-upstream origin masterって毎回聞かれるのをやめる - Qiita</a></li>
+</ul>
+<p>対処法としては、指示されているとおりの <code>git branch --set-upstream-to</code> コマンドを叩けば良いのだが、いちいちカレントブランチ名を入力しないといけないのが面倒臭い。</p>
+<p>ということで、<strong><code>gplf</code> (<code>git pull force</code>)</strong> というコマンドを作ってみた。<code>git push --force</code> があるんだから、<code>git pull --force</code> (とにかく Pull させろ) というコマンドがあってもいいじゃろ、ということで命名。ｗ</p>
+<pre class="language-bash"><code class="language-bash"><span class="token shebang important">#!/bin/bash</span>
+
+<span class="token comment"># git pull 時に --set-upstream-to しろというエラーが出た時に自動処理させる</span>
+
+<span class="token comment"># カレントブランチ名</span>
+<span class="token assign-left variable">current_branch_name</span><span class="token operator">=</span><span class="token string">"<span class="token variable"><span class="token variable">$(</span><span class="token function">git</span> rev-parse --abbrev-ref @<span class="token variable">)</span></span>"</span>
+
+<span class="token comment"># リモートブランチを指定して git pull する</span>
+<span class="token function">git</span> branch --set-upstream-to<span class="token operator">=</span><span class="token string">"origin/<span class="token variable">${current_branch_name}</span>"</span> <span class="token string">"<span class="token variable">${current_branch_name}</span>"</span>
+<span class="token function">git</span> pull
+</code></pre>
+<p>このスクリプトを <code>gplf</code> という名前で保存し、PATH が通っているところに配置、<code>$ chmod +x ./gplf</code> と実行権限を付与すれば準備 OK。</p>
+<p>僕は <code>git pull</code> を <code>gpl</code> とエイリアス登録しているので、<code>gpl</code> と入力して前述のエラーが出たら、<code>gplf</code> と打ち直してこのコマンドを実行させる、というワケ。</p>
+<p>コレでもう <code>--set-upstream-to</code> エラーに対して手間をかけなくて済むぞい。</p>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2019-10-02</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2019-10-02</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

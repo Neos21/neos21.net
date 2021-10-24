@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>Heroku に登録して Express サーバをデプロイして動かしてみる - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2018/12/05-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2018/index.html">2018年</a></li>
+            <li><a href="/blog/2018/12/index.html">12月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2018-12-05</time></div>
+        <h1 id="page-title">Heroku に登録して Express サーバをデプロイして動かしてみる</h1>
+
+<p><strong>Heroku (ヘロク)</strong> という PaaS (Platform as a Service) がある。Debian・Ubuntu 系の Linux 仮想環境に、Ruby on Rails や Node.js 製のアプリをデプロイして公開できるサービスだ。DB に PostgreSQL などが使える。<em>無料枠</em>もあり、開発者がお試しで使うには十分な環境。</p>
+<p>Rails チュートリアルで登場して名前が知られているかもしれないが、Node.js もサポートするようになっていて、Express サーバが動かしやすそうだったので、いまさらながら Heroku を試してみた。</p>
+<p>実施環境は macOS Mojave と Windows 10 それぞれで検証。どちらでも同様に動作した。</p>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#heroku-%E3%81%B8%E3%81%AE%E7%99%BB%E9%8C%B2">Heroku への登録</a></li>
+  <li><a href="#heroku-cli-%E3%81%AE%E3%82%A4%E3%83%B3%E3%82%B9%E3%83%88%E3%83%BC%E3%83%AB">Heroku CLI のインストール</a></li>
+  <li><a href="#%E3%82%B5%E3%83%B3%E3%83%97%E3%83%AB%E3%82%A2%E3%83%97%E3%83%AA%E3%81%AE%E3%83%AA%E3%83%9D%E3%82%B8%E3%83%88%E3%83%AA%E3%82%92%E4%BD%9C%E6%88%90%E3%81%99%E3%82%8B">サンプルアプリのリポジトリを作成する</a></li>
+  <li><a href="#heroku-cli-%E3%81%A7%E3%81%AE%E3%83%AD%E3%82%B0%E3%82%A4%E3%83%B3%E3%83%BB%E3%82%B5%E3%83%B3%E3%83%97%E3%83%AB%E3%82%A2%E3%83%97%E3%83%AA%E3%81%AE%E3%83%AA%E3%83%9D%E3%82%B8%E3%83%88%E3%83%AA%E3%81%A8-heroku-%E3%82%A2%E3%83%97%E3%83%AA%E3%82%92%E7%B4%90%E4%BB%98%E3%81%91%E3%82%8B">Heroku CLI でのログイン・サンプルアプリのリポジトリと Heroku アプリを紐付ける</a></li>
+  <li><a href="#nodejs-%E3%83%97%E3%83%AD%E3%82%B8%E3%82%A7%E3%82%AF%E3%83%88%E3%82%92%E4%BD%9C%E6%88%90%E3%81%97%E3%81%A6%E3%81%84%E3%81%8F">Node.js プロジェクトを作成していく</a>
+    <ul>
+      <li><a href="#express-%E3%82%92%E3%82%A4%E3%83%B3%E3%82%B9%E3%83%88%E3%83%BC%E3%83%AB%E3%81%99%E3%82%8B">Express をインストールする</a></li>
+      <li><a href="#%E3%82%B5%E3%83%B3%E3%83%97%E3%83%AB%E3%82%B3%E3%83%BC%E3%83%89%E3%82%92%E5%AE%9F%E8%A3%85%E3%81%99%E3%82%8B">サンプルコードを実装する</a></li>
+      <li><a href="#npm-start-%E3%81%A7%E3%82%B5%E3%83%BC%E3%83%90%E3%81%8C%E8%B5%B7%E5%8B%95%E3%81%99%E3%82%8B%E3%82%88%E3%81%86%E3%81%AB%E3%81%99%E3%82%8B"><code>npm start</code> でサーバが起動するようにする</a></li>
+      <li><a href="#packagejson-%E3%81%AB-engines-%E3%82%92%E8%A8%98%E8%BF%B0%E3%81%99%E3%82%8B"><code>package.json</code> に <code>engines</code> を記述する</a></li>
+    </ul>
+  </li>
+  <li><a href="#heroku-%E3%81%AB%E3%83%87%E3%83%97%E3%83%AD%E3%82%A4%E3%81%99%E3%82%8B">Heroku にデプロイする</a></li>
+</ul>
+<h2 id="heroku-への登録"><a class="header-link" href="#heroku-への登録"><span class="header-link-mark"></span></a>Heroku への登録</h2>
+<p>Heroku への登録は Web サイト上からすんなりと。</p>
+<ul>
+  <li><a href="https://jp.heroku.com/">クラウド・アプリケーション・プラットフォーム | Heroku</a></li>
+</ul>
+<p>登録後、「Create new app」画面でアプリの名前 (URL) を決める。コレで <code>https://【決めた名前】.herokuapp.com/</code> というサブドメイン形式でそのアプリにアクセスできるようになる。</p>
+<p>当然、「Create new app」で登録しただけでは、参照するアプリがないので、コレからサンプルアプリを作ってデプロイしていこうと思う。</p>
+<h2 id="heroku-cli-のインストール"><a class="header-link" href="#heroku-cli-のインストール"><span class="header-link-mark"></span></a>Heroku CLI のインストール</h2>
+<p>Heroku の管理操作は Web サイト上で行えるが、<strong>Heroku CLI</strong> というコマンドラインツールが提供されていて、コレを利用すると Git コマンドや GitHub などとの連携が大変やりやすくなる。</p>
+<p>次の公式ページより Heroku CLI をダウンロードし、インストールする。インストーラ上での設定は特に変更なし。</p>
+<ul>
+  <li><a href="https://devcenter.heroku.com/articles/heroku-cli">The Heroku CLI | Heroku Dev Center</a></li>
+</ul>
+<p>インストールが完了すると、ターミナル上で <code>$ heroku</code> コマンドが使えるようになる。</p>
+<h2 id="サンプルアプリのリポジトリを作成する"><a class="header-link" href="#サンプルアプリのリポジトリを作成する"><span class="header-link-mark"></span></a>サンプルアプリのリポジトリを作成する</h2>
+<p>さて、いよいよサンプルアプリの作成に入る。今回は Node.js 製のサーバフレームワークである <em>Express</em> を利用して、<code>https://【アプリ名】.herokuapp.com/</code> にアクセスすると <code>Hello World!</code> と書かれたページが表示されるだけのアプリを作ってみる。</p>
+<p>適当な作業ディレクトリを作り、<code>git init</code> を行う。もしくは、<em>GitHub 上でリポジトリを作っておいてから <code>git clone</code> で持ってきてもどちらでも良い。</em></p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">mkdir</span> example-app <span class="token operator">&#x26;&#x26;</span> <span class="token builtin class-name">cd</span> <span class="token variable">$_</span>
+$ <span class="token function">git</span> init
+</code></pre>
+<h2 id="heroku-cli-でのログイン・サンプルアプリのリポジトリと-heroku-アプリを紐付ける"><a class="header-link" href="#heroku-cli-でのログイン・サンプルアプリのリポジトリと-heroku-アプリを紐付ける"><span class="header-link-mark"></span></a>Heroku CLI でのログイン・サンプルアプリのリポジトリと Heroku アプリを紐付ける</h2>
+<p>次に、「この作業ディレクトリの資材を、この Heroku アプリにデプロイするよー」という紐付けを行う。</p>
+<p>作業ディレクトリに移動し、Heroku CLI でログインする。</p>
+<pre class="language-bash"><code class="language-bash">$ heroku login
+heroku: Enter your login credentials
+Email: 【Heroku 登録時に記載したメールアドレス】
+Password: 【パスワード】
+
+Logged <span class="token keyword">in</span> as 【メールアドレス】
+</code></pre>
+<p>このようにログインできる。</p>
+<p>ログインができたら、作業ディレクトリの Git リポジトリを、Heroku アプリと紐付ける。</p>
+<pre class="language-bash"><code class="language-bash">$ heroku git:remote -a 【Heroku アプリ名】
+<span class="token builtin class-name">set</span> <span class="token function">git</span> remote heroku to https://git.heroku.com/【Heroku アプリ名】.git
+</code></pre>
+<p>このように紐付けられる。</p>
+<h2 id="nodejs-プロジェクトを作成していく"><a class="header-link" href="#nodejs-プロジェクトを作成していく"><span class="header-link-mark"></span></a>Node.js プロジェクトを作成していく</h2>
+<p>Git リポジトリ環境と Heroku アプリとの紐付けができ、環境が整ったので、これからは <code>npm init</code> で <code>package.json</code> を生成し、サンプルアプリをコーディングしていく。</p>
+<p>いくつか Heroku 向けの特有な設定の違いがあるので、注意点とともに紹介していく。</p>
+<h3 id="express-をインストールする"><a class="header-link" href="#express-をインストールする"><span class="header-link-mark"></span></a>Express をインストールする</h3>
+<p><code>package.json</code> ができたら、まずは Express をインストールする。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">npm</span> <span class="token function">install</span> --save express
+</code></pre>
+<p>ココでひとつ注意。今回の Express の場合はアプリの動作に必要なので <code>--save</code> オプションを使って <code>dependencies</code> に追加したワケだが、<em>Heroku はデプロイ時に <code>devDependencies</code> に書かれているパッケージを無視する</em>という仕様に注意が必要だ。</p>
+<p>例えば Angular CLI で作成したプロジェクトは、デフォルトでは <code>typescript</code> などは <code>devDependencies</code> に追加されているが、この状態では Heroku 上で <code>ng build</code> コマンドによるビルドが失敗してしまうことになる。<code>devDependencies</code> のパッケージ群がインストールされないから、Heroku 上にトランスパイラがない状態になっているワケだ。</p>
+<p>Heroku にデプロイする Node.js プロジェクトは、<code>devDependencies</code> の使い方に十分注意が必要ということである。</p>
+<h3 id="サンプルコードを実装する"><a class="header-link" href="#サンプルコードを実装する"><span class="header-link-mark"></span></a>サンプルコードを実装する</h3>
+<p>Express をインストールしたら、サンプルコードを実装する。プロジェクトディレクト位r直下に <code>index.js</code> を作り、以下のように実装しよう。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword">const</span> express <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'express'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token keyword">const</span> app <span class="token operator">=</span> <span class="token function">express</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+app<span class="token punctuation">.</span><span class="token method function property-access">get</span><span class="token punctuation">(</span><span class="token string">'/'</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token parameter">req<span class="token punctuation">,</span> res</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'Access'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>     <span class="token comment">// コンソール出力</span>
+  res<span class="token punctuation">.</span><span class="token method function property-access">send</span><span class="token punctuation">(</span><span class="token string">'Hello World!'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment">// ブラウザでのアクセス時に画面に表示されるモノ</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// サーバ起動</span>
+<span class="token keyword">const</span> server <span class="token operator">=</span> app<span class="token punctuation">.</span><span class="token method function property-access">listen</span><span class="token punctuation">(</span>process<span class="token punctuation">.</span><span class="token property-access">env</span><span class="token punctuation">.</span><span class="token constant">PORT</span> <span class="token operator">||</span> <span class="token number">8080</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token keyword">const</span> host <span class="token operator">=</span> server<span class="token punctuation">.</span><span class="token method function property-access">address</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token property-access">address</span><span class="token punctuation">;</span>
+  <span class="token keyword">const</span> port <span class="token operator">=</span> server<span class="token punctuation">.</span><span class="token method function property-access">address</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token property-access">port</span><span class="token punctuation">;</span>
+  <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">Example app listening at http://</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>host<span class="token interpolation-punctuation punctuation">}</span></span><span class="token string">:</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>port<span class="token interpolation-punctuation punctuation">}</span></span><span class="token template-punctuation string">`</span></span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>サーバのポートは <code>process.env.PORT || 8080</code> と記述しておくことで、環境変数での指定があればそのポートで、なければ <code>8080</code> で起動するようにしてある。</p>
+<p>サンプルコードはコレで終わり。</p>
+<h3 id="npm-start-でサーバが起動するようにする"><a class="header-link" href="#npm-start-でサーバが起動するようにする"><span class="header-link-mark"></span></a><code>npm start</code> でサーバが起動するようにする</h3>
+<p><strong>Heroku にデプロイした Node.js プロジェクトは、<code>package.json</code> 内の <code>start</code> コマンドを自動的に実行してアプリを起動してくれる</strong>ので、今回は <code>index.js</code> を起動するスクリプトを記述しておこう。</p>
+<pre class="language-json"><code class="language-json"><span class="token property">"scripts"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+  <span class="token property">"start"</span><span class="token operator">:</span> <span class="token string">"node index.js"</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>コレだけ。</p>
+<h3 id="packagejson-に-engines-を記述する"><a class="header-link" href="#packagejson-に-engines-を記述する"><span class="header-link-mark"></span></a><code>package.json</code> に <code>engines</code> を記述する</h3>
+<p>最後に、Heroku 上で使用する Node.js および npm のバージョンを指定する必要があるので、<code>package.json</code> に <code>engines</code> プロパティを記述しておく必要がある。バージョン番号は <code>x</code> を使用して曖昧指定もできるので、現行の最新メジャーバージョンである Node.js v10、npm v6 系を指定しておくことにする。</p>
+<pre class="language-json"><code class="language-json"><span class="token property">"engines"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+  <span class="token property">"node"</span><span class="token operator">:</span> <span class="token string">"10.x"</span><span class="token punctuation">,</span>
+  <span class="token property">"npm"</span><span class="token operator">:</span> <span class="token string">"6.1.x"</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>ということで、最終的に出来上がった <code>package.json</code> の内容は以下のとおり。Heroku に Node.js プロジェクトをデプロイする際は、この記述が最低限必要になるということである。</p>
+<pre class="language-json"><code class="language-json"><span class="token punctuation">{</span>
+  <span class="token property">"name"</span><span class="token operator">:</span> <span class="token string">"example-app"</span><span class="token punctuation">,</span>
+  <span class="token property">"private"</span><span class="token operator">:</span> <span class="token boolean">true</span><span class="token punctuation">,</span>
+  <span class="token property">"scripts"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+    <span class="token property">"start"</span><span class="token operator">:</span> <span class="token string">"node index.js"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token property">"dependencies"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+    <span class="token property">"express"</span><span class="token operator">:</span> <span class="token string">"4.16.4"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token property">"engines"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+    <span class="token property">"node"</span><span class="token operator">:</span> <span class="token string">"10.x"</span><span class="token punctuation">,</span>
+    <span class="token property">"npm"</span><span class="token operator">:</span> <span class="token string">"6.1.x"</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<h2 id="heroku-にデプロイする"><a class="header-link" href="#heroku-にデプロイする"><span class="header-link-mark"></span></a>Heroku にデプロイする</h2>
+<p>ソースを作ったので、Git にコミットしておく。<strong>Heroku へのデプロイは、<code>git push</code> するだけで自動的に開始される。</strong></p>
+<p>Heroku への Git Push は、先程 <code>git remote add</code> したとおり、<code>$ git push heroku master</code> といった形で Push できる。以下、実際にコマンドを叩いてみた様子だ。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">git</span> push heroku master
+Counting objects: <span class="token number">9</span>, done.
+Delta compression using up to <span class="token number">8</span> threads.
+Compressing objects: <span class="token number">100</span>% <span class="token punctuation">(</span><span class="token number">9</span>/9<span class="token punctuation">)</span>, done.
+Writing objects: <span class="token number">100</span>% <span class="token punctuation">(</span><span class="token number">9</span>/9<span class="token punctuation">)</span>, <span class="token number">2.59</span> KiB <span class="token operator">|</span> <span class="token number">331.00</span> KiB/s, done.
+Total <span class="token number">9</span> <span class="token punctuation">(</span>delta <span class="token number">1</span><span class="token punctuation">)</span>, reused <span class="token number">0</span> <span class="token punctuation">(</span>delta <span class="token number">0</span><span class="token punctuation">)</span>
+remote: Compressing <span class="token builtin class-name">source</span> files<span class="token punctuation">..</span>. done.
+remote: Building source:
+remote:
+remote: -----<span class="token operator">></span> Node.js app detected
+remote:
+remote: -----<span class="token operator">></span> Creating runtime environment
+remote:
+remote:        <span class="token assign-left variable">NPM_CONFIG_LOGLEVEL</span><span class="token operator">=</span>error
+remote:        <span class="token assign-left variable">NODE_ENV</span><span class="token operator">=</span>production
+remote:        <span class="token assign-left variable">NODE_MODULES_CACHE</span><span class="token operator">=</span>true
+remote:        <span class="token assign-left variable">NODE_VERBOSE</span><span class="token operator">=</span>false
+remote:
+remote: -----<span class="token operator">></span> Installing binaries
+remote:        engines.node <span class="token punctuation">(</span>package.json<span class="token punctuation">)</span>:  <span class="token number">10</span>.x
+remote:        engines.npm <span class="token punctuation">(</span>package.json<span class="token punctuation">)</span>:   <span class="token number">6.1</span>.x
+remote:
+remote:        Resolving node version <span class="token number">10</span>.x<span class="token punctuation">..</span>.
+remote:        Downloading and installing node <span class="token number">10.13</span>.0<span class="token punctuation">..</span>.
+remote:        Bootstrapping <span class="token function">npm</span> <span class="token number">6.1</span>.x <span class="token punctuation">(</span>replacing <span class="token number">6.4</span>.1<span class="token punctuation">)</span><span class="token punctuation">..</span>.
+remote:        <span class="token function">npm</span> <span class="token number">6.1</span>.x installed
+remote:
+remote: -----<span class="token operator">></span> Building dependencies
+remote:        Installing node modules <span class="token punctuation">(</span>package.json<span class="token punctuation">)</span>
+remote:        added <span class="token number">48</span> packages from <span class="token number">36</span> contributors and audited <span class="token number">121</span> packages <span class="token keyword">in</span> <span class="token number">4</span>.962s
+remote:        found <span class="token number">0</span> vulnerabilities
+remote:
+remote:
+remote: -----<span class="token operator">></span> Caching build
+remote:        - node_modules
+remote:
+remote: -----<span class="token operator">></span> Pruning devDependencies
+remote:        audited <span class="token number">121</span> packages <span class="token keyword">in</span> <span class="token number">0</span>.917s
+remote:        found <span class="token number">0</span> vulnerabilities
+remote:
+remote:
+remote: -----<span class="token operator">></span> Build succeeded<span class="token operator">!</span>
+remote: -----<span class="token operator">></span> Discovering process types
+remote:        Procfile declares types     -<span class="token operator">></span> <span class="token punctuation">(</span>none<span class="token punctuation">)</span>
+remote:        Default types <span class="token keyword">for</span> buildpack -<span class="token operator">></span> web
+remote:
+remote: -----<span class="token operator">></span> Compressing<span class="token punctuation">..</span>.
+remote:        Done: 22M
+remote: -----<span class="token operator">></span> Launching<span class="token punctuation">..</span>.
+remote:        Released v3
+remote:        https://【アプリ名】.herokuapp.com/ deployed to Heroku
+remote:
+remote: Verifying deploy<span class="token punctuation">..</span>. done.
+To https://git.heroku.com/【アプリ名】.git
+ * <span class="token punctuation">[</span>new branch<span class="token punctuation">]</span>      master -<span class="token operator">></span> master
+</code></pre>
+<p><code>git push</code> 後、リモート (Heroku) のログが表示される。<code>Node.js app detected</code> と最初に表示されているとおり、Push したソースの中に <code>package.json</code> があれば自動的に Node.js プロジェクトとして扱ってくれる。</p>
+<p>次に、<code>engines.node (package.json): 10.x</code> と表示されているように、<code>package.json</code> の記述から使用する Node.js・npm のバージョンを特定し、<code>Installing node modules (package.json)</code> と表示されているとおり <code>npm install</code> 相当の処理を行ってくれる。この時に <code>devDependencies</code> のパッケージはインストールされない、というところが、前述の注意である。</p>
+<p>その後、<code>Launching...</code> 表示のあたりで、<code>npm start</code> コマンドを見つけて実行してくれている。最後に <code>https://【アプリ名】.herokuapp.com/ deployed to Heroku</code> と表示されているように、コレでこの URL にアクセスすれば自作の Express サーバが動いている様子が確認できるワケだ。試しにアクセスしてみて、「Hello World」と返されることを確認してみよう。</p>
+<p>Jenkins なんかだったら <code>npm install</code> や <code>npm start</code> は「自動実行したいモノ」として自分で書かないと動いてくれなかったが、Heroku は至れり尽くせり。これは便利である。</p>
+<p>今回はものすごく簡素な Web サーバを立ち上げてみたが、次は Angular アプリをデプロイしてみたり、PostgreSQL を導入して DB を扱ってみたりしようと思う。</p>
+<ul>
+  <li>参考：<a href="https://qiita.com/hiyuzawa/items/0c17de747b27b99907d0">heroku + nodejs - Qiita</a> … Heroku CLI の基本コマンドの記載もアリ</li>
+  <li>参考：<a href="http://tacamy.hatenablog.com/entry/2013/02/16/235127">Node.js + Express を Heroku で動かすまでの手順まとめ - tacamy--log</a></li>
+</ul>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2018-12-05</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2018-12-05</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

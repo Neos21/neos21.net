@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>Python + pipenv 環境に Selenium + ChromeDriver + BeautifulSoup4 でクローリング・スクレイピングしてみる - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2020/01/05-02.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2020/index.html">2020年</a></li>
+            <li><a href="/blog/2020/01/index.html">01月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2020-01-05</time></div>
+        <h1 id="page-title">Python + pipenv 環境に Selenium + ChromeDriver + BeautifulSoup4 でクローリング・スクレイピングしてみる</h1>
+
+<p>前回紹介した pipenv を使って、Python おなじみのクローリング・スクレイピングを行ってみる。</p>
+<p>今回作成したプロジェクトの全量は以下の GitHub リポジトリに上げたのでドウゾ。</p>
+<ul>
+  <li><a href="https://github.com/Neos21/practice-python-scraping">Neos21/practice-python-scraping</a></li>
+</ul>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#pipenv-%E3%81%AE%E6%BA%96%E5%82%99">pipenv の準備</a></li>
+  <li><a href="#%E3%83%97%E3%83%AD%E3%82%B8%E3%82%A7%E3%82%AF%E3%83%88%E3%81%AE%E4%BD%9C%E6%88%90">プロジェクトの作成</a></li>
+  <li><a href="#%E3%82%AF%E3%83%AD%E3%83%BC%E3%83%AA%E3%83%B3%E3%82%B0%E3%82%92%E8%A1%8C%E3%81%86%E3%82%B9%E3%82%AF%E3%83%AA%E3%83%97%E3%83%88">クローリングを行うスクリプト</a></li>
+  <li><a href="#%E3%82%B9%E3%82%AF%E3%83%AC%E3%82%A4%E3%83%94%E3%83%B3%E3%82%B0%E3%82%92%E8%A1%8C%E3%81%86%E3%82%B9%E3%82%AF%E3%83%AA%E3%83%97%E3%83%88">スクレイピングを行うスクリプト</a></li>
+  <li><a href="#%E4%BB%A5%E4%B8%8A">以上</a></li>
+  <li><a href="#%E5%8F%82%E8%80%83%E6%96%87%E7%8C%AE">参考文献</a></li>
+</ul>
+<h2 id="pipenv-の準備"><a class="header-link" href="#pipenv-の準備"><span class="header-link-mark"></span></a>pipenv の準備</h2>
+<p>各プロジェクトディレクトリの配下の <code>.venv/</code> ディレクトリ配下に仮想環境のファイルを配置するようにするため、環境変数で以下のように設定しておく。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token builtin class-name">export</span> <span class="token assign-left variable">PIPENV_VENV_IN_PROJECT</span><span class="token operator">=</span><span class="token number">1</span>
+</code></pre>
+<p>Windows の場合も <code>PIPENV_VENV_IN_PROJECT</code> というキーに <code>true</code> などの値を設定して環境変数を設定しておくこと。</p>
+<h2 id="プロジェクトの作成"><a class="header-link" href="#プロジェクトの作成"><span class="header-link-mark"></span></a>プロジェクトの作成</h2>
+<p>プロジェクトの作成手順はこんな感じ。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># Pipfile を生成する</span>
+$ pipenv --python <span class="token number">3.7</span>
+
+<span class="token comment"># クローリング用の Selenium をインストールする</span>
+$ pipenv <span class="token function">install</span> selenium
+
+<span class="token comment"># OS にインストールしてあるChrome のバージョンに合わせてインストールする</span>
+$ pipenv <span class="token function">install</span> chromedriver-binary~<span class="token operator">=</span><span class="token number">77.0</span>
+
+<span class="token comment"># HTML のパース・スクレイピングを行う BeautifulSoup4 をインストールする</span>
+$ pipenv <span class="token function">install</span> beautifulsoup4
+</code></pre>
+<p><code>chromedriver-binary</code> というのは、ChromeDriver のパスを自動判定してくれるモノ。後述するコードがシンプルになり、環境依存が減らせる期待があるので入れてみた次第。</p>
+<h2 id="クローリングを行うスクリプト"><a class="header-link" href="#クローリングを行うスクリプト"><span class="header-link-mark"></span></a>クローリングを行うスクリプト</h2>
+<p>まずは指定の URL にアクセスして HTML ソースを取得する、いわゆる<em>「クローリング」</em>を行うスクリプトを作ってみる。</p>
+<p>この辺については、Node.js で似たようなことをやったことがあるので、Node.js 民はそちらも参考にしていただけると理解がしやすいかと。</p>
+<ul>
+  <li><a href="/blog/2019/01/14-02.html">Node.js で selenium-webdriver と chromedriver を使って Chrome ブラウザを自動操作してみる</a></li>
+  <li><code>example_crawl.py</code> … 完全版は以下
+    <ul>
+      <li><a href="https://github.com/Neos21/practice-python-scraping/blob/master/example_crawl.py">practice-python-scraping/example_crawl.py at master · Neos21/practice-python-scraping · GitHub</a></li>
+    </ul>
+  </li>
+</ul>
+<pre class="language-python"><code class="language-python"><span class="token keyword">from</span> pathlib <span class="token keyword">import</span> Path
+<span class="token keyword">import</span> platform
+
+<span class="token keyword">import</span> chromedriver_binary
+
+<span class="token keyword">from</span> selenium <span class="token keyword">import</span> webdriver
+
+<span class="token keyword">def</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">:</span>
+  prepareHtmlDirectory<span class="token punctuation">(</span><span class="token punctuation">)</span>
+  driver <span class="token operator">=</span> createDriver<span class="token punctuation">(</span><span class="token punctuation">)</span>
+  pageSource <span class="token operator">=</span> getPageSource<span class="token punctuation">(</span>driver<span class="token punctuation">,</span> <span class="token string">'http://google.com/'</span><span class="token punctuation">)</span>
+  writePageSource<span class="token punctuation">(</span>pageSource<span class="token punctuation">,</span> <span class="token string">'google.html'</span><span class="token punctuation">)</span>
+  driver<span class="token punctuation">.</span>quit<span class="token punctuation">(</span><span class="token punctuation">)</span>
+
+<span class="token comment"># Chrome WebDriver を生成する</span>
+<span class="token keyword">def</span> <span class="token function">createDriver</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">:</span>
+  chromeOptions <span class="token operator">=</span> webdriver<span class="token punctuation">.</span>ChromeOptions<span class="token punctuation">(</span><span class="token punctuation">)</span>
+  chromeOptions<span class="token punctuation">.</span>add_argument<span class="token punctuation">(</span><span class="token string">'--headless'</span><span class="token punctuation">)</span>
+  chromeOptions<span class="token punctuation">.</span>add_argument<span class="token punctuation">(</span><span class="token string">'--disable-gpu'</span><span class="token punctuation">)</span>
+  chromeOptions<span class="token punctuation">.</span>add_argument<span class="token punctuation">(</span><span class="token string">'--no-sandbox'</span><span class="token punctuation">)</span>
+  driver <span class="token operator">=</span> webdriver<span class="token punctuation">.</span>Chrome<span class="token punctuation">(</span>options <span class="token operator">=</span> chromeOptions<span class="token punctuation">)</span>
+  <span class="token keyword">return</span> driver
+
+<span class="token keyword">def</span> <span class="token function">prepareHtmlDirectory</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">:</span>
+  htmlDir <span class="token operator">=</span> Path<span class="token punctuation">(</span>Path<span class="token punctuation">.</span>cwd<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">.</span>joinpath<span class="token punctuation">(</span><span class="token string">'html'</span><span class="token punctuation">)</span>
+  <span class="token keyword">if</span> <span class="token keyword">not</span> htmlDir<span class="token punctuation">.</span>exists<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">:</span>
+    htmlDir<span class="token punctuation">.</span>mkdir<span class="token punctuation">(</span><span class="token punctuation">)</span>
+
+<span class="token keyword">def</span> <span class="token function">getPageSource</span><span class="token punctuation">(</span>driver<span class="token punctuation">,</span> url<span class="token punctuation">)</span><span class="token punctuation">:</span>
+  driver<span class="token punctuation">.</span>get<span class="token punctuation">(</span>url<span class="token punctuation">)</span>
+  <span class="token keyword">print</span><span class="token punctuation">(</span><span class="token string-interpolation"><span class="token string">f'</span><span class="token interpolation"><span class="token punctuation">{</span>url<span class="token punctuation">}</span></span><span class="token string"> : </span><span class="token interpolation"><span class="token punctuation">{</span>driver<span class="token punctuation">.</span>title<span class="token punctuation">}</span></span><span class="token string">'</span></span><span class="token punctuation">)</span>
+  <span class="token keyword">return</span> driver<span class="token punctuation">.</span>page_source
+
+<span class="token keyword">def</span> <span class="token function">writePageSource</span><span class="token punctuation">(</span>pageSource<span class="token punctuation">,</span> fileName<span class="token punctuation">)</span><span class="token punctuation">:</span>
+  <span class="token builtin">file</span> <span class="token operator">=</span> Path<span class="token punctuation">(</span>Path<span class="token punctuation">.</span>cwd<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">.</span>joinpath<span class="token punctuation">(</span><span class="token string">'html'</span><span class="token punctuation">)</span><span class="token punctuation">.</span>joinpath<span class="token punctuation">(</span>fileName<span class="token punctuation">)</span>
+  <span class="token builtin">file</span><span class="token punctuation">.</span>write_text<span class="token punctuation">(</span>pageSource<span class="token punctuation">,</span> encoding <span class="token operator">=</span> <span class="token string">'utf-8'</span><span class="token punctuation">,</span> newline <span class="token operator">=</span> <span class="token string">''</span><span class="token punctuation">)</span>
+
+<span class="token keyword">if</span> __name__ <span class="token operator">==</span> <span class="token string">'__main__'</span><span class="token punctuation">:</span>
+  main<span class="token punctuation">(</span><span class="token punctuation">)</span>
+</code></pre>
+<p><code>chromedriver_binary</code> を <code>import</code> すると、<code>webdriver.Chrome()</code> で ChromeDriver をセットアップする時に <code>executable_path</code> 引数の指定が要らなくなるのが特徴。</p>
+<p>しかし試したところ、MacOS ではこの chromedriver-binary で Chrome を上手く認識できなかったのと、ヘッドレスモードで起動できなかったので、MacOS で動かす場合は以下のように修正した。</p>
+<pre class="language-python"><code class="language-python"><span class="token comment"># MacOS では executable_path で指定しないと上手く読み込めなかったのでコメントアウトしておく</span>
+<span class="token comment"># import chromedriver_binary</span>
+
+<span class="token comment"># Chrome WebDriver を生成する</span>
+<span class="token keyword">def</span> <span class="token function">createDriver</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">:</span>
+  <span class="token comment"># MacOS では ChromeDriver のパスを指定しておく</span>
+  executablePath <span class="token operator">=</span> <span class="token string">'/usr/local/bin/chromedriver'</span>
+  
+  chromeOptions <span class="token operator">=</span> webdriver<span class="token punctuation">.</span>ChromeOptions<span class="token punctuation">(</span><span class="token punctuation">)</span>
+  
+  <span class="token comment"># MacOS では Headless モードにすると上手く起動しなかったので避ける</span>
+  <span class="token keyword">if</span> platform<span class="token punctuation">.</span>system<span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">!=</span> <span class="token string">'Darwin'</span><span class="token punctuation">:</span>
+    chromeOptions<span class="token punctuation">.</span>add_argument<span class="token punctuation">(</span><span class="token string">'--headless'</span><span class="token punctuation">)</span>
+  
+  chromeOptions<span class="token punctuation">.</span>add_argument<span class="token punctuation">(</span><span class="token string">'--disable-gpu'</span><span class="token punctuation">)</span>
+  chromeOptions<span class="token punctuation">.</span>add_argument<span class="token punctuation">(</span><span class="token string">'--no-sandbox'</span><span class="token punctuation">)</span>
+  
+  driver <span class="token operator">=</span> webdriver<span class="token punctuation">.</span>Chrome<span class="token punctuation">(</span>executable_path <span class="token operator">=</span> executablePath<span class="token punctuation">,</span> options <span class="token operator">=</span> chromeOptions<span class="token punctuation">)</span>
+  <span class="token keyword">return</span> driver
+</code></pre>
+<p>ChromeDriver 周りは、実行環境によってどうしてもムリが出てくるので、OS をまたいだクロスブラウザテストをする、みたいな要件がないのであれば、Docker とかに寄せて OS 環境から統一させた方が良いと思う。</p>
+<hr>
+<p>あとは <code>pathlib</code> という組み込みモジュールを使って、Node.js でいうところの <code>fs</code> みたいなことを色々やった。特にファイル書き込み <code>write_text()</code> などは、改行コードやエンコードが未指定の時は OS に依存して勝手に Shift-JIS とか CRLF にされたりするので、しっかり明示しておくと環境差異が出なくなる。</p>
+<p>あとファイル末尾に <code>if __name__ == '__main__':</code> と書いているのは、Python でよくあるイディオム。このファイルを別のファイルが <code>import</code> した時に、勝手に <code>main()</code> 関数が実行されないようにするやり方。Node.js で再現するとしたら <code>if(!module.parent)</code> とかで判定すればいいかな。</p>
+<ul>
+  <li><a href="/blog/2019/02/07-01.html">Express で構築した WebAPI サーバをユニットテストする (コードカバレッジも見る)</a></li>
+</ul>
+<p>このスクリプトを実行する時は以下のようにする。</p>
+<pre class="language-bash"><code class="language-bash">$ pipenv run python example_crawl.py
+</code></pre>
+<p><code>./html/google.html</code> ファイルが生成されて、中身が書かれていれば OK。</p>
+<h2 id="スクレイピングを行うスクリプト"><a class="header-link" href="#スクレイピングを行うスクリプト"><span class="header-link-mark"></span></a>スクレイピングを行うスクリプト</h2>
+<p>続いて、HTML ソースから必要な情報を抜き取る、<em>「スクレイピング」</em>処理を行うスクリプトを作る。</p>
+<ul>
+  <li><code>example_scrape.py</code> … 完全版は以下
+    <ul>
+      <li><a href="https://github.com/Neos21/practice-python-scraping/blob/master/example_scrape.py">practice-python-scraping/example_scrape.py at master · Neos21/practice-python-scraping · GitHub</a></li>
+    </ul>
+  </li>
+</ul>
+<pre class="language-python"><code class="language-python"><span class="token keyword">import</span> json
+<span class="token keyword">from</span> pathlib <span class="token keyword">import</span> Path
+
+<span class="token keyword">from</span> bs4 <span class="token keyword">import</span> BeautifulSoup
+
+<span class="token keyword">def</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">:</span>
+  prepareJsonDirectory<span class="token punctuation">(</span><span class="token punctuation">)</span>
+  html <span class="token operator">=</span> getHtml<span class="token punctuation">(</span><span class="token string">'google.html'</span><span class="token punctuation">)</span>
+  soup <span class="token operator">=</span> parseHtml<span class="token punctuation">(</span>html<span class="token punctuation">)</span>
+  scrapedDict <span class="token operator">=</span> scrape<span class="token punctuation">(</span>soup<span class="token punctuation">)</span>
+  writeJson<span class="token punctuation">(</span>scrapedDict<span class="token punctuation">,</span> <span class="token string">'google.json'</span><span class="token punctuation">)</span>
+  <span class="token keyword">print</span><span class="token punctuation">(</span><span class="token string">'End'</span><span class="token punctuation">)</span>
+
+<span class="token keyword">def</span> <span class="token function">prepareJsonDirectory</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">:</span>
+  jsonDir <span class="token operator">=</span> Path<span class="token punctuation">(</span>Path<span class="token punctuation">.</span>cwd<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">.</span>joinpath<span class="token punctuation">(</span><span class="token string">'json'</span><span class="token punctuation">)</span>
+  <span class="token keyword">if</span> <span class="token keyword">not</span> jsonDir<span class="token punctuation">.</span>exists<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">:</span>
+    jsonDir<span class="token punctuation">.</span>mkdir<span class="token punctuation">(</span><span class="token punctuation">)</span>
+
+<span class="token keyword">def</span> <span class="token function">getHtml</span><span class="token punctuation">(</span>fileName<span class="token punctuation">)</span><span class="token punctuation">:</span>
+  <span class="token builtin">file</span> <span class="token operator">=</span> Path<span class="token punctuation">(</span>Path<span class="token punctuation">.</span>cwd<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">.</span>joinpath<span class="token punctuation">(</span><span class="token string">'html'</span><span class="token punctuation">)</span><span class="token punctuation">.</span>joinpath<span class="token punctuation">(</span>fileName<span class="token punctuation">)</span>
+  html <span class="token operator">=</span> <span class="token builtin">file</span><span class="token punctuation">.</span>read_text<span class="token punctuation">(</span>encoding <span class="token operator">=</span> <span class="token string">'utf-8'</span><span class="token punctuation">)</span>
+  <span class="token keyword">return</span> html
+
+<span class="token comment"># BeautifulSoup でパースする</span>
+<span class="token keyword">def</span> <span class="token function">parseHtml</span><span class="token punctuation">(</span>html<span class="token punctuation">)</span><span class="token punctuation">:</span>
+  soup <span class="token operator">=</span> BeautifulSoup<span class="token punctuation">(</span>html<span class="token punctuation">,</span> <span class="token string">'html.parser'</span><span class="token punctuation">)</span>
+  <span class="token keyword">return</span> soup
+
+<span class="token comment"># スクレイピングして結果を Dict で返す</span>
+<span class="token keyword">def</span> <span class="token function">scrape</span><span class="token punctuation">(</span>soup<span class="token punctuation">)</span><span class="token punctuation">:</span>
+  <span class="token comment"># 辞書 (Dict) を用意する</span>
+  scrapedDict <span class="token operator">=</span> <span class="token punctuation">{</span><span class="token punctuation">}</span>
+  
+  <span class="token comment"># 一つ要素を取得する</span>
+  <span class="token keyword">print</span><span class="token punctuation">(</span><span class="token string">'my_text'</span><span class="token punctuation">)</span>
+  scrapedDict<span class="token punctuation">[</span><span class="token string">'my_text'</span><span class="token punctuation">]</span> <span class="token operator">=</span> soup<span class="token punctuation">.</span>select<span class="token punctuation">(</span><span class="token string">'a.gb_e'</span><span class="token punctuation">)</span><span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">.</span>string
+  <span class="token keyword">print</span><span class="token punctuation">(</span><span class="token string">'  '</span> <span class="token operator">+</span> scrapedDict<span class="token punctuation">[</span><span class="token string">'my_text'</span><span class="token punctuation">]</span><span class="token punctuation">)</span>
+  
+  <span class="token comment"># p 要素を全て取得してリストに詰める</span>
+  <span class="token keyword">print</span><span class="token punctuation">(</span><span class="token string">'a_elements'</span><span class="token punctuation">)</span>
+  elements <span class="token operator">=</span> soup<span class="token punctuation">.</span>find_all<span class="token punctuation">(</span><span class="token string">'a'</span><span class="token punctuation">)</span>
+  elementList <span class="token operator">=</span> <span class="token punctuation">[</span><span class="token punctuation">]</span>
+  
+  <span class="token keyword">for</span> index <span class="token keyword">in</span> <span class="token builtin">range</span><span class="token punctuation">(</span><span class="token builtin">len</span><span class="token punctuation">(</span>elements<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">:</span>
+    element <span class="token operator">=</span> elements<span class="token punctuation">[</span>index<span class="token punctuation">]</span>
+    paragraphString <span class="token operator">=</span> element<span class="token punctuation">.</span>string
+    <span class="token keyword">print</span><span class="token punctuation">(</span><span class="token string-interpolation"><span class="token string">f'  [</span><span class="token interpolation"><span class="token punctuation">{</span>index<span class="token punctuation">}</span></span><span class="token string">] : </span><span class="token interpolation"><span class="token punctuation">{</span>paragraphString<span class="token punctuation">}</span></span><span class="token string">'</span></span><span class="token punctuation">)</span>
+    elementList<span class="token punctuation">.</span>append<span class="token punctuation">(</span>paragraphString<span class="token punctuation">)</span>
+  
+  <span class="token comment"># 辞書に格納する</span>
+  scrapedDict<span class="token punctuation">[</span><span class="token string">'a_elements'</span><span class="token punctuation">]</span> <span class="token operator">=</span> elementList
+  
+  <span class="token keyword">return</span> scrapedDict
+
+<span class="token keyword">def</span> <span class="token function">writeJson</span><span class="token punctuation">(</span>scrapedDict<span class="token punctuation">,</span> fileName<span class="token punctuation">)</span><span class="token punctuation">:</span>
+  jsonFile <span class="token operator">=</span> Path<span class="token punctuation">(</span>Path<span class="token punctuation">.</span>cwd<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">.</span>joinpath<span class="token punctuation">(</span><span class="token string">'json'</span><span class="token punctuation">)</span><span class="token punctuation">.</span>joinpath<span class="token punctuation">(</span>fileName<span class="token punctuation">)</span>
+  <span class="token keyword">with</span> jsonFile<span class="token punctuation">.</span><span class="token builtin">open</span><span class="token punctuation">(</span><span class="token string">'w'</span><span class="token punctuation">,</span> encoding <span class="token operator">=</span> <span class="token string">'utf-8'</span><span class="token punctuation">)</span> <span class="token keyword">as</span> <span class="token builtin">file</span><span class="token punctuation">:</span>
+    <span class="token comment"># Unicode 出力しないようにする</span>
+    json<span class="token punctuation">.</span>dump<span class="token punctuation">(</span>scrapedDict<span class="token punctuation">,</span> <span class="token builtin">file</span><span class="token punctuation">,</span> indent <span class="token operator">=</span> <span class="token number">2</span><span class="token punctuation">,</span> ensure_ascii <span class="token operator">=</span> <span class="token boolean">False</span><span class="token punctuation">)</span>
+
+<span class="token keyword">if</span> __name__ <span class="token operator">==</span> <span class="token string">'__main__'</span><span class="token punctuation">:</span>
+  main<span class="token punctuation">(</span><span class="token punctuation">)</span>
+</code></pre>
+<p>先程のコードで取得した <code>./html/google.html</code> が存在する前提でコードを書いている。</p>
+<p>HTML ファイルを読み込み、BeautifulSoup でパースし、jQuery 的にセレクタを使って要素を特定できる形式にする。</p>
+<p>Node.js では、Cheerio という npm パッケージが BeautifulSoup と似たようなことをしてくれるので、HTML パーサなんだなーと思えていれば OK。</p>
+<ul>
+  <li><a href="/blog/2018/12/17-03.html">Cheerio で Web ページをスクレイピングする</a></li>
+</ul>
+<p>そして <code>scrape()</code> 関数の中で、実際に要素を特定してテキストを取得、Dict (辞書・JS でいう連想配列) に詰めている。</p>
+<p>この Dict という Python の型は、組み込みモジュール <code>json</code> を使うとすぐに JSON 形式に変換できるので、そのまま <code>./json/google.json</code> というファイルで書き出している。</p>
+<p>このスクリプトの実行方法はこんな感じ。</p>
+<pre class="language-bash"><code class="language-bash">$ pipenv run python example_scrape.py
+</code></pre>
+<p><code>./json/google.json</code> ができていれば OK。</p>
+<h2 id="以上"><a class="header-link" href="#以上"><span class="header-link-mark"></span></a>以上</h2>
+<p>まだまだ Python 素人なので、Python らしくない書き方が散見されるかもしれないが、とりあえず Python を使ってクローリングしたい、スクレイピングしたい、というところはコレで始められるかなと思う。</p>
+<h2 id="参考文献"><a class="header-link" href="#参考文献"><span class="header-link-mark"></span></a>参考文献</h2>
+<ul>
+  <li><a href="https://qiita.com/derodero24/items/9e9567790bde9e4b9d0c">【Python】SeleniumでHeadless Chromeを使おう - Qiita</a></li>
+  <li><a href="https://hacknote.jp/archives/48685/">headless chromeをpythonで動かしてみた | ハックノート</a></li>
+  <li><a href="https://qiita.com/akiko-pusu/items/86faca0cb9c877896c04">ChromeとPythonのchromedriver-binaryのバージョンを合わせたい。 - Qiita</a></li>
+  <li><a href="https://dividable.net/python/python-scraping/">【保存版】Pythonでスクレイピングする方法を初心者向けに徹底解説！【サンプルコードあり】 | DAINOTE</a></li>
+  <li><a href="https://qiita.com/Azunyan1111/items/b161b998790b1db2ff7a">Python Webスクレイピング テクニック集「取得できない値は無い」JavaScript対応@追記あり6/12 - Qiita</a></li>
+</ul>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2020-01-05</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2020-01-05</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

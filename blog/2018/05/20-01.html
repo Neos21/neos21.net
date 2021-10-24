@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>JavaScript の配列やオブジェクトは参照渡しになる…バグを生む落とし穴 - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2018/05/20-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2018/index.html">2018年</a></li>
+            <li><a href="/blog/2018/05/index.html">05月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2018-05-20</time></div>
+        <h1 id="page-title">JavaScript の配列やオブジェクトは参照渡しになる…バグを生む落とし穴</h1>
+
+<p>JavaScript において、配列やオブジェクトは参照渡しになる。コレが思わぬバグを生むことに繋がるので、紹介しておく。</p>
+<p>今回、「参照渡し」「値渡し」「参照の値渡し」などの議論は避けるが、オブジェクトを代入する際、以下のような挙動をすることは覚えておきたい。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token comment">// 初期値としてこの値をそのまま保持しておきたい</span>
+<span class="token keyword">const</span> defaultValue <span class="token operator">=</span> <span class="token punctuation">{</span>
+  title<span class="token operator">:</span> <span class="token string">'ほげほげ'</span><span class="token punctuation">,</span>
+  itemsCount<span class="token operator">:</span> <span class="token number">0</span><span class="token punctuation">,</span>
+  pageNumber<span class="token operator">:</span> <span class="token number">1</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+
+<span class="token comment">// myValue は処理中で変更が入る要素 … 最初に初期値を代入する</span>
+<span class="token keyword">let</span> myValue <span class="token operator">=</span> defaultValue<span class="token punctuation">;</span>
+
+<span class="token comment">// 処理中に値を変更する</span>
+myValue<span class="token punctuation">.</span><span class="token property-access">title</span> <span class="token operator">=</span> <span class="token string">'ふがふが'</span><span class="token punctuation">;</span>
+myValue<span class="token punctuation">.</span><span class="token property-access">itemsCount</span> <span class="token operator">=</span> <span class="token number">100</span><span class="token punctuation">;</span>
+
+<span class="token comment">// 当然 myValue に変更は反映されているが…</span>
+<span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span>myValue<span class="token punctuation">.</span><span class="token property-access">title</span><span class="token punctuation">)</span><span class="token punctuation">;</span>      <span class="token comment">// → 'ふがふが'</span>
+<span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span>myValue<span class="token punctuation">.</span><span class="token property-access">itemsCount</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token comment">// → 100</span>
+
+<span class="token comment">// 実は defaultValue まで書き換わっている</span>
+<span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span>defaultValue<span class="token punctuation">.</span><span class="token property-access">title</span><span class="token punctuation">)</span><span class="token punctuation">;</span>      <span class="token comment">// → 'ふがふが' ('ほげほげ' ではない)</span>
+<span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span>defaultValue<span class="token punctuation">.</span><span class="token property-access">itemsCount</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token comment">// → 100        (0 ではない)</span>
+
+<span class="token comment">// だから「また初期値に戻そう」と思って defaultValue を代入しても、元に戻せない</span>
+myValue <span class="token operator">=</span> defaultValue<span class="token punctuation">;</span>
+<span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span>myValue<span class="token punctuation">.</span><span class="token property-access">title</span><span class="token punctuation">)</span><span class="token punctuation">;</span>      <span class="token comment">// → 'ふがふが' ('ほげほげ' に戻らない！)</span>
+<span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span>myValue<span class="token punctuation">.</span><span class="token property-access">itemsCount</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token comment">// → 100        (0 に戻らない！</span>
+</code></pre>
+<p>コレは Object (連想配列) だけでなく、Array (配列) も同様。</p>
+<p>対策としては、連想配列や配列そのものを代入して渡すのではなく、<strong>その配列のコピーを生成して渡す</strong>のが正解になる。</p>
+<p>一番簡単な例では、<code>Object.assign()</code> を使う例。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token comment">// 連想配列のコピーには Object.assign() が使える</span>
+<span class="token comment">// ただし、オブジェクト内にオブジェクトがある場合は、中のオブジェクトが参照渡しになってしまうので不完全</span>
+<span class="token keyword">let</span> myValue <span class="token operator">=</span> <span class="token known-class-name class-name">Object</span><span class="token punctuation">.</span><span class="token method function property-access">assign</span><span class="token punctuation">(</span><span class="token punctuation">{</span><span class="token punctuation">}</span><span class="token punctuation">,</span> defaultValue<span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<ul>
+  <li>参考：<a href="https://numb86-tech.hatenablog.com/entry/2016/10/27/123806">オブジェクトの値をコピーするObject.assign() - 30歳からのプログラミング</a></li>
+</ul>
+<p>オブジェクト内のオブジェクトが参照渡しになってしまう件は、<code>JSON.stringify()</code> と <code>JSON.parse()</code> を組み合わせたやり方だと解消できる。オブジェクトを一度文字列化してから再度オブジェクトに戻すことで複製するのだ。</p>
+<p>ただし、このやり方は <code>Date</code> 型のプロパティ値を正しく復元できなくなるという問題がある。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword">let</span> myValue <span class="token operator">=</span> <span class="token known-class-name class-name">JSON</span><span class="token punctuation">.</span><span class="token method function property-access">parse</span><span class="token punctuation">(</span><span class="token known-class-name class-name">JSON</span><span class="token punctuation">.</span><span class="token method function property-access">stringify</span><span class="token punctuation">(</span>defaultValue<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<ul>
+  <li>参考：<a href="https://woshidan.hatenablog.com/entry/2014/09/06/002003">JavaScriptのオブジェクトを扱うとき、=はただの値渡しではない - woshidan's blog</a></li>
+</ul>
+<p>一番良いのは、<strong>Lodash の <code>cloneDeep()</code> を使う</strong>と確実にコピーできる。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token comment">// Lodash の cloneDeep() が一番確実</span>
+<span class="token keyword">let</span> myValue <span class="token operator">=</span> _<span class="token punctuation">.</span><span class="token method function property-access">cloneDeep</span><span class="token punctuation">(</span>defaultValue<span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<ul>
+  <li>参考：<a href="http://ls-tk.hatenablog.com/entry/2015/10/28/142757">lodashのclone(isDeep)とcloneDeepの検証 - LS&#x26;TK's SE Life Log</a></li>
+</ul>
+<p><code>_.cloneDeep()</code> は <code>_.clone(isDeep)</code> のエイリアス。<code>_.clone(defaultValue, true)</code> と書けば <code>_.cloneDeep(defaultValue)</code> 同様にディープコピーになるが、<code>_.clone(defaultValue)</code> と第2引数を書き忘れると参照渡しになってしまうので、書き忘れを防ぐために <code>_.cloneDeep()</code> を使うと良いだろう。</p>
+<p>なお、配列の場合は <code>concat()</code> などでコピーできる。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword">const</span> defaultArray <span class="token operator">=</span> <span class="token punctuation">[</span> <span class="token number">1</span><span class="token punctuation">,</span> <span class="token number">2</span><span class="token punctuation">,</span> <span class="token number">3</span> <span class="token punctuation">]</span><span class="token punctuation">;</span>
+<span class="token keyword">let</span> myArray <span class="token operator">=</span> defaultArray<span class="token punctuation">.</span><span class="token method function property-access">concat</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<ul>
+  <li>参考：<a href="https://numb86-tech.hatenablog.com/entry/2016/10/27/123806">オブジェクトの値をコピーするObject.assign() - 30歳からのプログラミング</a></li>
+  <li>参考：<a href="https://woshidan.hatenablog.com/entry/2014/09/06/002003">JavaScriptのオブジェクトを扱うとき、=はただの値渡しではない - woshidan's blog</a></li>
+  <li>参考：<a href="http://ls-tk.hatenablog.com/entry/2015/10/28/142757">lodashのclone(isDeep)とcloneDeepの検証 - LS&#x26;TK's SE Life Log</a></li>
+</ul>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2018-05-20</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2018-05-20</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

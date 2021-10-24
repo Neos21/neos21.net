@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>Angular In Memory Web API を使ってモックサーバを立てる - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2018/02/09-02.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2018/index.html">2018年</a></li>
+            <li><a href="/blog/2018/02/index.html">02月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2018-02-09</time></div>
+        <h1 id="page-title">Angular In Memory Web API を使ってモックサーバを立てる</h1>
+
+<p>Angular アプリの開発中、Web API サーバをモック化する時は、<strong><code>angular-in-memory-web-api</code></strong> を使うと簡単にモック API サーバが用意できる。</p>
+<p>少々つまづいたところがあったので、実装の仕方を確認していこう。</p>
+<ul>
+  <li><a href="https://github.com/angular/in-memory-web-api">GitHub - angular/in-memory-web-api</a></li>
+</ul>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#%E3%83%97%E3%83%AD%E3%82%B8%E3%82%A7%E3%82%AF%E3%83%88%E3%82%92%E7%94%A8%E6%84%8F%E3%81%99%E3%82%8B">プロジェクトを用意する</a></li>
+  <li><a href="#http-%E9%80%9A%E4%BF%A1%E3%81%99%E3%82%8B%E7%94%BB%E9%9D%A2%E3%82%92%E4%BD%9C%E3%82%8B">HTTP 通信する画面を作る</a></li>
+  <li><a href="#web-api-%E3%83%A2%E3%83%83%E3%82%AF%E3%82%92%E6%A7%8B%E6%88%90%E3%81%99%E3%82%8B%E3%82%B5%E3%83%BC%E3%83%93%E3%82%B9%E3%82%AF%E3%83%A9%E3%82%B9%E3%82%92%E4%BD%9C%E6%88%90%E3%81%99%E3%82%8B">Web API モックを構成するサービスクラスを作成する</a></li>
+  <li><a href="#id-%E3%82%92%E6%8C%87%E5%AE%9A%E3%81%97%E3%81%A6%E7%89%B9%E5%AE%9A%E3%83%87%E3%83%BC%E3%82%BF%E3%81%AE%E3%81%BF%E5%8F%96%E5%BE%97%E3%81%99%E3%82%8B">ID を指定して特定データのみ取得する</a></li>
+  <li><a href="#%E3%83%A2%E3%83%83%E3%82%AF%E3%83%87%E3%83%BC%E3%82%BF%E3%82%AA%E3%83%96%E3%82%B8%E3%82%A7%E3%82%AF%E3%83%88%E3%83%BBurl-%E3%81%AB%E5%88%B6%E7%B4%84%E3%81%8C%E3%81%A7%E3%81%8D%E3%82%8B">モックデータオブジェクト・URL に制約ができる</a></li>
+  <li><a href="#2%E9%9A%8E%E5%B1%A4%E4%BB%A5%E4%B8%8A%E3%81%AE%E3%83%91%E3%82%B9%E3%82%92%E8%A7%A3%E9%87%88%E3%81%95%E3%81%9B%E3%82%8B%E6%96%B9%E6%B3%95">2階層以上のパスを解釈させる方法</a></li>
+  <li><a href="#%E5%AE%9F%E9%9A%9B%E3%81%AB%E3%83%87%E3%83%BC%E3%82%BF%E3%82%92%E5%8F%96%E5%BE%97%E3%81%97%E3%81%A6%E3%81%BF%E3%82%8B">実際にデータを取得してみる</a></li>
+  <li><a href="#%E3%83%AC%E3%82%B9%E3%83%9D%E3%83%B3%E3%82%B9%E3%83%87%E3%83%BC%E3%82%BF%E3%82%92%E3%82%AB%E3%82%B9%E3%82%BF%E3%83%9E%E3%82%A4%E3%82%BA%E3%81%99%E3%82%8B">レスポンスデータをカスタマイズする</a></li>
+  <li><a href="#%E3%81%BE%E3%81%A8%E3%82%81">まとめ</a></li>
+</ul>
+<h2 id="プロジェクトを用意する"><a class="header-link" href="#プロジェクトを用意する"><span class="header-link-mark"></span></a>プロジェクトを用意する</h2>
+<p>まずは Angular CLI の <code>ng new</code> コマンドで Angular プロジェクトの雛形を作ろう。今回は <code>@angular/cli@1.6.4</code> を使用して、Angular5 系の雛形を作成した。</p>
+<pre class="language-bash"><code class="language-bash">$ ng new api-example
+</code></pre>
+<p>雛形ができたら、Angular In Memory Web API をインストールする。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">npm</span> <span class="token function">install</span> angular-in-memory-web-api --save
+</code></pre>
+<p>コレでひとまず、<code>$ npm start</code> でサーバが起動するか確認しておこう。</p>
+<h2 id="http-通信する画面を作る"><a class="header-link" href="#http-通信する画面を作る"><span class="header-link-mark"></span></a>HTTP 通信する画面を作る</h2>
+<p>今回は <code>AppComponent</code> にて、POST 送信を行う簡単なプログラムを用意する。今回は HttpClient で実装したが、以前の Http モジュールを利用しても問題ない。</p>
+<pre class="language-typescript"><code class="language-typescript"><span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">Component</span> <span class="token punctuation">}</span></span> <span class="token keyword">from</span> <span class="token string">'@angular/core'</span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">HttpClient</span> <span class="token punctuation">}</span></span> <span class="token keyword">from</span> <span class="token string">'@angular/common/http'</span><span class="token punctuation">;</span>
+
+<span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> environment <span class="token punctuation">}</span></span> <span class="token keyword">from</span> <span class="token string">'../environments/environment'</span><span class="token punctuation">;</span>
+
+@<span class="token function"><span class="token maybe-class-name">Component</span></span><span class="token punctuation">(</span><span class="token punctuation">{</span>
+  selector<span class="token operator">:</span> <span class="token string">'app-root'</span><span class="token punctuation">,</span>
+  templateUrl<span class="token operator">:</span> <span class="token string">'./app.component.html'</span><span class="token punctuation">,</span>
+  styleUrls<span class="token operator">:</span> <span class="token punctuation">[</span><span class="token string">'./app.component.css'</span><span class="token punctuation">]</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span>
+<span class="token keyword">export</span> <span class="token keyword">class</span> <span class="token class-name"><span class="token maybe-class-name">AppComponent</span></span> <span class="token punctuation">{</span>
+  <span class="token doc-comment comment">/** 通信結果を表示するための項目 */</span>
+  <span class="token keyword">public</span> result<span class="token operator">:</span> <span class="token builtin">any</span><span class="token punctuation">;</span>
+  
+  <span class="token doc-comment comment">/**
+   * コンストラクタ
+   * 
+   * <span class="token keyword">@param</span> <span class="token parameter">http</span> HttpClient
+   */</span>
+  <span class="token keyword">constructor</span><span class="token punctuation">(</span><span class="token keyword">private</span> http<span class="token operator">:</span> <span class="token maybe-class-name">HttpClient</span><span class="token punctuation">)</span> <span class="token punctuation">{</span><span class="token punctuation">}</span>
+  
+  <span class="token doc-comment comment">/**
+   * GET 通信する
+   * 
+   * <span class="token keyword">@param</span> <span class="token parameter">path</span> ドメイン以下のパス
+   */</span>
+  <span class="token function">doGet</span><span class="token punctuation">(</span>path<span class="token operator">:</span> <span class="token builtin">string</span><span class="token punctuation">)</span><span class="token operator">:</span> <span class="token keyword">void</span> <span class="token punctuation">{</span>
+    <span class="token comment">// サーバ URL : 環境変数によって実際のサーバ URL にするか、モックサーバを示す文字列にするか切り替える</span>
+    <span class="token keyword">const</span> serverUrl <span class="token operator">=</span> environment<span class="token punctuation">.</span><span class="token property-access">production</span> <span class="token operator">?</span> <span class="token string">'http://example.com/'</span> <span class="token operator">:</span> <span class="token string">'mock-server/'</span><span class="token punctuation">;</span>
+    <span class="token comment">// サーバ URL とパスを結合して URL を生成し GET 通信する</span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">http</span><span class="token punctuation">.</span><span class="token keyword">get</span><span class="token punctuation">(</span>serverUrl <span class="token operator">+</span> path<span class="token punctuation">)</span>
+      <span class="token punctuation">.</span><span class="token method function property-access">toPromise</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+      <span class="token punctuation">.</span><span class="token method function property-access">then</span><span class="token punctuation">(</span><span class="token punctuation">(</span>response<span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+        <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">result</span> <span class="token operator">=</span> response<span class="token punctuation">;</span>
+      <span class="token punctuation">}</span><span class="token punctuation">)</span>
+      <span class="token punctuation">.</span><span class="token keyword">catch</span><span class="token punctuation">(</span><span class="token punctuation">(</span>error<span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+        <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">result</span> <span class="token operator">=</span> error<span class="token punctuation">;</span>
+      <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>HTML 側は以下のとおり。</p>
+<pre class="language-html"><code class="language-html"><span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>h1</span><span class="token punctuation">></span></span>Angular In Memory Web API Example<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>h1</span><span class="token punctuation">></span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>ul</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>li</span><span class="token punctuation">></span></span><span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>button</span> <span class="token attr-name">type</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>button<span class="token punctuation">"</span></span> <span class="token attr-name">(click)</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>doGet(<span class="token punctuation">'</span>users<span class="token punctuation">'</span>)<span class="token punctuation">"</span></span><span class="token punctuation">></span></span>ユーザ情報を取得する<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>button</span><span class="token punctuation">></span></span><span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>li</span><span class="token punctuation">></span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>ul</span><span class="token punctuation">></span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>div</span> <span class="token attr-name">*ngIf</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>result<span class="token punctuation">"</span></span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>h2</span><span class="token punctuation">></span></span>結果<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>h2</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>p</span><span class="token punctuation">></span></span>{{ result | json }}<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>p</span><span class="token punctuation">></span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>div</span><span class="token punctuation">></span></span>
+</code></pre>
+<p>今回は簡単にするため、サービスクラスも作っていないし、HTML 中に <code>doGet('users')</code> と URL 文字列の一部をもたせたりしていて、かなりお行儀の悪いコードだが、お許しいただきたい。</p>
+<p>ポイントは、HttpClient で通信するサーバ URL を開発中だけ <code>http://example.com/</code> ではなく <code>mock-server/</code> となるよう切り替えているところ。コレにより、「ユーザ情報を取得する」ボタンを押下すると、開発中は <code>mock-server/users</code> という URL に HTTP 通信を試みるワケである。</p>
+<p>コンポーネントができたら、<code>AppModule</code> の <code>imports</code> に <code>HttpClientModule</code> を追加しておく。コレでひとまず HTTP 通信を行おうとする画面ができあがる。</p>
+<pre class="language-typescript"><code class="language-typescript"><span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">BrowserModule</span> <span class="token punctuation">}</span></span> <span class="token keyword">from</span> <span class="token string">'@angular/platform-browser'</span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">HttpClientModule</span> <span class="token punctuation">}</span></span> <span class="token keyword">from</span> <span class="token string">'@angular/common/http'</span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">NgModule</span> <span class="token punctuation">}</span></span> <span class="token keyword">from</span> <span class="token string">'@angular/core'</span><span class="token punctuation">;</span>
+
+<span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">AppComponent</span> <span class="token punctuation">}</span></span> <span class="token keyword">from</span> <span class="token string">'./app.component'</span><span class="token punctuation">;</span>
+
+@<span class="token function"><span class="token maybe-class-name">NgModule</span></span><span class="token punctuation">(</span><span class="token punctuation">{</span>
+  declarations<span class="token operator">:</span> <span class="token punctuation">[</span>
+    <span class="token maybe-class-name">AppComponent</span>
+  <span class="token punctuation">]</span><span class="token punctuation">,</span>
+  imports<span class="token operator">:</span> <span class="token punctuation">[</span>
+    <span class="token maybe-class-name">BrowserModule</span><span class="token punctuation">,</span>
+    <span class="token maybe-class-name">HttpClientModule</span>  <span class="token comment">// ← 追加</span>
+  <span class="token punctuation">]</span><span class="token punctuation">,</span>
+  providers<span class="token operator">:</span> <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
+  bootstrap<span class="token operator">:</span> <span class="token punctuation">[</span><span class="token maybe-class-name">AppComponent</span><span class="token punctuation">]</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span>
+<span class="token keyword">export</span> <span class="token keyword">class</span> <span class="token class-name"><span class="token maybe-class-name">AppModule</span></span> <span class="token punctuation">{</span> <span class="token punctuation">}</span>
+</code></pre>
+<h2 id="web-api-モックを構成するサービスクラスを作成する"><a class="header-link" href="#web-api-モックを構成するサービスクラスを作成する"><span class="header-link-mark"></span></a>Web API モックを構成するサービスクラスを作成する</h2>
+<p>次に、Web API のモックとして、URL やレスポンスデータを定義するサービスクラスを作成する。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">npm</span> run ng generate <span class="token function">service</span> mock-web-api
+</code></pre>
+<p>このコマンドで <code>src/app/mock-web-api.service.ts</code> を作成したら、以下のように実装する。</p>
+<pre class="language-typescript"><code class="language-typescript"><span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">Injectable</span> <span class="token punctuation">}</span></span> <span class="token keyword">from</span> <span class="token string">'@angular/core'</span><span class="token punctuation">;</span>
+
+<span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">InMemoryDbService</span> <span class="token punctuation">}</span></span> <span class="token keyword">from</span> <span class="token string">'angular-in-memory-web-api'</span><span class="token punctuation">;</span>
+
+@<span class="token function"><span class="token maybe-class-name">Injectable</span></span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+<span class="token keyword">export</span> <span class="token keyword">class</span> <span class="token class-name"><span class="token maybe-class-name">MockWebApiService</span></span> <span class="token keyword">implements</span> <span class="token class-name"><span class="token maybe-class-name">InMemoryDbService</span></span> <span class="token punctuation">{</span>
+  <span class="token doc-comment comment">/** モックデータ : 標準的な Web API の URL と対応させるため、データは配列で定義し、各要素は id プロパティが必須 */</span>
+  <span class="token keyword">private</span> api<span class="token operator">:</span> <span class="token builtin">any</span> <span class="token operator">=</span> <span class="token punctuation">{</span>
+    <span class="token comment">// ユーザ情報とか</span>
+    users<span class="token operator">:</span> <span class="token punctuation">[</span>
+      <span class="token punctuation">{</span> id<span class="token operator">:</span> <span class="token number">1</span><span class="token punctuation">,</span> name<span class="token operator">:</span> <span class="token string">'Marty'</span> <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span> id<span class="token operator">:</span> <span class="token number">2</span><span class="token punctuation">,</span> name<span class="token operator">:</span> <span class="token string">'Jennifer'</span> <span class="token punctuation">}</span>
+    <span class="token punctuation">]</span>
+  <span class="token punctuation">}</span><span class="token punctuation">;</span>
+  
+  <span class="token doc-comment comment">/**
+   * InMemoryDbService から継承 : モックデータを作成する
+   * 
+   * <span class="token keyword">@return</span> モックデータ
+   */</span>
+  <span class="token keyword">public</span> <span class="token function">createDb</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator">:</span> <span class="token builtin">any</span> <span class="token punctuation">{</span>
+    <span class="token keyword">return</span> <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">api</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>ポイントは <code>InMemoryDbService</code> を継承している点だ。<code>createDb()</code> もオーバーライドしているメソッドで、<em>このメソッドで返却したオブジェクトが Web API の URL と自動的に対応する</em>ようになる。</p>
+<p>つまり、この設定だけで以下の URL でそれぞれデータをアクセスできるようになる、ということだ。</p>
+<ul>
+  <li><code>mock-server/users</code> → <code>this.api.users</code> の配列データ</li>
+  <li><code>mock-server/users/1</code> → <code>this.api.users</code> の配列のうち、<code>id</code> プロパティが <code>1</code> のデータ</li>
+</ul>
+<p>この「オブジェクトと URL の自動マッピング」については、あとで詳しく詳細する。</p>
+<p>サービスクラスができたら、コレをモックサーバとして動作させるために、<code>AppModule</code> に以下のように追加する。</p>
+<pre class="language-typescript"><code class="language-typescript"><span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">BrowserModule</span> <span class="token punctuation">}</span></span> <span class="token keyword">from</span> <span class="token string">'@angular/platform-browser'</span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">HttpClientModule</span> <span class="token punctuation">}</span></span> <span class="token keyword">from</span> <span class="token string">'@angular/common/http'</span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">NgModule</span> <span class="token punctuation">}</span></span> <span class="token keyword">from</span> <span class="token string">'@angular/core'</span><span class="token punctuation">;</span>
+
+<span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">HttpClientInMemoryWebApiModule</span> <span class="token punctuation">}</span></span> <span class="token keyword">from</span> <span class="token string">'angular-in-memory-web-api'</span><span class="token punctuation">;</span>
+
+<span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">AppComponent</span> <span class="token punctuation">}</span></span> <span class="token keyword">from</span> <span class="token string">'./app.component'</span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">MockWebApiService</span> <span class="token punctuation">}</span></span> <span class="token keyword">from</span> <span class="token string">'./mock-web-api.service'</span><span class="token punctuation">;</span>
+
+@<span class="token function"><span class="token maybe-class-name">NgModule</span></span><span class="token punctuation">(</span><span class="token punctuation">{</span>
+  declarations<span class="token operator">:</span> <span class="token punctuation">[</span>
+    <span class="token maybe-class-name">AppComponent</span>
+  <span class="token punctuation">]</span><span class="token punctuation">,</span>
+  imports<span class="token operator">:</span> <span class="token punctuation">[</span>
+    <span class="token maybe-class-name">BrowserModule</span><span class="token punctuation">,</span>
+    <span class="token maybe-class-name">HttpClientModule</span><span class="token punctuation">,</span>
+    <span class="token maybe-class-name">HttpClientInMemoryWebApiModule</span><span class="token punctuation">.</span><span class="token method function property-access">forRoot</span><span class="token punctuation">(</span><span class="token maybe-class-name">MockWebApiService</span><span class="token punctuation">)</span>  <span class="token comment">// ← 追加</span>
+  <span class="token punctuation">]</span><span class="token punctuation">,</span>
+  providers<span class="token operator">:</span> <span class="token punctuation">[</span>
+    <span class="token maybe-class-name">MockWebApiService</span>  <span class="token comment">// ← 追加</span>
+  <span class="token punctuation">]</span><span class="token punctuation">,</span>
+  bootstrap<span class="token operator">:</span> <span class="token punctuation">[</span><span class="token maybe-class-name">AppComponent</span><span class="token punctuation">]</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span>
+<span class="token keyword">export</span> <span class="token keyword">class</span> <span class="token class-name"><span class="token maybe-class-name">AppModule</span></span> <span class="token punctuation">{</span> <span class="token punctuation">}</span>
+</code></pre>
+<p>コレで完了。</p>
+<p>開発中は <code>mock-server/users</code> にアクセスすることになり、<code>MockWebApiService</code> にて定義した <code>users</code> のデータが返却されるようになる。</p>
+<pre class="language-json"><code class="language-json">「ユーザ情報を取得する」ボタン
+
+  ↓ 以下が取得・画面表示される
+
+<span class="token punctuation">[</span> <span class="token punctuation">{</span> <span class="token property">"id"</span><span class="token operator">:</span> <span class="token number">1</span><span class="token punctuation">,</span> <span class="token property">"name"</span><span class="token operator">:</span> <span class="token string">"Marty"</span> <span class="token punctuation">}</span><span class="token punctuation">,</span> <span class="token punctuation">{</span> <span class="token property">"id"</span><span class="token operator">:</span> <span class="token number">2</span><span class="token punctuation">,</span> <span class="token property">"name"</span><span class="token operator">:</span> <span class="token string">"Jennifer"</span> <span class="token punctuation">}</span> <span class="token punctuation">]</span>
+</code></pre>
+<h2 id="id-を指定して特定データのみ取得する"><a class="header-link" href="#id-を指定して特定データのみ取得する"><span class="header-link-mark"></span></a>ID を指定して特定データのみ取得する</h2>
+<p>さて、標準的な RESTful API の URL 設計に基づけば、<code>/users</code> はデータを一覧形式で取得でき、<code>/users/2</code> のように ID を指定すれば、個別の ID が取れるはずだ。</p>
+<p>Angular In Memory Web API はこうした RESTful API の URL を自動的に判別してデータを返してくれるので、いきなり <code>/users/2</code> にアクセスして <code>Jennifer</code> のデータのみを取得することができる。</p>
+<p>実際にやってみよう。HTML に以下の1行を追加する。</p>
+<pre class="language-html"><code class="language-html"><span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>h1</span><span class="token punctuation">></span></span>Angular In Memory Web API Example<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>h1</span><span class="token punctuation">></span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>ul</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>li</span><span class="token punctuation">></span></span><span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>button</span> <span class="token attr-name">type</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>button<span class="token punctuation">"</span></span> <span class="token attr-name">(click)</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>doGet(<span class="token punctuation">'</span>users<span class="token punctuation">'</span>)<span class="token punctuation">"</span></span><span class="token punctuation">></span></span>ユーザ情報を取得する<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>button</span><span class="token punctuation">></span></span><span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>li</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>li</span><span class="token punctuation">></span></span><span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>button</span> <span class="token attr-name">type</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>button<span class="token punctuation">"</span></span> <span class="token attr-name">(click)</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>doGet(<span class="token punctuation">'</span>users/2<span class="token punctuation">'</span>)<span class="token punctuation">"</span></span><span class="token punctuation">></span></span>ID : 2 のユーザ情報を取得する<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>button</span><span class="token punctuation">></span></span><span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>li</span><span class="token punctuation">></span></span>  <span class="token comment">&#x3C;!-- ←追加 --></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>ul</span><span class="token punctuation">></span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>div</span> <span class="token attr-name">*ngIf</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>result<span class="token punctuation">"</span></span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>h2</span><span class="token punctuation">></span></span>結果<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>h2</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>p</span><span class="token punctuation">></span></span>{{ result | json }}<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>p</span><span class="token punctuation">></span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>div</span><span class="token punctuation">></span></span>
+</code></pre>
+<p>コレだけで、「ID : 2 のユーザ情報を取得する」ボタンを押すと、以下のようなデータが取得できる。</p>
+<pre class="language-json"><code class="language-json"><span class="token punctuation">{</span> <span class="token property">"id"</span><span class="token operator">:</span> <span class="token number">2</span><span class="token punctuation">,</span> <span class="token property">"name"</span><span class="token operator">:</span> <span class="token string">"Jennifer"</span> <span class="token punctuation">}</span>
+</code></pre>
+<p>その他にも、クエリパラメータなども受け付けてくれるようだ。詳しくは以下の「HTTP request handling」を参照。</p>
+<ul>
+  <li>参考：<a href="https://github.com/angular/in-memory-web-api#http-request-handling">GitHub - angular/in-memory-web-api</a></li>
+</ul>
+<p>コレは便利だ。しかし問題が…。</p>
+<h2 id="モックデータオブジェクト・url-に制約ができる"><a class="header-link" href="#モックデータオブジェクト・url-に制約ができる"><span class="header-link-mark"></span></a>モックデータオブジェクト・URL に制約ができる</h2>
+<p><code>createDb()</code> で返却したオブジェクトが自動的に URL とマッピングされるのは便利だが、この機能のためにオブジェクトの内容に以下のような制約が発生する。</p>
+<ul>
+  <li><code>this.api</code> のトップレベルのキー名が URL となる
+    <ul>
+      <li>ここでは <code>users</code> というキー名がそのまま <code>/users</code> というパスになる</li>
+    </ul>
+  </li>
+  <li>各キーは配列でデータを持たなくてはならない
+    <ul>
+      <li><code>users: { name: 'Marty' }</code> というようにいきなりオブジェクトを1つ返却する作りにはできない</li>
+      <li>後述するカスタムハンドリングでレスポンスデータは調整可能だが、オブジェクトの型をチェックしているので、定義時点では配列化が必須。</li>
+    </ul>
+  </li>
+  <li>配列内の各データは URL で指定できる ID となる <code>id</code> プロパティを持たなくてはならない</li>
+</ul>
+<p>そして、このようなオブジェクトの制約により、<code>http://example.com/book/genres</code> のように<strong>2階層以上くだるパスが扱えない</strong>という問題が発生している。標準的な RESTful API の URL 設計に基づいていればこのような URL になることは珍しいかもしれないが、それにしてもモックサーバ用ライブラリの都合で URL が決まってしまうのはつらい。</p>
+<ul>
+  <li><code>api</code> オブジェクトのキー名を <code>'book/genres'</code> と指定してもダメで、<code>Collection 'book' not found"</code> というエラーになってしまう。</li>
+  <li><code>book: { genres: { ... } }</code> のように入れ子のオブジェクトにしたら…？と思ったが、コレだと <code>book</code> が配列でないためにエラーになる。</li>
+</ul>
+<h2 id="2階層以上のパスを解釈させる方法"><a class="header-link" href="#2階層以上のパスを解釈させる方法"><span class="header-link-mark"></span></a>2階層以上のパスを解釈させる方法</h2>
+<p>では、どうやって <code>/book/genres</code> のような2階層以上のパスを解釈させるか、というと、<code>InMemoryDbService</code> が持つ <em><code>parseRequestUrl()</code></em> というメソッドをオーバーライドし、<em>リクエスト URL を内部的に1階層のパスに変換する</em>ことで対処できる。</p>
+<p>実際にやってみる。<code>MockWebApiService</code> に以下のように <code>bookGenres</code> データと <code>parseRequestUrl()</code> メソッドを追加する。</p>
+<pre class="language-typescript"><code class="language-typescript"><span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">InMemoryDbService</span><span class="token punctuation">,</span> <span class="token maybe-class-name">ParsedRequestUrl</span><span class="token punctuation">,</span> <span class="token maybe-class-name">RequestInfoUtilities</span> <span class="token punctuation">}</span></span> <span class="token keyword">from</span> <span class="token string">'angular-in-memory-web-api'</span><span class="token punctuation">;</span>
+
+@<span class="token function"><span class="token maybe-class-name">Injectable</span></span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+<span class="token keyword">export</span> <span class="token keyword">class</span> <span class="token class-name"><span class="token maybe-class-name">MockWebApiService</span></span> <span class="token keyword">implements</span> <span class="token class-name"><span class="token maybe-class-name">InMemoryDbService</span></span> <span class="token punctuation">{</span>
+  <span class="token doc-comment comment">/** モックデータ : 標準的な Web API の URL と対応させるため、データは配列で定義し、各要素は id プロパティが必須 */</span>
+  <span class="token keyword">private</span> api<span class="token operator">:</span> <span class="token builtin">any</span> <span class="token operator">=</span> <span class="token punctuation">{</span>
+    <span class="token comment">// ユーザ情報とか</span>
+    users<span class="token operator">:</span> <span class="token punctuation">[</span> <span class="token comment">/* …中略… */</span> <span class="token punctuation">]</span><span class="token punctuation">,</span>
+    <span class="token comment">// 本のジャンル名 : '/book/genres' でアクセスされた時に対応させるデータ</span>
+    bookGenres<span class="token operator">:</span> <span class="token punctuation">[</span>
+      <span class="token punctuation">{</span> id<span class="token operator">:</span> <span class="token number">1</span><span class="token punctuation">,</span> genre<span class="token operator">:</span> <span class="token string">'Sience Fiction'</span> <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span> id<span class="token operator">:</span> <span class="token number">2</span><span class="token punctuation">,</span> genre<span class="token operator">:</span> <span class="token string">'Drama'</span> <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span> id<span class="token operator">:</span> <span class="token number">3</span><span class="token punctuation">,</span> genre<span class="token operator">:</span> <span class="token string">'History'</span> <span class="token punctuation">}</span>
+    <span class="token punctuation">]</span><span class="token punctuation">,</span>
+  <span class="token punctuation">}</span><span class="token punctuation">;</span>
+  <span class="token comment">// …中略…</span>
+  
+  <span class="token doc-comment comment">/**
+   * InMemoryDbService から継承 : リクエスト URL を変換する
+   * 
+   * <span class="token keyword">@param</span> <span class="token parameter">url</span> リクエスト URL
+   * <span class="token keyword">@param</span> <span class="token parameter">utils</span> リソース情報のユーティリティ
+   * <span class="token keyword">@return</span> 変換された URL 情報
+   */</span>
+  <span class="token keyword">public</span> <span class="token function">parseRequestUrl</span><span class="token punctuation">(</span>url<span class="token operator">:</span> <span class="token builtin">string</span><span class="token punctuation">,</span> utils<span class="token operator">:</span> <span class="token maybe-class-name">RequestInfoUtilities</span><span class="token punctuation">)</span><span class="token operator">:</span> <span class="token maybe-class-name">ParsedRequestUrl</span> <span class="token punctuation">{</span>
+    <span class="token comment">// 'book/genres' という URL を 'bookGenres' に変換する</span>
+    <span class="token keyword">const</span> replacedUrl <span class="token operator">=</span> url<span class="token punctuation">.</span><span class="token method function property-access">replace</span><span class="token punctuation">(</span><span class="token string">'book/genres'</span><span class="token punctuation">,</span> <span class="token string">'bookGenres'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token comment">// リクエスト情報を変換する</span>
+    <span class="token keyword">return</span> utils<span class="token punctuation">.</span><span class="token method function property-access">parseRequestUrl</span><span class="token punctuation">(</span>replacedUrl<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+</code></pre>
+<p><code>parseRequestUrl()</code> の第1引数の URL 文字列を <code>replace()</code> で変換し、第2引数の <code>RequestInfoUtilities</code> を使って <code>ParsedRequestUrl</code> 型に変えてやれば良い。</p>
+<p>ココでの URL 置換処理は全ての通信に影響するので、慎重に変換したい。例えば以下のような汎用的な置換処理でも同等の結果は得られるが、こうすると今度は <code>/users/2</code> といった URL が <code>/users2</code> のようになってしまうため、あまり使えない。</p>
+<pre class="language-typescript"><code class="language-typescript"><span class="token keyword">const</span> replacedUrl <span class="token operator">=</span> url
+  <span class="token punctuation">.</span><span class="token method function property-access">replace</span><span class="token punctuation">(</span><span class="token string">'mock-server/'</span><span class="token punctuation">,</span> <span class="token string">''</span><span class="token punctuation">)</span>  <span class="token comment">// 先頭の 'mock-server/' を除去する : これによりトップレベルのパスは置換対象外にする</span>
+  <span class="token punctuation">.</span><span class="token method function property-access">replace</span><span class="token punctuation">(</span><span class="token regex"><span class="token regex-delimiter">/</span><span class="token regex-source language-regex">\/.</span><span class="token regex-delimiter">/</span><span class="token regex-flags">g</span></span><span class="token punctuation">,</span> <span class="token punctuation">(</span>match<span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+    <span class="token comment">// '/a' 部分を取得し、'A' と大文字化する : これにより 'book/genres' は最終的に 'bookGenres' と置換される</span>
+    <span class="token keyword">return</span> match<span class="token punctuation">.</span><span class="token method function property-access">replace</span><span class="token punctuation">(</span><span class="token regex"><span class="token regex-delimiter">/</span><span class="token regex-source language-regex">\/</span><span class="token regex-delimiter">/</span><span class="token regex-flags">g</span></span><span class="token punctuation">,</span> <span class="token string">''</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">toUpperCase</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span>
+  <span class="token punctuation">.</span><span class="token method function property-access">replace</span><span class="token punctuation">(</span><span class="token regex"><span class="token regex-delimiter">/</span><span class="token regex-source language-regex">^</span><span class="token regex-delimiter">/</span></span><span class="token punctuation">,</span> <span class="token string">'mock-server/'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment">// 先頭に 'mock-server/' を再度付与する</span>
+</code></pre>
+<p>面倒だが、必要なパスだけ置換するようにした方が良いかも。</p>
+<h2 id="実際にデータを取得してみる"><a class="header-link" href="#実際にデータを取得してみる"><span class="header-link-mark"></span></a>実際にデータを取得してみる</h2>
+<p>それでは実際にデータを取得してみよう。コンポーネントの HTML に以下を追加する。</p>
+<pre class="language-html"><code class="language-html"><span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>li</span><span class="token punctuation">></span></span><span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>button</span> <span class="token attr-name">type</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>button<span class="token punctuation">"</span></span> <span class="token attr-name">(click)</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>doGet(<span class="token punctuation">'</span>book/genres<span class="token punctuation">'</span>)<span class="token punctuation">"</span></span><span class="token punctuation">></span></span>本のジャンル情報を取得する<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>button</span><span class="token punctuation">></span></span><span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>li</span><span class="token punctuation">></span></span>
+</code></pre>
+<p>これで <code>mock-server/book/genres</code> への HTTP 通信が発生するが、<code>parseRequestUrl()</code> が URL を <code>/mock-server/bookGenres</code> に変換するため、<code>api</code> に宣言された <code>bookGenres</code> オブジェクトが取得され、以下の結果が得られる。</p>
+<pre class="language-json"><code class="language-json"><span class="token punctuation">[</span> <span class="token punctuation">{</span> <span class="token property">"id"</span><span class="token operator">:</span> <span class="token number">1</span><span class="token punctuation">,</span> <span class="token property">"genre"</span><span class="token operator">:</span> <span class="token string">"Sience Fiction"</span> <span class="token punctuation">}</span><span class="token punctuation">,</span> <span class="token punctuation">{</span> <span class="token property">"id"</span><span class="token operator">:</span> <span class="token number">2</span><span class="token punctuation">,</span> <span class="token property">"genre"</span><span class="token operator">:</span> <span class="token string">"Drama"</span> <span class="token punctuation">}</span><span class="token punctuation">,</span> <span class="token punctuation">{</span> <span class="token property">"id"</span><span class="token operator">:</span> <span class="token number">3</span><span class="token punctuation">,</span> <span class="token property">"genre"</span><span class="token operator">:</span> <span class="token string">"History"</span> <span class="token punctuation">}</span> <span class="token punctuation">]</span>
+</code></pre>
+<p>思ったように動いてくれた。</p>
+<h2 id="レスポンスデータをカスタマイズする"><a class="header-link" href="#レスポンスデータをカスタマイズする"><span class="header-link-mark"></span></a>レスポンスデータをカスタマイズする</h2>
+<p>今度は全く別の例。</p>
+<p>次は、<code>/blood-type</code> というパスにアクセスした時に、配列形式ではなく単一のオブジェクトを返却するようにしたい。</p>
+<p>Angular In Memory Web API の標準仕様では、前述の <code>/users</code> のように、配列形式でしかデータを取得できないはずだ。しかし、<em><code>responseInterceptor()</code></em> というメソッドをオーバーライドすると、<strong>特定のパスへのアクセス時にレスポンスデータをカスタマイズ</strong>できるのだ。</p>
+<p>実際に実装してみる。<code>MockWebApiService</code> に以下のように <code>blood-type</code> モックデータと <code>responseInterceptor()</code> メソッドを追加する。</p>
+<pre class="language-typescript"><code class="language-typescript"><span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">Injectable</span> <span class="token punctuation">}</span></span> <span class="token keyword">from</span> <span class="token string">'@angular/core'</span><span class="token punctuation">;</span>
+
+<span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">InMemoryDbService</span><span class="token punctuation">,</span> <span class="token maybe-class-name">ParsedRequestUrl</span><span class="token punctuation">,</span> <span class="token maybe-class-name">RequestInfoUtilities</span> <span class="token punctuation">}</span></span> <span class="token keyword">from</span> <span class="token string">'angular-in-memory-web-api'</span><span class="token punctuation">;</span>
+
+@<span class="token function"><span class="token maybe-class-name">Injectable</span></span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+<span class="token keyword">export</span> <span class="token keyword">class</span> <span class="token class-name"><span class="token maybe-class-name">MockWebApiService</span></span> <span class="token keyword">implements</span> <span class="token class-name"><span class="token maybe-class-name">InMemoryDbService</span></span> <span class="token punctuation">{</span>
+  <span class="token doc-comment comment">/** モックデータ : 標準的な Web API の URL と対応させるため、データは配列で定義し、各要素は id プロパティが必須 */</span>
+  <span class="token keyword">private</span> api<span class="token operator">:</span> <span class="token builtin">any</span> <span class="token operator">=</span> <span class="token punctuation">{</span>
+    users<span class="token operator">:</span> <span class="token punctuation">[</span> <span class="token comment">/* 中略 */</span> <span class="token punctuation">]</span><span class="token punctuation">,</span>
+    bookGenres<span class="token operator">:</span> <span class="token punctuation">[</span> <span class="token comment">/* 中略 */</span> <span class="token punctuation">]</span><span class="token punctuation">,</span>
+    <span class="token comment">// 血液型情報 : '/blood-type' で内部のオブジェクト部分のみ返却させる</span>
+    <span class="token string">'blood-type'</span><span class="token operator">:</span> <span class="token punctuation">[</span>
+      <span class="token punctuation">{</span>
+        id<span class="token operator">:</span> <span class="token number">0</span><span class="token punctuation">,</span>
+        <span class="token comment">// この部分を返却する</span>
+        data<span class="token operator">:</span> <span class="token punctuation">{</span>
+          <span class="token constant">A</span><span class="token operator">:</span> <span class="token string">'A型'</span><span class="token punctuation">,</span>
+          <span class="token constant">B</span><span class="token operator">:</span> <span class="token string">'B型'</span><span class="token punctuation">,</span>
+          <span class="token constant">AB</span><span class="token operator">:</span> <span class="token string">'AB型'</span><span class="token punctuation">,</span>
+          <span class="token constant">O</span><span class="token operator">:</span> <span class="token string">'O型'</span>
+        <span class="token punctuation">}</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">]</span>
+  <span class="token punctuation">}</span><span class="token punctuation">;</span>
+  
+  <span class="token comment">// …中略…</span>
+  
+  
+  <span class="token doc-comment comment">/**
+   * InMemoryDbService から継承 : データを返却する処理
+   * 
+   * <span class="token keyword">@param</span> <span class="token parameter">responseOptions</span> レスポンスデータを含むオブジェクト
+   * <span class="token keyword">@param</span> <span class="token parameter">requestInfo</span> リクエスト情報
+   */</span>
+  <span class="token keyword">public</span> <span class="token function">responseInterceptor</span><span class="token punctuation">(</span>responseOptions<span class="token operator">:</span> <span class="token builtin">any</span><span class="token punctuation">,</span> requestInfo<span class="token operator">:</span> <span class="token builtin">any</span><span class="token punctuation">)</span><span class="token operator">:</span> <span class="token builtin">any</span> <span class="token punctuation">{</span>
+    <span class="token comment">// '/blood-type' へのアクセス時は内部のオブジェクトデータを返却する</span>
+    <span class="token keyword">if</span><span class="token punctuation">(</span>requestInfo<span class="token punctuation">.</span><span class="token property-access">collectionName</span> <span class="token operator">===</span> <span class="token string">'blood-type'</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      responseOptions<span class="token punctuation">.</span><span class="token property-access">body</span> <span class="token operator">=</span> <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">api</span><span class="token punctuation">[</span><span class="token string">'blood-type'</span><span class="token punctuation">]</span><span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">.</span><span class="token property-access">data</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+    
+    <span class="token keyword">return</span> responseOptions<span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+</code></pre>
+<p><code>responseInterceptor()</code> で <code>responseOptions.body</code> にお好みのデータを代入し直してやれば、レスポンスデータを変更できる。ココでは、キー <code>blood-type</code> の配列0番目の要素が持つ <code>data</code> プロパティの値、つまり連想配列オブジェクトを返却するようにした。</p>
+<p>なお、ココで参照している <code>requestInfo.collectionName</code> は、<code>parseRequestUrl()</code> メソッドで変換した後の URL となる。つまり、先程の書籍一覧のレスポンスデータを操作したい場合は、<code>'book/genres'</code> ではなく <em><code>'bookGenres'</code></em> であるかどうかでチェックしないといけない。</p>
+<p>HTML 側にこのパスを叩くボタンを追加して、実際に動作させてみよう。</p>
+<pre class="language-html"><code class="language-html"><span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>li</span><span class="token punctuation">></span></span><span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>button</span> <span class="token attr-name">type</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>button<span class="token punctuation">"</span></span> <span class="token attr-name">(click)</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>doGet(<span class="token punctuation">'</span>blood-type<span class="token punctuation">'</span>)<span class="token punctuation">"</span></span><span class="token punctuation">></span></span>血液型情報を取得する<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>button</span><span class="token punctuation">></span></span><span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>li</span><span class="token punctuation">></span></span>
+</code></pre>
+<p>これで、以下のような結果が得られるはずだ。</p>
+<pre class="language-json"><code class="language-json"><span class="token punctuation">{</span> <span class="token property">"A"</span><span class="token operator">:</span> <span class="token string">"A型"</span><span class="token punctuation">,</span> <span class="token property">"B"</span><span class="token operator">:</span> <span class="token string">"B型"</span><span class="token punctuation">,</span> <span class="token property">"AB"</span><span class="token operator">:</span> <span class="token string">"AB型"</span><span class="token punctuation">,</span> <span class="token property">"O"</span><span class="token operator">:</span> <span class="token string">"O型"</span> <span class="token punctuation">}</span>
+</code></pre>
+<h2 id="まとめ"><a class="header-link" href="#まとめ"><span class="header-link-mark"></span></a>まとめ</h2>
+<ul>
+  <li><code>angular-in-memory-web-api</code> というパッケージを使うと、Angular4 以降のアプリでモック API を実現できる。</li>
+  <li><code>InMemoryDbService</code> を継承したクラスを用意し、<code>createDb()</code> メソッドをオーバーライドすることで、URL と返却データを定義する。</li>
+  <li><code>parseRequestUrl()</code> をオーバーライドして URL 文字列を変換すれば、2階層以上のパスでもアクセスできる。</li>
+  <li><code>responseInterceptor()</code> をオーバーライドすると、特定のパスでレスポンスデータをカスタマイズできる。</li>
+</ul>
+<p>かなり機能が多く、まだまだ紹介しきれていないノウハウも多々ある。設定の癖も強いので、一つずつ調べながら実装しよう。</p>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2018-02-09</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2018-02-09</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>Heroku Scheduler を使って定期的に Node.js スクリプトにバッチ処理を行わせてみる：Heroku 無料枠の話と Dyno の概念も整理 - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2018/12/18-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2018/index.html">2018年</a></li>
+            <li><a href="/blog/2018/12/index.html">12月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2018-12-18</time></div>
+        <h1 id="page-title">Heroku Scheduler を使って定期的に Node.js スクリプトにバッチ処理を行わせてみる：Heroku 無料枠の話と Dyno の概念も整理</h1>
+
+<p>Node.js 製の Heroku アプリを作った。Express + Angular な構成で動作しているのだが、Heroku Postgres に溜め込んでいるデータを定期的に削除したくて、バッチ処理を組み込みたくなった。</p>
+<p>調べてみると、Heroku には <strong>Heroku Scheduler</strong> というアドオンがあり、コレを使って指定のタイミングで任意の Node.js スクリプトを実行できるようなので、試してみた。</p>
+<ul>
+  <li><a href="https://devcenter.heroku.com/articles/scheduler">Heroku Scheduler | Heroku Dev Center</a></li>
+</ul>
+<p>今回、Heroku の無料枠の概要と、「Dyno」と呼ばれる仮想環境の概念も整理してみようと思う。</p>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#%E3%82%A2%E3%83%89%E3%82%AA%E3%83%B3%E3%81%AE%E3%82%A4%E3%83%B3%E3%82%B9%E3%83%88%E3%83%BC%E3%83%AB%E3%81%AB%E3%81%AF%E3%82%AF%E3%83%AC%E3%82%B8%E3%83%83%E3%83%88%E3%82%AB%E3%83%BC%E3%83%89%E7%99%BB%E9%8C%B2%E3%81%8C%E5%BF%85%E8%A6%81">アドオンのインストールにはクレジットカード登録が必要</a></li>
+  <li><a href="#%E3%82%B3%E3%82%B3%E3%81%A7-heroku-%E3%81%AE%E7%84%A1%E6%96%99%E6%9E%A0%E3%83%BB%E6%96%99%E9%87%91%E4%BD%93%E7%B3%BB%E3%82%92%E3%81%8A%E3%81%95%E3%82%89%E3%81%84">ココで Heroku の無料枠・料金体系をおさらい</a></li>
+  <li><a href="#heroku-scheduler-%E3%81%AE%E4%BB%95%E7%B5%84%E3%81%BF">Heroku Scheduler の仕組み</a></li>
+  <li><a href="#%E3%82%AF%E3%83%AC%E3%82%B8%E3%83%83%E3%83%88%E3%82%AB%E3%83%BC%E3%83%89%E7%99%BB%E9%8C%B2%E5%AE%8C%E4%BA%86%E3%83%BBheroku-scheduler-%E3%82%92%E3%82%A4%E3%83%B3%E3%82%B9%E3%83%88%E3%83%BC%E3%83%AB%E3%81%99%E3%82%8B">クレジットカード登録完了・Heroku Scheduler をインストールする</a></li>
+  <li><a href="#%E3%83%AF%E3%83%BC%E3%82%AF%E3%82%B9%E3%83%9A%E3%83%BC%E3%82%B9%E3%81%AF-web-dyno-%E3%81%A8%E5%85%B1%E7%94%A8%E3%81%A7%E3%81%8D%E3%82%8B">ワークスペースは Web Dyno と共用できる</a></li>
+  <li><a href="#%E3%82%B5%E3%83%B3%E3%83%97%E3%83%AB%E3%82%B9%E3%82%AF%E3%83%AA%E3%83%97%E3%83%88%E3%81%AE%E7%94%A8%E6%84%8F">サンプルスクリプトの用意</a></li>
+  <li><a href="#%E3%82%B9%E3%82%B1%E3%82%B8%E3%83%A5%E3%83%BC%E3%83%A9%E3%81%AE%E8%A8%AD%E5%AE%9A%E3%81%AE%E4%BB%95%E6%96%B9">スケジューラの設定の仕方</a></li>
+  <li><a href="#%E3%82%B3%E3%83%AC%E3%81%A0%E3%81%91%E3%81%A7-ok">コレだけで OK</a></li>
+</ul>
+<h2 id="アドオンのインストールにはクレジットカード登録が必要"><a class="header-link" href="#アドオンのインストールにはクレジットカード登録が必要"><span class="header-link-mark"></span></a>アドオンのインストールにはクレジットカード登録が必要</h2>
+<p>Heroku Scheduler アドオンは無料で利用できるのだが、使いすぎると課金対象になるため、無料枠での利用に留めておく場合でも、クレジットカード登録が必要になる。</p>
+<p>アカウント登録直後、Heroku CLI でアドオンのインストールを試みると、以下のように「クレジットカード登録してね」と言われる。</p>
+<pre class="language-bash"><code class="language-bash">$ heroku addons:create scheduler:standard
+Creating scheduler:standard on example-app<span class="token punctuation">..</span>. <span class="token operator">!</span>
+ <span class="token operator">!</span>    Please verify your account to <span class="token function">install</span> this add-on plan <span class="token punctuation">(</span>please enter a
+ <span class="token operator">!</span>    credit card<span class="token punctuation">)</span> For <span class="token function">more</span> information, see
+ <span class="token operator">!</span>    https://devcenter.heroku.com/categories/billing Verify now at
+ <span class="token operator">!</span>    https://heroku.com/verify
+</code></pre>
+<p>仕方がないので、<code>https://heroku.com/verify</code> にアクセスしてクレジットカードを登録した。</p>
+<p>
+  <img src="18-01-04.png" alt="クレカ登録">
+</p>
+<h2 id="ココで-heroku-の無料枠・料金体系をおさらい"><a class="header-link" href="#ココで-heroku-の無料枠・料金体系をおさらい"><span class="header-link-mark"></span></a>ココで Heroku の無料枠・料金体系をおさらい</h2>
+<p>なんだか課金されそうになっても困るので、ここらで Heroku の料金体系をおさらいしておこうと思う。</p>
+<p>Heroku に登録すると利用できるようになる仮想環境は、「Dyno」と呼ばれる。Heroku に登録した直後の無料枠としてもらえる Dyno は <em>Free-Dyno</em> と総称される。この仮想環境は<strong>月550時間分使える。</strong></p>
+<p>Web アプリとして稼動する Dyno のことは <em>Web Dyno</em> と表現する。この無料枠の Web Dyno は、<em>30分間アプリにアクセスがないと Sleep する。</em>Sleep している間は利用時間に含まれない。Sleep している状態で Heroku アプリへのアクセスがあると、その場で仮想環境を起動してレスポンスを返すため、その際は仮想環境の起動を待つことになりレスポンスが遅れる。自分の体感では、15〜30秒くらい待たされて Web アプリが開く感じ。</p>
+<p>月550時間というと、Heroku アプリを24時間アクティブにしていられるのは22日とちょっと、ということになる。平日のみ稼動していれば良いような個人開発のアプリなら、コレでも良いかもしれない。</p>
+<p>さて、クレジットカードを登録すると、勿論有料プランも利用できるようになるワケだが、自分としては有料プランは使う気がない。今回の Herkou Scheduler も、無料の枠内で利用したいのだ。</p>
+<p>ただ、クレジットカードを登録すると、アカウントの認証が通ったということになり、Free-Dyno の利用時間が<em>450時間追加</em>され、<strong>月1000時間</strong>まで使えるようになる。</p>
+<p>月1000時間というと、Heroku アプリを24時間アクティブにしておいても41日間使える。1ヶ月に1アプリはまるまる起動させっぱなしにできるだけの容量がもらえている。</p>
+<p>以前は「Free Dyno の場合、1日に6時間は Sleep させないといけない」というルールだったようだが、現在はこのルールはないので、1アプリに限れば、無料枠だけで24時間連続稼動は可能である。なお、「誰もアクセスしていないのに Web Dyno を30分間で Sleep させないようにする」にはテクニックが必要なので、これは別途紹介しようと思う。</p>
+<ul>
+  <li>参考：<a href="https://qiita.com/tonishi/items/7904dfcdabb7acc8a286">Herokuが再度料金体系変更 - flexible free dyno hoursで月1000時間の無料枠（ただし全アプリ横断で） - Qiita</a></li>
+</ul>
+<p>このような利用状況は、Account の Billing ページで確認できる。</p>
+<ul>
+  <li><a href="https://dashboard.heroku.com/account/billing">Heroku</a></li>
+</ul>
+<h2 id="heroku-scheduler-の仕組み"><a class="header-link" href="#heroku-scheduler-の仕組み"><span class="header-link-mark"></span></a>Heroku Scheduler の仕組み</h2>
+<p>Heroku Scheduler は、Web Dyno とは別の <strong>One-Off Dyno</strong> という仮想環境が立ち上がって実行される。一時的な処理を行うための Dyno で、<code>$ heroku run</code> コマンドを利用した時もこの Dyno が立ち上がる。この One-Off Dyno も、実行にかかった時間分だけ、Free-Dyno の利用時間から引かれる。</p>
+<p>つまり、Free Dyno の総利用可能時間である月1000時間のうち、One-Off Dyno を500時間分使ったとしたら、Web Dyno が無料枠で起動できる時間は500時間分になるワケである。これでは30日間・24時間立ち上げっぱなしの Web アプリには出来ないので、注意が必要である。</p>
+<p>ちなみに、この他に Worker Dyno と呼ばれるバックグラウンド処理を行う Dyno タイプも存在する。今回は扱わないが、Worker Dyno の利用時間も、Free Dyno の総利用時間から引かれるので、1000時間をどの Dyno に割り当てるかは注意が必要である。</p>
+<p>これらは <code>$ heroku ps</code> コマンドで別々に確認できるとおり、<strong>実行するプロセスが違う</strong>ところが特徴である。実行するプロセスは違うものの、<strong>1つのアプリ内のワークスペースは共用</strong>される。この点は後で詳しく説明する。</p>
+<ul>
+  <li>参考：<a href="https://devcenter.heroku.com/articles/one-off-dynos">One-Off Dynos | Heroku Dev Center</a></li>
+  <li>参考：<a href="http://www.stockdog.work/entry/2017/04/08/233848">herokuのworker dynoとweb dynoの違いって何? - ストックドッグ</a></li>
+</ul>
+<h2 id="クレジットカード登録完了・heroku-scheduler-をインストールする"><a class="header-link" href="#クレジットカード登録完了・heroku-scheduler-をインストールする"><span class="header-link-mark"></span></a>クレジットカード登録完了・Heroku Scheduler をインストールする</h2>
+<p>さてさて、本筋に戻ろう。Heroku アカウントにクレジットカード情報を登録したので、再度 Heroku Scheduler アドオンをインストールしてみる。</p>
+<pre class="language-bash"><code class="language-bash">$ heroku addons:create scheduler:standard
+Creating scheduler:standard on example-app<span class="token punctuation">..</span>. <span class="token function">free</span>
+To manage scheduled <span class="token function">jobs</span> run:
+heroku addons:open scheduler
+
+Created scheduler-flat-67591
+Use heroku addons:docs scheduler to view documentation
+</code></pre>
+<p>このようにインストールできた。Web 上のダッシュボードを見ると、「Resources」タブの中に「Heroku Scheduler」というモノが登録された。</p>
+<p>
+  <img src="18-01-03.png" alt="Heroku Scheduler">
+</p>
+<p>コレをクリックすると、次の URL に遷移する。</p>
+<ul>
+  <li><a href="https://scheduler.heroku.com/dashboard">https://scheduler.heroku.com/dashboard</a></li>
+</ul>
+<p>ココで、その Heroku アプリの Scheduler を設定できる。</p>
+<p>
+  <img src="18-01-02.png" alt="Scheduler を設定できる">
+</p>
+<h2 id="ワークスペースは-web-dyno-と共用できる"><a class="header-link" href="#ワークスペースは-web-dyno-と共用できる"><span class="header-link-mark"></span></a>ワークスペースは Web Dyno と共用できる</h2>
+<p>今回、既に Express + Angular なアプリを公開している Heroku プロジェクトに対してスケジューラを追加したワケだが、このスケジューラから実行する Node.js スクリプトで <code>require()</code> していたりしたら、その依存モジュールはどうやって導入するのだろうか。</p>
+<p>ココが分からなくて色々調べていたのだが、どうやらこの Heroku Scheduler は、<em>Web Dyno にデプロイされているワークスペースのファイルを共用</em>できるので、プロジェクトルートの <code>package.json</code> に依存モジュールを書いておけば良いのだ。</p>
+<p>イメージを表すとこんな感じ。</p>
+<pre><code>example-app/      ← Heroku に上げている Git プロジェクトのルート
+├ package.json   ← Express・Angular およびスケジューラで利用する依存モジュールを書いておく
+├ node_modules/  ← Heroku にデプロイ時、依存パッケージがインストールされるので、このようなディレクトリができていると推測される
+├ server.js      ← Express サーバを起動するファイル。npm start でコレが実行され Web Dyno が動作する
+├ src/           ← Angular のソースファイル。postinstall でビルドされ dist ディレクトリができる
+├ dist/          ← postinstall で生成され、server.js が配信する Angular の成果物ファイル群
+└ bin/           ← スケジューラから実行するスクリプトを置いておくディレクトリを適当に作る
+   └ script.js   ← スケジューラから実行するスクリプト。利用する依存パッケージは package.json に記載してある
+</code></pre>
+<p>Web Dyno で使われているファイルは <code>package.json</code> (デプロイ時の処理)、<code>server.js</code>、<code>dist/</code> あたりになるが、デプロイ時に <code>npm install</code> が実行されることから、ワークスペースには <code>node_modules/</code> 相当のディレクトリが存在していることになる。コレによって <code>server.js</code> が依存する <code>express</code> パッケージが動作しているワケだ。</p>
+<p>このような Heroku 上のワークスペースは、Heroku Scheduler 利用時も共用しているので、極端な話、<code>bin/script.js</code> から <code>dist/index.html</code> などを参照したりすることもできるのだ。依存モジュールも Heroku デプロイ時に実行される <code>npm install</code> でインストールされているから、<code>bin/script.js</code> から <code>require('moment')</code> みたいなこともできるというワケ。</p>
+<p>最初この仕組みがよく分からなくて、<em>Heroku Scheduler 用に別の <code>package.json</code> を用意したりしないといけないかしら？とか思っていたのだが、そんな必要はない</em>ことが分かって良かった。</p>
+<h2 id="サンプルスクリプトの用意"><a class="header-link" href="#サンプルスクリプトの用意"><span class="header-link-mark"></span></a>サンプルスクリプトの用意</h2>
+<p>先程のディレクトリ構成のとおり、Express + Angular なプロジェクトに、スケジューラから呼ぶスクリプトを追加しようと思う。</p>
+<p><code>bin/</code> というディレクトリ名はただの慣例なので、自由に決められる。<code>script.js</code> の内容はお試しで以下のような簡素なモノにしておく。</p>
+<pre class="language-javascript"><code class="language-javascript">#<span class="token operator">!</span><span class="token operator">/</span>usr<span class="token operator">/</span>bin<span class="token operator">/</span>env node
+
+<span class="token keyword">const</span> moment <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'moment'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'バッチ処理'</span><span class="token punctuation">,</span> <span class="token function">moment</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p><code>moment</code> を <code>require()</code> して、ただ現在時刻をコンソール出力するだけのスクリプトにした。</p>
+<p>moment.js を使うので、Express サーバや Angular アプリで使用していなければインストールし、<code>dependencies</code> に追記しておく。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">npm</span> <span class="token function">install</span> --save moment
+</code></pre>
+<p><code>package.json</code> の <code>dependencies</code> は、以下のような内容になるかと思う。</p>
+<pre class="language-json"><code class="language-json"><span class="token property">"dependencies"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+  <span class="token comment">// ↓ Angular で使用するモノたち</span>
+  <span class="token property">"@angular-devkit/build-angular"</span><span class="token operator">:</span> <span class="token string">"0.10.4"</span><span class="token punctuation">,</span>
+  <span class="token property">"@angular/animations"</span><span class="token operator">:</span> <span class="token string">"7.0.2"</span><span class="token punctuation">,</span>
+  <span class="token property">"@angular/cli"</span><span class="token operator">:</span> <span class="token string">"7.0.4"</span><span class="token punctuation">,</span>
+  <span class="token property">"@angular/common"</span><span class="token operator">:</span> <span class="token string">"7.0.2"</span><span class="token punctuation">,</span>
+  <span class="token property">"@angular/compiler"</span><span class="token operator">:</span> <span class="token string">"7.0.2"</span><span class="token punctuation">,</span>
+  <span class="token property">"@angular/compiler-cli"</span><span class="token operator">:</span> <span class="token string">"7.0.2"</span><span class="token punctuation">,</span>
+  <span class="token property">"@angular/core"</span><span class="token operator">:</span> <span class="token string">"7.0.2"</span><span class="token punctuation">,</span>
+  <span class="token property">"@angular/forms"</span><span class="token operator">:</span> <span class="token string">"7.0.2"</span><span class="token punctuation">,</span>
+  <span class="token property">"@angular/http"</span><span class="token operator">:</span> <span class="token string">"7.0.2"</span><span class="token punctuation">,</span>
+  <span class="token property">"@angular/language-service"</span><span class="token operator">:</span> <span class="token string">"7.0.2"</span><span class="token punctuation">,</span>
+  <span class="token property">"@angular/platform-browser"</span><span class="token operator">:</span> <span class="token string">"7.0.2"</span><span class="token punctuation">,</span>
+  <span class="token property">"@angular/platform-browser-dynamic"</span><span class="token operator">:</span> <span class="token string">"7.0.2"</span><span class="token punctuation">,</span>
+  <span class="token property">"@angular/router"</span><span class="token operator">:</span> <span class="token string">"7.0.2"</span><span class="token punctuation">,</span>
+  <span class="token property">"@types/node"</span><span class="token operator">:</span> <span class="token string">"8.9.5"</span><span class="token punctuation">,</span>
+  <span class="token property">"codelyzer"</span><span class="token operator">:</span> <span class="token string">"4.5.0"</span><span class="token punctuation">,</span>
+  <span class="token property">"core-js"</span><span class="token operator">:</span> <span class="token string">"2.5.7"</span><span class="token punctuation">,</span>
+  <span class="token comment">// ↓ Express サーバ</span>
+  <span class="token property">"express"</span><span class="token operator">:</span> <span class="token string">"4.16.4"</span><span class="token punctuation">,</span>
+  <span class="token comment">// ↓ スケジューラで使用する moment</span>
+  <span class="token property">"moment"</span><span class="token operator">:</span> <span class="token string">"2.22.2"</span><span class="token punctuation">,</span>
+  <span class="token comment">// ↓ 以降また Angular で使用するモノたち</span>
+  <span class="token property">"node-sass"</span><span class="token operator">:</span> <span class="token string">"4.10.0"</span><span class="token punctuation">,</span>
+  <span class="token property">"rxjs"</span><span class="token operator">:</span> <span class="token string">"6.3.3"</span><span class="token punctuation">,</span>
+  <span class="token property">"ts-node"</span><span class="token operator">:</span> <span class="token string">"7.0.1"</span><span class="token punctuation">,</span>
+  <span class="token property">"tslint"</span><span class="token operator">:</span> <span class="token string">"5.11.0"</span><span class="token punctuation">,</span>
+  <span class="token property">"typescript"</span><span class="token operator">:</span> <span class="token string">"3.1.6"</span><span class="token punctuation">,</span>
+  <span class="token property">"zone.js"</span><span class="token operator">:</span> <span class="token string">"0.8.26"</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>あとはこのプロジェクトを <code>$ git push heroku master</code> で Push して、moment がインストールされており、<code>bin/script.js</code> が存在している状態で、Web Dyno が動作しているようなワークスペース状況にしてやれば準備 OK。</p>
+<h2 id="スケジューラの設定の仕方"><a class="header-link" href="#スケジューラの設定の仕方"><span class="header-link-mark"></span></a>スケジューラの設定の仕方</h2>
+<p>さて、Heroku Scheduler のダッシュボードをブラウザで開いたら、「Add new job」をクリックしてジョブを定義する。</p>
+<p>
+  <img src="18-01-01.png" alt="スケジュール設定">
+</p>
+<ul>
+  <li><code>$</code> の後ろに、実行するコマンドを書ける。<em>今回はココに <code>node bin/script.js</code> と記述する。</em>
+    <ul>
+      <li><code>node</code> コマンドが使えるのは、<code>package.json</code> の <code>engines</code> プロパティでバージョンを含めて定義しているため。このワークスペース内で、指定のバージョンの Node.js (<code>node</code>)、および <code>npm</code> コマンドが実行できる、ということだ。</li>
+      <li>Heroku は Linux ベースの仮想環境が起動しているので、<code>curl</code> などのコマンドも叩けるし、シェルスクリプトを置いておいて実行することもできる。</li>
+    </ul>
+  </li>
+  <li><code>DYNO SIZE</code> は「Free」しかないと思うのでこのまま。</li>
+  <li><code>FREQUENCY</code> は繰り返し方の指定。
+    <ul>
+      <li><code>Daily</code> は1日に1回、指定の時刻に実行。</li>
+      <li><code>Hourly</code> は1時間ごとに、決まった分単位で実行。</li>
+      <li><code>Every 10 minutes</code> は10分ごとに実行。</li>
+    </ul>
+  </li>
+  <li><code>Daily</code> を選ぶと、UTC で実行時刻を設定できる。毎時 <code>:00</code> 分か <code>:30</code> 分かの30分単位でしか選べないので、<code>8:45</code> に実行、ということはできないので注意。また、<strong>UTC で指定</strong>するので、日本時間 (JST) の朝9時に実行したい場合は、UTC でいうと0時、<code>0:00</code> と指定する必要がある。
+    <ul>
+      <li>参考：<a href="https://www.jisakeisan.com/?t1=utc&#x26;t2=jst">UTC/協定世界時とJST/日本標準時の変換と時差の計算</a> … 9時間差の計算で混乱したらツールを使おう。w</li>
+    </ul>
+  </li>
+  <li><code>Hourly</code> を選択すると、10分間隔で「分」数を指定できる。この設定を使えば、毎時「30分」に実行、といった処理ができる。</li>
+</ul>
+<p>今回の自分の用途では、夜間バッチのイメージに近いので、日本時間の夜0時に <code>bin/script.js</code> を実行したい。そこで、<code>FREQUENCY</code> は <code>Daily</code> にし、<code>NEXT DUE</code> は「<code>15:00</code> UTC」(= JST 0時) とする。コレで「Save」すれば準備完了だ。</p>
+<p>今回のサンプルスクリプトはコンソール出力するだけのモノなので、<code>$ heroku logs</code> か、ダッシュボード上の「View logs」で、0時頃にジョブが実行されているか確認してみよう。きちんと実行されていれば、Heroku Scheduler ダッシュボードの <code>LAST RUN</code> に実行された時刻が表示されるはずだ。</p>
+<h2 id="コレだけで-ok"><a class="header-link" href="#コレだけで-ok"><span class="header-link-mark"></span></a>コレだけで OK</h2>
+<p>最初色々な懸念点があったが、Web アプリ部分が稼動する Web Dyno と、Heroku Scheduler が稼動する One-Off Dyno とでは、同じ Heroku プロジェクト内のファイルを利用できるので、Web アプリに対する定期的なジョブはほとんど設定要らずで組み込めることが分かった。</p>
+<p>1アカウントあたりの無料枠 (Free Dyno) は Web Dyno と One-Off Dyno との合計で、月1000時間分までである。もし Web Dyno を24時間稼動させるとすると、One-Off Dyno は1日あたり8時間分ぐらいまでしか動作させられないことになるので、スケジューラや <code>$ heroku run</code> コマンドを使う頻度には注意が必要だ。</p>
+<p>とはいえ、自分の場合は現状 Web Dyno を24時間稼動させっぱなしにはしないので、十分余裕をもって利用できているかなと思う。スケジューラによるジョブ設定もイイカンジ。</p>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2018-12-18</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2018-12-18</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

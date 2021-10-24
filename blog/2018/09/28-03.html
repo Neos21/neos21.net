@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>Sequelize を使って Express サーバから MySQL DB を操作してみる - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2018/09/28-03.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2018/index.html">2018年</a></li>
+            <li><a href="/blog/2018/09/index.html">09月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2018-09-28</time></div>
+        <h1 id="page-title">Sequelize を使って Express サーバから MySQL DB を操作してみる</h1>
+
+<p>Express サーバから MySQL DB とのやり取りを行おうと思い、Node.js で使える良い O/R マッパーがないか調べてみたところ、<strong>Sequelize</strong> というモノがよく使われているようだったので試してみた。</p>
+<ul>
+  <li><a href="http://docs.sequelizejs.com/">Sequelize | Sequelize ORM</a></li>
+  <li><a href="https://github.com/sequelize/sequelize">GitHub - sequelize/sequelize: An easy-to-use multi SQL dialect ORM for Node.js</a></li>
+</ul>
+<h2 id="インストール"><a class="header-link" href="#インストール"><span class="header-link-mark"></span></a>インストール</h2>
+<p>以下の公式ドキュメントに沿って、まずは Sequelize をインストールする。</p>
+<ul>
+  <li>参考：<a href="http://docs.sequelizejs.com/manual/installation/getting-started">http://docs.sequelizejs.com/manual/installation/getting-started</a></li>
+</ul>
+<p>Sequelize と同時に、利用する DB に合わせたパッケージもインストールする必要がある。今回は MySQL を使用するので <code>mysql2</code> というパッケージを入れることになる。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">npm</span> <span class="token function">install</span> -S sequelize mysql2
+</code></pre>
+<h2 id="単体で使ってみる"><a class="header-link" href="#単体で使ってみる"><span class="header-link-mark"></span></a>単体で使ってみる</h2>
+<p>まずは Express サーバに組み込まず、単独の Node.js スクリプトとして使ってみる。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword">const</span> <span class="token maybe-class-name">Sequelize</span> <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'sequelize'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// 接続先情報</span>
+<span class="token keyword">const</span> host     <span class="token operator">=</span> <span class="token string">'my-sql-server.com'</span><span class="token punctuation">;</span>
+<span class="token keyword">const</span> database <span class="token operator">=</span> <span class="token string">'my_db'</span><span class="token punctuation">;</span>
+<span class="token keyword">const</span> username <span class="token operator">=</span> <span class="token string">'【ユーザ名】'</span><span class="token punctuation">;</span>
+<span class="token keyword">const</span> password <span class="token operator">=</span> <span class="token string">'【パスワード】'</span><span class="token punctuation">;</span>
+
+<span class="token comment">// 接続開始</span>
+<span class="token keyword">const</span> sequelize <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">Sequelize</span><span class="token punctuation">(</span>database<span class="token punctuation">,</span> username<span class="token punctuation">,</span> password<span class="token punctuation">,</span> <span class="token punctuation">{</span>
+  host<span class="token operator">:</span> host<span class="token punctuation">,</span>
+  dialect<span class="token operator">:</span> <span class="token string">'mysql'</span><span class="token punctuation">,</span>
+  operatorsAliases<span class="token operator">:</span> <span class="token boolean">false</span><span class="token punctuation">,</span>
+  pool<span class="token operator">:</span> <span class="token punctuation">{</span>
+    min<span class="token operator">:</span> <span class="token number">0</span><span class="token punctuation">,</span>
+    max<span class="token operator">:</span> <span class="token number">5</span><span class="token punctuation">,</span>
+    acuire<span class="token operator">:</span> <span class="token number">30000</span><span class="token punctuation">,</span>
+    idle  <span class="token operator">:</span> <span class="token number">10000</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// 接続確認用</span>
+sequelize<span class="token punctuation">.</span><span class="token method function property-access">authenticate</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+  <span class="token punctuation">.</span><span class="token method function property-access">then</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span>       <span class="token arrow operator">=></span> <span class="token punctuation">{</span> <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'Success test connection'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>        <span class="token punctuation">}</span><span class="token punctuation">)</span>
+  <span class="token punctuation">.</span><span class="token keyword control-flow">catch</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token parameter">error</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span> <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'Failure test connection'</span><span class="token punctuation">,</span> error<span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// users テーブルに対応するモデルを作成する</span>
+<span class="token keyword">const</span> <span class="token maybe-class-name">UserModel</span> <span class="token operator">=</span> sequelize<span class="token punctuation">.</span><span class="token method function property-access">define</span><span class="token punctuation">(</span><span class="token string">'users'</span><span class="token punctuation">,</span> <span class="token punctuation">{</span>                                                               <span class="token comment">// CREATE TABLE 文で指定した内容は大体以下のような感じ</span>
+  id       <span class="token operator">:</span> <span class="token punctuation">{</span> field<span class="token operator">:</span> <span class="token string">'id'</span>        <span class="token punctuation">,</span> type<span class="token operator">:</span> <span class="token maybe-class-name">Sequelize</span><span class="token punctuation">.</span><span class="token constant">INTEGER</span><span class="token punctuation">(</span><span class="token number">11</span><span class="token punctuation">)</span> <span class="token punctuation">,</span> primaryKey<span class="token operator">:</span> <span class="token boolean">true</span><span class="token punctuation">,</span> autoIncrement<span class="token operator">:</span> <span class="token boolean">true</span> <span class="token punctuation">}</span><span class="token punctuation">,</span>  <span class="token comment">// INT(11)       NOT NULL  PRIMARY KEY  AUTO_INCREMENT</span>
+  userName <span class="token operator">:</span> <span class="token punctuation">{</span> field<span class="token operator">:</span> <span class="token string">'user_name'</span> <span class="token punctuation">,</span> type<span class="token operator">:</span> <span class="token maybe-class-name">Sequelize</span><span class="token punctuation">.</span><span class="token constant">STRING</span><span class="token punctuation">(</span><span class="token number">100</span><span class="token punctuation">)</span> <span class="token punctuation">,</span> allowNull<span class="token operator">:</span> <span class="token boolean">false</span>                      <span class="token punctuation">}</span><span class="token punctuation">,</span>  <span class="token comment">// VARCHAR(100)  NOT NULL</span>
+  address  <span class="token operator">:</span> <span class="token punctuation">{</span> field<span class="token operator">:</span> <span class="token string">'address'</span>   <span class="token punctuation">,</span> type<span class="token operator">:</span> <span class="token maybe-class-name">Sequelize</span><span class="token punctuation">.</span><span class="token constant">STRING</span><span class="token punctuation">(</span><span class="token number">500</span><span class="token punctuation">)</span>                                         <span class="token punctuation">}</span><span class="token punctuation">,</span>  <span class="token comment">// VARCHAR(500)  DEFAULT NULL</span>
+  createdAt<span class="token operator">:</span> <span class="token punctuation">{</span> field<span class="token operator">:</span> <span class="token string">'created_at'</span><span class="token punctuation">,</span> type<span class="token operator">:</span> <span class="token maybe-class-name">Sequelize</span><span class="token punctuation">.</span><span class="token constant">DATE</span>                                                <span class="token punctuation">}</span><span class="token punctuation">,</span>  <span class="token comment">// DATETIME      NOT NULL  DEFAULT CURRENT_TIMESTAMP</span>
+  updatedAt<span class="token operator">:</span> <span class="token punctuation">{</span> field<span class="token operator">:</span> <span class="token string">'updated_at'</span><span class="token punctuation">,</span> type<span class="token operator">:</span> <span class="token maybe-class-name">Sequelize</span><span class="token punctuation">.</span><span class="token constant">DATE</span>                                                <span class="token punctuation">}</span>   <span class="token comment">// DATETIME      NOT NULL  DEFAULT CURRENT_TIMESTAMP  ON UPDATE CURRENT_TIMESTAMP</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// 全件取得してみる</span>
+<span class="token maybe-class-name">UserModel</span><span class="token punctuation">.</span><span class="token method function property-access">findAll</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+  <span class="token punctuation">.</span><span class="token method function property-access">then</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token parameter">result</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+    <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'データ取得'</span><span class="token punctuation">,</span> result<span class="token punctuation">.</span><span class="token property-access">dataValues</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>こんなスクリプト <code>sequelize-test.js</code> を作成し、<code>$ node sequelize-test.js</code> で実行してみよう。<code>SELECT * FROM users;</code> 相当の SQL が実行され、データが取得できれば OK だ。</p>
+<p>DB 接続に関するところは特段説明も要らないだろう。接続先情報を書いて渡してやれば良い。プールの設定などもできるので、この辺を調整したい場合は公式のドキュメントを読む。</p>
+<h2 id="モデルの定義"><a class="header-link" href="#モデルの定義"><span class="header-link-mark"></span></a>モデルの定義</h2>
+<p>DB テーブルに対応するモデルを作成するのが、<code>sequelize.define()</code> 部分。ココで、DB 上はスネークケースで作成しているフィールド名を、キャメルケースのプロパティ名に直している。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword">const</span> <span class="token maybe-class-name">UserModel</span> <span class="token operator">=</span> sequelize<span class="token punctuation">.</span><span class="token method function property-access">define</span><span class="token punctuation">(</span><span class="token string">'【DB テーブル名】'</span><span class="token punctuation">,</span> <span class="token punctuation">{</span>
+  <span class="token comment">// +--- モデルのプロパティ        +--- フィールド定義 : 型を示す専用のメソッドを使う</span>
+  <span class="token comment">// |         +--- DB カラム名     |                             +--- primaryKey 指定などがあれば行える</span>
+  <span class="token comment">// |         |                    |                             |</span>
+  id       <span class="token operator">:</span> <span class="token punctuation">{</span> field<span class="token operator">:</span> <span class="token string">'id'</span>        <span class="token punctuation">,</span> type<span class="token operator">:</span> <span class="token maybe-class-name">Sequelize</span><span class="token punctuation">.</span><span class="token constant">INTEGER</span><span class="token punctuation">(</span><span class="token number">11</span><span class="token punctuation">)</span> <span class="token punctuation">,</span> primaryKey<span class="token operator">:</span> <span class="token boolean">true</span><span class="token punctuation">,</span> autoIncrement<span class="token operator">:</span> <span class="token boolean">true</span> <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  userName <span class="token operator">:</span> <span class="token punctuation">{</span> field<span class="token operator">:</span> <span class="token string">'user_name'</span> <span class="token punctuation">,</span> type<span class="token operator">:</span> <span class="token maybe-class-name">Sequelize</span><span class="token punctuation">.</span><span class="token constant">STRING</span><span class="token punctuation">(</span><span class="token number">100</span><span class="token punctuation">)</span> <span class="token punctuation">,</span> allowNull<span class="token operator">:</span> <span class="token boolean">false</span>                      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  address  <span class="token operator">:</span> <span class="token punctuation">{</span> field<span class="token operator">:</span> <span class="token string">'address'</span>   <span class="token punctuation">,</span> type<span class="token operator">:</span> <span class="token maybe-class-name">Sequelize</span><span class="token punctuation">.</span><span class="token constant">STRING</span><span class="token punctuation">(</span><span class="token number">500</span><span class="token punctuation">)</span>                                         <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  createdAt<span class="token operator">:</span> <span class="token punctuation">{</span> field<span class="token operator">:</span> <span class="token string">'created_at'</span><span class="token punctuation">,</span> type<span class="token operator">:</span> <span class="token maybe-class-name">Sequelize</span><span class="token punctuation">.</span><span class="token constant">DATE</span>                                                <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  updatedAt<span class="token operator">:</span> <span class="token punctuation">{</span> field<span class="token operator">:</span> <span class="token string">'updated_at'</span><span class="token punctuation">,</span> type<span class="token operator">:</span> <span class="token maybe-class-name">Sequelize</span><span class="token punctuation">.</span><span class="token constant">DATE</span>                                                <span class="token punctuation">}</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>DB 側と同じケースで命名していれば、このような変換は要らず、<code>userName: { type: Sequelize.STRING }</code> のように短く書いたりも出来る。詳しくは API リファレンスを参照しよう。</p>
+<h2 id="crud-操作してみる"><a class="header-link" href="#crud-操作してみる"><span class="header-link-mark"></span></a>CRUD 操作してみる</h2>
+<p>上の例では <code>Model#findAll()</code> というメソッドを使って、<code>users</code> テーブルの全データを取得した。このように、Promise でデータが送り返されてくる作りだ。</p>
+<p>以下に <code>UserModel</code> の場合の基本的な CRUD 操作のコードを書いておく。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token comment">// SELECT : 条件を指定して複数件取得する</span>
+<span class="token maybe-class-name">UserModel</span><span class="token punctuation">.</span><span class="token method function property-access">findAll</span><span class="token punctuation">(</span><span class="token punctuation">{</span>
+  where<span class="token operator">:</span> <span class="token punctuation">{</span>
+    address<span class="token operator">:</span> <span class="token string">'東京'</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span>
+  <span class="token punctuation">.</span><span class="token method function property-access">then</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token parameter">result</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+    <span class="token comment">// 結果の配列データは result.dataValues が持っている</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// SELECT : ID (キー) を指定して1件取得する</span>
+<span class="token maybe-class-name">UserModel</span><span class="token punctuation">.</span><span class="token method function property-access">findById</span><span class="token punctuation">(</span>id<span class="token punctuation">)</span>
+  <span class="token punctuation">.</span><span class="token method function property-access">then</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token parameter">result</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+    <span class="token comment">// 結果のオブジェクトは result.dataValues が持っている</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// INSERT : 新規追加</span>
+<span class="token comment">//   id は自動採番させるため指定しない (指定するとその内容で INSERT される)</span>
+<span class="token comment">//   created_at・updated_at も DB 側に自動更新させるため未指定</span>
+<span class="token maybe-class-name">UserModel</span><span class="token punctuation">.</span><span class="token method function property-access">create</span><span class="token punctuation">(</span><span class="token punctuation">{</span>
+  userName<span class="token operator">:</span> <span class="token string">'山田 太郎'</span><span class="token punctuation">,</span>
+  address <span class="token operator">:</span> <span class="token string">'北海道'</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span>
+  <span class="token punctuation">.</span><span class="token method function property-access">then</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token parameter">result</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+    <span class="token comment">// 新規追加できた結果オブジェクトは result.dataValues が返してくれる</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// UPDATE : 更新</span>
+<span class="token maybe-class-name">UserModel</span><span class="token punctuation">.</span><span class="token method function property-access">update</span><span class="token punctuation">(</span><span class="token punctuation">{</span>
+  <span class="token comment">// 更新したい Key・Value を指定する</span>
+  userName<span class="token operator">:</span> <span class="token string">'田中 邦衛'</span><span class="token punctuation">,</span>
+  address <span class="token operator">:</span> <span class="token string">'沖縄'</span>
+<span class="token punctuation">}</span><span class="token punctuation">,</span> <span class="token punctuation">{</span>
+  <span class="token comment">// 更新対象を指定する</span>
+  where<span class="token operator">:</span> <span class="token punctuation">{</span>
+    id<span class="token operator">:</span> <span class="token number">29</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token comment">// 更新するフィールド名を指定する</span>
+  fields<span class="token operator">:</span> <span class="token punctuation">[</span>
+    <span class="token string">'userName'</span><span class="token punctuation">,</span>
+    <span class="token string">'address'</span>
+  <span class="token punctuation">]</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span>
+  <span class="token punctuation">.</span><span class="token method function property-access">then</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span> <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// DELETE : 削除</span>
+<span class="token maybe-class-name">UserModel</span><span class="token punctuation">.</span><span class="token method function property-access">destroy</span><span class="token punctuation">(</span><span class="token punctuation">{</span>
+  <span class="token comment">// 削除対象を指定する</span>
+  where<span class="token operator">:</span> <span class="token punctuation">{</span>
+    id<span class="token operator">:</span> <span class="token number">42</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span>
+  <span class="token punctuation">.</span><span class="token method function property-access">then</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span> <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>他にも <code>findOrCreate</code> や <code>upsert</code> など、便利なメソッドが多数用意されている。</p>
+<ul>
+  <li>参考：<a href="http://docs.sequelizejs.com/manual/tutorial/models-usage.html">Manual | Sequelize</a></li>
+</ul>
+<h2 id="express-サーバに組み込んでみる"><a class="header-link" href="#express-サーバに組み込んでみる"><span class="header-link-mark"></span></a>Express サーバに組み込んでみる</h2>
+<p>ココまでで Sequelize を使った CRUD 操作はできるようになったと思うので、Express サーバに組み込んでみる。</p>
+<p>といっても、コントローラでやることとしては、リクエストデータからパラメータを拾い上げて、それを元に <code>Model.findAll()</code> なり <code>Model.update()</code> なりの引数にセットしていくだけだ。結果を受け取ったらそれをレスポンスにセットすれば良いだけ。</p>
+<p>モデルをどう用意するか、についてだが、以下のような共通クラスを用意するのが良いと思う。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token comment">/* app/models/models.js */</span>
+
+<span class="token keyword">const</span> <span class="token maybe-class-name">Sequelize</span> <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'sequelize'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// 接続情報 (省略)</span>
+<span class="token comment">// 接続開始 (省略)</span>
+<span class="token keyword">const</span> sequelize <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">Sequelize</span><span class="token punctuation">(</span>database<span class="token punctuation">,</span> username<span class="token punctuation">,</span> password<span class="token punctuation">,</span> <span class="token punctuation">{</span>
+  host<span class="token operator">:</span> host<span class="token punctuation">,</span>
+  dialect<span class="token operator">:</span> <span class="token string">'mysql'</span><span class="token punctuation">,</span>
+  operatorsAliases<span class="token operator">:</span> <span class="token boolean">false</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// モデルを定義する</span>
+<span class="token keyword">const</span> <span class="token maybe-class-name">Models</span> <span class="token operator">=</span> <span class="token punctuation">{</span><span class="token punctuation">}</span><span class="token punctuation">;</span>
+<span class="token comment">// 各モデルを設定する</span>
+<span class="token maybe-class-name">Models</span><span class="token punctuation">.</span><span class="token property-access"><span class="token maybe-class-name">User</span></span> <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'./user-model'</span><span class="token punctuation">)</span><span class="token punctuation">(</span>sequelize<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token maybe-class-name">Models</span><span class="token punctuation">.</span><span class="token property-access"><span class="token maybe-class-name">Product</span></span> <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'./product-model'</span><span class="token punctuation">)</span><span class="token punctuation">(</span>sequelize<span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment">// user-model.js 的なファイルがあるテイ</span>
+<span class="token comment">// Sequelize 本体を設定する</span>
+<span class="token maybe-class-name">Models</span><span class="token punctuation">.</span><span class="token property-access">sequelize</span> <span class="token operator">=</span> sequelize<span class="token punctuation">;</span>
+<span class="token maybe-class-name">Models</span><span class="token punctuation">.</span><span class="token property-access"><span class="token maybe-class-name">Sequelize</span></span> <span class="token operator">=</span> <span class="token maybe-class-name">Sequelize</span><span class="token punctuation">;</span>
+<span class="token comment">// エクスポートする</span>
+module<span class="token punctuation">.</span><span class="token property-access">exports</span> <span class="token operator">=</span> <span class="token maybe-class-name">Models</span><span class="token punctuation">;</span>
+</code></pre>
+<pre class="language-javascript"><code class="language-javascript"><span class="token comment">/* app/models/user-model.js */</span>
+
+<span class="token comment">// 型定義用に require しておく</span>
+<span class="token keyword">const</span> <span class="token maybe-class-name">Sequelize</span> <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'sequelize'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+module<span class="token punctuation">.</span><span class="token method-variable function-variable method function property-access">exports</span> <span class="token operator">=</span> <span class="token punctuation">(</span><span class="token parameter">sequelize</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token keyword">const</span> <span class="token maybe-class-name">UserModel</span> <span class="token operator">=</span> sequelize<span class="token punctuation">.</span><span class="token method function property-access">define</span><span class="token punctuation">(</span><span class="token string">'users'</span><span class="token punctuation">,</span> <span class="token punctuation">{</span>                                                                <span class="token comment">// CREATE TABLE 文で指定した内容は大体以下のような感じ</span>
+    id       <span class="token operator">:</span> <span class="token punctuation">{</span> field<span class="token operator">:</span> <span class="token string">'id'</span>        <span class="token punctuation">,</span> type<span class="token operator">:</span> <span class="token maybe-class-name">Sequelize</span><span class="token punctuation">.</span><span class="token constant">INTEGER</span><span class="token punctuation">(</span><span class="token number">11</span><span class="token punctuation">)</span> <span class="token punctuation">,</span> primaryKey<span class="token operator">:</span> <span class="token boolean">true</span><span class="token punctuation">,</span> autoIncrement<span class="token operator">:</span> <span class="token boolean">true</span> <span class="token punctuation">}</span><span class="token punctuation">,</span>  <span class="token comment">// INT(11)       NOT NULL  PRIMARY KEY  AUTO_INCREMENT</span>
+    userName <span class="token operator">:</span> <span class="token punctuation">{</span> field<span class="token operator">:</span> <span class="token string">'user_name'</span> <span class="token punctuation">,</span> type<span class="token operator">:</span> <span class="token maybe-class-name">Sequelize</span><span class="token punctuation">.</span><span class="token constant">STRING</span><span class="token punctuation">(</span><span class="token number">100</span><span class="token punctuation">)</span> <span class="token punctuation">,</span> allowNull<span class="token operator">:</span> <span class="token boolean">false</span>                      <span class="token punctuation">}</span><span class="token punctuation">,</span>  <span class="token comment">// VARCHAR(100)  NOT NULL</span>
+    address  <span class="token operator">:</span> <span class="token punctuation">{</span> field<span class="token operator">:</span> <span class="token string">'address'</span>   <span class="token punctuation">,</span> type<span class="token operator">:</span> <span class="token maybe-class-name">Sequelize</span><span class="token punctuation">.</span><span class="token constant">STRING</span><span class="token punctuation">(</span><span class="token number">500</span><span class="token punctuation">)</span>                                         <span class="token punctuation">}</span><span class="token punctuation">,</span>  <span class="token comment">// VARCHAR(500)  DEFAULT NULL</span>
+    createdAt<span class="token operator">:</span> <span class="token punctuation">{</span> field<span class="token operator">:</span> <span class="token string">'created_at'</span><span class="token punctuation">,</span> type<span class="token operator">:</span> <span class="token maybe-class-name">Sequelize</span><span class="token punctuation">.</span><span class="token constant">DATE</span>                                                <span class="token punctuation">}</span><span class="token punctuation">,</span>  <span class="token comment">// DATETIME      NOT NULL  DEFAULT CURRENT_TIMESTAMP</span>
+    updatedAt<span class="token operator">:</span> <span class="token punctuation">{</span> field<span class="token operator">:</span> <span class="token string">'updated_at'</span><span class="token punctuation">,</span> type<span class="token operator">:</span> <span class="token maybe-class-name">Sequelize</span><span class="token punctuation">.</span><span class="token constant">DATE</span>                                                <span class="token punctuation">}</span>   <span class="token comment">// DATETIME      NOT NULL  DEFAULT CURRENT_TIMESTAMP  ON UPDATE CURRENT_TIMESTAMP</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword control-flow">return</span> <span class="token maybe-class-name">UserModel</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+</code></pre>
+<p>このようなモデル生成用のファイル <code>models.js</code> をベースに、テーブルごとに <code>user-model.js</code>・<code>product-model.js</code> とファイルを分けておくと管理しやすいかと。</p>
+<p>で、コントローラでは <code>models.js</code> を <code>require()</code> して使う。ルーティング部分は省略するが、リクエストとレスポンスを引数で受け取っているテイ。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token comment">/* app/controllers/users-controller.js */</span>
+
+<span class="token comment">// Models を読み込む</span>
+<span class="token keyword">const</span> <span class="token maybe-class-name">Models</span> <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'../models/models'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token keyword">class</span> <span class="token class-name">UsersController</span> <span class="token punctuation">{</span>
+  <span class="token doc-comment comment">/** 検索するアクション */</span>
+  <span class="token function">findAll</span><span class="token punctuation">(</span><span class="token parameter">req<span class="token punctuation">,</span> res</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token comment">// オプションの雛形を作っておく</span>
+    <span class="token keyword">const</span> options <span class="token operator">=</span> <span class="token punctuation">{</span>
+      where<span class="token operator">:</span> <span class="token punctuation">{</span><span class="token punctuation">}</span>
+    <span class="token punctuation">}</span><span class="token punctuation">;</span>
+    
+    <span class="token comment">// リクエストで address パラメータを指定されていれば、絞り込み検索のためのオプションとして追加する</span>
+    <span class="token keyword control-flow">if</span><span class="token punctuation">(</span>req<span class="token punctuation">.</span><span class="token property-access">query</span><span class="token punctuation">[</span><span class="token string">'address'</span><span class="token punctuation">]</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      options<span class="token punctuation">.</span><span class="token property-access">where</span><span class="token punctuation">[</span><span class="token string">'address'</span><span class="token punctuation">]</span> <span class="token operator">=</span> req<span class="token punctuation">.</span><span class="token property-access">query</span><span class="token punctuation">[</span><span class="token string">'address'</span><span class="token punctuation">]</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+    
+    <span class="token comment">// User モデルを使用する</span>
+    <span class="token maybe-class-name">Models</span><span class="token punctuation">.</span><span class="token property-access"><span class="token maybe-class-name">User</span></span><span class="token punctuation">.</span><span class="token method function property-access">findAll</span><span class="token punctuation">(</span>options<span class="token punctuation">)</span>
+      <span class="token punctuation">.</span><span class="token method function property-access">then</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token parameter">result</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+        <span class="token comment">// 200:OK と、JSON 形式の結果データ dataValues を返す</span>
+        res<span class="token punctuation">.</span><span class="token method function property-access">status</span><span class="token punctuation">(</span><span class="token number">200</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        res<span class="token punctuation">.</span><span class="token method function property-access">json</span><span class="token punctuation">(</span>result<span class="token punctuation">.</span><span class="token property-access">dataValues</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span><span class="token punctuation">)</span>
+      <span class="token punctuation">.</span><span class="token keyword control-flow">catch</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token parameter">error</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+        <span class="token comment">// 404:NotFound と、エラー情報を返す</span>
+        res<span class="token punctuation">.</span><span class="token method function property-access">status</span><span class="token punctuation">(</span><span class="token number">404</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        res<span class="token punctuation">.</span><span class="token method function property-access">json</span><span class="token punctuation">(</span>error<span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>こんな風に Express サーバを作っておけば、<code>http://localhost/users</code> で全件、<code>http://localhost/users?address=Tokyo</code> で絞り込み検索した結果が受け取れる、API サーバの出来上がり。</p>
+<p>SELECT の際の条件指定や、INSERT・UPDATE の際のモデル構築処理などは、コントローラから外出しして管理していくと良いだろう。</p>
+<hr>
+<p>以上。DB 操作がかなり簡単になったので、Sequelize オススメ！</p>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2018-09-28</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2018-09-28</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

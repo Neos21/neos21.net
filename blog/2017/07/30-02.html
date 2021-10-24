@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>Angular4 で Service を DI する方法 - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2017/07/30-02.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2017/index.html">2017年</a></li>
+            <li><a href="/blog/2017/07/index.html">07月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2017-07-30</time></div>
+        <h1 id="page-title">Angular4 で Service を DI する方法</h1>
+
+<p>Angular4 における DI (Dependency Injection・依存性注入) に関連して、Component から Service を使うときに Service クラスをどう Angular モジュールとして突っ込んでやればいいかなというのを調べてみた。</p>
+<p>今回のサンプルコードでは、<code>MyPageListService</code> という一つの Service を、色んな形で DI するようにしている。イメージとしては、同階層にある <code>MyPageListComponent</code> でしか使わない Service、といった位置付け。</p>
+<p>それでも色々な形で Service を登録しておき Component から DI できるということを示すため、<code>MyPageListService</code> をルートの NgModule に登録してみたり、中間の NgModule に登録してみたりアレコレしている。この例のとおりに構成すると、ディレクトリ構成などが不自然なことになるので注意してほしい。</p>
+<h2 id="共通的な-service-である場合"><a class="header-link" href="#共通的な-service-である場合"><span class="header-link-mark"></span></a>共通的な Service である場合</h2>
+<p>広く使う Service は <code>app.module.ts</code> の <code>@NgModule</code> の <code>providers</code> に突っ込むと動くようになる。</p>
+<p>その Service を使う Component では <code>constructor</code> の引数で当該 Service を受け取り、Component 自身のフィールド変数に持たせて使用する。その Service を扱える Component が増えるため、本来は共通的な処理のモノのみ、ルートの NgModule に追加すると良い。</p>
+<p>また、今回は紹介していないが、アプリ全体で共通的に使用するモジュール群は <code>shared</code> というディレクトリを作り、<code>SharedModule</code> を作ってそこに <code>providers</code> として登録するのが Angular 公式で推奨されているスタイルガイドとなっている。つまり <code>app.module.ts</code> では基本的に <code>providers</code> に Service を登録するようなことはほとんどなく、全ては <code>imports</code> している配下の NgModule が行う、という作りだ。</p>
+<pre class="language-typescript"><code class="language-typescript"><span class="token comment">/* ./src/app/app.module.ts */</span>
+<span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">NgModule</span> <span class="token punctuation">}</span></span>          <span class="token keyword">from</span> <span class="token string">'@angular/core'</span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">BrowserModule</span> <span class="token punctuation">}</span></span>     <span class="token keyword">from</span> <span class="token string">'@angular/platform-browser'</span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">AppRoutingModule</span> <span class="token punctuation">}</span></span>  <span class="token keyword">from</span> <span class="token string">'./app-routing.module'</span><span class="token punctuation">;</span>      <span class="token comment">// ルーティング</span>
+<span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">AppComponent</span> <span class="token punctuation">}</span></span>      <span class="token keyword">from</span> <span class="token string">'./app.component'</span><span class="token punctuation">;</span>           <span class="token comment">// ルートの Component</span>
+<span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">MyPageModule</span> <span class="token punctuation">}</span></span>      <span class="token keyword">from</span> <span class="token string">'./my-page/my-page.module'</span><span class="token punctuation">;</span>  <span class="token comment">// my-page 配下をまとめる NgModule</span>
+<span class="token comment">// DI したい Service : ここではサンプルのため、共通的に読み込むべき Service ではないものの、ルートで登録してみている</span>
+<span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">MyPageListService</span> <span class="token punctuation">}</span></span> <span class="token keyword">from</span> <span class="token string">'./my-page/my-page-list/my-page-list.service'</span><span class="token punctuation">;</span>
+
+@<span class="token function"><span class="token maybe-class-name">NgModule</span></span><span class="token punctuation">(</span><span class="token punctuation">{</span>
+  imports     <span class="token operator">:</span> <span class="token punctuation">[</span><span class="token maybe-class-name">BrowserModule</span><span class="token punctuation">,</span> <span class="token maybe-class-name">AppRoutingModule</span><span class="token punctuation">,</span> <span class="token maybe-class-name">MyPageModule</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
+  declarations<span class="token operator">:</span> <span class="token punctuation">[</span><span class="token maybe-class-name">AppComponent</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
+  providers   <span class="token operator">:</span> <span class="token punctuation">[</span><span class="token maybe-class-name">MyPageListService</span><span class="token punctuation">]</span><span class="token punctuation">,</span>  <span class="token comment">// アプリのルートの NgModule で Providers に指定する</span>
+  bootstrap   <span class="token operator">:</span> <span class="token punctuation">[</span><span class="token maybe-class-name">AppComponent</span><span class="token punctuation">]</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span>
+<span class="token keyword">export</span> <span class="token keyword">class</span> <span class="token class-name"><span class="token maybe-class-name">AppModule</span></span> <span class="token punctuation">{</span> <span class="token punctuation">}</span>
+</code></pre>
+<pre class="language-typescript"><code class="language-typescript"><span class="token comment">/* ./src/app/my-page/my-page.module.ts */</span>
+<span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">NgModule</span> <span class="token punctuation">}</span></span> <span class="token keyword">from</span> <span class="token string">'@angular/core'</span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">CommonModule</span> <span class="token punctuation">}</span></span> <span class="token keyword">from</span> <span class="token string">'@angular/common'</span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">MyPageRoutingModule</span> <span class="token punctuation">}</span></span> <span class="token keyword">from</span> <span class="token string">'./my-page-routing.module'</span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">MyPageListComponent</span> <span class="token punctuation">}</span></span> <span class="token keyword">from</span> <span class="token string">'./my-page-list/my-page-list.component'</span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">MyPageEditComponent</span> <span class="token punctuation">}</span></span> <span class="token keyword">from</span> <span class="token string">'./my-page-edit/my-page-edit.component'</span><span class="token punctuation">;</span>
+
+<span class="token comment">// 中間の my-page NgModule には MyPageListService は登場しない</span>
+<span class="token comment">// ココに providers: [MyPageListService] と書いても問題はない (Service は 重複して providers に指定しても問題ない様子)</span>
+<span class="token comment">// (Component は 複数の NgModule の declarations に書くとエラーになる)</span>
+@<span class="token function"><span class="token maybe-class-name">NgModule</span></span><span class="token punctuation">(</span><span class="token punctuation">{</span>
+  imports     <span class="token operator">:</span> <span class="token punctuation">[</span><span class="token maybe-class-name">CommonModule</span><span class="token punctuation">,</span> <span class="token maybe-class-name">MyPageRoutingModule</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
+  declarations<span class="token operator">:</span> <span class="token punctuation">[</span><span class="token maybe-class-name">MyPageListComponent</span><span class="token punctuation">,</span> <span class="token maybe-class-name">MyPageEditComponent</span><span class="token punctuation">]</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span>
+<span class="token keyword">export</span> <span class="token keyword">class</span> <span class="token class-name"><span class="token maybe-class-name">MyPageModule</span></span> <span class="token punctuation">{</span> <span class="token punctuation">}</span>
+</code></pre>
+<pre class="language-typescript"><code class="language-typescript"><span class="token comment">/* ./src/app/my-page/my-page-list/my-page-list.component.ts */</span>
+<span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">Component</span><span class="token punctuation">,</span> <span class="token maybe-class-name">OnInit</span> <span class="token punctuation">}</span></span> <span class="token keyword">from</span> <span class="token string">'@angular/core'</span><span class="token punctuation">;</span>
+<span class="token comment">// 型を知るための import であって、コレによって new したりするワケではない</span>
+<span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">MyPageListService</span> <span class="token punctuation">}</span></span> <span class="token keyword">from</span> <span class="token string">'./my-page-list.service'</span><span class="token punctuation">;</span>
+
+<span class="token comment">// Component の providers は指定していない</span>
+@<span class="token function"><span class="token maybe-class-name">Component</span></span><span class="token punctuation">(</span><span class="token punctuation">{</span>
+  selector   <span class="token operator">:</span> <span class="token string">'app-my-page-list'</span><span class="token punctuation">,</span>
+  templateUrl<span class="token operator">:</span> <span class="token string">'./my-page-list.component.html'</span><span class="token punctuation">,</span>
+  styleUrls  <span class="token operator">:</span> <span class="token punctuation">[</span><span class="token string">'./my-page-list.component.scss'</span><span class="token punctuation">]</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span>
+<span class="token keyword">export</span> <span class="token keyword">class</span> <span class="token class-name"><span class="token maybe-class-name">MyPageListComponent</span></span> <span class="token keyword">implements</span> <span class="token class-name"><span class="token maybe-class-name">OnInit</span></span> <span class="token punctuation">{</span>
+  <span class="token comment">// 取得した Service を控えておくフィールド変数</span>
+  myPageListService<span class="token operator">:</span> <span class="token maybe-class-name">MyPageListService</span><span class="token punctuation">;</span>
+  
+  <span class="token comment">// 引数でいきなり MyPageListService を受け取っている</span>
+  <span class="token keyword">constructor</span><span class="token punctuation">(</span>myPageListService<span class="token operator">:</span> <span class="token maybe-class-name">MyPageListService</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">myPageListService</span> <span class="token operator">=</span> <span class="token maybe-class-name">MyPageListService</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<h3 id="service-の-di-の仕方"><a class="header-link" href="#service-の-di-の仕方"><span class="header-link-mark"></span></a>Service の DI の仕方</h3>
+<p>今回の例は全てフィールド変数を定義するような書き方にしている。これは ES2015 からの移行時に分かりやすい。しかし、TypeScript だと <code>constructor</code> の引数に <code>private</code> などのアクセス修飾子を付与することで、その引数をフィールド変数として持てるようになる。つまりこういうことだ。</p>
+<pre class="language-typescript"><code class="language-typescript"><span class="token comment">/* ./src/app/my-page/my-page-list/my-page-list.component.ts */</span>
+@<span class="token function"><span class="token maybe-class-name">Component</span></span><span class="token punctuation">(</span><span class="token punctuation">{</span> <span class="token comment">/* 省略 */</span> <span class="token punctuation">}</span><span class="token punctuation">)</span>
+<span class="token keyword">export</span> <span class="token keyword">class</span> <span class="token class-name"><span class="token maybe-class-name">MyPageListComponent</span></span> <span class="token keyword">implements</span> <span class="token class-name"><span class="token maybe-class-name">OnInit</span></span> <span class="token punctuation">{</span>
+  <span class="token comment">// アクセス修飾子 private を付けると、フィールド変数の定義なしに this.myPageListService が作れるようになる</span>
+  <span class="token keyword">constructor</span><span class="token punctuation">(</span><span class="token keyword">private</span> myPageListService<span class="token operator">:</span> <span class="token maybe-class-name">MyPageListService</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token comment">// いきなり this.myPageListService のメソッドを叩く例</span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">myPageListService</span><span class="token punctuation">.</span><span class="token method function property-access">hogeMethod</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>この方が TypeScript らしい書き方になるのかもしれないが、ES2015 から移行してきた感覚では少し違和感。そして ES2015 に戻りづらくなりそう…。</p>
+<h3 id="component-の場合は異なる-ngmodule-で重複しないこと"><a class="header-link" href="#component-の場合は異なる-ngmodule-で重複しないこと"><span class="header-link-mark"></span></a>Component の場合は異なる NgModule で重複しないこと</h3>
+<p>途中で触れたが、Component の場合は複数の NgModule の <code>declarations</code> に書いてしまうと、以下のようなエラーが出る (<code>ng serve</code> 時にコンソールで確認できる)。</p>
+<pre><code>Error: Type MyPageListComponent is part of the declarations of 2 modules: MyPageModule and AppModule!
+       Please consider moving MyPageListComponent to a higher module that imports MyPageModule and AppModule.
+       You can also create a new NgModule that exports and includes MyPageListComponent then import that NgModule in MyPageModule and AppModule.
+</code></pre>
+<ul>
+  <li>参考：<a href="http://qiita.com/maaz118/items/9d252e0e09f0ceed22eb#import-the-formsmodule">angular.io FUNDAMENTALS/NgModules メモ - Qiita</a></li>
+</ul>
+<blockquote>
+  <p>コンポーネント、ディレクティブ、パイプは一つのモジュールのみに所属する。他のモジュールに属しているクラスをre-declareしてはいけない</p>
+</blockquote>
+<p>Service を異なる NgModule の <code>providers</code> に重複して書くのは良いみたい。</p>
+<h2 id="その機能配下で共通的に使用する-service-の場合"><a class="header-link" href="#その機能配下で共通的に使用する-service-の場合"><span class="header-link-mark"></span></a>その機能配下で共通的に使用する Service の場合</h2>
+<p>共通的な Service だからといって、何でもかんでも <code>app.module.ts</code> に突っ込んでしまうと、<code>app.module.ts</code> が肥大化してしまい、見通しが悪くなる。Angular には <em>NgModule</em> というモジュール分割の機能があるので、コレを使って、アプリ内の機能ごと ≒ ディレクトリごとに NgModule を作ってやろう。</p>
+<p>Angular 公式のスタイルガイドなどを見ていると、この機能別に作る NgModule のことを「Feature Modules」と呼んでいる。やはり「機能別」のようだ。</p>
+<p>アプリのルートで存在を知らなくて良い Service は、なるべくその Service を使用する範囲を狭めるよう、当該 Service から一番近い NgModule に含ませてやると良いだろう。</p>
+<p>もし、<code>MyPageListService</code> が <code>./src/my-page/</code> 配下の色々な Component で使うようなものだとしたら、<code>MyPageModule</code> の <code>providers</code> に登録しておくイメージだ。</p>
+<pre class="language-typescript"><code class="language-typescript"><span class="token comment">/* ./src/app/app.module.ts */</span>
+<span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">NgModule</span> <span class="token punctuation">}</span></span>          <span class="token keyword">from</span> <span class="token string">'@angular/core'</span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">BrowserModule</span> <span class="token punctuation">}</span></span>     <span class="token keyword">from</span> <span class="token string">'@angular/platform-browser'</span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">AppRoutingModule</span> <span class="token punctuation">}</span></span>  <span class="token keyword">from</span> <span class="token string">'./app-routing.module'</span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">AppComponent</span> <span class="token punctuation">}</span></span>      <span class="token keyword">from</span> <span class="token string">'./app.component'</span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">MyPageModule</span> <span class="token punctuation">}</span></span>      <span class="token keyword">from</span> <span class="token string">'./my-page/my-page.module'</span><span class="token punctuation">;</span>  <span class="token comment">// my-page 配下をまとめる NgModule : コレに MyPageListService を追加する</span>
+
+<span class="token comment">// ルートでは providers に MyPageListService を指定しない</span>
+@<span class="token function"><span class="token maybe-class-name">NgModule</span></span><span class="token punctuation">(</span><span class="token punctuation">{</span>
+  imports     <span class="token operator">:</span> <span class="token punctuation">[</span><span class="token maybe-class-name">BrowserModule</span><span class="token punctuation">,</span> <span class="token maybe-class-name">AppRoutingModule</span><span class="token punctuation">,</span> <span class="token maybe-class-name">MyPageModule</span><span class="token punctuation">]</span><span class="token punctuation">,</span>  <span class="token comment">// ← MyPageModule はココでルートの NgModule に含ませている</span>
+  declarations<span class="token operator">:</span> <span class="token punctuation">[</span><span class="token maybe-class-name">AppComponent</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
+  bootstrap   <span class="token operator">:</span> <span class="token punctuation">[</span><span class="token maybe-class-name">AppComponent</span><span class="token punctuation">]</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span>
+<span class="token keyword">export</span> <span class="token keyword">class</span> <span class="token class-name"><span class="token maybe-class-name">AppModule</span></span> <span class="token punctuation">{</span> <span class="token punctuation">}</span>
+</code></pre>
+<pre class="language-typescript"><code class="language-typescript"><span class="token comment">/* ./src/app/my-page/my-page.module.ts */</span>
+<span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">NgModule</span> <span class="token punctuation">}</span></span> <span class="token keyword">from</span> <span class="token string">'@angular/core'</span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">CommonModule</span> <span class="token punctuation">}</span></span> <span class="token keyword">from</span> <span class="token string">'@angular/common'</span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">MyPageRoutingModule</span> <span class="token punctuation">}</span></span> <span class="token keyword">from</span> <span class="token string">'./my-page-routing.module'</span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">MyPageListComponent</span> <span class="token punctuation">}</span></span> <span class="token keyword">from</span> <span class="token string">'./my-page-list/my-page-list.component'</span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">MyPageEditComponent</span> <span class="token punctuation">}</span></span> <span class="token keyword">from</span> <span class="token string">'./my-page-edit/my-page-edit.component'</span><span class="token punctuation">;</span>
+<span class="token comment">// DI したい Service</span>
+<span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">MyPageListService</span>   <span class="token punctuation">}</span></span> <span class="token keyword">from</span> <span class="token string">'./my-page-list/my-page-list.service'</span><span class="token punctuation">;</span>
+
+<span class="token comment">// 中間の NgModule に Service を登録する</span>
+<span class="token comment">// コレでこの場合、MyPageListComponent・MyPageEditComponent から MyPageListService を使える状態になる</span>
+@<span class="token function"><span class="token maybe-class-name">NgModule</span></span><span class="token punctuation">(</span><span class="token punctuation">{</span>
+  imports     <span class="token operator">:</span> <span class="token punctuation">[</span><span class="token maybe-class-name">CommonModule</span><span class="token punctuation">,</span> <span class="token maybe-class-name">MyPageRoutingModule</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
+  declarations<span class="token operator">:</span> <span class="token punctuation">[</span><span class="token maybe-class-name">MyPageListComponent</span><span class="token punctuation">,</span> <span class="token maybe-class-name">MyPageEditComponent</span><span class="token punctuation">]</span>
+  providers   <span class="token operator">:</span> <span class="token punctuation">[</span><span class="token maybe-class-name">MyPageListService</span><span class="token punctuation">]</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span>
+<span class="token keyword">export</span> <span class="token keyword">class</span> <span class="token class-name"><span class="token maybe-class-name">MyPageModule</span></span> <span class="token punctuation">{</span> <span class="token punctuation">}</span>
+</code></pre>
+<pre class="language-typescript"><code class="language-typescript"><span class="token comment">/* ./src/app/my-page/my-page-list/my-page-list.component.ts */</span>
+<span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">Component</span><span class="token punctuation">,</span> <span class="token maybe-class-name">OnInit</span> <span class="token punctuation">}</span></span> <span class="token keyword">from</span> <span class="token string">'@angular/core'</span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">MyPageListService</span> <span class="token punctuation">}</span></span> <span class="token keyword">from</span> <span class="token string">'./my-page-list.service'</span><span class="token punctuation">;</span>
+
+<span class="token comment">// Component の作りは変わらず。</span>
+@<span class="token function"><span class="token maybe-class-name">Component</span></span><span class="token punctuation">(</span><span class="token punctuation">{</span>
+  selector   <span class="token operator">:</span> <span class="token string">'app-my-page-list'</span><span class="token punctuation">,</span>
+  templateUrl<span class="token operator">:</span> <span class="token string">'./my-page-list.component.html'</span><span class="token punctuation">,</span>
+  styleUrls  <span class="token operator">:</span> <span class="token punctuation">[</span><span class="token string">'./my-page-list.component.scss'</span><span class="token punctuation">]</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span>
+<span class="token keyword">export</span> <span class="token keyword">class</span> <span class="token class-name"><span class="token maybe-class-name">MyPageListComponent</span></span> <span class="token keyword">implements</span> <span class="token class-name"><span class="token maybe-class-name">OnInit</span></span> <span class="token punctuation">{</span>
+  myPageListService<span class="token operator">:</span> <span class="token maybe-class-name">MyPageListService</span><span class="token punctuation">;</span>
+  
+  <span class="token keyword">constructor</span><span class="token punctuation">(</span>myPageListService<span class="token operator">:</span> <span class="token maybe-class-name">MyPageListService</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">myPageListService</span> <span class="token operator">=</span> <span class="token maybe-class-name">MyPageListService</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<h2 id="当該-component-でしか使わない-service-の場合"><a class="header-link" href="#当該-component-でしか使わない-service-の場合"><span class="header-link-mark"></span></a>当該 Component でしか使わない Service の場合</h2>
+<p>その Component 自身でしか使わない Service であれば、<code>@Component</code> に <code>providers</code> を書くことができる。こうしておけば、Service の利用範囲を狭めることができる。</p>
+<pre class="language-typescript"><code class="language-typescript"><span class="token comment">/* ./src/app/app.module.ts */</span>
+<span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">NgModule</span> <span class="token punctuation">}</span></span>          <span class="token keyword">from</span> <span class="token string">'@angular/core'</span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">BrowserModule</span> <span class="token punctuation">}</span></span>     <span class="token keyword">from</span> <span class="token string">'@angular/platform-browser'</span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">AppRoutingModule</span> <span class="token punctuation">}</span></span>  <span class="token keyword">from</span> <span class="token string">'./app-routing.module'</span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">AppComponent</span> <span class="token punctuation">}</span></span>      <span class="token keyword">from</span> <span class="token string">'./app.component'</span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">MyPageModule</span> <span class="token punctuation">}</span></span>      <span class="token keyword">from</span> <span class="token string">'./my-page/my-page.module'</span><span class="token punctuation">;</span>
+
+<span class="token comment">// ルートでは providers に MyPageListService を指定しない</span>
+@<span class="token function"><span class="token maybe-class-name">NgModule</span></span><span class="token punctuation">(</span><span class="token punctuation">{</span>
+  imports     <span class="token operator">:</span> <span class="token punctuation">[</span><span class="token maybe-class-name">BrowserModule</span><span class="token punctuation">,</span> <span class="token maybe-class-name">AppRoutingModule</span><span class="token punctuation">,</span> <span class="token maybe-class-name">MyPageModule</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
+  declarations<span class="token operator">:</span> <span class="token punctuation">[</span><span class="token maybe-class-name">AppComponent</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
+  bootstrap   <span class="token operator">:</span> <span class="token punctuation">[</span><span class="token maybe-class-name">AppComponent</span><span class="token punctuation">]</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span>
+<span class="token keyword">export</span> <span class="token keyword">class</span> <span class="token class-name"><span class="token maybe-class-name">AppModule</span></span> <span class="token punctuation">{</span> <span class="token punctuation">}</span>
+</code></pre>
+<pre class="language-typescript"><code class="language-typescript"><span class="token comment">/* ./src/app/my-page/my-page.module.ts */</span>
+<span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">NgModule</span> <span class="token punctuation">}</span></span> <span class="token keyword">from</span> <span class="token string">'@angular/core'</span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">CommonModule</span> <span class="token punctuation">}</span></span> <span class="token keyword">from</span> <span class="token string">'@angular/common'</span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">MyPageRoutingModule</span> <span class="token punctuation">}</span></span> <span class="token keyword">from</span> <span class="token string">'./my-page-routing.module'</span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">MyPageListComponent</span> <span class="token punctuation">}</span></span> <span class="token keyword">from</span> <span class="token string">'./my-page-list/my-page-list.component'</span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">MyPageEditComponent</span> <span class="token punctuation">}</span></span> <span class="token keyword">from</span> <span class="token string">'./my-page-edit/my-page-edit.component'</span><span class="token punctuation">;</span>
+
+<span class="token comment">// 中間の NgModule でも providers に MyPageListService を指定しない</span>
+@<span class="token function"><span class="token maybe-class-name">NgModule</span></span><span class="token punctuation">(</span><span class="token punctuation">{</span>
+  imports     <span class="token operator">:</span> <span class="token punctuation">[</span><span class="token maybe-class-name">CommonModule</span><span class="token punctuation">,</span> <span class="token maybe-class-name">MyPageRoutingModule</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
+  declarations<span class="token operator">:</span> <span class="token punctuation">[</span><span class="token maybe-class-name">MyPageListComponent</span><span class="token punctuation">,</span> <span class="token maybe-class-name">MyPageEditComponent</span><span class="token punctuation">]</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span>
+<span class="token keyword">export</span> <span class="token keyword">class</span> <span class="token class-name"><span class="token maybe-class-name">MyPageModule</span></span> <span class="token punctuation">{</span> <span class="token punctuation">}</span>
+</code></pre>
+<pre class="language-typescript"><code class="language-typescript"><span class="token comment">/* ./src/app/my-page/my-page-list/my-page-list.component.ts */</span>
+<span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">Component</span><span class="token punctuation">,</span> <span class="token maybe-class-name">OnInit</span> <span class="token punctuation">}</span></span> <span class="token keyword">from</span> <span class="token string">'@angular/core'</span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">MyPageListService</span> <span class="token punctuation">}</span></span> <span class="token keyword">from</span> <span class="token string">'./my-page-list.service'</span><span class="token punctuation">;</span>
+
+<span class="token comment">// Component の providers で指定する</span>
+@<span class="token function"><span class="token maybe-class-name">Component</span></span><span class="token punctuation">(</span><span class="token punctuation">{</span>
+  selector   <span class="token operator">:</span> <span class="token string">'app-my-page-list'</span><span class="token punctuation">,</span>
+  templateUrl<span class="token operator">:</span> <span class="token string">'./my-page-list.component.html'</span><span class="token punctuation">,</span>
+  styleUrls  <span class="token operator">:</span> <span class="token punctuation">[</span><span class="token string">'./my-page-list.component.scss'</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
+  providers  <span class="token operator">:</span> <span class="token punctuation">[</span><span class="token maybe-class-name">MyPageListService</span><span class="token punctuation">]</span>  <span class="token comment">// ← ココで Service を指定する</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span>
+<span class="token keyword">export</span> <span class="token keyword">class</span> <span class="token class-name"><span class="token maybe-class-name">MyPageListComponent</span></span> <span class="token keyword">implements</span> <span class="token class-name"><span class="token maybe-class-name">OnInit</span></span> <span class="token punctuation">{</span>
+  myPageListService<span class="token operator">:</span> <span class="token maybe-class-name">MyPageListService</span><span class="token punctuation">;</span>
+  
+  <span class="token comment">// 以降の扱い方は同じ。</span>
+  <span class="token keyword">constructor</span><span class="token punctuation">(</span>myPageListService<span class="token operator">:</span> <span class="token maybe-class-name">MyPageListService</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">myPageListService</span> <span class="token operator">=</span> <span class="token maybe-class-name">MyPageListService</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<pre class="language-typescript"><code class="language-typescript"><span class="token comment">/* ./src/app/my-page/my-page-edit/my-page-edit.component.ts */</span>
+<span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">Component</span><span class="token punctuation">,</span> <span class="token maybe-class-name">OnInit</span> <span class="token punctuation">}</span></span> <span class="token keyword">from</span> <span class="token string">'@angular/core'</span><span class="token punctuation">;</span>
+<span class="token comment">// ページごとのコンポーネントのイメージなので、階層を遡って取得している</span>
+<span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">MyPageListService</span> <span class="token punctuation">}</span></span> <span class="token keyword">from</span> <span class="token string">'../my-page-list/my-page-list.service'</span><span class="token punctuation">;</span>
+
+<span class="token comment">// 今回の例の作り上は強引になるが</span>
+<span class="token comment">// もし別のコンポーネント MyPageEditComponent が providers に指定しても問題ない</span>
+@<span class="token function"><span class="token maybe-class-name">Component</span></span><span class="token punctuation">(</span><span class="token punctuation">{</span>
+  selector   <span class="token operator">:</span> <span class="token string">'app-my-page-edit'</span><span class="token punctuation">,</span>
+  templateUrl<span class="token operator">:</span> <span class="token string">'./my-page-edit.component.html'</span><span class="token punctuation">,</span>
+  styleUrls  <span class="token operator">:</span> <span class="token punctuation">[</span><span class="token string">'./my-page-edit.component.scss'</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
+  providers  <span class="token operator">:</span> <span class="token punctuation">[</span><span class="token maybe-class-name">MyPageListService</span><span class="token punctuation">]</span>  <span class="token comment">// ← ココで Service を指定できる</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span>
+<span class="token keyword">export</span> <span class="token keyword">class</span> <span class="token class-name"><span class="token maybe-class-name">MyPageEditComponent</span></span> <span class="token keyword">implements</span> <span class="token class-name"><span class="token maybe-class-name">OnInit</span></span> <span class="token punctuation">{</span>
+  myPageListService<span class="token operator">:</span> <span class="token maybe-class-name">MyPageEditService</span><span class="token punctuation">;</span>
+  
+  <span class="token comment">// 以降の扱い方は同じ。</span>
+  <span class="token keyword">constructor</span><span class="token punctuation">(</span>myPageEditService<span class="token operator">:</span> <span class="token maybe-class-name">MyPageEditService</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">myPageEditService</span> <span class="token operator">=</span> <span class="token maybe-class-name">MyPageEditService</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<h2 id="総括"><a class="header-link" href="#総括"><span class="header-link-mark"></span></a>総括</h2>
+<p>Component の場合は異なる NgModule の <code>declarations</code> に重複して書けないので、Service もそうなのかと思ったら、Service は重複して <code>providers</code> に書いても大丈夫みたい。</p>
+<p>あんまりちゃんと検証していないので副作用があるかもしれないし、普通に機能ごと・ページごとにコンポーネントやサービスを作っていれば、重複して <code>providers</code> に書きたくなる Service はまず発生しないはず。</p>
+<ul>
+  <li>アプリ全体で共通的な Service なら
+    <ul>
+      <li><code>./src/app/shared/hoge.service.ts</code> といった階層で Service を作っておき</li>
+      <li><code>./src/app/shared/shared.module.ts</code> の <code>providers</code> に登録する</li>
+      <li><code>./src/app/app.module.ts</code> は <code>shared.module.ts</code> を <code>imports</code> しておくのみ</li>
+    </ul>
+  </li>
+  <li>その機能内で共通的な Service なら
+    <ul>
+      <li><code>./src/app/hoge/shared/hoge.service.ts</code> といった階層で Service を作っておき</li>
+      <li><code>./src/app/hoge/hoge.module.ts</code> の <code>providers</code> に登録する</li>
+      <li><code>./src/app/app.module.ts</code> は <code>hoge.module.ts</code> を <code>imports</code> しておくのみ</li>
+    </ul>
+  </li>
+  <li>そのコンポーネントのみで使用する Service なら
+    <ul>
+      <li><code>./src/app/hoge/fuga/fuga.service.ts</code> といった階層で Service を作っておき</li>
+      <li><code>./src/app/hoge/fuga/fuga.component.ts</code> の <code>providers</code> に登録して使う</li>
+      <li><code>./src/app/app.module.ts</code> は <code>fuga.component.ts</code> を <code>declarations</code> に登録するか、配下の NgModule を <code>imports</code> することで対応する</li>
+    </ul>
+  </li>
+</ul>
+<p>だいたいこんな感じになるのではないだろうか。</p>
+<p><code>shared</code> というディレクトリ構成は Angular 公式のスタイルガイドにも登場している。ルートの <code>app</code> に関連するモジュールは <code>core</code>、異なる機能間で共通的に使うモジュールは <code>shared</code> というディレクトリを作るようだ。</p>
+<ul>
+  <li>参考：<a href="https://angular.io/guide/styleguide#shared-feature-module">Angular Docs</a></li>
+  <li>参考：<a href="https://angular.io/guide/styleguide#core-feature-module">Angular Docs</a></li>
+  <li>参考：<a href="http://qiita.com/Yamamoto0525/items/e59551faf69775a7ad12#%E5%85%B1%E6%9C%89%E6%A9%9F%E8%83%BD%E3%83%A2%E3%82%B8%E3%83%A5%E3%83%BC%E3%83%AB">Angular2 DOC GUIDEを翻訳するSTYLE GUIDE - Qiita</a></li>
+  <li>参考：<a href="http://qiita.com/Yamamoto0525/items/e59551faf69775a7ad12#%E3%82%B3%E3%82%A2%E6%A9%9F%E8%83%BD%E3%83%A2%E3%82%B8%E3%83%A5%E3%83%BC%E3%83%AB">Angular2 DOC GUIDEを翻訳するSTYLE GUIDE - Qiita</a></li>
+</ul>
+<h2 id="その他参考"><a class="header-link" href="#その他参考"><span class="header-link-mark"></span></a>その他参考</h2>
+<ul>
+  <li><a href="http://qiita.com/laco0416/items/61eed550d1f6070b36ab">Angular2のDIを知る - Qiita</a></li>
+  <li><a href="http://dolpen.hatenablog.com/entry/2016/04/25/201343">Angular2 における Injector の話 - Dolpenの日記</a></li>
+</ul>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2017-07-30</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2017-07-30</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

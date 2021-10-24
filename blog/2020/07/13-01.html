@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>Kubernetes の Secret を Git 管理可能にする Sealed Secrets を使ってみた - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2020/07/13-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2020/index.html">2020年</a></li>
+            <li><a href="/blog/2020/07/index.html">07月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2020-07-13</time></div>
+        <h1 id="page-title">Kubernetes の Secret を Git 管理可能にする Sealed Secrets を使ってみた</h1>
+
+<p>Kubernetes でクレデンシャル情報などを管理する際、<em>Secret</em> という仕組みを利用するだろう。</p>
+<p>しかし、この Secret は、単に Base64 でエンコードされているだけで、デコードしてしまえば機密情報が簡単に確認できてしまう。Secret を定義するための YAML ファイルを Git 管理などしてしまったら、簡単にパスワード等が漏洩してしまうことになる。</p>
+<p>とはいえ、Secret 以外のリソースは Git 管理しているし、Secret だけが YAML ファイルで管理できないのは分かりにくくて困る…。</p>
+<p>そんな時に使えるのが、<strong>Sealed Secrets</strong> というカスタム・リソースだ。Secret を暗号化して Git 管理しても大丈夫なようにしてくれて、使用する際は通常の Secret として使えるようにしてくれる。</p>
+<ul>
+  <li><a href="https://github.com/bitnami-labs/sealed-secrets">GitHub - bitnami-labs/sealed-secrets: A Kubernetes controller and tool for one-way encrypted Secrets</a></li>
+</ul>
+<h2 id="secret-は簡単に復元できる"><a class="header-link" href="#secret-は簡単に復元できる"><span class="header-link-mark"></span></a>Secret は簡単に復元できる</h2>
+<p>まずは生の Secret を見てみよう。次のようなコマンドで、Secret を作成したとする。</p>
+<pre class="language-bash"><code class="language-bash">$ kubectl create secret generic my-secret --from-literal<span class="token operator">=</span><span class="token string">'my-password=THIS_IS_SECRET_PASSWORD'</span> --dry-run<span class="token operator">=</span>client --output<span class="token operator">=</span>yaml
+</code></pre>
+<p>こんな YAML ファイルができる。</p>
+<pre class="language-yaml"><code class="language-yaml"><span class="token key atrule">apiVersion</span><span class="token punctuation">:</span> v1
+<span class="token key atrule">kind</span><span class="token punctuation">:</span> Secret
+<span class="token key atrule">metadata</span><span class="token punctuation">:</span>
+  <span class="token key atrule">creationTimestamp</span><span class="token punctuation">:</span> <span class="token null important">null</span>
+  <span class="token key atrule">name</span><span class="token punctuation">:</span> my<span class="token punctuation">-</span>secret
+<span class="token key atrule">data</span><span class="token punctuation">:</span>
+  <span class="token key atrule">my-password</span><span class="token punctuation">:</span> VEhJU19JU19TRUNSRVRfUEFTU1dPUkQ=
+</code></pre>
+<p><code>my-password</code> 部分の Base64 文字列をデコードすると、元のパスワード文字列が取得できてしまう。</p>
+<pre class="language-bash"><code class="language-bash">$ kubectl get secret my-secret --output<span class="token operator">=</span>json <span class="token operator">|</span> jq -r <span class="token string">'.data["my-password"]'</span> <span class="token operator">|</span> base64 --decode
+THIS_IS_SECRET_PASSWORD
+</code></pre>
+<p>つまり上の YAML ファイルを Git 管理に含めたりしてしまうと、簡単にパスワードが割れてしまうワケである。</p>
+<h2 id="クラスタに-sealed-secrets-をインストールする"><a class="header-link" href="#クラスタに-sealed-secrets-をインストールする"><span class="header-link-mark"></span></a>クラスタに Sealed Secrets をインストールする</h2>
+<p>それでは Sealed Secrets を使ってみよう。</p>
+<p>まずは Kubernetes クラスタに対し、Sealed Secrets の Controller と Operator をインストールする。インストールには Helm を使うのが楽だと思われ。</p>
+<ul>
+  <li><a href="https://github.com/helm/charts/tree/master/stable/sealed-secrets">charts/stable/sealed-secrets at master · helm/charts · GitHub</a></li>
+</ul>
+<pre class="language-bash"><code class="language-bash">$ helm repo <span class="token function">add</span> stable https://kubernetes-charts.storage.googleapis.com/
+$ helm repo update
+$ helm <span class="token function">install</span> sealed-secrets --namespace kube-system --name sealed-secrets stable/sealed-secrets
+</code></pre>
+<p>こんな感じで良いかな。</p>
+<h2 id="クライアントに-kubeseal-をインストールする"><a class="header-link" href="#クライアントに-kubeseal-をインストールする"><span class="header-link-mark"></span></a>クライアントに <code>kubeseal</code> をインストールする</h2>
+<p>続いてクライアントサイド、<code>kubectl</code> を実行したりするマシンに、<em><code>kubeseal</code></em> というコマンドをインストールする。Mac の場合は Homebrew で入れられる。</p>
+<pre class="language-bash"><code class="language-bash">$ brew <span class="token function">install</span> kubeseal
+</code></pre>
+<p>コレで準備は完了。</p>
+<h2 id="秘密鍵をバックアップしておく"><a class="header-link" href="#秘密鍵をバックアップしておく"><span class="header-link-mark"></span></a>秘密鍵をバックアップしておく</h2>
+<p>先程クラスタにインストールした Sealed Secrets は、クラスタ内に公開鍵 (証明書) と秘密鍵を作っている。</p>
+<p>公開鍵は、Secret を基に Sealed Secrets を作成する際に暗号化のために使用する。このあとダウンロードする。</p>
+<p>秘密鍵は、登録された Sealed Secrets を復号して、クラスタ内に Secret として自動展開してもらう時に、Sealed Secret 自身が使っている。秘密鍵を我々が普段使用することはないが、クラスタを作り直した時なんかに同じ秘密鍵を投入してあげないと、作成済の Sealed Secrets を正しく復号できなくなってしまうので、予めバックアップを取っておこう。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># 秘密鍵をバックアップしておく</span>
+$ kubectl get secret --namespace<span class="token operator">=</span>kube-system sealed-secrets-key --output<span class="token operator">=</span>yaml <span class="token operator">></span> ./sealed-secrets-private-key.pem
+
+<span class="token comment"># それぞれの中身を参照するにはこんな感じ</span>
+$ kubectl get secret --namespace<span class="token operator">=</span>kube-system sealed-secrets-key --output<span class="token operator">=</span>json <span class="token operator">|</span> jq -r <span class="token string">'.["data"]["tls.key"]'</span> <span class="token operator">|</span> base64 --decode
+$ kubectl get secret --namespace<span class="token operator">=</span>kube-system sealed-secrets-key --output<span class="token operator">=</span>json <span class="token operator">|</span> jq -r <span class="token string">'.["data"]["tls.crt"]'</span> <span class="token operator">|</span> base64 --decode
+</code></pre>
+<h2 id="公開鍵をダウンロードする"><a class="header-link" href="#公開鍵をダウンロードする"><span class="header-link-mark"></span></a>公開鍵をダウンロードする</h2>
+<p>続いて公開鍵をダウンロードする。コチラはこのあとの暗号化作業 (Sealed Secrets の作成作業) で必要になるのでダウンロード必須。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># 公開鍵証明書を取得する</span>
+$ kubeseal --fetch-cert --controller-namespace<span class="token operator">=</span>kube-system --controller-name<span class="token operator">=</span>sealed-secrets <span class="token operator">></span> ./sealed-secrets-public-cert.pem
+</code></pre>
+<h2 id="sealed-secrets-を登録する"><a class="header-link" href="#sealed-secrets-を登録する"><span class="header-link-mark"></span></a>Sealed Secrets を登録する</h2>
+<p>それでは Sealed Secrets を登録してみよう。</p>
+<h3 id="仮の-secret-を作る"><a class="header-link" href="#仮の-secret-を作る"><span class="header-link-mark"></span></a>仮の Secret を作る</h3>
+<p>まずは Sealed Secrets を生成するために、Dry-Run で Secret を作っておく。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># Secret の YAML ファイルを Dry-Run で生成する</span>
+$ kubectl create secret generic my-credential --namespace<span class="token operator">=</span>my-namespace --from-literal<span class="token operator">=</span><span class="token string">'my-password=PASSWORD_STRING'</span> --dry-run<span class="token operator">=</span>client --output<span class="token operator">=</span>yaml <span class="token operator">></span> ./secret-my-credential.yaml
+</code></pre>
+<p>コレで次のような YAML ファイルが生成される。ココまでは Kubernetes クラスタにこの Secret を登録していないだけで、素の Secret そのまま。</p>
+<ul>
+  <li><code>secret-my-credential.yaml</code></li>
+</ul>
+<pre class="language-yaml"><code class="language-yaml"><span class="token key atrule">apiVersion</span><span class="token punctuation">:</span> v1
+<span class="token key atrule">data</span><span class="token punctuation">:</span>
+  <span class="token key atrule">my-password</span><span class="token punctuation">:</span> 【「PASSWORD_STRING」のBase64 文字列】
+<span class="token key atrule">kind</span><span class="token punctuation">:</span> Secret
+<span class="token key atrule">metadata</span><span class="token punctuation">:</span>
+  <span class="token key atrule">creationTimestamp</span><span class="token punctuation">:</span> <span class="token null important">null</span>
+  <span class="token key atrule">name</span><span class="token punctuation">:</span> my<span class="token punctuation">-</span>credential
+  <span class="token key atrule">namespace</span><span class="token punctuation">:</span> my<span class="token punctuation">-</span>namespace
+</code></pre>
+<h3 id="sealed-secrets-を生成する"><a class="header-link" href="#sealed-secrets-を生成する"><span class="header-link-mark"></span></a>Sealed Secrets を生成する</h3>
+<p>素の Secret の YAML ファイルができたら、次の要領で Sealed Secrets の YAML ファイルを生成する。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># Sealed Secrets の YAML ファイルを生成する</span>
+$ kubeseal --cert<span class="token operator">=</span>./sealed-secrets-public-cert.pem --format<span class="token operator">=</span>yaml <span class="token operator">&#x3C;</span> ./secret-my-credential.yaml <span class="token operator">></span> ./sealed-secrets-my-credential.yaml
+</code></pre>
+<p>ココで、先程取得した公開鍵ファイルを利用し、<code>kubeseal</code> コマンドで暗号化している。生成されたファイルは次のとおり。</p>
+<ul>
+  <li><code>sealed-secrets-my-credential.yaml</code></li>
+</ul>
+<pre class="language-yaml"><code class="language-yaml"><span class="token key atrule">apiVersion</span><span class="token punctuation">:</span> bitnami.com/v1alpha1
+<span class="token key atrule">kind</span><span class="token punctuation">:</span> SealedSecret
+<span class="token key atrule">metadata</span><span class="token punctuation">:</span>
+  <span class="token key atrule">creationTimestamp</span><span class="token punctuation">:</span> <span class="token null important">null</span>
+  <span class="token key atrule">name</span><span class="token punctuation">:</span> my<span class="token punctuation">-</span>credential
+  <span class="token key atrule">namespace</span><span class="token punctuation">:</span> my<span class="token punctuation">-</span>namespace
+<span class="token key atrule">spec</span><span class="token punctuation">:</span>
+  <span class="token key atrule">encryptedData</span><span class="token punctuation">:</span>
+    <span class="token key atrule">my-password</span><span class="token punctuation">:</span> 【暗号化された文字列】
+  <span class="token key atrule">template</span><span class="token punctuation">:</span>
+    <span class="token key atrule">metadata</span><span class="token punctuation">:</span>
+      <span class="token key atrule">creationTimestamp</span><span class="token punctuation">:</span> <span class="token null important">null</span>
+      <span class="token key atrule">name</span><span class="token punctuation">:</span> my<span class="token punctuation">-</span>credential
+      <span class="token key atrule">namespace</span><span class="token punctuation">:</span> my<span class="token punctuation">-</span>namespace
+</code></pre>
+<p>Git 管理して良いのはコチラの YAML ファイルのみ。Kubernetes クラスタに登録するのもコチラの YAML ファイルのみとなる。</p>
+<p>先程 Dry-Run で作成した素の Secret <code>secret-my-credential.yaml</code> ファイルは、当然 Git 管理もしないし、もう捨ててしまって良い。</p>
+<h3 id="sealed-secrets-を登録する-1"><a class="header-link" href="#sealed-secrets-を登録する-1"><span class="header-link-mark"></span></a>Sealed Secrets を登録する</h3>
+<p>それではこの Sealed Secrets を Kubernetes クラスタに登録しよう。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># Sealed Secrets を登録する</span>
+$ kubectl apply -f sealed-secrets-my-credential.yaml
+</code></pre>
+<p>登録が成功すると、まず Sealed Secrets リソースとして確認できる。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># Sealed Secrets が登録された</span>
+$ kubectl get sealedsecret
+</code></pre>
+<p>そして、Sealed Secrets は登録された時点で<em>自動的に復号</em>され Secret として登録されるので、Secret にも同名のリソースが出来ていることが分かるだろう。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># 同名の Secret が生成されていることを確認する</span>
+$ kubectl get secret
+</code></pre>
+<p>もし Secret が生成されていない場合は、Sealed Secrets を正しく復号できなかった可能性がある。使用した公開鍵と秘密鍵のペアを要確認。</p>
+<p>Secret として展開された方は、当然 Base64 デコードすれば内容が確認できる。</p>
+<pre class="language-bash"><code class="language-bash">$ kubectl get secret my-credential --output<span class="token operator">=</span>json <span class="token operator">|</span> jq -r <span class="token string">'.["data"]["my-password"]'</span> <span class="token operator">|</span> base64 --decode
+</code></pre>
+<h3 id="sealed-secrets-を参照するには"><a class="header-link" href="#sealed-secrets-を参照するには"><span class="header-link-mark"></span></a>Sealed Secrets を参照するには</h3>
+<p>登録した Sealed Secrets を Deployment などで使用する場合は、「Sealed Secrets を参照しよう」と考えるのではなく、「Sealed Secrets が自動展開された Secret」を参照すれば良い。つまり素の Secret があるテイで、<em><code>secretKeyRef</code></em> を使えば良い。</p>
+<pre class="language-yaml"><code class="language-yaml"><span class="token key atrule">apiVersion</span><span class="token punctuation">:</span> apps/v1
+<span class="token key atrule">kind</span><span class="token punctuation">:</span> Deployment
+<span class="token key atrule">metadata</span><span class="token punctuation">:</span>
+  <span class="token key atrule">name</span><span class="token punctuation">:</span> my<span class="token punctuation">-</span>app
+  <span class="token key atrule">namespace</span><span class="token punctuation">:</span> my<span class="token punctuation">-</span>namespace
+<span class="token key atrule">spec</span><span class="token punctuation">:</span>
+  <span class="token key atrule">selector</span><span class="token punctuation">:</span>
+    <span class="token key atrule">matchLabels</span><span class="token punctuation">:</span>
+      <span class="token key atrule">app</span><span class="token punctuation">:</span> my<span class="token punctuation">-</span>app
+  <span class="token key atrule">replicas</span><span class="token punctuation">:</span> <span class="token number">1</span>
+  <span class="token key atrule">template</span><span class="token punctuation">:</span>
+    <span class="token key atrule">metadata</span><span class="token punctuation">:</span>
+      <span class="token key atrule">labels</span><span class="token punctuation">:</span>
+        <span class="token key atrule">app</span><span class="token punctuation">:</span> my<span class="token punctuation">-</span>app
+    <span class="token key atrule">spec</span><span class="token punctuation">:</span>
+      <span class="token key atrule">containers</span><span class="token punctuation">:</span>
+        <span class="token punctuation">-</span> <span class="token key atrule">name</span><span class="token punctuation">:</span> my<span class="token punctuation">-</span>app
+          <span class="token key atrule">image</span><span class="token punctuation">:</span> my<span class="token punctuation">-</span>image<span class="token punctuation">:</span>latest
+          <span class="token key atrule">env</span><span class="token punctuation">:</span>
+            <span class="token comment"># ↓ Secret を参照する</span>
+            <span class="token punctuation">-</span> <span class="token key atrule">name</span> <span class="token punctuation">:</span> MY_PASSWORD
+              <span class="token key atrule">valueFrom</span><span class="token punctuation">:</span>
+                <span class="token key atrule">secretKeyRef</span><span class="token punctuation">:</span>
+                  <span class="token key atrule">name</span><span class="token punctuation">:</span> my<span class="token punctuation">-</span>credential
+                  <span class="token key atrule">key</span> <span class="token punctuation">:</span> my<span class="token punctuation">-</span>password
+</code></pre>
+<p>こんな感じ！</p>
+<ul>
+  <li>参考：<a href="https://github.com/bitnami-labs/sealed-secrets">GitHub - bitnami-labs/sealed-secrets: A Kubernetes controller and tool for one-way encrypted Secrets</a></li>
+  <li>参考：<a href="https://qiita.com/sotoiwa/items/3cd9ba7b7175ce9c71be">SecretをGitHubに登録したくないのでSealedSecretを使う - Qiita</a></li>
+  <li>参考：<a href="https://tech.uzabase.com/entry/2020/03/10/171733">Sealed Secretsを利用したKubernetes Secretリソースのセキュアな管理 - Uzabase Tech Blog</a></li>
+  <li>参考：<a href="https://qiita.com/prodigy413/items/63b39de347ab57d05814">sealed secrets - Qiita</a></li>
+</ul>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2020-07-13</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2020-07-13</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

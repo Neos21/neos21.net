@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>Angular の FormArray で項目数が動的に増える入力フォームを実現する - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2018/05/21-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2018/index.html">2018年</a></li>
+            <li><a href="/blog/2018/05/index.html">05月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2018-05-21</time></div>
+        <h1 id="page-title">Angular の FormArray で項目数が動的に増える入力フォームを実現する</h1>
+
+<p>Angular 4 以降の ReactiveForms で検証。</p>
+<p>例えばユーザ情報を登録するフォームがあったとして、電話番号と種別 (固定電話なのか携帯なのかなど) を複数入力できるようにしたいとする。</p>
+<p>画面のイメージとしては、電話番号テキストボックスと、種別テキストボックスが1行に並んでいて、「追加」ボタンを押すとその行が増やせる、みたいな作りだ。</p>
+<p>この場合、動的にフォーム入力できる項目を増やしたりすることになるが、どうやって実装したら良いのか。調べてみると <strong>FormArray</strong> という仕組みで Angular が提供してくれていた。この使い方を紹介する。</p>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#%E3%83%95%E3%82%A9%E3%83%BC%E3%83%A0%E3%81%AE%E7%94%9F%E6%88%90%E3%81%A8%E5%8B%95%E7%9A%84%E8%BF%BD%E5%8A%A0">フォームの生成と動的追加</a></li>
+  <li><a href="#formarray-%E3%82%92%E3%81%BE%E3%82%8B%E3%81%94%E3%81%A8%E5%A4%89%E6%9B%B4%E3%81%99%E3%82%8B--formgroupsetcontrol">FormArray をまるごと変更する : <code>FormGroup#setControl()</code></a></li>
+  <li><a href="#formarray-%E3%81%AE%E9%80%94%E4%B8%AD%E3%81%AB%E3%83%87%E3%83%BC%E3%82%BF%E3%82%92%E5%85%A5%E3%82%8C%E3%82%8B--formarrayinsert">FormArray の途中にデータを入れる : <code>FormArray#insert()</code></a></li>
+  <li><a href="#formarray-%E3%81%AE%E3%83%87%E3%83%BC%E3%82%BF%E3%82%92%E5%8F%82%E7%85%A7%E3%81%99%E3%82%8B--formarrayvalue%E3%83%BBformarraycontrols">FormArray のデータを参照する : <code>FormArray.value</code>・<code>FormArray.controls</code></a></li>
+  <li><a href="#formarray-%E5%86%85%E3%81%AE%E3%83%87%E3%83%BC%E3%82%BF%E3%82%92%E7%B7%A8%E9%9B%86%E3%81%99%E3%82%8B">FormArray 内のデータを編集する</a></li>
+  <li><a href="#%E4%BB%A5%E4%B8%8A">以上</a></li>
+</ul>
+<h2 id="フォームの生成と動的追加"><a class="header-link" href="#フォームの生成と動的追加"><span class="header-link-mark"></span></a>フォームの生成と動的追加</h2>
+<p>まずはコンポーネント TypeScript を以下のように実装する。</p>
+<pre class="language-typescript"><code class="language-typescript"><span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">Component</span><span class="token punctuation">,</span> <span class="token maybe-class-name">OnInit</span> <span class="token punctuation">}</span></span> <span class="token keyword">from</span> <span class="token string">'@angular/core'</span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">FormBuilder</span><span class="token punctuation">,</span> <span class="token maybe-class-name">FormGroup</span><span class="token punctuation">,</span> <span class="token maybe-class-name">FormArray</span> <span class="token punctuation">}</span></span> <span class="token keyword">from</span> <span class="token string">'@angular/forms'</span><span class="token punctuation">;</span>
+
+<span class="token doc-comment comment">/**
+ * ユーザ情報登録画面
+ */</span>
+@<span class="token function"><span class="token maybe-class-name">Component</span></span><span class="token punctuation">(</span><span class="token punctuation">{</span>
+  selector<span class="token operator">:</span> <span class="token string">'app-user-register'</span><span class="token punctuation">,</span>
+  templateUrl<span class="token operator">:</span> <span class="token string">'./user-register.component.html'</span><span class="token punctuation">,</span>
+  styleUrls<span class="token operator">:</span> <span class="token punctuation">[</span><span class="token string">'./user-register.component.scss'</span><span class="token punctuation">]</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span>
+<span class="token keyword">export</span> <span class="token keyword">class</span> <span class="token class-name"><span class="token maybe-class-name">UserRegisterComponent</span></span> <span class="token keyword">implements</span> <span class="token class-name"><span class="token maybe-class-name">OnInit</span></span> <span class="token punctuation">{</span>
+  <span class="token doc-comment comment">/** ユーザ情報登録フォーム */</span>
+  <span class="token keyword">public</span> userForm<span class="token operator">:</span> <span class="token maybe-class-name">FormGroup</span><span class="token punctuation">;</span>
+  
+  <span class="token doc-comment comment">/**
+   * コンストラクタ
+   * 
+   * <span class="token keyword">@param</span> <span class="token parameter">formBuilder</span> FormBuilder
+   */</span>
+  <span class="token keyword">constructor</span><span class="token punctuation">(</span><span class="token keyword">private</span> formBuilder<span class="token operator">:</span> <span class="token maybe-class-name">FormBuilder</span><span class="token punctuation">)</span> <span class="token punctuation">{</span> <span class="token punctuation">}</span>
+  
+  <span class="token doc-comment comment">/**
+   * フォームを用意する
+   */</span>
+  <span class="token function">ngOnInit</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">userForm</span> <span class="token operator">=</span> <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">userFormBuilder</span><span class="token punctuation">.</span><span class="token method function property-access">group</span><span class="token punctuation">(</span><span class="token punctuation">{</span>
+      <span class="token comment">// 名前</span>
+      name<span class="token operator">:</span> <span class="token punctuation">[</span><span class="token string">''</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
+      <span class="token comment">// 電話番号 : 動的に追加できる</span>
+      phoneNumbers<span class="token operator">:</span> <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">userFormBuilder</span><span class="token punctuation">.</span><span class="token method function property-access">array</span><span class="token punctuation">(</span><span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token punctuation">)</span>
+    <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  
+  <span class="token doc-comment comment">/**
+   * formArrayName を取得するために必要な Getter
+   * 
+   * <span class="token keyword">@return</span> 電話番号の FormArray
+   */</span>
+  <span class="token keyword">get</span> <span class="token function">phoneNumbers</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator">:</span> <span class="token maybe-class-name">FormArray</span> <span class="token punctuation">{</span>
+    <span class="token keyword">return</span> <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">userForm</span><span class="token punctuation">.</span><span class="token keyword">get</span><span class="token punctuation">(</span><span class="token string">'phoneNumbers'</span><span class="token punctuation">)</span> <span class="token keyword">as</span> <span class="token maybe-class-name">FormArray</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  
+  <span class="token doc-comment comment">/**
+   * 電話番号入力フォームを1行追加する
+   */</span>
+  <span class="token function">addPhoneNumber</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token comment">// Getter を用意したいので「this.phoneNumbers」でアクセス可能</span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">phoneNumbers</span><span class="token punctuation">.</span><span class="token method function property-access">push</span><span class="token punctuation">(</span><span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">userFormBuilder</span><span class="token punctuation">.</span><span class="token method function property-access">group</span><span class="token punctuation">(</span><span class="token punctuation">{</span>
+      <span class="token comment">// 電話番号</span>
+      phoneNumber<span class="token operator">:</span> <span class="token string">''</span><span class="token punctuation">,</span>
+      <span class="token comment">// 種別 : 「固定電話」「携帯」などの情報</span>
+      <span class="token keyword">type</span><span class="token operator">:</span> <span class="token string">''</span>
+    <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>次に HTML はこんな感じ。</p>
+<pre class="language-html"><code class="language-html"><span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>form</span> <span class="token attr-name">[formGroup]</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>userForm<span class="token punctuation">"</span></span> <span class="token attr-name">novalidate</span><span class="token punctuation">></span></span>
+  <span class="token comment">&#x3C;!-- 通常の ReactiveForms どおり、userForm.name をバインディングしている --></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>p</span><span class="token punctuation">></span></span>名前：<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>input</span> <span class="token attr-name">type</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>text<span class="token punctuation">"</span></span> <span class="token attr-name">formControlName</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>name<span class="token punctuation">"</span></span><span class="token punctuation">></span></span><span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>p</span><span class="token punctuation">></span></span>
+  <span class="token comment">&#x3C;!-- Getter を作成したので、TypeScript 側の this.phoneNumbers (FormArray) にアクセスできる --></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>div</span> <span class="token attr-name">formArrayName</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>phoneNumbers<span class="token punctuation">"</span></span><span class="token punctuation">></span></span>
+    <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>ul</span><span class="token punctuation">></span></span>
+      <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>li</span> <span class="token attr-name">*ngFor</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>let phoneNumber of phoneNumbers.controls; let i = index<span class="token punctuation">"</span></span> <span class="token attr-name">[formGroupName]</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>i<span class="token punctuation">"</span></span><span class="token punctuation">></span></span>
+        <span class="token comment">&#x3C;!-- 擬似的に表現すると、this.phoneNumbers[0].phoneNumber とのバインディングができている状態 --></span>
+        電話番号：<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>input</span> <span class="token attr-name">type</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>text<span class="token punctuation">"</span></span> <span class="token attr-name">formControlName</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>phoneNumber<span class="token punctuation">"</span></span><span class="token punctuation">></span></span>
+        種別    ：<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>input</span> <span class="token attr-name">type</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>text<span class="token punctuation">"</span></span> <span class="token attr-name">formControlName</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>type<span class="token punctuation">"</span></span><span class="token punctuation">></span></span>
+      <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>li</span><span class="token punctuation">></span></span>
+    <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>ul</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>div</span><span class="token punctuation">></span></span>
+  <span class="token comment">&#x3C;!-- 電話番号入力フォームを1行追加する --></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>p</span><span class="token punctuation">></span></span><span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>button</span> <span class="token attr-name">type</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>button<span class="token punctuation">"</span></span> <span class="token attr-name">(click)</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>addPhoneNumber()<span class="token punctuation">"</span></span><span class="token punctuation">></span></span>追加<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>button</span><span class="token punctuation">></span></span><span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>p</span><span class="token punctuation">></span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>form</span><span class="token punctuation">></span></span>
+</code></pre>
+<ul>
+  <li><code>ngOnInit()</code> にて、<code>userForm</code> を <code>FormBuilder#group()</code> で生成する。</li>
+  <li><code>userForm</code> 配下に <code>phoneNumbers</code> というプロパティを置き (<code>userForm.phoneNumbers</code>)、<code>FormBuilder#array()</code> で<em>フォーム配列</em>である宣言だけしておく。ココで <code>phoneNumbers</code> の宣言をしないと、画面上で対象のフォームが存在しないタイミングができてしまい、エラーになってしまう。</li>
+  <li>HTML 側の <code>formArrayName</code> 属性で対象の FormArray を参照したりするために、専用の Getter メソッドが必要になる。</li>
+  <li>FormArray の中には、<code>FormBuilder#group()</code> で生成した FormGroup を配列で複数格納できる。<code>addPhoneNumber()</code> メソッドでやっているのがそれ。</li>
+</ul>
+<p>コレで、動的に追加できるフォームを作成できた。</p>
+<h2 id="formarray-をまるごと変更する--formgroupsetcontrol"><a class="header-link" href="#formarray-をまるごと変更する--formgroupsetcontrol"><span class="header-link-mark"></span></a>FormArray をまるごと変更する : <code>FormGroup#setControl()</code></h2>
+<p>例えば編集画面において、取得したデータを基に編集フォームを生成するような場合。<em>既に生成してある FormArray の中身を全量入れ替えるには、<code>FormGroup#setControl()</code></em> を使う。</p>
+<pre class="language-typescript"><code class="language-typescript"><span class="token comment">// フォームに初期値として埋め込むデータ。実際は非同期通信で取得するようなテイ</span>
+<span class="token keyword">const</span> dataList <span class="token operator">=</span> <span class="token punctuation">[</span>
+  <span class="token punctuation">{</span> phoneNumber<span class="token operator">:</span> <span class="token string">'090-0000-0000'</span><span class="token punctuation">,</span> <span class="token keyword">type</span><span class="token operator">:</span> <span class="token string">'携帯'</span> <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span> phoneNumber<span class="token operator">:</span>  <span class="token string">'03-0000-0000'</span><span class="token punctuation">,</span> <span class="token keyword">type</span><span class="token operator">:</span> <span class="token string">'自宅'</span> <span class="token punctuation">}</span>
+<span class="token punctuation">]</span><span class="token punctuation">;</span>
+
+<span class="token comment">// データを基に FormGroup の配列を作る</span>
+<span class="token keyword">const</span> phoneNumberFormGroups <span class="token operator">=</span> dataList<span class="token punctuation">.</span><span class="token method function property-access">map</span><span class="token punctuation">(</span><span class="token punctuation">(</span>data<span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token keyword">return</span> <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">userFormBuilder</span><span class="token punctuation">.</span><span class="token method function property-access">group</span><span class="token punctuation">(</span>data<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// FormGroup の配列を取り込んで FormArray を作る</span>
+<span class="token keyword">const</span> phoneNumbersFormArray <span class="token operator">=</span> <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">userFormBuilder</span><span class="token punctuation">.</span><span class="token method function property-access">array</span><span class="token punctuation">(</span>phoneNumberFormGroups<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// 元々のフォームに適用する</span>
+<span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">userForm</span><span class="token punctuation">.</span><span class="token method function property-access">setControl</span><span class="token punctuation">(</span><span class="token string">'phoneNumbers'</span><span class="token punctuation">,</span> phoneNumbersFormArray'<span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p><code>this.userForm</code> に何か代入するワケではないので注意。</p>
+<h2 id="formarray-の途中にデータを入れる--formarrayinsert"><a class="header-link" href="#formarray-の途中にデータを入れる--formarrayinsert"><span class="header-link-mark"></span></a>FormArray の途中にデータを入れる : <code>FormArray#insert()</code></h2>
+<p>さきほどは <code>FormArray#push()</code> で末尾にデータを追加したが、配列の途中に挿入したい場合は、<code>FormArray#insert()</code> が使える。</p>
+<pre class="language-typescript"><code class="language-typescript"><span class="token comment">// 「(this.userForm.get('phoneNumbers') as FormArray)」部分は「this.phoneNumbers」と書いても良い (Getter メソッドがあるので)</span>
+<span class="token comment">// insert() の第1引数が、第2引数の FormGroup を挿入したい配列の添字。この場合、添字 2、つまり3つ目の要素として挿入できる</span>
+<span class="token punctuation">(</span><span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">userForm</span><span class="token punctuation">.</span><span class="token keyword">get</span><span class="token punctuation">(</span><span class="token string">'phoneNumbers'</span><span class="token punctuation">)</span> <span class="token keyword">as</span> <span class="token maybe-class-name">FormArray</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">insert</span><span class="token punctuation">(</span><span class="token number">2</span><span class="token punctuation">,</span> <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">userFormBuilder</span><span class="token punctuation">.</span><span class="token method function property-access">group</span><span class="token punctuation">(</span><span class="token punctuation">{</span>
+  phoneNumber<span class="token operator">:</span> <span class="token string">'090-0000-0000'</span><span class="token punctuation">,</span>
+  <span class="token keyword">type</span><span class="token operator">:</span> <span class="token string">'携帯'</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<h2 id="formarray-のデータを参照する--formarrayvalue・formarraycontrols"><a class="header-link" href="#formarray-のデータを参照する--formarrayvalue・formarraycontrols"><span class="header-link-mark"></span></a>FormArray のデータを参照する : <code>FormArray.value</code>・<code>FormArray.controls</code></h2>
+<p>FormArray のデータを参照するには、<code>FormArray.value</code> や <code>FormArray.controls</code> が使える。<code>FormArray.value</code> は単純にオブジェクトの配列になっている。<code>FormArray.controls</code> の方は、FormGroup の配列になっているので、掘り下げていけば各行のデータの操作もできる。</p>
+<pre class="language-typescript"><code class="language-typescript"><span class="token comment">// フォーム配列の中身を参照する</span>
+<span class="token punctuation">(</span><span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">userForm</span><span class="token punctuation">.</span><span class="token keyword">get</span><span class="token punctuation">(</span><span class="token string">'phoneNumbers'</span><span class="token punctuation">)</span> <span class="token keyword">as</span> <span class="token maybe-class-name">FormArray</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token property-access">value</span><span class="token punctuation">;</span>
+
+<span class="token comment">// フォーム配列1件目のデータを参照する</span>
+<span class="token punctuation">(</span><span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">userForm</span><span class="token punctuation">.</span><span class="token keyword">get</span><span class="token punctuation">(</span><span class="token string">'phoneNumbers'</span><span class="token punctuation">)</span> <span class="token keyword">as</span> <span class="token maybe-class-name">FormArray</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token property-access">controls</span><span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">.</span><span class="token property-access">value</span><span class="token punctuation">;</span>
+
+<span class="token comment">// フォーム配列1件目のデータのうち phoneNumber 項目のデータを参照する</span>
+<span class="token punctuation">(</span><span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">userForm</span><span class="token punctuation">.</span><span class="token keyword">get</span><span class="token punctuation">(</span><span class="token string">'phoneNumbers'</span><span class="token punctuation">)</span> <span class="token keyword">as</span> <span class="token maybe-class-name">FormArray</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token property-access">controls</span><span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">.</span><span class="token keyword">get</span><span class="token punctuation">(</span><span class="token string">'phoneNumber'</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token property-access">value</span><span class="token punctuation">;</span>
+</code></pre>
+<h2 id="formarray-内のデータを編集する"><a class="header-link" href="#formarray-内のデータを編集する"><span class="header-link-mark"></span></a>FormArray 内のデータを編集する</h2>
+<p>先程の例で <code>get('phoneNumber')</code> と出てきたので分かるかもしれないが、FormArray の中身は <code>userForm</code> 同様、ただの FormGroup なので、<code>setValue()</code> などで編集できる。</p>
+<pre class="language-typescript"><code class="language-typescript"><span class="token comment">// フォーム配列1件目のデータのうち phoneNumber 項目のデータを編集する</span>
+<span class="token punctuation">(</span><span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">userForm</span><span class="token punctuation">.</span><span class="token keyword">get</span><span class="token punctuation">(</span><span class="token string">'phoneNumbers'</span><span class="token punctuation">)</span> <span class="token keyword">as</span> <span class="token maybe-class-name">FormArray</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token property-access">controls</span><span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">.</span><span class="token keyword">get</span><span class="token punctuation">(</span><span class="token string">'phoneNumber'</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">setValue</span><span class="token punctuation">(</span><span class="token string">'03-9999-9999'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<h2 id="以上"><a class="header-link" href="#以上"><span class="header-link-mark"></span></a>以上</h2>
+<p>このように、フォーム1行を FomArray として定義し、1行の要素は FormGroup で作成していくことで、動的に行追加できるフォームを作成できた。</p>
+<ul>
+  <li>参考：<a href="https://qiita.com/mixplace/items/79023cb35668603e5c7b">angular.io Guide: Reactive Forms - Qiita</a></li>
+  <li>参考：<a href="http://ryotah.hatenablog.com/entry/2017/08/31/210723">AngularのForm（Reactive Forms）メモ - ryotah's blog</a></li>
+  <li>参考：<a href="https://stackoverflow.com/questions/45153442/angular-2-4-reactive-forms-with-arrays">Angular 2/4 Reactive Forms with arrays - Stack Overflow</a></li>
+</ul>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2018-05-21</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2018-05-21</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

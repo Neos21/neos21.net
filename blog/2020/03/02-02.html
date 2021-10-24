@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>OCI Compute Instance の SSH 接続ポートを変更する - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2020/03/02-02.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2020/index.html">2020年</a></li>
+            <li><a href="/blog/2020/03/index.html">03月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2020-03-02</time></div>
+        <h1 id="page-title">OCI Compute Instance の SSH 接続ポートを変更する</h1>
+
+<p>OCI の Compute Instance、具体的には Always Free の Oracle Linux 7 において、通常22番ポートで接続する SSH を、別のポートで接続できるようにする。</p>
+<p>結論からいうと、<strong>以前書いた以下の記事 (GCE 向けの記事) と全く同じ方法で実現できた。</strong>CentOS 向けのやり方を参考にすれば大丈夫そうだ。</p>
+<ul>
+  <li><a href="/blog/2019/08/02-01.html#SSH-%E6%8E%A5%E7%B6%9A%E3%81%99%E3%82%8B%E3%81%9F%E3%82%81%E3%81%AE%E3%83%9D%E3%83%BC%E3%83%88%E3%82%9222%E7%95%AA%E3%81%8B%E3%82%89%E4%BB%96%E3%81%AE%E3%83%9D%E3%83%BC%E3%83%88%E7%95%AA%E5%8F%B7%E3%81%AB%E5%A4%89%E6%9B%B4%E3%81%99%E3%82%8B">永久無料枠で Google Compute Engine (GCE) インスタンスを立ち上げる : その2</a></li>
+</ul>
+<p>一応、順に手順を紹介する。</p>
+<h2 id="oci-で変更後のポートの-ingress-rule-を設定しておく"><a class="header-link" href="#oci-で変更後のポートの-ingress-rule-を設定しておく"><span class="header-link-mark"></span></a>OCI で変更後のポートの Ingress Rule を設定しておく</h2>
+<p>今回の例では <em>10022</em> 番ポートで SSH 接続できるように変更する予定なので、予め OCI 管理コンソールより、<strong>Security List</strong> を編集して <em>10022</em> 番ポートへのアクセスを許可するよう Ingress Rule を設定しておく。</p>
+<ul>
+  <li>Stateless : No</li>
+  <li>Source Type : CIDR</li>
+  <li>Source CIDR : 0.0.0.0/0 (ココはお好みで)</li>
+  <li>IP Protocol : TCP</li>
+  <li>Source Port Range : (未入力)</li>
+  <li>Destination Port Range : <em>10022</em></li>
+</ul>
+<p>現状の Ingress Rule は、変更前である 22 番ポートへのアクセス許可と、上で新たに追加した 10022 番ポートへのアクセス許可の、2つのルールがある状態にしよう。</p>
+<h2 id="oci-compute-instance-で設定開始"><a class="header-link" href="#oci-compute-instance-で設定開始"><span class="header-link-mark"></span></a>OCI Compute Instance で設定開始</h2>
+<p>OCI Compute Instnace に22番ポートで SSH 接続し、次のように設定を開始する。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># ファイアウォールを無効化する</span>
+$ <span class="token function">sudo</span> systemctl disable firewalld
+Removed symlink /etc/systemd/system/multi-user.target.wants/firewalld.service.
+Removed symlink /etc/systemd/system/dbus-org.fedoraproject.FirewallD1.service.
+
+<span class="token comment"># 以下のファイルを編集し SELinux を無効化する</span>
+$ <span class="token function">sudo</span> <span class="token function">vi</span> /etc/selinux/config
+<span class="token comment"># 'SELINUX=enforcing' の行を 'SELINUX=disabled' と変更する</span>
+
+<span class="token comment"># 設定を確認する</span>
+$ <span class="token function">sudo</span> systemctl is-enabled firewalld
+disabled
+
+$ <span class="token function">sudo</span> getenforce
+Enforcing
+
+<span class="token comment"># Enforcing と出ていたら、インスタンスを再起動する</span>
+
+<span class="token comment"># 以下のように Disabled になっていることを確認する</span>
+$ <span class="token function">sudo</span> getenforce
+Disabled
+
+<span class="token comment"># ポート番号を変更する</span>
+$ <span class="token function">sudo</span> <span class="token function">vi</span> /etc/ssh/sshd_config
+<span class="token comment"># '#Port 22' のコメント行をアンコメントし 'Port 10022' と変更する</span>
+
+<span class="token comment"># sshd を再起動する</span>
+$ <span class="token function">sudo</span> systemctl restart sshd
+
+<span class="token comment"># 設定を確認・10022ポートをリッスンしていることが分かる</span>
+$ systemctl status sshd.service
+● sshd.service - OpenSSH server daemon
+   Loaded: loaded <span class="token punctuation">(</span>/usr/lib/systemd/system/sshd.service<span class="token punctuation">;</span> enabled<span class="token punctuation">;</span> vendor preset: enabled<span class="token punctuation">)</span>
+   Active: active <span class="token punctuation">(</span>running<span class="token punctuation">)</span> since Tue <span class="token number">2020</span>-01-28 07:17:41 GMT<span class="token punctuation">;</span> 3s ago
+     Docs: man:sshd<span class="token punctuation">(</span><span class="token number">8</span><span class="token punctuation">)</span>
+           man:sshd_config<span class="token punctuation">(</span><span class="token number">5</span><span class="token punctuation">)</span>
+ Main PID: <span class="token number">18326</span> <span class="token punctuation">(</span>sshd<span class="token punctuation">)</span>
+    Tasks: <span class="token number">1</span>
+   Memory: <span class="token number">1</span>.3M
+   CGroup: /system.slice/sshd.service
+           └─18326 /usr/sbin/sshd -D
+
+Jan <span class="token number">28</span> 07:17:41 neos-compute systemd<span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span>: Starting OpenSSH server daemon<span class="token punctuation">..</span>.
+Jan <span class="token number">28</span> 07:17:41 neos-compute sshd<span class="token punctuation">[</span><span class="token number">18326</span><span class="token punctuation">]</span>: Server listening on <span class="token number">0.0</span>.0.0 port <span class="token number">10022</span>.
+Jan <span class="token number">28</span> 07:17:41 neos-compute sshd<span class="token punctuation">[</span><span class="token number">18326</span><span class="token punctuation">]</span>: Server listening on :: port <span class="token number">10022</span>.
+Jan <span class="token number">28</span> 07:17:41 neos-compute systemd<span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span>: Started OpenSSH server daemon.
+</code></pre>
+<p>ココまで出来たら、<strong>インスタンスを再起動する。</strong>反映までは5〜10分くらいかかるっぽいので、繋がらないように見えても焦らない。</p>
+<p>インスタンスを再機動したら、以下のように変更後のポート番号を指定して SSH 接続してみる。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># ポート番号を指定して SSH 接続する</span>
+$ <span class="token function">ssh</span> -i ~/.ssh/my_oci_vm -p <span class="token number">10022</span> opc@【Public IP】
+</code></pre>
+<p><code>~/.ssh/config</code> でポート番号を指定するなら以下のように記述する。</p>
+<ul>
+  <li><code>~/.ssh/config</code></li>
+</ul>
+<pre><code>Host my_oci_vm
+  HostName      【Public IP】
+  Port          10022
+  User          opc
+  IdentityFile  ~/.ssh/my_oci_vm
+</code></pre>
+<p>コレで無事アクセスできれば成功。</p>
+<h2 id="22番ポートへのアクセスを許可する-ingress-rule-を削除する"><a class="header-link" href="#22番ポートへのアクセスを許可する-ingress-rule-を削除する"><span class="header-link-mark"></span></a>22番ポートへのアクセスを許可する Ingress Rule を削除する</h2>
+<p>変更後のポートへのアクセス許可ルールを追加したのと同じ要領で、22番ポートへのアクセスを許可する Ingress Rule を、Security List から削除しておく。</p>
+<h2 id="以上"><a class="header-link" href="#以上"><span class="header-link-mark"></span></a>以上</h2>
+<p>コレで SSH のポートを変更できた。良き良き。</p>
+<ul>
+  <li>参考：<a href="http://knopp.hatenablog.jp/entry/2019/12/02/073029">Computeインスタンスのsshポート変更（2日目） - KNOPP's blog</a></li>
+</ul>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2020-03-02</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2020-03-02</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

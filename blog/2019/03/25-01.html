@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>Oracle Digital Assistant に選択肢を提示させて会話セッションを実現する - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2019/03/25-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2019/index.html">2019年</a></li>
+            <li><a href="/blog/2019/03/index.html">03月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2019-03-25</time></div>
+        <h1 id="page-title">Oracle Digital Assistant に選択肢を提示させて会話セッションを実現する</h1>
+
+<p>Oracle Digital Assistant にて、ユーザに選択肢を提示して、簡単な会話セッションを実現する。</p>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#%E4%BA%8B%E5%89%8D%E6%BA%96%E5%82%99">事前準備</a></li>
+  <li><a href="#%E3%82%A4%E3%83%B3%E3%83%86%E3%83%B3%E3%83%88">インテント</a></li>
+  <li><a href="#%E3%83%80%E3%82%A4%E3%82%A2%E3%83%AD%E3%82%B0%E3%83%BB%E3%83%95%E3%83%AD%E3%83%BC">ダイアログ・フロー</a></li>
+  <li><a href="#%E4%BB%A5%E4%B8%8A">以上</a></li>
+</ul>
+<h2 id="事前準備"><a class="header-link" href="#事前準備"><span class="header-link-mark"></span></a>事前準備</h2>
+<p>「Oracle Digital Assistant Designer UI」画面に行き、任意の「Skill」を作成する。</p>
+<h2 id="インテント"><a class="header-link" href="#インテント"><span class="header-link-mark"></span></a>インテント</h2>
+<p>今回作成するインテントは1つとする。「startIntent」というインテント名で、一番最初に会話セッションの開始を判断するだけとする。「start talking」とか、好きなサンプルフレーズを登録しておこう。</p>
+<p>会話セッションの途中でやっぱり会話を止めるとか、前の質問に戻るとかいうハンドリングをしたい場合は、それぞれのインテントを作って制御してやると良いかと思う。</p>
+<h2 id="ダイアログ・フロー"><a class="header-link" href="#ダイアログ・フロー"><span class="header-link-mark"></span></a>ダイアログ・フロー</h2>
+<p>今回はダイアログ・フローによるステート制御を主目的としている。選択肢の提示には <code>System.List</code> というビルトイン・コンポーネントを使う。このコンポーネントによるステート遷移の制御方法をよく見ていただきたい。</p>
+<pre class="language-yaml"><code class="language-yaml"><span class="token comment"># metadata</span>
+<span class="token comment"># ==================================================</span>
+<span class="token key atrule">metadata</span><span class="token punctuation">:</span>
+  <span class="token key atrule">platformVersion</span><span class="token punctuation">:</span> <span class="token number">1.0</span>
+<span class="token key atrule">main</span><span class="token punctuation">:</span> <span class="token boolean important">true</span>
+<span class="token key atrule">name</span><span class="token punctuation">:</span> MySkill
+
+<span class="token comment"># context</span>
+<span class="token comment"># ==================================================</span>
+<span class="token key atrule">context</span><span class="token punctuation">:</span>
+  <span class="token comment"># 変数宣言</span>
+  <span class="token key atrule">variables</span><span class="token punctuation">:</span>
+    <span class="token comment"># インテント・エンジンの結果を保持する</span>
+    <span class="token key atrule">iResult</span><span class="token punctuation">:</span> <span class="token string">"nlpresult"</span>
+
+<span class="token comment"># states</span>
+<span class="token comment"># ==================================================</span>
+<span class="token key atrule">states</span><span class="token punctuation">:</span>
+  <span class="token comment"># セッション開始</span>
+  <span class="token comment"># --------------------------------------------------</span>
+  
+  <span class="token comment"># ユーザ入力の文字列を解析し、合致するインテントに振り分ける</span>
+  <span class="token key atrule">intentState</span><span class="token punctuation">:</span>
+    <span class="token key atrule">component</span><span class="token punctuation">:</span> <span class="token string">"System.Intent"</span>
+    <span class="token key atrule">properties</span><span class="token punctuation">:</span>
+      <span class="token key atrule">variable</span><span class="token punctuation">:</span> <span class="token string">"iResult"</span>
+    <span class="token key atrule">transitions</span><span class="token punctuation">:</span>
+      <span class="token key atrule">actions</span><span class="token punctuation">:</span>
+        <span class="token key atrule">startIntent</span>     <span class="token punctuation">:</span> <span class="token string">"q1State"</span>          <span class="token comment"># 「会話開始」インテントに合致したら最初の質問をする</span>
+        <span class="token key atrule">unresolvedIntent</span><span class="token punctuation">:</span> <span class="token string">"unresolvedState"</span>  <span class="token comment"># インテントにも合致しなかった場合は会話セッションを開始しない</span>
+  
+  <span class="token comment"># 「会話開始」以外のインテントに合致した場合</span>
+  <span class="token key atrule">unresolvedState</span><span class="token punctuation">:</span>
+    <span class="token key atrule">component</span><span class="token punctuation">:</span> <span class="token string">"System.Output"</span>
+    <span class="token key atrule">properties</span><span class="token punctuation">:</span>
+      <span class="token key atrule">text</span><span class="token punctuation">:</span> <span class="token string">"「会話開始」と発言してね"</span>
+    <span class="token key atrule">transitions</span><span class="token punctuation">:</span>
+      <span class="token key atrule">return</span><span class="token punctuation">:</span> <span class="token string">"done"</span>
+  
+  <span class="token comment"># 質問 1</span>
+  <span class="token comment"># --------------------------------------------------</span>
+  
+  <span class="token comment"># 質問する</span>
+  <span class="token key atrule">q1State</span><span class="token punctuation">:</span>
+    <span class="token key atrule">component</span><span class="token punctuation">:</span> <span class="token string">"System.List"</span>
+    <span class="token key atrule">properties</span><span class="token punctuation">:</span> 
+      <span class="token key atrule">prompt</span><span class="token punctuation">:</span> <span class="token string">"あなたの性別は？"</span>
+      <span class="token key atrule">options</span><span class="token punctuation">:</span>
+        <span class="token punctuation">-</span> <span class="token key atrule">label</span><span class="token punctuation">:</span> <span class="token string">"男性"</span>  <span class="token comment"># ユーザに見えるボタンのラベル</span>
+          <span class="token key atrule">value</span><span class="token punctuation">:</span> <span class="token string">"male"</span>  <span class="token comment"># transitions.actions でこの value 値に沿って次のステートを特定する</span>
+        <span class="token punctuation">-</span> <span class="token key atrule">label</span><span class="token punctuation">:</span> <span class="token string">"女性"</span>
+          <span class="token key atrule">value</span><span class="token punctuation">:</span> <span class="token string">"female"</span>
+    <span class="token key atrule">transitions</span><span class="token punctuation">:</span>
+      <span class="token key atrule">actions</span><span class="token punctuation">:</span>
+        <span class="token key atrule">male</span>  <span class="token punctuation">:</span> <span class="token string">"q2MaleState"</span>    <span class="token comment"># 「男性」選択肢 (「male」アクション) が選択されたら「q2MaleState」ステートに移動する</span>
+        <span class="token key atrule">female</span><span class="token punctuation">:</span> <span class="token string">"q2FemaleState"</span>  <span class="token comment"># 同様に「女性」=「female」アクションが選択されたら「q2FemaleState」ステートに移動する</span>
+  
+  <span class="token comment"># 選択肢にない言葉を受け取った場合、再度質問する</span>
+  <span class="token key atrule">q1RetryState</span><span class="token punctuation">:</span>
+    <span class="token key atrule">component</span><span class="token punctuation">:</span> <span class="token string">"System.Output"</span>
+    <span class="token key atrule">properties</span><span class="token punctuation">:</span>
+      <span class="token key atrule">text</span><span class="token punctuation">:</span> <span class="token string">"男性か女性か、選択肢の中から答えてね"</span>
+      <span class="token key atrule">keepTurn</span><span class="token punctuation">:</span> <span class="token boolean important">true</span>  <span class="token comment"># transitions で指定した次のステートを (ユーザの発言を待たずに) 続けて実行する</span>
+    <span class="token key atrule">transitions</span><span class="token punctuation">:</span>
+      <span class="token key atrule">next</span><span class="token punctuation">:</span> <span class="token string">"q1State"</span>
+  
+  <span class="token comment"># 質問 2 (男性向け)</span>
+  <span class="token comment"># --------------------------------------------------</span>
+  
+  <span class="token comment"># 男性向けの質問</span>
+  <span class="token key atrule">q2MaleState</span><span class="token punctuation">:</span>
+    <span class="token key atrule">component</span><span class="token punctuation">:</span> <span class="token string">"System.List"</span>
+    <span class="token key atrule">properties</span><span class="token punctuation">:</span> 
+      <span class="token key atrule">prompt</span><span class="token punctuation">:</span> <span class="token string">"どちらがより好きですか？"</span>
+      <span class="token key atrule">options</span><span class="token punctuation">:</span>
+        <span class="token punctuation">-</span> <span class="token key atrule">label</span><span class="token punctuation">:</span> <span class="token string">"ゲーム"</span>
+          <span class="token key atrule">value</span><span class="token punctuation">:</span> <span class="token string">"games"</span>
+        <span class="token punctuation">-</span> <span class="token key atrule">label</span><span class="token punctuation">:</span> <span class="token string">"スポーツ"</span>
+          <span class="token key atrule">value</span><span class="token punctuation">:</span> <span class="token string">"sports"</span>
+    <span class="token key atrule">transitions</span><span class="token punctuation">:</span>
+      <span class="token key atrule">actions</span><span class="token punctuation">:</span>
+        <span class="token key atrule">games</span> <span class="token punctuation">:</span> <span class="token string">"maleGamesState"</span>
+        <span class="token key atrule">sports</span><span class="token punctuation">:</span> <span class="token string">"maleSportsState"</span>
+  
+  <span class="token comment"># 選択肢にない言葉を受け取った場合、再度質問する</span>
+  <span class="token key atrule">q2MaleRetryState</span><span class="token punctuation">:</span>
+    <span class="token key atrule">component</span><span class="token punctuation">:</span> <span class="token string">"System.Output"</span>
+    <span class="token key atrule">properties</span><span class="token punctuation">:</span>
+      <span class="token key atrule">text</span><span class="token punctuation">:</span> <span class="token string">"ゲームかスポーツか、選択肢の中から答えてね"</span>
+      <span class="token key atrule">keepTurn</span><span class="token punctuation">:</span> <span class="token boolean important">true</span>
+    <span class="token key atrule">transitions</span><span class="token punctuation">:</span>
+      <span class="token key atrule">next</span><span class="token punctuation">:</span> <span class="token string">"q2MaleState"</span>
+  
+  <span class="token comment"># 質問 2 (女性向け)</span>
+  <span class="token comment"># --------------------------------------------------</span>
+  
+  <span class="token comment"># 女性向けの質問</span>
+  <span class="token key atrule">q2FemaleState</span><span class="token punctuation">:</span>
+    <span class="token key atrule">component</span><span class="token punctuation">:</span> <span class="token string">"System.List"</span>
+    <span class="token key atrule">properties</span><span class="token punctuation">:</span> 
+      <span class="token key atrule">prompt</span><span class="token punctuation">:</span> <span class="token string">"どちらがより好きですか？"</span>
+      <span class="token key atrule">options</span><span class="token punctuation">:</span>
+        <span class="token punctuation">-</span> <span class="token key atrule">label</span><span class="token punctuation">:</span> <span class="token string">"ファッション"</span>
+          <span class="token key atrule">value</span><span class="token punctuation">:</span> <span class="token string">"fashion"</span>
+        <span class="token punctuation">-</span> <span class="token key atrule">label</span><span class="token punctuation">:</span> <span class="token string">"スイーツ"</span>
+          <span class="token key atrule">value</span><span class="token punctuation">:</span> <span class="token string">"sweets"</span>
+    <span class="token key atrule">transitions</span><span class="token punctuation">:</span>
+      <span class="token key atrule">actions</span><span class="token punctuation">:</span>
+        <span class="token key atrule">fashion</span><span class="token punctuation">:</span> <span class="token string">"femaleFashionState"</span>
+        <span class="token key atrule">sweets</span> <span class="token punctuation">:</span> <span class="token string">"femaleSweetsState"</span>
+  
+  <span class="token comment"># 選択肢にない言葉を受け取った場合、再度質問する</span>
+  <span class="token key atrule">q2FemaleRetryState</span><span class="token punctuation">:</span>
+    <span class="token key atrule">component</span><span class="token punctuation">:</span> <span class="token string">"System.Output"</span>
+    <span class="token key atrule">properties</span><span class="token punctuation">:</span>
+      <span class="token key atrule">text</span><span class="token punctuation">:</span> <span class="token string">"ファッションかスイーツか、選択肢の中から答えてね"</span>
+      <span class="token key atrule">keepTurn</span><span class="token punctuation">:</span> <span class="token boolean important">true</span>
+    <span class="token key atrule">transitions</span><span class="token punctuation">:</span>
+      <span class="token key atrule">next</span><span class="token punctuation">:</span> <span class="token string">"q2FemaleState"</span>
+  
+  <span class="token comment"># 最終回答集</span>
+  <span class="token comment"># --------------------------------------------------</span>
+  
+  <span class="token key atrule">maleGamesAction</span><span class="token punctuation">:</span>
+    <span class="token key atrule">component</span><span class="token punctuation">:</span> <span class="token string">"System.Output"</span>
+    <span class="token key atrule">properties</span><span class="token punctuation">:</span>
+      <span class="token key atrule">text</span><span class="token punctuation">:</span> <span class="token string">"あなたはゲームが好きな男性なんですね！"</span>
+    <span class="token key atrule">transitions</span><span class="token punctuation">:</span>
+      <span class="token key atrule">return</span><span class="token punctuation">:</span> <span class="token string">"done"</span>
+  
+  <span class="token key atrule">maleSportsAction</span><span class="token punctuation">:</span>
+    <span class="token key atrule">component</span><span class="token punctuation">:</span> <span class="token string">"System.Output"</span>
+    <span class="token key atrule">properties</span><span class="token punctuation">:</span>
+      <span class="token key atrule">text</span><span class="token punctuation">:</span> <span class="token string">"あなたはスポーツが好きな男性なんですね！"</span>
+    <span class="token key atrule">transitions</span><span class="token punctuation">:</span>
+      <span class="token key atrule">return</span><span class="token punctuation">:</span> <span class="token string">"done"</span>
+  
+  <span class="token key atrule">femaleFashionAction</span><span class="token punctuation">:</span>
+    <span class="token key atrule">component</span><span class="token punctuation">:</span> <span class="token string">"System.Output"</span>
+    <span class="token key atrule">properties</span><span class="token punctuation">:</span>
+      <span class="token key atrule">text</span><span class="token punctuation">:</span> <span class="token string">"あなたはファッションが好きな女性なんですね！"</span>
+    <span class="token key atrule">transitions</span><span class="token punctuation">:</span>
+      <span class="token key atrule">return</span><span class="token punctuation">:</span> <span class="token string">"done"</span>
+  
+  <span class="token key atrule">femaleSweetsAction</span><span class="token punctuation">:</span>
+    <span class="token key atrule">component</span><span class="token punctuation">:</span> <span class="token string">"System.Output"</span>
+    <span class="token key atrule">properties</span><span class="token punctuation">:</span>
+      <span class="token key atrule">text</span><span class="token punctuation">:</span> <span class="token string">"あなたはスイーツが好きな女性なんですね！"</span>
+    <span class="token key atrule">transitions</span><span class="token punctuation">:</span>
+      <span class="token key atrule">return</span><span class="token punctuation">:</span> <span class="token string">"done"</span>
+</code></pre>
+<p><code>System.List</code> コンポーネントを使う際は、<code>options</code> で選択肢を定義できる。</p>
+<p><code>label</code> が選択肢のボタンラベルとなるが、別にユーザがボタンを押さなくとも、同一の文字列を手入力して返信しても同じ効果が得られる。</p>
+<p><code>value</code> で、<code>label</code> と対応するアクション名を任意で定義する。このアクション名は <code>transitions.actions</code> プロパティで「次に移動するステート」をハンドリングするための文言として使用する。</p>
+<p><code>System.List</code> コンポーネントで提示する選択肢にない言葉が飛んできた場合は、<code>transitions.actions</code> で定義しているどのアクションとも合致しないので、自動的にその下 (直後) に記述されているステートに移動する。</p>
+<p>たとえば、<code>q1State</code> ステートで「あなたの性別は？」と尋ねられた時に、「どちらでもない」と回答すると、<code>male</code> アクションとも <code>female</code> アクションとも合致しないので、次に書かれた <code>q1RetryState</code> ステートが実行される。</p>
+<p>で、この <code>q1RetryState</code> では「選択肢の中から答えてね」と発話させると同時に、<em><code>keepTurn: true</code></em> 指定によって、即座に <code>transitions.next</code> に書かれた次のステート、<code>q1State</code> が実行される。つまりユーザからすると、「選択肢の中から答えてね」「あなたの性別は？」と連続で2通の返信をもらうことになる。</p>
+<p>このような選択肢による次ステートのハンドリングを行い、最終的には「あなたは○○が好きな人なんですね！」と発言して、<code>return: "done"</code> 指定によって会話セッションを終了する。</p>
+<p>作成できたら、「Testing」ボタン (再生マークのアイコン) から会話してみよう。</p>
+<h2 id="以上"><a class="header-link" href="#以上"><span class="header-link-mark"></span></a>以上</h2>
+<p>今回は <code>System.List</code> ビルトイン・コンポーネントを使って選択肢を提示し、ステート制御をしてみた。ダイアログ・フローが長くなりがちなので、ユーザをどのように誘導したいかと、どのようなコンポーネントで制御できそうかを見極める必要があるだろう。</p>
+<p>また、ココまででは Digital Assistant の管理画面上でしか動作を確認できないので、Web ページや Facebook Messenger など、何らかの「フロントエンド」が必要になる。コチラは別途紹介しよう。</p>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2019-03-25</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2019-03-25</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

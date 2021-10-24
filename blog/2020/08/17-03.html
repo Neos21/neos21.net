@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>npm publish を自動で行う GitHub Actions の作り方 - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2020/08/17-03.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2020/index.html">2020年</a></li>
+            <li><a href="/blog/2020/08/index.html">08月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2020-08-17</time></div>
+        <h1 id="page-title">npm publish を自動で行う GitHub Actions の作り方</h1>
+
+<p><code>npm publish</code> を自動で行う GitHub Actions を作ったので、その作り方を紹介する。</p>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#npm-%E3%81%AE%E3%83%88%E3%83%BC%E3%82%AF%E3%83%B3%E3%82%92%E5%8F%96%E5%BE%97%E3%81%99%E3%82%8B">npm のトークンを取得する</a></li>
+  <li><a href="#github-%E3%81%AE-secrets-%E3%81%AB-npm-%E3%83%88%E3%83%BC%E3%82%AF%E3%83%B3%E3%82%92%E7%99%BB%E9%8C%B2%E3%81%99%E3%82%8B">GitHub の Secrets に npm トークンを登録する</a></li>
+  <li><a href="#npm-publish-%E3%81%99%E3%82%8B-github-actions-workflow">npm publish する GitHub Actions Workflow</a></li>
+</ul>
+<h2 id="npm-のトークンを取得する"><a class="header-link" href="#npm-のトークンを取得する"><span class="header-link-mark"></span></a>npm のトークンを取得する</h2>
+<p>GitHub Actions から <code>npm publish</code> を行うため、まずは npm のトークンを発行しておく。</p>
+<p><code>npmjs.com</code> にログインしたら、右上のユーザアイコンから「Auth Tokens」を選ぶ。</p>
+<p>
+  <img src="17-03-01.png" alt="Auth Tokens">
+</p>
+<p>「Access Tokens」ページに移動したら「Create New Token」ボタンを押下する。</p>
+<p>
+  <img src="17-03-02.png" alt="Create New Token">
+</p>
+<p>「Create Token」ページでは「Read and Publish」の Access Level を選択し、「Create Token」ボタンを押下する。</p>
+<p>
+  <img src="17-03-03.png" alt="Create Token">
+</p>
+<p>すると「Successfully created a new token!」というメッセージとともに、npm トークンが表示される。このトークン文字列は二度と再表示ができないので、ココで間違いなくコピーして控えておく。</p>
+<p>
+  <img src="17-03-04.png" alt="作れた">
+</p>
+<h2 id="github-の-secrets-に-npm-トークンを登録する"><a class="header-link" href="#github-の-secrets-に-npm-トークンを登録する"><span class="header-link-mark"></span></a>GitHub の Secrets に npm トークンを登録する</h2>
+<p>npm トークンを取得したら、それを GitHub リポジトリの Secrets として保存する。</p>
+<p>GitHub のリポジトリページを開き、「Settings」ページに移動する。「Settings」ページの左メニューから「Secrets」を選択し、「New secret」ボタンを押下する。</p>
+<p>「New secret」ページにて、次のように登録する。</p>
+<ul>
+  <li>Name：<code>NODE_AUTH_TOKEN</code> とする</li>
+  <li>Value：先程コピーした npm トークン文字列 (前後に空白や改行を含まないよう、1行とする)</li>
+</ul>
+<p>「Add secret」ボタンを押下したら Secret が登録できる。</p>
+<h2 id="npm-publish-する-github-actions-workflow"><a class="header-link" href="#npm-publish-する-github-actions-workflow"><span class="header-link-mark"></span></a>npm publish する GitHub Actions Workflow</h2>
+<p>Secret の用意ができたら、いよいよ Workflow の作成に移る。おおよそ以下のように書けば良い。</p>
+<ul>
+  <li><code>.github/workflows/publish-to-npm.yaml</code></li>
+</ul>
+<pre class="language-yaml"><code class="language-yaml"><span class="token key atrule">name</span><span class="token punctuation">:</span> Publish To npm
+<span class="token key atrule">on</span><span class="token punctuation">:</span>
+  <span class="token key atrule">push</span><span class="token punctuation">:</span>
+    <span class="token key atrule">branches</span><span class="token punctuation">:</span>
+      <span class="token punctuation">-</span> master
+  <span class="token key atrule">workflow_dispatch</span><span class="token punctuation">:</span>
+<span class="token key atrule">jobs</span><span class="token punctuation">:</span>
+  <span class="token key atrule">publish-to-npm</span><span class="token punctuation">:</span>
+    <span class="token key atrule">runs-on</span><span class="token punctuation">:</span> ubuntu<span class="token punctuation">-</span>latest
+    <span class="token key atrule">steps</span><span class="token punctuation">:</span>
+      <span class="token punctuation">-</span> <span class="token key atrule">name</span><span class="token punctuation">:</span> Checkout
+        <span class="token key atrule">uses</span><span class="token punctuation">:</span> actions/checkout@v1
+      <span class="token punctuation">-</span> <span class="token key atrule">name</span><span class="token punctuation">:</span> Use Node.js And Setup .npmrc
+        <span class="token key atrule">uses</span><span class="token punctuation">:</span> actions/setup<span class="token punctuation">-</span>node@v1
+        <span class="token key atrule">with</span><span class="token punctuation">:</span>
+          <span class="token key atrule">node-version</span><span class="token punctuation">:</span> <span class="token string">'12.x'</span>
+          <span class="token key atrule">registry-url</span><span class="token punctuation">:</span> <span class="token string">'https://registry.npmjs.org'</span>
+          <span class="token comment"># ↓ package.json の name に含めたスコープを指定しておく</span>
+          <span class="token key atrule">scope</span>       <span class="token punctuation">:</span> <span class="token string">'@neos21'</span>
+          <span class="token key atrule">always-auth</span> <span class="token punctuation">:</span> <span class="token boolean important">true</span>
+        <span class="token key atrule">env</span> <span class="token punctuation">:</span>
+          <span class="token key atrule">NODE_AUTH_TOKEN</span><span class="token punctuation">:</span> $<span class="token punctuation">{</span><span class="token punctuation">{</span> secrets.NODE_AUTH_TOKEN <span class="token punctuation">}</span><span class="token punctuation">}</span>
+      <span class="token punctuation">-</span> <span class="token key atrule">name</span><span class="token punctuation">:</span> Can Publish
+        <span class="token key atrule">run</span> <span class="token punctuation">:</span> npx can<span class="token punctuation">-</span>npm<span class="token punctuation">-</span>publish <span class="token punctuation">-</span><span class="token punctuation">-</span>verbose
+        <span class="token key atrule">env</span> <span class="token punctuation">:</span>
+          <span class="token key atrule">NODE_AUTH_TOKEN</span><span class="token punctuation">:</span> $<span class="token punctuation">{</span><span class="token punctuation">{</span> secrets.NODE_AUTH_TOKEN <span class="token punctuation">}</span><span class="token punctuation">}</span>
+      <span class="token punctuation">-</span> <span class="token key atrule">name</span><span class="token punctuation">:</span> Install
+        <span class="token key atrule">run</span> <span class="token punctuation">:</span> npm install
+        <span class="token key atrule">env</span> <span class="token punctuation">:</span>
+          <span class="token key atrule">NODE_AUTH_TOKEN</span><span class="token punctuation">:</span> $<span class="token punctuation">{</span><span class="token punctuation">{</span> secrets.NODE_AUTH_TOKEN <span class="token punctuation">}</span><span class="token punctuation">}</span>
+      <span class="token punctuation">-</span> <span class="token key atrule">name</span><span class="token punctuation">:</span> Build
+        <span class="token key atrule">run</span> <span class="token punctuation">:</span> npm run build <span class="token punctuation">-</span><span class="token punctuation">-</span>if<span class="token punctuation">-</span>present
+        <span class="token key atrule">env</span> <span class="token punctuation">:</span>
+          <span class="token key atrule">NODE_AUTH_TOKEN</span><span class="token punctuation">:</span> $<span class="token punctuation">{</span><span class="token punctuation">{</span> secrets.NODE_AUTH_TOKEN <span class="token punctuation">}</span><span class="token punctuation">}</span>
+      <span class="token punctuation">-</span> <span class="token key atrule">name</span><span class="token punctuation">:</span> Publish
+        <span class="token key atrule">run</span> <span class="token punctuation">:</span> npm publish <span class="token punctuation">-</span><span class="token punctuation">-</span>access=public
+        <span class="token key atrule">env</span> <span class="token punctuation">:</span>
+          <span class="token key atrule">NODE_AUTH_TOKEN</span><span class="token punctuation">:</span> $<span class="token punctuation">{</span><span class="token punctuation">{</span> secrets.NODE_AUTH_TOKEN <span class="token punctuation">}</span><span class="token punctuation">}</span>
+</code></pre>
+<ul>
+  <li><code>master</code> ブランチへの Push をトリガーに動作するようにした
+    <ul>
+      <li><code>can-npm-publish</code> を使い、当該バージョンが公開済かどうかチェックしているので、<code>package.json</code> 内のバージョン番号を書き換えていない場合は <code>npm install</code> 以降の Step が動作しないことになる</li>
+    </ul>
+  </li>
+  <li><code>actions/setup-node</code> 内の <code>scope</code> は自身の Owner 名に合わせて変更する</li>
+  <li>Secrets に登録した <code>NODE_AUTH_TOKEN</code> を環境変数で渡し、npmjs のレジストリで認証できるようにしている</li>
+  <li><code>npm install</code>・<code>npm run build</code>・<code>npm publish</code> などは通常手作業で Publish する時と同じ
+    <ul>
+      <li><code>npm install</code> は依存パッケージがなかったら何の影響もしない。この Workflow をそのまま汎用的に流用できるだろう</li>
+      <li><code>--if-present</code> オプションにより、<code>npm run build</code> が存在しなくてもエラーにならない。コレにより、この Workflow を汎用的に流用できるだろう</li>
+      <li><code>--access=public</code> オプションは、スコープパッケージを <code>npm publish</code> する場合は必須</li>
+    </ul>
+  </li>
+</ul>
+<p>前回紹介した GPR (GitHub Package Registry) への Publish を同時に行う場合は、一つの Workflow ファイルに2つの Job として記載しても良いし、二つの Workflow ファイルに分けていても良い。</p>
+<p>1 Workflow・2 Jobs で記述した場合、片方の Job が失敗してももう片方の Job はそれに引きずられて中断されることはなく、ちゃんと最後まで終わるようだ。</p>
+<p>2 Workflows で記述した場合は完全に別々に動くので気にすることなし。「Actions」タブでの表示も「npm 公開用」と「GPR 公開用」とで Workflow が別れて表示されるので、コチラの方が分かりやすいかも。</p>
+<p>以上～。</p>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2020-08-17</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2020-08-17</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

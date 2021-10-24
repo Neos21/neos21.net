@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>Docker コンテナのライフサイクル : 「終了」と「破棄」は違う - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2019/02/20-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2019/index.html">2019年</a></li>
+            <li><a href="/blog/2019/02/index.html">02月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2019-02-20</time></div>
+        <h1 id="page-title">Docker コンテナのライフサイクル : 「終了」と「破棄」は違う</h1>
+
+<p>以前の記事で、Docker コンテナについて、次のように書いた。</p>
+<ul>
+  <li>「<code>$ docker run</code> と <code>$$ exit</code> で起動と終了を繰り返すと、毎回変更が破棄されてしまう」
+    <ul>
+      <li><a href="/blog/2019/02/18-01.html">MacOS で Docker を始めてみる</a></li>
+    </ul>
+  </li>
+</ul>
+<p>実は、この表現は正しくない。<code>$$ exit</code> による終了 = 即全てのデータが破棄される、というワケではなく、コレはただ「コンテナを終了させただけ」なのだ。</p>
+<p>「でもその後 <code>$ docker run</code> コマンドをもう一回叩くと、データ残ってないんだけど…？」と思うかもしれない。</p>
+<p>今回は、<strong>コンテナの「生成」→「起動」→「終了」→「破棄」</strong>というライフサイクルを確認してみよう。</p>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#%E5%AE%9F%E9%9A%9B%E3%81%AB%E3%82%84%E3%81%A3%E3%81%A6%E3%81%BF%E3%82%8B">実際にやってみる</a></li>
+  <li><a href="#%E7%B5%82%E4%BA%86%E3%81%97%E3%81%9F%E3%82%B3%E3%83%B3%E3%83%86%E3%83%8A%E3%81%AF%E3%81%A9%E3%81%93%E3%81%AB%E3%81%82%E3%82%8B%E3%81%AE%EF%BC%9F">終了したコンテナはどこにあるの？</a></li>
+  <li><a href="#%E7%B5%82%E4%BA%86%E3%81%95%E3%81%9B%E3%81%9F%E3%82%B3%E3%83%B3%E3%83%86%E3%83%8A%E3%81%AB%E3%82%82%E3%81%86%E4%B8%80%E5%BA%A6%E3%82%A2%E3%82%AF%E3%82%BB%E3%82%B9%E3%81%97%E3%81%9F%E3%81%84-%E3%82%A2%E3%82%BF%E3%83%83%E3%83%81">終了させたコンテナにもう一度アクセスしたい (アタッチ)</a></li>
+  <li><a href="#%E3%82%B3%E3%83%B3%E3%83%86%E3%83%8A%E3%82%92%E8%B5%B7%E5%8B%95%E3%81%95%E3%81%9B%E3%81%9F%E3%81%BE%E3%81%BE%E6%8A%9C%E3%81%91%E3%82%8B-%E3%83%87%E3%82%BF%E3%83%83%E3%83%81">コンテナを起動させたまま抜ける (デタッチ)</a></li>
+  <li><a href="#%E7%B5%82%E4%BA%86%E3%81%97%E3%81%9F%E3%82%B3%E3%83%B3%E3%83%86%E3%83%8A%E3%81%8C%E6%BA%9C%E3%81%BE%E3%81%A3%E3%81%A6%E3%81%84%E3%81%8F%E3%80%8C%E7%A0%B4%E6%A3%84%E3%80%8D%E3%81%AF%E3%81%A9%E3%81%86%E3%81%99%E3%82%8B%E3%81%AE%EF%BC%9F">終了したコンテナが溜まっていく…「破棄」はどうするの？</a></li>
+  <li><a href="#%E4%BB%A5%E4%B8%8A">以上</a></li>
+</ul>
+<h2 id="実際にやってみる"><a class="header-link" href="#実際にやってみる"><span class="header-link-mark"></span></a>実際にやってみる</h2>
+<p>実際にコマンドを叩いて順を追って確認してみよう。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># まずはコンテナを生成・起動する</span>
+$ docker run -it centos:7 <span class="token function">bash</span>
+
+<span class="token comment"># ホスト名を確認する。Docker が生成したランダムなホスト名が見える</span>
+<span class="token punctuation">[</span>root@038be9cb96b3 /<span class="token punctuation">]</span><span class="token comment"># hostname</span>
+038be9cb96b3
+
+<span class="token comment"># exit で抜ける</span>
+<span class="token punctuation">[</span>root@038be9cb96b3 /<span class="token punctuation">]</span><span class="token comment"># exit</span>
+
+<span class="token comment"># 同じコマンドでコンテナを生成・起動する → 別の環境が立ち上がる</span>
+$ docker run -it centos:7 <span class="token function">bash</span>
+
+<span class="token comment"># その証拠に、ホスト名が異なる</span>
+<span class="token punctuation">[</span>root@ded8c658767b /<span class="token punctuation">]</span><span class="token comment"># hostname</span>
+ded8c658767b
+
+<span class="token comment"># exit で抜ける</span>
+<span class="token punctuation">[</span>root@ded8c658767b /<span class="token punctuation">]</span><span class="token comment"># exit</span>
+</code></pre>
+<p>ココまでで何が起こっているかというと、<em>「1つの Docker イメージ」を基に「2つの Docker コンテナ」を生成</em>して、別々に保持している状態なのだ。物理的な比喩で言うと、<em>「1つの CentOS のインストールディスク」を用いて「2つの CentOS サーバを立てて、両方の電源を切った」</em>状態、といえる。</p>
+<p>「Create (新規生成)」と「Start (起動)」がセットになっているのが <code>docker run</code> コマンドである。</p>
+<h2 id="終了したコンテナはどこにあるの？"><a class="header-link" href="#終了したコンテナはどこにあるの？"><span class="header-link-mark"></span></a>終了したコンテナはどこにあるの？</h2>
+<p>ココで疑問なのは、<strong>一度 <code>exit</code> で抜けて終了させたコンテナはどこにあって、どうやったらまたアクセスできるの？</strong>ということだ。多分最初はコレが一番分かりにくいのだと思う。</p>
+<p>一つのターミナルで Docker コンテナにアクセスしている間に、別のターミナルを開いて <em><code>$ docker ps</code></em> と叩くと、起動中のコンテナが確認できる。</p>
+<pre class="language-bash"><code class="language-bash">$ docker <span class="token function">ps</span>
+CONTAINER ID        IMAGE               COMMAND             CREATED             STATUS              PORTS               NAMES
+ede6d077be0c        centos:7            <span class="token string">"bash"</span>              <span class="token number">22</span> minutes ago      Up <span class="token number">1</span> second                             silly_hamilton
+</code></pre>
+<p>一方、<code>exit</code> で抜けて終了した Docker コンテナは、<strong><code>$ docker ps --all</code></strong> コマンドで確認できる。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># `--all` は `-a` と省略できる</span>
+$ docker <span class="token function">ps</span> -a
+CONTAINER ID        IMAGE               COMMAND             CREATED             STATUS                      PORTS               NAMES
+ded8c658767b        centos:7            <span class="token string">"bash"</span>              <span class="token number">23</span> minutes ago      Up About a minute                               silly_hamilton
+038be9cb96b3        centos:7            <span class="token string">"bash"</span>              <span class="token number">25</span> minutes ago      Exited <span class="token punctuation">(</span><span class="token number">0</span><span class="token punctuation">)</span> <span class="token number">24</span> minutes ago                       hardcore_poitras
+</code></pre>
+<p>終了させたコンテナはココにいた。</p>
+<h2 id="終了させたコンテナにもう一度アクセスしたい-アタッチ"><a class="header-link" href="#終了させたコンテナにもう一度アクセスしたい-アタッチ"><span class="header-link-mark"></span></a>終了させたコンテナにもう一度アクセスしたい (アタッチ)</h2>
+<p><em>じゃあ、これらのコンテナにアクセスするにはどうしたらいいの？</em>という話。</p>
+<p>まずは、この状態ではコンテナが終了しているので、再度起動させる。<strong><code>$ docker start</code></strong> コマンドを使い、先程のコマンドで確認できた <code>CONTAINER ID</code> を指定すれば、そのコンテナがまた起動できる。</p>
+<pre class="language-bash"><code class="language-bash">$ docker start 038be9cb96b3
+038be9cb96b3
+</code></pre>
+<p>で、起動したコンテナにアクセスすることを<em>「アタッチ」</em>と表現するのだが、<strong><code>$ docker attach</code></strong> コマンドで、またシェルにログインできる。</p>
+<pre class="language-bash"><code class="language-bash">$ docker attach 038be9cb96b3
+<span class="token punctuation">[</span>root@038be9cb96b3 /<span class="token punctuation">]</span><span class="token comment"># hostname</span>
+038be9cb96b3
+</code></pre>
+<p>このとおり。</p>
+<h2 id="コンテナを起動させたまま抜ける-デタッチ"><a class="header-link" href="#コンテナを起動させたまま抜ける-デタッチ"><span class="header-link-mark"></span></a>コンテナを起動させたまま抜ける (デタッチ)</h2>
+<p>起動中のコンテナに入るのを「アタッチ」と呼ぶが、反対に、入っているコンテナから抜け出すことは<em>「デタッチ」</em>という。デタッチはコンテナ内部で行うので、<code>docker</code> コマンドではなく、<strong><code>Ctrl + P</code> → <code>Ctrl + Q</code></strong> と入力する。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># アタッチ</span>
+$ docker attach 038be9cb96b3
+<span class="token punctuation">[</span>root@038be9cb96b3 /<span class="token punctuation">]</span><span class="token comment"># hostname</span>
+038be9cb96b3
+
+<span class="token comment"># デタッチ : Ctrl + P → Ctrl + Q と入力する</span>
+<span class="token punctuation">[</span>root@038be9cb96b3 /<span class="token punctuation">]</span><span class="token comment"># read escape sequence</span>
+
+<span class="token comment"># デタッチしただけだとコンテナは終了していないので、`docker ps` で見える</span>
+$ docker <span class="token function">ps</span>
+CONTAINER ID        IMAGE               COMMAND             CREATED             STATUS              PORTS               NAMES
+038be9cb96b3        centos:7            <span class="token string">"bash"</span>              <span class="token number">29</span> minutes ago      Up About a minute                       hardcore_poitras
+</code></pre>
+<h2 id="終了したコンテナが溜まっていく「破棄」はどうするの？"><a class="header-link" href="#終了したコンテナが溜まっていく「破棄」はどうするの？"><span class="header-link-mark"></span></a>終了したコンテナが溜まっていく…「破棄」はどうするの？</h2>
+<p>こうした挙動を認識しておらず、バンバン <code>$ docker run</code> しまくっていると、裏側には「終了したまま放置されているコンテナ」がゴミとして残ることになる。</p>
+<pre class="language-bash"><code class="language-bash">$ docker <span class="token function">ps</span> -a
+CONTAINER ID        IMAGE               COMMAND             CREATED             STATUS                        PORTS               NAMES
+e02b7b30296f        centos:7            <span class="token string">"/bin/bash"</span>         <span class="token number">23</span> seconds ago      Exited <span class="token punctuation">(</span><span class="token number">0</span><span class="token punctuation">)</span> <span class="token number">22</span> seconds ago                         sad_pasteur
+0552478e9e44        centos:7            <span class="token string">"/bin/bash"</span>         <span class="token number">35</span> seconds ago      Exited <span class="token punctuation">(</span><span class="token number">0</span><span class="token punctuation">)</span> <span class="token number">34</span> seconds ago                         practical_rosalind
+ded8c658767b        centos:7            <span class="token string">"bash"</span>              <span class="token number">34</span> minutes ago      Exited <span class="token punctuation">(</span><span class="token number">137</span><span class="token punctuation">)</span> <span class="token number">11</span> minutes ago                       silly_hamilton
+038be9cb96b3        centos:7            <span class="token string">"bash"</span>              <span class="token number">36</span> minutes ago      Up <span class="token number">8</span> minutes                                      hardcore_poitras
+</code></pre>
+<p>このままだと、それぞれのコンテナは前述の方法で再起動できるワケだが、これらを完全に削除して、本当にデータを破棄するには、<strong><code>$ docker rm</code></strong> コマンドを使う。</p>
+<pre class="language-bash"><code class="language-bash">$ docker <span class="token function">rm</span> e02b7b30296f
+e02b7b30296f
+</code></pre>
+<p>こんな風にすると、破棄 = 削除できる。</p>
+<p>試行錯誤している最中はいいとして、一段落したら、このようにゴミコンテナが残っていないか確認するといいだろう。</p>
+<h2 id="以上"><a class="header-link" href="#以上"><span class="header-link-mark"></span></a>以上</h2>
+<p>コンテナをバンバンとっかえひっかえできるのはサーバ運用としてはメリットかもしれないが、どうも個人がコマンドラインから使っている範囲だと、分かりづらいように感じる。</p>
+<p>自分の用途に応じて、コンテナのライフサイクルを意識して適宜エイリアスを作ったりすると良いかと思う。</p>
+<ul>
+  <li>参考：<a href="https://qiita.com/chroju/items/ce9cae248cc016745c66">Dockerのライフサイクルがよくわからなかった - Qiita</a></li>
+</ul>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2019-02-20</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2019-02-20</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

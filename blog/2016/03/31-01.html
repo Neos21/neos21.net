@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>Ant から Eclipse ワークスペースのリフレッシュやフルビルドを行う - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2016/03/31-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2016/index.html">2016年</a></li>
+            <li><a href="/blog/2016/03/index.html">03月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2016-03-31</time></div>
+        <h1 id="page-title">Ant から Eclipse ワークスペースのリフレッシュやフルビルドを行う</h1>
+
+<p>今まで Eclipse の「プロジェクト設定に従い WAR ファイルを作成」メニューから WAR ファイルを作っていた Tomcat プロジェクトがキモいので、Ant でビルドしようと思って苦戦した話。</p>
+<h2 id="javac-タスクが制御できなかった"><a class="header-link" href="#javac-タスクが制御できなかった"><span class="header-link-mark"></span></a>javac タスクが制御できなかった</h2>
+<p>Ant の war タスクで class ファイルを格納する前に javac タスクでコンパイルしなきゃねー、java ファイル以外は src ディレクトリから classes ディレクトリへ copy タスクでコピーしなきゃねー、とか思ってたんだけど、javac タスクがどうしてもうまく行かなくて諦めました。</p>
+<p>まず javac タスクで動かす JDK を「外部ツールの構成」で「ワークスペースと同じ JRE を使用」にしているのに、「インストール済みの JRE」で選ばれている JDK ではなく普通に環境変数 PATH に入ってる別の JRE が選ばれてしまい、コンパイルができなかった。</p>
+<p>環境変数 JAVACMD というものを使うと、その環境変数を Ant が自動認識してコンパイラとして使用すると聞いたが、それもなんかうまく動かず。</p>
+<p>使用する JDK はともかく、コンパイルがとりあえずできるようになってからも、ファイル数が多いと OutOfMemory で落ちてしまう。Ant は異常終了するときにエラーメッセージが何も出ないパターンが多く、どうして落ちたか分かりづらかった。</p>
+<p>また、なんとか javac でコンパイルできたファイルを見てみると、Eclipse がビルドして生成する class ファイルとは色々と中身が違った。</p>
+<ul>
+  <li>Eclipse から起動する Ant の javac はワケが分からないなぁー</li>
+</ul>
+<p>というのと、</p>
+<ul>
+  <li>Eclipse が「プロジェクト設定に従い WAR ファイルを作成」メニューで作った WAR に入る class ファイルはどうやってコンパイルされてんだろうー</li>
+</ul>
+<p>というので途方に暮れていた。</p>
+<h2 id="考え方を変えた"><a class="header-link" href="#考え方を変えた"><span class="header-link-mark"></span></a>考え方を変えた</h2>
+<p>そんなワケで考え方を変えてみた。</p>
+<p>Ant の javac でコンパイルするのは諦めよう。んで、Eclipse が class ファイルを生成するのは「プロジェクトのビルド」の時だ。普段は「自動的にビルド」にチェックを入れているので基本的には最新の状態で class ファイルが生成されているはずだが、<strong>Ant から Eclipse のビルド処理を呼んであげられたら</strong>確実だよなぁ。</p>
+<p>というところでググってたら、ドンピシャなモノを発見。</p>
+<h3 id="eclipseincrementalbuild"><a class="header-link" href="#eclipseincrementalbuild"><span class="header-link-mark"></span></a>eclipse.incrementalBuild</h3>
+<p><code>eclipse.incrementalBuild</code> という Eclipse 独自の Ant タスクがあり、このタスクを使えば<strong>特定のプロジェクト、もしくはワークスペース全体に対し、ビルドやクリーンの命令が出せる</strong>。</p>
+<p><em>Eclipse のフルビルドは、src ディレクトリにある <code>.java</code> 以外のファイルを自動的に classes ディレクトリにコピーしてくれる</em>ので、そこも優秀。</p>
+<p>基本的な書式は以下のとおり。</p>
+<pre class="language-xml"><code class="language-xml"><span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>eclipse.incrementalBuild</span> <span class="token attr-name">project</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>myProject<span class="token punctuation">"</span></span> <span class="token attr-name">kind</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>full<span class="token punctuation">"</span></span><span class="token punctuation">/></span></span>
+</code></pre>
+<ul>
+  <li>project 属性はプロジェクト名を指定する。書かなければワークスペース全体が対象になる。</li>
+  <li>kind 属性には incremental (デフォルト)、clean、full の3種類のいずれかを指定する。</li>
+</ul>
+<h3 id="eclipserefreshlocal"><a class="header-link" href="#eclipserefreshlocal"><span class="header-link-mark"></span></a>eclipse.refreshLocal</h3>
+<p>また、<code>eclipse.refreshLocal</code> というタスクでプロジェクトのリフレッシュもできるので、ファイルの追加変更等を確実に認識させてからビルド、といったことができるようになる。</p>
+<p>こちらの基本的な書式は以下。</p>
+<pre class="language-xml"><code class="language-xml"><span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>eclipse.refreshLocal</span> <span class="token attr-name">resource</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>myProject<span class="token punctuation">"</span></span> <span class="token attr-name">depth</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>infinite<span class="token punctuation">"</span></span><span class="token punctuation">/></span></span>
+</code></pre>
+<ul>
+  <li>resource 属性はプロジェクト名を指定する。</li>
+  <li>depth 属性は zero、one、infinite が選べる様子。階層の掘り下げ方っぽいので、とりあえず infinite にしとく。</li>
+</ul>
+<h2 id="作った"><a class="header-link" href="#作った"><span class="header-link-mark"></span></a>作った</h2>
+<p>というわけで、以下のようなタスクで WAR ファイルを生成すると、「プロジェクト設定に従い WAR ファイルを作成」で生成した WAR とほぼ同一の内容になる。</p>
+<pre class="language-xml"><code class="language-xml"><span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>project</span> <span class="token attr-name">name</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>myAnt<span class="token punctuation">"</span></span> <span class="token attr-name">default</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>createWar<span class="token punctuation">"</span></span> <span class="token attr-name">basedir</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>.<span class="token punctuation">"</span></span><span class="token punctuation">></span></span>
+  <span class="token comment">&#x3C;!-- ルートディレクトリの設定 --></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>dirname</span> <span class="token attr-name">property</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>base<span class="token punctuation">"</span></span> <span class="token attr-name">file</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>${ant.file}<span class="token punctuation">"</span></span><span class="token punctuation">/></span></span>
+  
+  <span class="token comment">&#x3C;!-- プロジェクトのビルド --></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>target</span> <span class="token attr-name">name</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>buildProject<span class="token punctuation">"</span></span><span class="token punctuation">></span></span>
+    <span class="token comment">&#x3C;!-- 予めプロジェクトをリフレッシュしておく --></span>
+    <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>eclipse.refreshLocal</span> <span class="token attr-name">resource</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>myProject<span class="token punctuation">"</span></span> <span class="token attr-name">depth</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>infinite<span class="token punctuation">"</span></span><span class="token punctuation">/></span></span>
+    <span class="token comment">&#x3C;!-- プロジェクトをフルビルドする --></span>
+    <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>eclipse.incrementalBuild</span> <span class="token attr-name">project</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>myProject<span class="token punctuation">"</span></span> <span class="token attr-name">kind</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>full<span class="token punctuation">"</span></span><span class="token punctuation">/></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>target</span><span class="token punctuation">></span></span>
+  <span class="token comment">&#x3C;!-- WAR ファイルを作る --></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>target</span> <span class="token attr-name">name</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>createWar<span class="token punctuation">"</span></span> <span class="token attr-name">depends</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>buildProject<span class="token punctuation">"</span></span><span class="token punctuation">></span></span>
+    <span class="token comment">&#x3C;!-- 前回の Ant 実行で作成されている WAR ファイルを消しておく --></span>
+    <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>delete</span> <span class="token attr-name">file</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>${base}/myProject.war<span class="token punctuation">"</span></span><span class="token punctuation">/></span></span>
+    <span class="token comment">&#x3C;!-- WAR ファイルを作る --></span>
+    <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>war</span> <span class="token attr-name">destfile</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>${base}/myProject.war<span class="token punctuation">"</span></span> <span class="token attr-name">webxml</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>${base}/WEB-INF/web.xml<span class="token punctuation">"</span></span><span class="token punctuation">></span></span>
+      <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>classes</span> <span class="token attr-name">dir</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>${base}WEB-INF/classes<span class="token punctuation">"</span></span><span class="token punctuation">/></span></span>
+      <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>lib</span> <span class="token attr-name">dir</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>${base}/WEB-INF<span class="token punctuation">"</span></span><span class="token punctuation">/></span></span>
+      <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>fileset</span> <span class="token attr-name">dir</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>${base<span class="token punctuation">"</span></span><span class="token attr-name">}</span><span class="token punctuation">></span></span>
+        <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>exclude</span> <span class="token attr-name">name</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>**/src/**/*<span class="token punctuation">"</span></span><span class="token punctuation">/></span></span>
+        <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>exclude</span> <span class="token attr-name">name</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>**/src<span class="token punctuation">"</span></span><span class="token punctuation">/></span></span>
+        <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>exclude</span> <span class="token attr-name">name</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>**/work/**/*<span class="token punctuation">"</span></span><span class="token punctuation">/></span></span>
+        <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>exclude</span> <span class="token attr-name">name</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>**/work<span class="token punctuation">"</span></span><span class="token punctuation">/></span></span>
+      <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>fileset</span><span class="token punctuation">></span></span>
+    <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>war</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>target</span><span class="token punctuation">></span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>project</span><span class="token punctuation">></span></span>
+</code></pre>
+<p>exclude 要素での除外は適宜行う。不要なものは入れないようにしておこう。</p>
+<p>「プロジェクト設定に従い WAR ファイルを作成」で生成した WAR と差分が発生しうる場所は、exclude 要素で除外したファイルと、Ant の war タスクはマニフェストファイルを自動的に作成して格納するので、元のプロジェクトにマニフェストファイルがなかった場合は差分になる。</p>
+<p>しかしこれらはアプリの動作には関係しないファイルたちで、class ファイルなんかは中身も同一なので、このまま Ant から作った WAR をデプロイして使うことができた。</p>
+<h2 id="参考"><a class="header-link" href="#参考"><span class="header-link-mark"></span></a>参考</h2>
+<ul>
+  <li><a href="http://d.hatena.ne.jp/kimukou_26/20131212/p1">eclipseの独自ant taskを触ってみる - exception think</a></li>
+  <li><a href="http://software.fujitsu.com/jp/manual/manualfiles/M090096/B1WD1461/02Z200/B1461-00-08-01-05.html">8.1.5 ビルドおよびデバッグ</a></li>
+  <li><a href="http://help.eclipse.org/mars/index.jsp?topic=%2Forg.eclipse.platform.doc.isv%2Fguide%2Fant_eclipse_tasks.htm">Help - Eclipse Platform</a></li>
+  <li><a href="http://www.atmarkit.co.jp/ait/articles/0412/21/news095.html">JavaTips 〜Apache／Jakarta編：Antでwarファイルを作成する - ＠IT</a></li>
+  <li><a href="http://www.ne.jp/asahi/hishidama/home/tech/ant/tag/war.html">Ant「warタスク」メモ(Hishidama's ant-war Memo)</a></li>
+</ul>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2016-03-31</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2016-03-31</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

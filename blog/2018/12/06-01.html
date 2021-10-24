@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>Heroku アプリに PostgreSQL を導入する - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2018/12/06-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2018/index.html">2018年</a></li>
+            <li><a href="/blog/2018/12/index.html">12月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2018-12-06</time></div>
+        <h1 id="page-title">Heroku アプリに PostgreSQL を導入する</h1>
+
+<p>最近 Heroku いじりを始めて、サーバサイドにも触れる機会ができた。サーバサイドといったら DB 使ってデータ永続化でしょ、ということで、今回は <strong>Heroku アプリに PostgreSQL を導入</strong>してみる。</p>
+<ul>
+  <li>参考：<a href="https://devcenter.heroku.com/articles/heroku-postgresql">Heroku Postgres | Heroku Dev Center</a> … 公式のリファレンス</li>
+</ul>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#heroku-postgres-%E3%81%AF%E7%84%A1%E6%96%99%E3%81%A7%E4%BD%BF%E3%81%88%E3%82%8B">Heroku Postgres は無料で使える</a></li>
+  <li><a href="#web-%E3%83%80%E3%83%83%E3%82%B7%E3%83%A5%E3%83%9C%E3%83%BC%E3%83%89%E3%81%8B%E3%82%89-postgresql-%E3%82%92%E5%B0%8E%E5%85%A5%E3%81%99%E3%82%8B">Web ダッシュボードから PostgreSQL を導入する</a>
+    <ul>
+      <li><a href="#heroku-cli-%E3%81%8B%E3%82%89-postgresql-%E3%82%92%E5%B0%8E%E5%85%A5%E3%81%99%E3%82%8B">Heroku CLI から PostgreSQL を導入する</a></li>
+    </ul>
+  </li>
+  <li><a href="#heroku-postgres-%E3%81%AE%E7%8A%B6%E6%B3%81%E7%A2%BA%E8%AA%8D">Heroku Postgres の状況確認</a></li>
+  <li><a href="#heroku-postgres-%E3%81%AB%E6%8E%A5%E7%B6%9A%E3%81%99%E3%82%8B">Heroku Postgres に接続する</a></li>
+  <li><a href="#%E3%81%93%E3%81%AE%E3%81%82%E3%81%A8%E3%82%84%E3%82%8A%E3%81%9F%E3%81%84%E3%81%93%E3%81%A8">このあとやりたいこと</a></li>
+</ul>
+<h2 id="heroku-postgres-は無料で使える"><a class="header-link" href="#heroku-postgres-は無料で使える"><span class="header-link-mark"></span></a>Heroku Postgres は無料で使える</h2>
+<p>Heroku の PostgreSQL、公式サイトでは Heroku Postgres と表記されているが、コチラは無料利用も可能だ。無料枠である <code>hobby-dev</code> プランでは、全部で1万行のデータまでというデータ容量制限があったり、メモリキャッシュができないなど、Web サービスを本運用するには難しい制限がかかっているが、個人の開発用途なら十分であろう。</p>
+<p>プランの詳細はコチラに記載アリ。</p>
+<ul>
+  <li>参考：<a href="https://devcenter.heroku.com/articles/heroku-postgres-plans#hobby-tier">Choosing the Right Heroku Postgres Plan | Heroku Dev Center</a></li>
+</ul>
+<h2 id="web-ダッシュボードから-postgresql-を導入する"><a class="header-link" href="#web-ダッシュボードから-postgresql-を導入する"><span class="header-link-mark"></span></a>Web ダッシュボードから PostgreSQL を導入する</h2>
+<p>今回は試しに、Heroku の Web 上のダッシュボード (管理画面) から PostgreSQL を導入してみた。</p>
+<p>PostgreSQL を導入したい Heroku アプリのダッシュボードに行き、右上のメニューから「Data」を選び、「Heroku Postgres」を選択してインストールする。</p>
+<p>
+  <img src="06-01-05.png" alt="右上のアイコンから Data">
+</p>
+<p>
+  <img src="06-01-04.png" alt="Heroku Postgres">
+</p>
+<p>
+  <img src="06-01-03.png" alt="App to provision to">
+</p>
+<p>
+  <img src="06-01-02.png" alt="Provision add-on">
+</p>
+<p>
+  <img src="06-01-01.png" alt="できーた">
+</p>
+<p><em>…コレだけ。</em>すごい、メチャクチャ簡単に DB もらえた。</p>
+<h3 id="heroku-cli-から-postgresql-を導入する"><a class="header-link" href="#heroku-cli-から-postgresql-を導入する"><span class="header-link-mark"></span></a>Heroku CLI から PostgreSQL を導入する</h3>
+<p>今回試さなかったが、Heroku CLI からも同様のインストール作業ができるようだ。</p>
+<pre class="language-bash"><code class="language-bash">$ heroku addons:create heroku-postgresql:hobby-dev
+</code></pre>
+<p>PostgreSQL は「Addon」としてインストールするようだ。</p>
+<h2 id="heroku-postgres-の状況確認"><a class="header-link" href="#heroku-postgres-の状況確認"><span class="header-link-mark"></span></a>Heroku Postgres の状況確認</h2>
+<p>PostgreSQL をインストールすると、<code>heroku pg</code> コマンドで Heroku Postgres を操作できるようになる。自分のローカル開発環境には既に PostgreSQL をインストールしていたので分からなかったのだが、もしかしたらローカル環境に PostgreSQL をインストールしておかないといけないかもしれない。</p>
+<p>インストールした PostgreSQL の状況は以下のように確認できる。</p>
+<pre class="language-bash"><code class="language-bash">$ heroku pg:info
+<span class="token operator">==</span><span class="token operator">=</span> DATABASE_URL
+Plan:                  Hobby-dev
+Status:                Available
+Connections:           <span class="token number">0</span>/20
+PG Version:            <span class="token number">10.5</span>
+Created:               <span class="token number">2018</span>-11-06 <span class="token number">13</span>:43 UTC
+Data Size:             <span class="token number">7.6</span> MB
+Tables:                <span class="token number">0</span>
+Rows:                  <span class="token number">0</span>/10000 <span class="token punctuation">(</span>In compliance<span class="token punctuation">)</span>
+Fork/Follow:           Unsupported
+Rollback:              Unsupported
+Continuous Protection: Off
+Add-on:                postgresql-globular-28873
+</code></pre>
+<p><code>hobby-dev</code> プラン (無料枠) で、Status は <code>Available</code> (有効) なようである。</p>
+<p>Web 上の管理画面では、接続情報が確認できる。</p>
+<p>
+  <img src="06-01-07.png" alt="Settings で接続情報を確認できる">
+</p>
+<p>また、アプリケーションから DB 接続するための接続文字列が、環境変数 <code>DATABASE_URL</code> として自動的に追加されていた。</p>
+<p>
+  <img src="06-01-06.png" alt="環境変数も自動設定済">
+</p>
+<h2 id="heroku-postgres-に接続する"><a class="header-link" href="#heroku-postgres-に接続する"><span class="header-link-mark"></span></a>Heroku Postgres に接続する</h2>
+<p>Heroku Postgres にコンソールからアクセスして、直接 <code>SELECT</code> 文や <code>INSERT</code> 文を流したりもできる。通常の PostgreSQL で使用する <code>psql</code> コマンドの代わりに、<em><code>heroku pg:psql</code> コマンド</em>で接続できる。</p>
+<pre class="language-bash"><code class="language-bash">$ heroku pg:psql
+--<span class="token operator">></span> Connecting to postgresql-globular-28873
+</code></pre>
+<p>違いが分からなかったのだが、<strong><code>$ heroku psql</code></strong> コマンドでも接続できた。</p>
+<h2 id="このあとやりたいこと"><a class="header-link" href="#このあとやりたいこと"><span class="header-link-mark"></span></a>このあとやりたいこと</h2>
+<p>Heroku アプリで PostgreSQL が使えるようになったワケだが、このままではまだ開発がやりづらい。まずはローカル開発環境にも同等の PostgreSQL 環境が欲しい。</p>
+<p>そして、Node.js で PostgreSQL に接続してみたいと思う。まずは公式のリファレンスにもある <code>pg</code> パッケージを使って操作してみたい。</p>
+<p>さらに、ローカルの PostgreSQL と、Heroku Postgres との接続情報を、環境変数で切り替えられるようにしたい。</p>
+<p>以降、このあたりを整理してやっていこうと思う。</p>
+<ul>
+  <li>参考：<a href="https://qiita.com/shosho/items/5ebabf11efb1f3b604f7">Heroku Postgres を利用してみよう - Qiita</a></li>
+</ul>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2018-12-06</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2018-12-06</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>Jenkins Multibranch Pipeline でワークスペースのパスが長過ぎてエラーになるのを回避する - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2018/05/23-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2018/index.html">2018年</a></li>
+            <li><a href="/blog/2018/05/index.html">05月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2018-05-23</time></div>
+        <h1 id="page-title">Jenkins Multibranch Pipeline でワークスペースのパスが長過ぎてエラーになるのを回避する</h1>
+
+<p>Windows Server 上で動作させている Jenkins にて。</p>
+<p>Multibranch Pipeline を使うと、Git ブランチごとにワークスペースディレクトリが自動生成されるのだが、この<em>ディレクトリ名にユニーク ID と思われるランダムな文字列が付与される</em>。これのせいで、Git チェックアウト時にファイルのフルパスが長くなり過ぎて、ビルドが失敗してしまった。</p>
+<p>以下のような <code>Filename too long</code> といったコンソールログが表示される。</p>
+<pre><code>hudson.plugins.git.GitException: Command "git.exe checkout -f 2cea7d8eb9185899c01d2ffc86872f584da2e60c" returned status code 1:
+
+stdout:
+stderr: error: unable to create file edgemagic-nextgen-core/src/test/resources/dbunit_test_data/com/cybra/edgemagic/service/EmObjectServiceTest/data/testInstances_create_dataRequiresData.xml: Filename too long
+</code></pre>
+<ul>
+  <li>参考：<a href="https://stackoverflow.com/questions/45222538/filename-too-long-error-in-jenkins-git-checkout">"Filename too long" error in Jenkins git checkout - Stack Overflow</a></li>
+</ul>
+<p>そこで考えたのが、<strong>ワークスペースディレクトリの名前を短くできないか</strong>、ということで、調べてみるとやり方があった。</p>
+<p>Declarative Pipeline の場合、<em><code>ws()</code></em> ステップでワークスペースディレクトリを変更できる他、<code>agent {}</code> ブロック内で <strong><code>customWorkspace</code></strong> オプションを指定すると任意のパス配下をワークスペースとして使えるようになるのだ。</p>
+<ul>
+  <li>参考：<a href="https://issues.jenkins-ci.org/browse/JENKINS-41118?focusedCommentId=292792&#x26;page=com.atlassian.jira.plugin.system.issuetabpanels%3Acomment-tabpanel#comment-292792">JENKINS-41118 Allow custom workspaces in declarative pipeline - Jenkins JIRA</a> … <code>customWorkspace</code> 指定の例</li>
+  <li>参考：<a href="https://issues.jenkins-ci.org/browse/JENKINS-38706?focusedCommentId=335077&#x26;page=com.atlassian.jira.plugin.system.issuetabpanels%3Acomment-tabpanel#comment-335077">JENKINS-38706 Workspace directory names mangled in multibranch pipeline - Jenkins JIRA</a> … <code>customWorkspace "${JENKINS_HOME}/Workspace/${URLDecoder.decode(JOB_NAME)}/${BUILD_NUMBER}"</code> という例を挙げているが、URLDecoder が使えなかった</li>
+  <li>参考：<a href="https://gist.github.com/abayer/ea2b26ad5555cb7a424d2b83ab721b6e">New Declarative Pipeline features in 1.1 · GitHub</a> … <code>customWorkspace</code> は相対パスでもフルパスでも書けるようだ</li>
+</ul>
+<p>早速書いてみるとこんな感じ。</p>
+<pre class="language-groovy"><code class="language-groovy">pipeline <span class="token punctuation">{</span>
+  agent <span class="token punctuation">{</span>
+    label <span class="token punctuation">{</span>
+      label <span class="token string gstring">""</span>
+      <span class="token comment">// ワークスペースディレクトリ配下のディレクトリ名を変える</span>
+      <span class="token comment">// ブランチ名に「feat/」が含まれていれば消す。それ以外の「/」は「-」にする</span>
+      <span class="token comment">// 「my-multi-job-【ブランチ名の省略形】-【ビルド番号】」にする</span>
+      customWorkspace <span class="token string gstring">"<span class="token expression"><span class="token punctuation">$</span><span class="token punctuation">{</span>JENKINS_HOME<span class="token punctuation">}</span></span>/workspace/my-multi-job-${BRANCH_NAME.replaceAll("</span>feat<span class="token string regex">/", "").replaceAll("/</span><span class="token string gstring">", "</span><span class="token operator">-</span><span class="token string gstring">")}-<span class="token expression"><span class="token punctuation">$</span><span class="token punctuation">{</span>BUILD_NUMBER<span class="token punctuation">}</span></span>"</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span>
+  stages <span class="token punctuation">{</span>
+    steps <span class="token punctuation">{</span>
+      echo <span class="token string gstring">"<span class="token expression"><span class="token punctuation">$</span><span class="token punctuation">{</span><span class="token function">pwd</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">}</span></span>"</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>Jenkins が設定する環境変数を用いて、元々のワークスペースディレクトリ <code>${WORKSPACE}</code> と同階層に「<code>my-multi-job-【ブランチ名の省略形】-【ビルド番号】</code>」という名前のディレクトリを作り、通常よりも短いディレクトリ名で済ませられるようにした。</p>
+<p><em>Jenkins が提供する環境変数の一例</em>は以下のとおり。</p>
+<table>
+  <thead>
+    <tr>
+      <th>環境変数</th>
+      <th>概要</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>${JENKINS_HOME}</code></td>
+      <td>Jenkins のルートパス</td>
+    </tr>
+    <tr>
+      <td><code>${WORKSPACE}</code></td>
+      <td>デフォルトのワークスペースのパス。デフォルトだと <code>${JENKINS_HOME}/workspace/${JOB_NAME}</code> かな</td>
+    </tr>
+    <tr>
+      <td><code>${BUILD_NUMBER}</code></td>
+      <td>ビルド番号 (1 からの連番になる)</td>
+    </tr>
+    <tr>
+      <td><code>${JOB_NAME}</code></td>
+      <td>ジョブ名</td>
+    </tr>
+    <tr>
+      <td><code>${BRANCH_NAME}</code></td>
+      <td>マルチブランチ・パイプラインの時だけ参照可能</td>
+    </tr>
+  </tbody>
+</table>
+<ul>
+  <li>参考：<a href="https://wiki.jenkins.io/pages/viewpage.action?pageId=31719431">Building a software project - 日本語 - Jenkins Wiki</a></li>
+</ul>
+<p>また、処理部分で使用している <code>${pwd()}</code> は、環境変数ではないが、カレントディレクトリを確認できる。</p>
+<p>Jenkins の中身は Java なので、例のように <code>replaceAll()</code> という Java String のメソッドが使える。この <code>replaceAll()</code> で <code>\</code> 記号を扱う時は <code>\\\\</code> と書かないと、<code>PatternSyntaxException: Unexpected internal error near index 1</code> エラーが出るので注意。<code>replaceAll("\\\\", "-")</code> と書くことで、<code>\</code> 記号を <code>-</code> に置換できる、というワケだ。</p>
+<ul>
+  <li>参考：<a href="https://stackoverflow.com/questions/13175129/split-and-error">java - split("\\") and error - Stack Overflow</a></li>
+</ul>
+<p>コレでワークスペースまでのパスを短くでき、チェックアウトするファイルの長さにも耐えられるようになった。一件落着。</p>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2018-05-23</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2018-05-23</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

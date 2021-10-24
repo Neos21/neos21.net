@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>Oracle Management Cloud の Log Analytics とやらを使ってみる - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2019/03/29-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2019/index.html">2019年</a></li>
+            <li><a href="/blog/2019/03/index.html">03月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2019-03-29</time></div>
+        <h1 id="page-title">Oracle Management Cloud の Log Analytics とやらを使ってみる</h1>
+
+<p><strong>Oracle Management Cloud (OMC)</strong> というサービスがある。サーバのログを収集・分析して、問題が発生した場合はアラートを上げたりできる。</p>
+<p>今回はこの OMC の中の <em>Log Analytics</em> 機能を中心に、使い始めてみる。</p>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#omc-%E3%81%AE%E7%89%B9%E5%BE%B4">OMC の特徴</a></li>
+  <li><a href="#%E5%89%8D%E6%8F%90%E3%81%A8%E3%81%99%E3%82%8B%E3%82%B5%E3%83%BC%E3%83%90%E7%92%B0%E5%A2%83">前提とするサーバ環境</a></li>
+  <li><a href="#omc-%E3%82%A4%E3%83%B3%E3%82%B9%E3%82%BF%E3%83%B3%E3%82%B9%E3%81%AE%E4%BD%9C%E6%88%90">OMC インスタンスの作成</a></li>
+  <li><a href="#cloud-agent-installer-%E3%82%92%E3%83%80%E3%82%A6%E3%83%B3%E3%83%AD%E3%83%BC%E3%83%89%E3%81%99%E3%82%8B">Cloud Agent Installer をダウンロードする</a></li>
+  <li><a href="#%E3%83%AD%E3%82%B0%E3%83%BB%E3%82%BD%E3%83%BC%E3%82%B9%E3%80%8Cnodejs-log4js-logs%E3%80%8D%E3%81%AE%E8%A8%AD%E5%AE%9A%E3%82%92%E5%A4%89%E6%9B%B4%E3%81%99%E3%82%8B">ログ・ソース「Node.js Log4js Logs」の設定を変更する</a></li>
+  <li><a href="#%E3%82%AF%E3%83%A9%E3%82%A6%E3%83%89%E3%82%A8%E3%83%BC%E3%82%B8%E3%82%A7%E3%83%B3%E3%83%88%E3%83%BB%E3%82%A4%E3%83%B3%E3%82%B9%E3%83%88%E3%83%BC%E3%83%A9%E3%82%92%E5%90%8C%E6%A2%B1%E3%81%97%E3%81%9F-docker-%E3%82%A4%E3%83%A1%E3%83%BC%E3%82%B8%E3%82%92%E4%BD%9C%E3%82%8B">クラウドエージェント・インストーラを同梱した Docker イメージを作る</a></li>
+  <li><a href="#%E5%AE%9F%E9%9A%9B%E3%81%AB%E8%B5%B7%E5%8B%95%E3%81%97%E3%81%A6%E3%81%BF%E3%82%8B">実際に起動してみる</a></li>
+  <li><a href="#%E4%BB%A5%E4%B8%8A">以上</a></li>
+</ul>
+<h2 id="omc-の特徴"><a class="header-link" href="#omc-の特徴"><span class="header-link-mark"></span></a>OMC の特徴</h2>
+<p>OMC の特徴は以下のとおり。</p>
+<ul>
+  <li>Web サーバに<strong>クラウド・エージェント</strong>というツールをインストールしておく
+    <ul>
+      <li>このツールは、OMC 管理コンソール (Web ページ) で設定された内容を定期的に受信し、その設定内容に応じてログ情報を送信する</li>
+      <li>つまり、Web サーバ側はクラウド・エージェントを一度インストールしておけばよく、ログ収集の仕方を変えたりする時に<em>再デプロイが不要</em>なのである</li>
+    </ul>
+  </li>
+  <li>デフォルトで、OS・ミドルウェア・ロガーツールが出力するログの書式を解析する<em>「ログ・パーサ」</em>が充実している
+    <ul>
+      <li>OS が出力する動作ログ</li>
+      <li>Apache や Tomcat サーバがデフォルトで出力するログ</li>
+      <li>「Log4js」のようなロギングライブラリで出力するログ</li>
+      <li>こうした各種ツールが出力するログの<em>デフォルトの書式を解析するパーサ (= 正規表現)</em> が多数登録されており、ログを表形式にまとめたりする時にうまいことやってくれる</li>
+      <li>勿論自分で正規表現をガリガリ書いてパーサを作ったりもできるし、自動的にうまい感じにパーサを構築してくれたりもする</li>
+    </ul>
+  </li>
+  <li>パースしたログをグラフィカルに表示してくれる「ログ・エクスプローラ」機能がある
+    <ul>
+      <li>なんか日本語が文字化けすることがあったりして、ちょっとイマイチなところもあるけど、色々見やすい</li>
+    </ul>
+  </li>
+  <li>特定のログを検知した時に、アラートメールを送信したりできる</li>
+</ul>
+<p>お膳立てされているところが多く、サーバ側にクラウド・エージェントを仕込んでおきさえすれば、後から色々と調整したりできる。</p>
+<h2 id="前提とするサーバ環境"><a class="header-link" href="#前提とするサーバ環境"><span class="header-link-mark"></span></a>前提とするサーバ環境</h2>
+<ul>
+  <li>実装言語は Node.js。Express サーバを Docker コンテナに包んで稼動させているものとする</li>
+  <li>ログを <em>Log4js</em> でファイル出力している</li>
+  <li>稼動する Docker コンテナは CentOS をベースに使用している</li>
+</ul>
+<p>今回はこのようなサーバのログ収集ができるようにしてみる。</p>
+<h2 id="omc-インスタンスの作成"><a class="header-link" href="#omc-インスタンスの作成"><span class="header-link-mark"></span></a>OMC インスタンスの作成</h2>
+<p>Oracle Cloud My Services のメニュー → サービス → Management Cloud と移動し、OMC インスタンスを作成する。</p>
+<p>インスタンスを作成したら、右側のメニューアイコンより「OMC URL」を押下すると、OMC 管理コンソールのトップページに遷移する。</p>
+<h2 id="cloud-agent-installer-をダウンロードする"><a class="header-link" href="#cloud-agent-installer-をダウンロードする"><span class="header-link-mark"></span></a>Cloud Agent Installer をダウンロードする</h2>
+<p>前述の「クラウド・エージェント」ソフトウェアを Docker コンテナに同梱するため、まずはそのインストーラファイルをダウンロードする。</p>
+<p>OMC 管理コンソールの左メニュー → 「管理」 → 「エージェント」と進み、画面右上のハンバーガーメニュー風アイコン → 「Download Agents」と進む。</p>
+<p>次の画面で、</p>
+<ul>
+  <li>エージェント・タイプ : クラウド・エージェント</li>
+</ul>
+<p>を選択し、Docker コンテナの OS に応じたエージェントの Zip ファイルをダウンロードする。今回は <em>Cloud Agent - Linux (64-bit)</em> を使用する。現時点では v1.38 というバージョンで、<code>cloudagent_linux.x64_1.38.0.zip</code> というファイルがダウンロードできた。</p>
+<p>また、この画面で、<em><code>TENANCY_NAME</code></em>・<em><code>OMC_URL</code></em> パラメータ値をメモしておく。さらに、ページ中の「登録キー」リンクを押下して、次画面の「キー値」欄に表示されている値をメモしておく。この値は、後述する <em><code>AGENT_REGISTRATION_KEY</code></em> 項目の設定値となる。</p>
+<h2 id="ログ・ソース「nodejs-log4js-logs」の設定を変更する"><a class="header-link" href="#ログ・ソース「nodejs-log4js-logs」の設定を変更する"><span class="header-link-mark"></span></a>ログ・ソース「Node.js Log4js Logs」の設定を変更する</h2>
+<p>今回は Log4js が追記するログファイルを監視したいのだが、Log4js が出力するログファイルをよしなに解析してくれる<em>ログソース</em>が用意されている。</p>
+<p>ログソースとは、「ログパーサ」を、どんなマシンの、どんなファイルに適用するか、といった設定を担う概念。こんな文言が含まれるログには「要注意」ラベルを付ける、とかいう設定もできたりする。</p>
+<p>OMC 管理コンソール左メニュー → 管理 → ログ管理 → ログ・ソース と進み、「ログ・ソースの検索」検索窓より絞り込んで <em>Node.js Log4js Logs</em> というログソースを見つける。</p>
+<p>このログソースの詳細画面に飛んだら、以下のように設定しておく。</p>
+<ul>
+  <li>自動連動 : チェックする → コレにより、ウェブサーバを再デプロイしたりした時に関連付け作業をしなくて済むようになる</li>
+  <li>「含まれているパターン」タブ : ウェブサーバ内の、監視したいログファイルのパスを指定する
+    <ul>
+      <li>例えばウェブサーバ内の <code>/my-app/logs/my-app.log</code> というパスにログファイルが吐かれる場合は、「ファイル名パターン : <code>/my-app/logs/*.log</code>」みたいに指定できる</li>
+      <li>最初から設定されている <code>{log_directory}/{log_filename_pattern}</code> というパターン指定だけでも設定できる。この変数に与える値をどう設定するかは後述</li>
+    </ul>
+  </li>
+  <li>アラート設定をしたい場合は、「ラベル」タブにて任意の条件を追加し、好きなラベルを選択するか新規生成するかしておく
+    <ul>
+      <li>ラベルに応じてアラート通知をメールで送信するには、「管理」→「アラート・ルール」というメニューから設定する。「エンティティ・タイプ : <code>Node.js</code>」「ラベル : 作成したラベル名」「通知 … 電子メール : 電子メール・チャネル」と選択肢たらメール・チャネルを作成し、通知対象のメールアドレスを設定する</li>
+    </ul>
+  </li>
+</ul>
+<h2 id="クラウドエージェント・インストーラを同梱した-docker-イメージを作る"><a class="header-link" href="#クラウドエージェント・インストーラを同梱した-docker-イメージを作る"><span class="header-link-mark"></span></a>クラウドエージェント・インストーラを同梱した Docker イメージを作る</h2>
+<p>管理画面側での初期設定は以上。以降、ログを実際にどうパースするか、どんなログを抽出・集計するか、といった設定は、実際に「クラウド・エージェント」にログを送信させるよう設定してから変更しても問題ない。</p>
+<p>続いては、ログを送信させる Web サーバ側の設定。先程ダウンロードしたクラウドエージェントの Zip ファイルと、いくつかの設定ファイルを用意して、サーバ起動時に初期設定してやる必要がある。今回は Web サーバを Docker コンテナとして稼動させる例として記述する。</p>
+<p>まずはプロジェクトディレクトリ直下に次のような構成でファイルを格納する。</p>
+<ul>
+  <li><code>./cloud-agent-installer/</code> (ディレクトリ名は任意)
+    <ul>
+      <li><code>cloudagent_linux.x64_1.38.0.zip</code> … 先程ダウンロードしたクラウドエージェントの Zip ファイル</li>
+      <li><code>agent.rsp</code> … エージェントの設定ファイル</li>
+      <li><code>linux-entity-agent.json</code> … デフォルトの Linux ホストの設定を更新するためのファイル</li>
+      <li><code>nodejs-entity-agent.json</code> … Node.js サーバとしての「エンティティ・エージェント」を追加するためのファイル</li>
+    </ul>
+  </li>
+</ul>
+<p>Zip ファイルは先程のモノとして、それ以外のファイルの内容は以下のとおり。</p>
+<ul>
+  <li><code>agent.rsp</code> … エージェントの設定ファイル
+    <ul>
+      <li>このファイルは、Zip ファイル内に元のファイルが格納されている。元ファイルをコピーしたら、以下の4項目についてダミーの値を記述しておく。<em>このダミーの値を後で置換する。</em></li>
+    </ul>
+  </li>
+</ul>
+<pre><code>###################################### Registration Parameters #####################################
+
+# 最初は「TENANT_NAME=」という行になっていると思うので、「__TENANT_NAME__」とダミーの値を設定しておく
+TENANT_NAME=__TENANT_NAME__
+
+# 以下も同様…
+AGENT_REGISTRATION_KEY=__AGENT_REGISTRATION_KEY__
+
+AGENT_BASE_DIRECTORY=__AGENT_BASE_DIRECTORY__
+
+##################################### Communication Parameters #####################################
+
+# この4項目だけ
+OMC_URL=__OMC_URL__
+</code></pre>
+<ul>
+  <li><code>linux-entity-agent.json</code> … デフォルトの Linux ホストの設定を更新するためのファイル
+    <ul>
+      <li>Linux OS のシステムログを拾うための「エンティティ・エージェント」がデフォルトで仕込まれているのだが、そのエージェントがログを送信する際、サーバ自身の名前がよく分からなくなるので、ホスト名を設定してやるために用意する。 <code>name</code> プロパティに <code>__HOSTNAME__</code> というダミーの値を設定しておき、あとで <code>$ hostname</code> コマンドで拾える Docker コンテナのホスト名に置換してやる。</li>
+    </ul>
+  </li>
+</ul>
+<pre class="language-json"><code class="language-json"><span class="token punctuation">{</span>
+  <span class="token property">"entities"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
+    <span class="token punctuation">{</span>
+      <span class="token property">"name"</span><span class="token operator">:</span> <span class="token string">"__HOSTNAME__"</span><span class="token punctuation">,</span>
+      <span class="token property">"type"</span><span class="token operator">:</span> <span class="token string">"omc_host_linux"</span><span class="token punctuation">,</span>
+      <span class="token property">"properties"</span><span class="token operator">:</span><span class="token punctuation">{</span>
+        <span class="token property">"capability"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+          <span class="token property">"displayName"</span><span class="token operator">:</span> <span class="token string">"capability"</span><span class="token punctuation">,</span>
+          <span class="token property">"value"</span><span class="token operator">:</span> <span class="token string">"monitoring"</span>
+        <span class="token punctuation">}</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">]</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<ul>
+  <li><code>nodejs-entity-agent.json</code> … Node.js サーバとしての「エンティティ・エージェント」を追加するためのファイル
+    <ul>
+      <li>「Node.js Log4js Logs」ログ・ソースを使うには、「Node.js」タイプの「エンティティ・エージェント」を設定する必要がある。その設定を追加するためのモノ。</li>
+      <li><code>properties.host_name</code>・<code>port_list</code>・<code>full_module_name</code> プロパティは、OMC の APM (Application Performance Monitoring) という性能監視用の別機能を利用する際に指定する項目。Log Analytics においては使用しないので、値は適当で良いし、必要なら正しく設定する。</li>
+      <li><code>name</code> プロパティ、はホスト名に置換するのでダミー値を設定しておく。</li>
+      <li><code>log_directory</code>・<code>log_filename_pattern</code> プロパティは、前述のログソースの設定画面に出てきていたパターン指定に使われる。ココで、コンテナ内の収集させたいログファイルをパターン指定できるというワケ。勿論、ログソースの設定画面で後からファイルパターンを設定すれば、そのファイルを収集するよう自動的に設定変更が反映されるので、お好みで。</li>
+    </ul>
+  </li>
+</ul>
+<pre class="language-json"><code class="language-json"><span class="token punctuation">{</span>
+  <span class="token property">"entities"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
+    <span class="token punctuation">{</span>
+      <span class="token property">"name"</span><span class="token operator">:</span> <span class="token string">"__HOSTNAME__"</span><span class="token punctuation">,</span>
+      <span class="token property">"type"</span><span class="token operator">:</span> <span class="token string">"omc_nodejs"</span><span class="token punctuation">,</span>
+      <span class="token property">"properties"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+        <span class="token property">"host_name"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+          <span class="token property">"displayName"</span><span class="token operator">:</span> <span class="token string">"__HOSTNAME__"</span><span class="token punctuation">,</span>
+          <span class="token property">"value"</span><span class="token operator">:</span> <span class="token string">"__HOSTNAME__"</span>
+        <span class="token punctuation">}</span><span class="token punctuation">,</span>
+        <span class="token property">"port_list"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+          <span class="token property">"displayName"</span><span class="token operator">:</span> <span class="token string">"8080"</span><span class="token punctuation">,</span>
+          <span class="token property">"value"</span><span class="token operator">:</span> <span class="token string">"8080"</span>
+        <span class="token punctuation">}</span><span class="token punctuation">,</span>
+        <span class="token property">"full_module_name"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+          <span class="token property">"displayName"</span><span class="token operator">:</span> <span class="token string">"/my-app/index.js"</span><span class="token punctuation">,</span>
+          <span class="token property">"value"</span><span class="token operator">:</span> <span class="token string">"/my-app/index.js"</span>
+        <span class="token punctuation">}</span><span class="token punctuation">,</span>
+        <span class="token property">"log_directory"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+          <span class="token property">"displayName"</span><span class="token operator">:</span> <span class="token string">"/my-app/logs"</span><span class="token punctuation">,</span>
+          <span class="token property">"value"</span><span class="token operator">:</span> <span class="token string">"/my-app/logs"</span>
+        <span class="token punctuation">}</span><span class="token punctuation">,</span>
+        <span class="token property">"log_filename_pattern"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+          <span class="token property">"displayName"</span><span class="token operator">:</span> <span class="token string">"error-*.log"</span><span class="token punctuation">,</span>
+          <span class="token property">"value"</span><span class="token operator">:</span> <span class="token string">"error-*.log"</span>
+        <span class="token punctuation">}</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">]</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>ファイルの準備はコレで OK。あとは <code>Dockerfile</code> と、Docker コンテナ起動時に実行するシェルスクリプトをちょっと書いてやる。</p>
+<ul>
+  <li><code>Dockerfile</code></li>
+</ul>
+<pre class="language-dockerfile"><code class="language-dockerfile"><span class="token comment"># Oracle Cloud Agent を正常にインストールできる OS として CentOS 7 を選んだ</span>
+<span class="token keyword">FROM</span> centos<span class="token punctuation">:</span>7
+
+<span class="token comment"># 起動スクリプトをコピーする</span>
+<span class="token keyword">COPY</span> ./start.sh /
+<span class="token comment"># Cloud Agent Installer をコピーする</span>
+<span class="token keyword">COPY</span> ./cloud<span class="token punctuation">-</span>agent<span class="token punctuation">-</span>installer/ /cloud<span class="token punctuation">-</span>agent<span class="token punctuation">-</span>installer/
+<span class="token comment"># 必要に応じてアプリの資材もコピーする…</span>
+
+<span class="token comment"># Cloud Agent Installer のインストールに bc と unzip コマンドを使うのでインストールしておく</span>
+<span class="token keyword">RUN</span> set <span class="token punctuation">-</span>x &#x26;&#x26; \
+    <span class="token punctuation">:</span> <span class="token string">'Install bc and unzip command (for Cloud Agent Installer)'</span> &#x26;&#x26; \
+    yum install <span class="token punctuation">-</span>y bc unzip
+<span class="token comment"># 必要に応じてアプリの実行環境も設定しておく…</span>
+
+<span class="token comment"># 必要に応じてコンテナが公開するポートを指定しておいたり…</span>
+<span class="token keyword">EXPOSE</span> 8080
+
+<span class="token comment"># コンテナ起動時に /start.sh を実行する</span>
+<span class="token keyword">CMD</span> <span class="token punctuation">[</span><span class="token string">"sh"</span><span class="token punctuation">,</span> <span class="token string">"/start.sh"</span><span class="token punctuation">]</span>
+</code></pre>
+<p><code>start.sh</code> の内容は以下の要領で。</p>
+<ul>
+  <li><code>start.sh</code></li>
+</ul>
+<pre class="language-bash"><code class="language-bash"><span class="token shebang important">#!/bin/bash</span>
+
+<span class="token comment"># ================================================================================</span>
+<span class="token comment"># 起動スクリプト : Cloud Agent のインストールと初期設定を行い Web サーバを起動する</span>
+<span class="token comment"># ================================================================================</span>
+
+<span class="token comment"># 実行コマンドを出力する</span>
+<span class="token builtin class-name">set</span> -x
+
+<span class="token comment"># 変数定義</span>
+<span class="token comment"># --------------------------------------------------------------------------------</span>
+
+<span class="token comment"># 設定情報を定義する : 別途環境変数で渡しても OK</span>
+
+<span class="token comment"># クラウド・エージェントのダウンロード画面で確認した TENANT_NAME</span>
+<span class="token assign-left variable">TENANT_NAME</span><span class="token operator">=</span><span class="token string">'xxxxxxxxxxxxxxxxx'</span>
+
+<span class="token comment"># 「登録キー値」画面で確認した値</span>
+<span class="token assign-left variable">AGENT_REGISTRATION_KEY</span><span class="token operator">=</span><span class="token string">'yyyyyyyyyyyyyyy'</span>
+
+<span class="token comment"># クラウド・エージェントのインストール先ディレクトリ : 適当に指定する・インストーラがあるディレクトリとは別の場所にディレクトリごと新規生成させないとエラーになる</span>
+<span class="token assign-left variable">AGENT_BASE_DIRECTORY</span><span class="token operator">=</span><span class="token string">'/cloud-agent/'</span>
+
+<span class="token comment"># クラウド・エージェントのダウンロード画面で確認した OMC_URL</span>
+<span class="token assign-left variable">OMC_URL</span><span class="token operator">=</span><span class="token string">'https://xxxxxxxxxxxxxxxxx.uscom-xxxx-1.oraclecloud.com/'</span>
+
+<span class="token comment"># 以下全般的な変数</span>
+
+<span class="token comment"># 設定ファイルが格納されているベースディレクトリ</span>
+<span class="token assign-left variable">base_path</span><span class="token operator">=</span><span class="token string">'/cloud-agent-installer'</span>
+
+<span class="token comment"># インストーラの解凍先ディレクトリ</span>
+<span class="token assign-left variable">installer_path</span><span class="token operator">=</span><span class="token string">"<span class="token variable">${base_path}</span>/installer"</span>
+
+<span class="token comment"># インストールした資材の格納先ディレクトリ (AGENT_BASE_DIRECTORY 変数と同じ値だが末尾にスラッシュなしで使用するローカル変数)</span>
+<span class="token assign-left variable">dest_path</span><span class="token operator">=</span><span class="token string">'/cloud-agent'</span>
+
+<span class="token comment"># omcli コマンドのフルパス</span>
+<span class="token assign-left variable">omcli</span><span class="token operator">=</span><span class="token string">"<span class="token variable">${dest_path}</span>/agent_inst/bin/omcli"</span>
+
+<span class="token comment"># インストーラの解凍とエージェント定義の準備</span>
+<span class="token comment"># --------------------------------------------------------------------------------</span>
+
+<span class="token comment"># ベースディレクトリ配下の ./installer/ ディレクトリ配下にインストーラを解凍する (ココで unzip コマンドが必要になる)</span>
+<span class="token function">unzip</span> -d <span class="token string">"<span class="token variable">${installer_path}</span>"</span> <span class="token string">"<span class="token variable">${base_path}</span>/cloudagent_linux.x64_*.zip"</span>
+
+<span class="token comment"># agent.rsp の内容を環境変数で置換する</span>
+<span class="token assign-left variable">agent_rsp</span><span class="token operator">=</span><span class="token string">'agent.rsp'</span>
+<span class="token assign-left variable">base_agent_rsp</span><span class="token operator">=</span><span class="token string">"<span class="token variable">${base_path}</span>/<span class="token variable">${agent_rsp}</span>"</span>
+
+<span class="token comment"># 置換する文字列にスラッシュ `/` が含まれているため sed コマンドの区切り文字にアットマーク `@` を使用する</span>
+<span class="token function">sed</span> -i s@__TENANT_NAME__@<span class="token string">"<span class="token variable">${TENANT_NAME}</span>"</span>@ <span class="token string">"<span class="token variable">${base_agent_rsp}</span>"</span>
+<span class="token function">sed</span> -i s@__AGENT_REGISTRATION_KEY__@<span class="token string">"<span class="token variable">${AGENT_REGISTRATION_KEY}</span>"</span>@ <span class="token string">"<span class="token variable">${base_agent_rsp}</span>"</span>
+<span class="token function">sed</span> -i s@__AGENT_BASE_DIRECTORY__@<span class="token string">"<span class="token variable">${AGENT_BASE_DIRECTORY}</span>"</span>@ <span class="token string">"<span class="token variable">${base_agent_rsp}</span>"</span>
+<span class="token function">sed</span> -i s@__OMC_URL__@<span class="token string">"<span class="token variable">${OMC_URL}</span>"</span>@ <span class="token string">"<span class="token variable">${base_agent_rsp}</span>"</span>
+
+<span class="token comment"># agent.rsp を上書き移動する</span>
+<span class="token function">cat</span> <span class="token string">"<span class="token variable">${base_agent_rsp}</span>"</span>
+<span class="token function">mv</span> -f <span class="token string">"<span class="token variable">${base_path}</span>/<span class="token variable">${agent_rsp}</span>"</span> <span class="token string">"<span class="token variable">${installer_path}</span>/<span class="token variable">${agent_rsp}</span>"</span>
+
+<span class="token comment"># エージェントのインストール</span>
+<span class="token comment"># --------------------------------------------------------------------------------</span>
+
+<span class="token comment"># インストール前に動作検証する (このスクリプト内で bc コマンドが使用される)</span>
+<span class="token function">sh</span> <span class="token string">"<span class="token variable">${installer_path}</span>/AgentInstall.sh"</span> <span class="token assign-left variable">EXECUTE_PREREQ</span><span class="token operator">=</span>true
+<span class="token comment"># インストールを開始する : agent.rsp に定義したディレクトリに資材が置かれる</span>
+<span class="token function">sh</span> <span class="token string">"<span class="token variable">${installer_path}</span>/AgentInstall.sh"</span>
+
+<span class="token comment"># エージェントを起動する (インストール時にも起動するようだが念のため)</span>
+<span class="token string">"<span class="token variable">${omcli}</span>"</span> start agent
+<span class="token comment"># 事前のエンティティの状況を確認する</span>
+<span class="token string">"<span class="token variable">${omcli}</span>"</span> status_entity agent
+
+<span class="token comment"># Linux エージェントの設定更新</span>
+<span class="token comment"># --------------------------------------------------------------------------------</span>
+
+<span class="token comment"># Host Linux エージェントの設定ファイルにホスト名を設定する</span>
+<span class="token assign-left variable">linux_entity_agent</span><span class="token operator">=</span><span class="token string">"<span class="token variable">${base_path}</span>/linux-entity-agent.json"</span>
+<span class="token function">sed</span> -i s/__HOSTNAME__/<span class="token variable"><span class="token variable">`</span><span class="token function">hostname</span> -f<span class="token variable">`</span></span>/ <span class="token string">"<span class="token variable">${linux_entity_agent}</span>"</span>
+
+<span class="token comment"># Host Linux エージェントを更新する</span>
+<span class="token function">cat</span> <span class="token string">"<span class="token variable">${linux_entity_agent}</span>"</span>
+<span class="token string">"<span class="token variable">${omcli}</span>"</span> update_entity agent <span class="token string">"<span class="token variable">${linux_entity_agent}</span>"</span>
+
+<span class="token comment"># Node.js エージェントの設定追加</span>
+<span class="token comment"># --------------------------------------------------------------------------------</span>
+
+<span class="token comment"># Node.js エージェントの設定ファイルにホスト名を設定する</span>
+<span class="token assign-left variable">nodejs_entity_agent</span><span class="token operator">=</span><span class="token string">"<span class="token variable">${base_path}</span>/nodejs-entity-agent.json"</span>
+<span class="token function">sed</span> -i s/__HOSTNAME__/<span class="token variable"><span class="token variable">`</span><span class="token function">hostname</span> -f<span class="token variable">`</span></span>/ <span class="token string">"<span class="token variable">${nodejs_entity_agent}</span>"</span>
+
+<span class="token comment"># Node.js エージェントを追加する</span>
+<span class="token function">cat</span> <span class="token string">"<span class="token variable">${nodejs_entity_agent}</span>"</span>
+<span class="token string">"<span class="token variable">${omcli}</span>"</span> add_entity agent <span class="token string">"<span class="token variable">${nodejs_entity_agent}</span>"</span>
+
+<span class="token comment"># 設定後確認</span>
+<span class="token comment"># --------------------------------------------------------------------------------</span>
+
+<span class="token comment"># 操作後のエンティティの状況を確認する</span>
+<span class="token string">"<span class="token variable">${omcli}</span>"</span> status_entity agent
+
+<span class="token comment"># サーバ起動</span>
+<span class="token comment"># --------------------------------------------------------------------------------</span>
+
+<span class="token comment"># サーバを起動する (ココでは Node.js アプリのテイ)</span>
+<span class="token builtin class-name">cd</span> /my-app/
+<span class="token function">npm</span> start
+</code></pre>
+<p>こんな感じで設定完了。</p>
+<h2 id="実際に起動してみる"><a class="header-link" href="#実際に起動してみる"><span class="header-link-mark"></span></a>実際に起動してみる</h2>
+<p>クラウド・エージェントはローカル端末で起動してもログを収集してくれるので、試してみたければ Docker コンテナをローカルで起動してみれば良い。</p>
+<p>起動後、<code>start.sh</code> に記載した初期設定に3・4分かかるのが難点。実際に Web サーバが起動するまで最初に5分近くかかる。</p>
+<p>サーバが起動したら、何か Log4js でログが追記されるような操作をしてみよう。OMC 管理画面の「ログ・エクスプローラ」を開き、ログが転送され、表示されるか確認してみる。実際に触ってみた感じだと、ログ・エクスプローラでログが見られるようになるのは、ログ出力されてから2・3分経ってから、という感じ。また、ログに日本語文字列が含まれると時たま文字化けする。UTF-8 なのに ISO-8859-1 と解釈した時の化け方をするので、なんかこう、「米国企業」って感じ。ｗ</p>
+<p>Docker コンテナが死んでも、管理画面上はエンティティが一覧に残り続けて鬱陶しいので、「管理」→「エンティティ構成」→「エンティティの削除」と進み、不要になったエンティティを定期的に消してあげると良いだろう。</p>
+<h2 id="以上"><a class="header-link" href="#以上"><span class="header-link-mark"></span></a>以上</h2>
+<p>最初に一度設定してしまえば後は管理画面でいかようにも設定できるのは良いところだが、その「最初に設定する」ところが物凄く面倒臭い…。</p>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2019-03-29</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2019-03-29</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

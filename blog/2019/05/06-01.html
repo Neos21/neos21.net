@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>Linux サーバに「いつ」「どの SSH 鍵を使って」ログインされたか調べる方法 - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2019/05/06-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2019/index.html">2019年</a></li>
+            <li><a href="/blog/2019/05/index.html">05月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2019-05-06</time></div>
+        <h1 id="page-title">Linux サーバに「いつ」「どの SSH 鍵を使って」ログインされたか調べる方法</h1>
+
+<ul>
+  <li>普段、ある Linux サーバに SSH 鍵を使って接続して作業している</li>
+  <li>サーバで使うユーザは、単一のシステム用ユーザ (仮に <code>devuser</code>) を複数の開発メンバで共用している</li>
+</ul>
+<p>コレまでの運用からこんな状況なので、<em><code>$ last -w</code></em> コマンドで過去に SSH ログインしたユーザ情報を調べたところで、<code>devuser</code> という名前が並ぶばかりで、実際のところ誰がログインして作業したのかが分からない。</p>
+<p>そこで考えたのは、<em>「いつ」「どの SSH 鍵を使って」ログインしたか</em>、が分かれば、使用するユーザは <code>devuser</code> で同じでも、作業者が特定できるのではないか、ということだ。今回はこの情報を<em>ログ出力する方法</em>を紹介する。</p>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#%E8%89%B2%E3%80%85%E3%81%8A%E3%81%95%E3%82%89%E3%81%84">色々おさらい</a>
+    <ul>
+      <li><a href="#ssh-%E9%8D%B5%E3%81%AE%E7%99%BA%E8%A1%8C%E6%96%B9%E6%B3%95">SSH 鍵の発行方法</a></li>
+      <li><a href="#ssh-%E9%8D%B5%E3%81%AE%E7%AE%A1%E7%90%86%E6%96%B9%E6%B3%95">SSH 鍵の管理方法</a></li>
+    </ul>
+  </li>
+  <li><a href="#%E3%81%A9%E3%81%AE-ssh-%E9%8D%B5%E3%82%92%E4%BD%BF%E3%81%A3%E3%81%A6%E3%83%AD%E3%82%B0%E3%82%A4%E3%83%B3%E3%81%95%E3%82%8C%E3%81%9F%E3%81%8B%E3%83%AD%E3%82%B0%E3%82%92%E6%AE%8B%E3%81%99%E3%81%AB%E3%81%AF">どの SSH 鍵を使ってログインされたかログを残すには</a></li>
+  <li><a href="#%E3%82%B3%E3%83%A1%E3%83%B3%E3%83%88%E6%AC%84%E3%81%AB%E3%81%AF%E5%80%8B%E4%BA%BA%E3%82%92%E7%89%B9%E5%AE%9A%E3%81%A7%E3%81%8D%E3%82%8B%E6%83%85%E5%A0%B1%E3%82%92%E5%85%A5%E3%82%8C%E3%81%A6%E3%82%82%E3%82%89%E3%81%86">コメント欄には個人を特定できる情報を入れてもらう</a></li>
+</ul>
+<h2 id="色々おさらい"><a class="header-link" href="#色々おさらい"><span class="header-link-mark"></span></a>色々おさらい</h2>
+<p>そもそも、「公開鍵認証方式」を使って、サーバに SSH 接続するための諸々をおさらいしておく。</p>
+<h3 id="ssh-鍵の発行方法"><a class="header-link" href="#ssh-鍵の発行方法"><span class="header-link-mark"></span></a>SSH 鍵の発行方法</h3>
+<p>SSH 鍵は以下のように作成する。</p>
+<ul>
+  <li><code>$ ssh-keygen -t rsa -b 4096 -C 'コメント'</code>
+    <ul>
+      <li><code>-t rsa</code> は生成する鍵の種類の指定。一般的には <em>RSA 鍵</em>を生成して使う</li>
+      <li><code>-b 4096</code> はビット数。<code>2048</code> 以上にしないと簡単すぎて解読される恐れがある</li>
+      <li><code>-C 'コメント'</code> は単なるコメント。なくても大丈夫だが、このあと話す内容に関わるので指定しておく</li>
+    </ul>
+  </li>
+</ul>
+<pre class="language-bash"><code class="language-bash">$ ssh-keygen -t rsa -b <span class="token number">4096</span> -C <span class="token string">'NeosKey'</span>
+Generating public/private rsa key pair.
+Enter <span class="token function">file</span> <span class="token keyword">in</span> <span class="token function">which</span> to save the key <span class="token punctuation">(</span>/Users/Neo/.ssh/id_rsa<span class="token punctuation">)</span>:  <span class="token comment"># ★ 鍵ファイルの出力先を指定する</span>
+Enter passphrase <span class="token punctuation">(</span>empty <span class="token keyword">for</span> no passphrase<span class="token punctuation">)</span>:  <span class="token comment"># ★ パスフレーズ・空欄で良い</span>
+Enter same passphrase again:  <span class="token comment"># ★ パスフレーズ再確認</span>
+Your identification has been saved <span class="token keyword">in</span> /Users/Neo/.ssh/id_rsa.
+Your public key has been saved <span class="token keyword">in</span> /Users/Neo/.ssh/id_rsa.pub.
+The key fingerprint is:
+SHA256:p+Y+E/dih2xOAOz1aCClx1MtSEEXSY6rhagYVbdceiA NeosKey
+The key's randomart image is:
++---<span class="token punctuation">[</span>RSA <span class="token number">4096</span><span class="token punctuation">]</span>----+
+<span class="token operator">|</span>    EoB+*+       <span class="token operator">|</span>
+<span class="token operator">|</span>   <span class="token builtin class-name">.</span> O.Xo <span class="token builtin class-name">.</span>      <span class="token operator">|</span>
+<span class="token operator">|</span>  <span class="token builtin class-name">.</span> o % +.       <span class="token operator">|</span>
+<span class="token operator">|</span> <span class="token builtin class-name">.</span> <span class="token builtin class-name">.</span> <span class="token operator">=</span> B o       <span class="token operator">|</span>
+<span class="token operator">|</span><span class="token builtin class-name">.</span> <span class="token builtin class-name">.</span> <span class="token builtin class-name">.</span> + S o      <span class="token operator">|</span>
+<span class="token operator">|</span>.o   o <span class="token punctuation">..</span>+.      <span class="token operator">|</span>
+<span class="token operator">|</span>o   <span class="token builtin class-name">.</span>   o+.o     <span class="token operator">|</span>
+<span class="token operator">|</span>       oo.* o    <span class="token operator">|</span>
+<span class="token operator">|</span>       .o*.o     <span class="token operator">|</span>
++----<span class="token punctuation">[</span>SHA256<span class="token punctuation">]</span>-----+
+</code></pre>
+<p>このようにすると、<code>~/.ssh/</code> 配下に <strong><code>id_rsa</code> (秘密鍵)</strong> と <em><code>id_rsa.pub</code> (公開鍵)</em> のペアが生成される。</p>
+<ul>
+  <li><code>id_rsa</code> (秘密鍵) の例
+    <ul>
+      <li>秘密鍵は外部に漏らしてはならないモノ</li>
+      <li>秘密鍵ファイルさえあれば公開鍵はまた生成できる</li>
+    </ul>
+  </li>
+</ul>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">cat</span> ~/.ssh/id_rsa
+-----BEGIN OPENSSH PRIVATE KEY-----
+b3BlbnNzaC1rZXktdjVAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAACFwAAAAdzc2gtcn
+……中略……
+<span class="token assign-left variable">CpL4jB7tMfEAAAAJTmVvJ3MgS2V5AQV</span><span class="token operator">=</span>
+-----END OPENSSH PRIVATE KEY-----
+</code></pre>
+<ul>
+  <li><code>id_rsa.pub</code> (公開鍵) の例
+    <ul>
+      <li>公開鍵を、通信したい相手に教えておくことで、暗号化したり復号したりできる</li>
+      <li>公開鍵は、知られたところで、秘密鍵を復元することはできないので、あまり気にせず配布して大丈夫 (GitHub で管理している人もいる)</li>
+      <li><code>ssh-rsa (スペース)</code> の直後に始まる長い文字列が公開鍵</li>
+      <li>そこからさらにスペースを挟んで書かれた <code>NeosKey</code> 部分はただのコメントなので、あってもなくても変わらない</li>
+    </ul>
+  </li>
+</ul>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">cat</span> ~/.ssh/id_rsapub
+ssh-rsa AAANB3NzaC1yc2EA……<span class="token punctuation">(</span>中略<span class="token punctuation">)</span>……PLtSQ2oQH2m3s67FQ<span class="token operator">==</span> NeosKey
+</code></pre>
+<ul>
+  <li>フィンガープリント (指紋) の確認方法
+    <ul>
+      <li>フィンガープリントとは、<em>公開鍵のハッシュ値</em></li>
+      <li>秘密鍵ファイル、公開鍵ファイルのいずれからも同じフィンガープリント文字列が取得できる</li>
+      <li>このフィンガープリントの突合をもって正しいものか確認している</li>
+    </ul>
+  </li>
+</ul>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># 秘密鍵からフィンガープリントを確認</span>
+$ ssh-keygen -lf ~/.ssh/id_rsa
+<span class="token number">4096</span> SHA256:p+Y+E/dih2xOAOz1aCClx1MtSEEXSY6rhagYVbdceiA NeosKey <span class="token punctuation">(</span>RSA<span class="token punctuation">)</span>
+
+<span class="token comment"># 秘密鍵からフィンガープリントを確認 (コマンド自体は同じ)</span>
+$ ssh-keygen -lf ~/.ssh/id_rsa.pub
+<span class="token number">4096</span> SHA256:p+Y+E/dih2xOAOz1aCClx1MtSEEXSY6rhagYVbdceiA NeosKey <span class="token punctuation">(</span>RSA<span class="token punctuation">)</span>
+</code></pre>
+<p>クライアントサイドで SSH 鍵を作る方法は以上。</p>
+<h3 id="ssh-鍵の管理方法"><a class="header-link" href="#ssh-鍵の管理方法"><span class="header-link-mark"></span></a>SSH 鍵の管理方法</h3>
+<p>クライアントで SSH 鍵を作ったはいいけど、コレだけではサーバに SSH 接続できない。<em>「その鍵を使えばウチのサーバに接続して良いよ」</em>とサーバ側が許可を下ろすには、どうしたら良いのか。</p>
+<p>あるサーバに SSH 接続するためには、公開鍵の情報が <strong><code>~/.ssh/authorized_keys</code></strong> に記録されている必要がある。サーバにあるこのファイルを開いてみると、以下のように公開鍵が羅列されているだろう。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">cat</span> ~/.ssh/authorized_keys
+ssh-rsa AAANB3NzaC1yc2EA……<span class="token punctuation">(</span>中略<span class="token punctuation">)</span>……PLtSQ2oQH2m3s67FQ<span class="token operator">==</span> NeosKey
+ssh-rsa <span class="token assign-left variable">xxxxxxxxxxxxxxxxxx</span><span class="token operator">==</span> AdamsKey
+ssh-rsa <span class="token assign-left variable">yyyyyyyyyyyyyyyyyy</span><span class="token operator">==</span> TimsKey
+</code></pre>
+<p>要はこのファイルに公開鍵を追記していけば良い。そうすれば、</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">ssh</span> -i ~/.ssh/id_rsa devuser@10.200.100.100
+</code></pre>
+<p>といった書式で SSH 接続できるようになる。</p>
+<h2 id="どの-ssh-鍵を使ってログインされたかログを残すには"><a class="header-link" href="#どの-ssh-鍵を使ってログインされたかログを残すには"><span class="header-link-mark"></span></a>どの SSH 鍵を使ってログインされたかログを残すには</h2>
+<p>SSH 鍵の生成方法と鍵ペアの存在、<code>authorized_keys</code> というファイルの存在を確認したところで、本題に入る。</p>
+<p>前述の例に出した <code>authorized_keys</code> ファイルには、<code>NeosKey</code>・<code>AdamsKey</code>・<code>TimsKey</code> という3つの公開鍵が設定されていた。開発メンバが3人いて、3人が <code>devuser</code> ユーザに SSH ログインできる状態、と考えられる。コレをログに残したいワケだ。</p>
+<p>サーバの <strong><code>/etc/ssh/sshd_config</code></strong> というファイルを開く。恐らく root ユーザ権限が必要なので <code>sudo vi</code> しよう。</p>
+<p>中を見ると色々設定があると思うが、<em>以下の2行</em>を記述すれば良い。</p>
+<pre><code>SyslogFacility AUTHPRIV
+LogLevel VERBOSE
+</code></pre>
+<p>このように設定しておくと、<strong><code>/var/log/secure</code></strong> というファイルに、SSH ログイン時に以下のようなログが出力されるようになる。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">sudo</span> <span class="token function">cat</span> /var/log/secure
+
+<span class="token comment"># 抜粋</span>
+Apr  <span class="token number">9</span> 04:33:18 myhost sshd<span class="token punctuation">[</span><span class="token number">27711</span><span class="token punctuation">]</span>: Accepted publickey <span class="token keyword">for</span> devuser from <span class="token number">10.200</span>.100.100 port <span class="token number">50177</span> ssh2: RSA SHA256:p+Y+E/dih2xOAOz1aCClx1MtSEEXSY6rhagYVbdceiA
+</code></pre>
+<p><code>/var/log/secure</code> というログファイルに、<strong>SSH ログイン時に使用された SSH 鍵のフィンガープリント</strong>が記録されるのだ。</p>
+<p>フィンガープリントを確認するには、<code>authorized_keys</code> ファイルを読み込んで以下のように叩けば良い。</p>
+<pre class="language-bash"><code class="language-bash">$ ssh-keygen -lf ~/.ssh/authorized_keys
+<span class="token number">4096</span> SHA256:p+Y+E/dih2xOAOz1aCClx1MtSEEXSY6rhagYVbdceiA NeosKey <span class="token punctuation">(</span>RSA<span class="token punctuation">)</span>
+<span class="token number">4096</span> SHA256:xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx AdamsKey <span class="token punctuation">(</span>RSA<span class="token punctuation">)</span>
+<span class="token number">4096</span> SHA256:yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy TimsKey <span class="token punctuation">(</span>RSA<span class="token punctuation">)</span>
+</code></pre>
+<p>コレを突合すれば、コメント欄から、誰が生成した SSH 鍵のフィンガープリントかは特定できるので、<code>NeosKey</code> の生成者である Neo 氏がログインした形跡が分かる。</p>
+<h2 id="コメント欄には個人を特定できる情報を入れてもらう"><a class="header-link" href="#コメント欄には個人を特定できる情報を入れてもらう"><span class="header-link-mark"></span></a>コメント欄には個人を特定できる情報を入れてもらう</h2>
+<p>というワケで、<code>ssh-keygen</code> コマンドの <code>-C</code> オプションに渡すコメント欄には、その開発者のメールアドレスや社員番号なんかを入れてもらうのが分かりやすいのではないだろうか。</p>
+<p>コレなら、サーバ側に用意するユーザは1つでも、どの開発者が SSH ログインしたかは追跡できるようになる。</p>
+<ul>
+  <li>参考：<a href="https://mochikoastech.hatenablog.com/entry/archives/23">鍵認証のサーバで「いつ」「誰が」「どの鍵で」ログインしたかを調べる方法 - mochikoAsTechのdig日記</a></li>
+</ul>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2019-05-06</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2019-05-06</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

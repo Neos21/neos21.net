@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>Angular4 + Cordova な iOS アプリでテキストボックスの入力時に Angular のイベントが発火しない件 - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2017/10/12-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2017/index.html">2017年</a></li>
+            <li><a href="/blog/2017/10/index.html">10月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2017-10-12</time></div>
+        <h1 id="page-title">Angular4 + Cordova な iOS アプリでテキストボックスの入力時に Angular のイベントが発火しない件</h1>
+
+<p>タイトルで全部説明しきれなかった。</p>
+<ul>
+  <li>Angular + Cordova で iOS アプリを作っている。</li>
+  <li>Angular の ReactiveForms を使って、FormControl として定義したテキストボックスに文字を入力させたい。</li>
+  <li>文字の入力中にリアルタイムでバリデーションチェックを行い、連動して画面にエラーメッセージを出したりしたい。</li>
+  <li>テキストボックスに入力された文字をフォーム送信したい。</li>
+</ul>
+<p>という状況で、以下のような不具合が起きた。</p>
+<ul>
+  <li>iOS の「かな入力」モードのソフトウェアキーボードを使っている時に、</li>
+  <li>テキストボックスに入力した文字を確定する前にフォーカスアウトしてしまうと、</li>
+  <li>FormControl が入力中の文字列を認識できなくなる。</li>
+</ul>
+<p>確定せずにフォーカスアウトすると、テキストボックスには文字列が入っているのに、FormControl の value としては取得できない、という状態になるのだ。ユーザとしては正しい値を入れたのに、確定キーを押さずにフォーカスアウトしただけで「何も入れていません」的な扱いになるので、これは直したい。</p>
+<h2 id="まずはテキストボックスの実装"><a class="header-link" href="#まずはテキストボックスの実装"><span class="header-link-mark"></span></a>まずはテキストボックスの実装</h2>
+<p>まずは問題が発生する画面のサンプルを。</p>
+<p>ReactiveForms を使ったテキストボックスがある画面は、以下のような実装になっている。</p>
+<pre class="language-typescript"><code class="language-typescript">@<span class="token function"><span class="token maybe-class-name">Component</span></span><span class="token punctuation">(</span><span class="token punctuation">{</span> <span class="token comment">/* 省略 */</span><span class="token punctuation">}</span><span class="token punctuation">)</span>
+<span class="token keyword">export</span> <span class="token keyword">class</span> <span class="token class-name"><span class="token maybe-class-name">MyComponent</span></span> <span class="token punctuation">{</span>
+  <span class="token doc-comment comment">/** フォーム */</span>
+  <span class="token keyword">public</span> myForm<span class="token operator">:</span> <span class="token maybe-class-name">FormGroup</span><span class="token punctuation">;</span>
+  
+  <span class="token doc-comment comment">/** コンストラクタでフォームを生成する */</span>
+  <span class="token keyword">constructor</span><span class="token punctuation">(</span><span class="token keyword">private</span> formBuilder<span class="token operator">:</span> <span class="token maybe-class-name">FormBuilder</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">myForm</span> <span class="token operator">=</span> <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">formBuilder</span><span class="token punctuation">.</span><span class="token method function property-access">group</span><span class="token punctuation">(</span><span class="token punctuation">{</span>
+      userId<span class="token operator">:</span> <span class="token punctuation">[</span><span class="token string">''</span><span class="token punctuation">,</span> <span class="token punctuation">[</span><span class="token maybe-class-name">Validators</span><span class="token punctuation">.</span><span class="token property-access">required</span><span class="token punctuation">,</span> <span class="token maybe-class-name">Validators</span><span class="token punctuation">.</span><span class="token method function property-access">pattern</span><span class="token punctuation">(</span><span class="token string">'^[0-9]+$'</span><span class="token punctuation">)</span><span class="token punctuation">]</span><span class="token punctuation">]</span>
+    <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>HTML 側はこんな感じ。</p>
+<pre class="language-html"><code class="language-html"><span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>form</span> <span class="token attr-name">[formGroup]</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>myForm<span class="token punctuation">"</span></span> <span class="token attr-name">novalidate</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>p</span><span class="token punctuation">></span></span>ユーザ ID を入力してください。<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>p</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>p</span><span class="token punctuation">></span></span><span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>input</span> <span class="token attr-name">type</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>text<span class="token punctuation">"</span></span> <span class="token attr-name">formControlName</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>userId<span class="token punctuation">"</span></span><span class="token punctuation">></span></span><span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>p</span><span class="token punctuation">></span></span>
+  <span class="token comment">&#x3C;!-- 入力値のフィードバックメッセージをリアルタイムに表示したい --></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>p</span><span class="token punctuation">></span></span>{{ myForm.get('userId').touched &#x26;&#x26; myForm.get('userId').errors ? '入力エラーがあります' : '正常値です' }}<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>p</span><span class="token punctuation">></span></span>
+  <span class="token comment">&#x3C;!-- あとは送信ボタンがあったり… --></span>
+</code></pre>
+<p>このままだと上述の不具合が起こる。</p>
+<h2 id="原因は"><a class="header-link" href="#原因は"><span class="header-link-mark"></span></a>原因は…</h2>
+<p>普通に PC のブラウザで触っている時は、未変換の文字を残してフォーカスアウトしたりしても問題ないのだが、どうも <em>iOS の「かな入力」キーボードの時の IME の挙動が Angular のイベント管理部分と相性が悪い</em>ようだ。iOS の「かな入力」時の IME まではさすがに Angular も対応していなかったようで、Cordova アプリ化してみて初めて遭遇する問題だったようだ。残念ながら「<strong>Angular + Cordova + iOS + かな入力キーボード</strong>」という環境を満たす不具合に遭遇した例がなく、自分で直すしかなかった。</p>
+<p>色々要素の状態を調べてみると、実際の DOM 要素の value 属性値には、フォーカスアウト時に未確定だった文字列も入力されていた。つまり Angular の中の世界でだけ値が取得できていなかったワケである。そこで、<strong>生の DOM 要素から value 属性値を取得して、FormControl に強制的に再設定させれば</strong>、Angular の世界でもきちんと反映されるはずと考え、以下のようなディレクティブを作った。</p>
+<h2 id="formcontrol-値強制再反映ディレクティブ"><a class="header-link" href="#formcontrol-値強制再反映ディレクティブ"><span class="header-link-mark"></span></a>FormControl 値強制再反映ディレクティブ</h2>
+<pre class="language-typescript"><code class="language-typescript"><span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">Directive</span><span class="token punctuation">,</span> <span class="token maybe-class-name">ElementRef</span><span class="token punctuation">,</span> <span class="token maybe-class-name">HostListener</span><span class="token punctuation">,</span> <span class="token maybe-class-name">Input</span> <span class="token punctuation">}</span></span> <span class="token keyword">from</span> <span class="token string">'@angular/core'</span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">FormControl</span> <span class="token punctuation">}</span></span> <span class="token keyword">from</span> <span class="token string">'@angular/forms'</span><span class="token punctuation">;</span>
+
+<span class="token doc-comment comment">/**
+ * FormControl 値強制再反映ディレクティブ
+ */</span>
+@<span class="token function"><span class="token maybe-class-name">Directive</span></span><span class="token punctuation">(</span><span class="token punctuation">{</span>
+  selector<span class="token operator">:</span> <span class="token string">'[forceUpdateFormControl]'</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span>
+<span class="token keyword">export</span> <span class="token keyword">class</span> <span class="token class-name"><span class="token maybe-class-name">ForceUpdateFormControlDirective</span></span> <span class="token punctuation">{</span>
+  <span class="token doc-comment comment">/** 操作対象の FormControl を指定する */</span>
+  @<span class="token function"><span class="token maybe-class-name">Input</span></span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+  target<span class="token operator">:</span> <span class="token maybe-class-name">FormControl</span><span class="token punctuation">;</span>
+  
+  <span class="token doc-comment comment">/**
+   * コンストラクタ
+   * 
+   * <span class="token keyword">@param</span> <span class="token parameter">el</span> 実際の DOM 要素を参照する
+   */</span>
+  <span class="token keyword">constructor</span><span class="token punctuation">(</span><span class="token keyword">protected</span> el<span class="token operator">:</span> <span class="token maybe-class-name">ElementRef</span><span class="token punctuation">)</span> <span class="token punctuation">{</span><span class="token punctuation">}</span>
+  
+  <span class="token doc-comment comment">/** blur イベント時の処理 */</span>
+  @<span class="token function"><span class="token maybe-class-name">HostListener</span></span><span class="token punctuation">(</span><span class="token string">'blur'</span><span class="token punctuation">)</span>
+  <span class="token function">onBlur</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator">:</span> <span class="token keyword">void</span> <span class="token punctuation">{</span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token method function property-access">forceUpdateValue</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  
+  <span class="token doc-comment comment">/** keyup イベント時の処理 */</span>
+  @<span class="token function"><span class="token maybe-class-name">HostListener</span></span><span class="token punctuation">(</span><span class="token string">'keyup'</span><span class="token punctuation">)</span>
+  <span class="token function">onKeyup</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator">:</span> <span class="token keyword">void</span> <span class="token punctuation">{</span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token method function property-access">forceUpdateValue</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  
+  <span class="token doc-comment comment">/** 実際の DOM 要素から取得した value 属性値を FormControl に設定する */</span>
+  <span class="token keyword">private</span> <span class="token function">forceUpdateValue</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator">:</span> <span class="token keyword">void</span> <span class="token punctuation">{</span>
+    <span class="token comment">// 対象の FormControl が指定されており DOM 要素に value プロパティが存在する場合のみ実行する</span>
+    <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">targetFormControl</span> <span class="token operator">&#x26;&#x26;</span> <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">el</span><span class="token punctuation">.</span><span class="token property-access">nativeElement</span><span class="token punctuation">.</span><span class="token property-access">value</span> <span class="token operator">!==</span> <span class="token keyword">undefined</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token comment">// DOM 要素の value 属性値を FormControl に設定する</span>
+      <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">targetFormControl</span><span class="token punctuation">.</span><span class="token method function property-access">setValue</span><span class="token punctuation">(</span><span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">el</span><span class="token punctuation">.</span><span class="token property-access">nativeElement</span><span class="token punctuation">.</span><span class="token property-access">value</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token comment">// setValue() だけでは状態が変化しないので、フォームを操作したマークを付ける</span>
+      <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">targetFormControl</span><span class="token punctuation">.</span><span class="token method function property-access">markAsDirty</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>あとはこのディレクティブを <code>input[type="text"]</code> な要素に設定する。</p>
+<pre class="language-html"><code class="language-html"><span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>p</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>input</span> <span class="token attr-name">type</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>text<span class="token punctuation">"</span></span> <span class="token attr-name">formControlName</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>userId<span class="token punctuation">"</span></span>
+         <span class="token attr-name">forceUpdateFormControl</span> <span class="token attr-name">[target]</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>myForm.get(<span class="token punctuation">'</span>userId<span class="token punctuation">'</span>)<span class="token punctuation">"</span></span><span class="token punctuation">></span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>p</span><span class="token punctuation">></span></span>
+</code></pre>
+<p>これで上手く行った。</p>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2017-10-12</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2017-10-12</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

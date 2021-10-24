@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>MacOS 版 Excel VBA で Dir() 関数の代わり・ファイル一覧を取得する - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2019/01/21-02.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2019/index.html">2019年</a></li>
+            <li><a href="/blog/2019/01/index.html">01月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2019-01-21</time></div>
+        <h1 id="page-title">MacOS 版 Excel VBA で Dir() 関数の代わり・ファイル一覧を取得する</h1>
+
+<p>前回紹介したとおり、Mac 版の Excel VBA では、<code>Dir()</code> 関数がまともに動かない。特に <code>Dir()</code> 関数でファイルの一覧を取得するような処理が全く動かず、Windows 版とは違うコードを書かないといけない。</p>
+<ul>
+  <li><a href="/blog/2019/01/20-01.html">Mac の Excel VBA は色々と挙動が違うので、VBA で OS 判別する</a></li>
+</ul>
+<p>色々調べてみると、<strong>Excel VBA から AppleScript を実行できるので、AppleScript からシェルスクリプトを実行する</strong>のが良さそうだ。</p>
+<p>試した環境は、<em>MacOS High Sierra、Excel for Mac 2016 (v15.41)</em>。</p>
+<h2 id="実際のコード"><a class="header-link" href="#実際のコード"><span class="header-link-mark"></span></a>実際のコード</h2>
+<p>実行する AppleScript はこんな感じ。</p>
+<pre class="language-applescript"><code class="language-applescript">do shell <span class="token class builtin">script</span> <span class="token string">"find -E '/path/to/directory' -type f -iregex '.*.xlsx' -maxdepth 1"</span>
+</code></pre>
+<p>中身はシェルスクリプト。<code>find</code> コマンドを使って、指定のディレクトリ配下にある、<code>.xlsx</code> ファイルのフルパスを取得する、というモノ。</p>
+<p>コレを VBA に組み込んで実行してやる。</p>
+<pre class="language-vb"><code class="language-vb"><span class="token comment">' 検索対象のディレクトリ</span>
+<span class="token keyword">Dim</span> targetPath <span class="token keyword">As</span> <span class="token keyword">String</span><span class="token punctuation">:</span> targetPath <span class="token operator">=</span> <span class="token string">"/path/to/directory"</span>
+
+<span class="token comment">' AppleScript を組み立てる</span>
+<span class="token keyword">Dim</span> appleScript <span class="token keyword">As</span> <span class="token keyword">String</span>
+appleScript <span class="token operator">=</span> <span class="token string">"do shell script ""find -E '"</span> <span class="token operator">&#x26;</span> targetPath <span class="token operator">&#x26;</span> <span class="token string">"' -type f -iregex '.*.xlsx' -maxdepth 1"""</span>
+
+<span class="token comment">' 実行結果を格納する変数</span>
+<span class="token keyword">Dim</span> result <span class="token keyword">As</span> <span class="token keyword">String</span><span class="token punctuation">:</span> result <span class="token operator">=</span> <span class="token string">""</span>
+
+<span class="token comment">' ファイルが一つもないなど、AppleScript の実行結果でエラーが起こるとエラーイベントが発火するので流す</span>
+<span class="token keyword">On</span> <span class="token keyword">Error</span> <span class="token keyword">Resume</span> <span class="token keyword">Next</span>
+result <span class="token operator">=</span> MacScript<span class="token punctuation">(</span>appleScript<span class="token punctuation">)</span>
+<span class="token keyword">On</span> <span class="token keyword">Error</span> <span class="token keyword">GoTo</span> <span class="token number">0</span>
+
+<span class="token comment">' 改行コード CR で区切り、配列にする</span>
+<span class="token keyword">Dim</span> filePaths<span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token keyword">As</span> <span class="token keyword">String</span>
+filePaths <span class="token operator">=</span> Split<span class="token punctuation">(</span>result<span class="token punctuation">,</span> vbCr<span class="token punctuation">)</span>
+
+<span class="token comment">' 1件もデータがない場合は UBound(filePaths) は -1、配列でないモノとみなされるので、空の配列に直す</span>
+<span class="token keyword">If</span> UBound<span class="token punctuation">(</span>filePaths<span class="token punctuation">)</span> <span class="token operator">&#x3C;</span> <span class="token number">0</span> <span class="token keyword">Then</span>
+  <span class="token keyword">ReDim</span> filePaths<span class="token punctuation">(</span><span class="token number">0</span><span class="token punctuation">)</span>
+<span class="token keyword">End</span> <span class="token keyword">If</span>
+
+<span class="token comment">' あとは filePaths をループして使うなり…</span>
+<span class="token comment">' そのまま Workbooks.Open() も呼べる</span>
+Workbooks<span class="token punctuation">.</span>Open<span class="token punctuation">(</span>filePaths<span class="token punctuation">(</span><span class="token number">0</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+</code></pre>
+<p>AppleScript を VBA 中で組み立てるところが、可読性が大きく損なわれる。ココは仕方ないか…。</p>
+<p>複数行の AppleScript を書きたければ、<code>Chr(13)</code> (= <code>vbCr</code>) を連結することで改行込みのスクリプトが書ける。</p>
+<p>今回、<code>'.*.xlsx'</code> という拡張子の絞り込みや、<code>--maxdepth</code> オプションなどは固定で組み込んでしまったが、ココらへんも引数に応じて文字列結合したりしなかったりしても良いだろう。</p>
+<pre class="language-vb"><code class="language-vb"><span class="token comment">' AppleScript 中に出てくるダブルクォートを Chr(34) にした</span>
+<span class="token comment">' -iregex を変更して、.xls・.xlsx・.xlsm ファイルがヒットするようにした</span>
+appleScript <span class="token operator">=</span> <span class="token string">"do shell script "</span> <span class="token operator">&#x26;</span> Chr<span class="token punctuation">(</span><span class="token number">34</span><span class="token punctuation">)</span> <span class="token operator">&#x26;</span> <span class="token string">"find -E '"</span> <span class="token operator">&#x26;</span> targetDirectoryPath <span class="token operator">&#x26;</span> <span class="token string">"' -type f -iregex '.*.[xls|xlsx|xlsm]' -maxdepth 1"</span> <span class="token operator">&#x26;</span> Chr<span class="token punctuation">(</span><span class="token number">34</span><span class="token punctuation">)</span>
+</code></pre>
+<h2 id="find-コマンドが-operation-not-permitted-を返すことがある"><a class="header-link" href="#find-コマンドが-operation-not-permitted-を返すことがある"><span class="header-link-mark"></span></a><code>find</code> コマンドが <code>Operation not permitted</code> を返すことがある</h2>
+<p>まだ発生条件やタイミングがよく分かっていなのだが、上述の <code>MacScript()</code> の実行に失敗して、VBA マクロの<strong>エラー 5「プロシージャの呼び出し、または引数が不正です。」</strong>が発生することがある。</p>
+<p>AppleScript 中のシェルスクリプトに <code>2>&#x26;1</code> を追記したりして調べてみると、<code>find: : Operation not permitted.</code> エラーが発生していることがある。</p>
+<p>確かに、何かの拍子に、マクロを実行中に「このディレクトリやファイルへのアクセス権を付与するか？」みたいなダイアログが出てくることはあるのだが、アクセス権を付与したはずのディレクトリでもマクロ入りブックを再起動したりすると発生したりしなかったりで、タイミングが良く分からなかった。</p>
+<p><em>アクセス権の付与ダイアログ</em>が表示されるタイミングが分からず色々難儀だったので、自分の場合は、AppleScript の <code>choose folder</code> を使って、先に <code>find</code> したいディレクトリをユーザに選択させることにした。こうすると上手くアクセス権の付与ダイアログが出てくれることが増えた気がした。</p>
+<pre class="language-vb"><code class="language-vb"><span class="token comment">' AppleScript のランタイムエラーを逃がすため指定する</span>
+<span class="token keyword">On</span> <span class="token keyword">Error</span> <span class="token keyword">Resume</span> <span class="token keyword">Next</span>
+
+<span class="token comment">' アクセス権を得たいのでディレクトリ選択ダイアログを表示し、ユーザに選択させる</span>
+<span class="token keyword">Dim</span> targetDirectoryPath <span class="token keyword">As</span> <span class="token keyword">String</span>
+targetDirectoryPath <span class="token operator">=</span> MacScript<span class="token punctuation">(</span><span class="token string">"choose folder as string"</span><span class="token punctuation">)</span>
+
+<span class="token keyword">If</span> Err<span class="token punctuation">.</span>Number <span class="token operator">&#x3C;</span><span class="token operator">></span> <span class="token number">0</span> <span class="token keyword">Then</span>
+  <span class="token comment">' キャンセルされたか AppleScript のランタイムエラーの場合。Exit しておくと良い</span>
+<span class="token keyword">End</span> <span class="token keyword">If</span>
+
+<span class="token comment">' このままだとコロン区切りのパスになっているので、AppleScript を使ってスラッシュを使う POSIX なパスに変換してもらう</span>
+targetDirectoryPath <span class="token operator">=</span> MacScript<span class="token punctuation">(</span><span class="token string">"tell text 1 thru -2 of "</span> <span class="token operator">&#x26;</span> Chr<span class="token punctuation">(</span><span class="token number">34</span><span class="token punctuation">)</span> <span class="token operator">&#x26;</span> targetDirectoryPath <span class="token operator">&#x26;</span> Chr<span class="token punctuation">(</span><span class="token number">34</span><span class="token punctuation">)</span> <span class="token operator">&#x26;</span> <span class="token string">" to return quoted form of it's POSIX Path"</span><span class="token punctuation">)</span>
+<span class="token comment">' 結果がシングルクォートで囲まれた文字列になっているので、用途に応じて削っておいたり</span>
+targetDirectoryPath <span class="token operator">=</span> Replace<span class="token punctuation">(</span>targetDirectoryPath<span class="token punctuation">,</span> <span class="token string">"'"</span><span class="token punctuation">,</span> <span class="token string">""</span><span class="token punctuation">)</span>
+
+<span class="token comment">' find コマンドで検索する</span>
+<span class="token keyword">Dim</span> appleScript <span class="token keyword">As</span> <span class="token keyword">String</span><span class="token punctuation">:</span> appleScript <span class="token operator">=</span> <span class="token string">"do shell script "</span> <span class="token operator">&#x26;</span> Chr<span class="token punctuation">(</span><span class="token number">34</span><span class="token punctuation">)</span> <span class="token operator">&#x26;</span> <span class="token string">"find -E '"</span> <span class="token operator">&#x26;</span> targetDirectoryPath <span class="token operator">&#x26;</span> <span class="token string">"' -type f -iregex '.*.[xls|xlsx|xlsm]' -maxdepth 1"</span> <span class="token operator">&#x26;</span> Chr<span class="token punctuation">(</span><span class="token number">34</span><span class="token punctuation">)</span>
+<span class="token keyword">Dim</span> result <span class="token keyword">As</span> <span class="token keyword">String</span><span class="token punctuation">:</span> result <span class="token operator">=</span> MacScript<span class="token punctuation">(</span>appleScript<span class="token punctuation">)</span>
+
+<span class="token keyword">If</span> Err<span class="token punctuation">.</span>Number <span class="token operator">&#x3C;</span><span class="token operator">></span> <span class="token number">0</span> <span class="token keyword">Then</span>
+  <span class="token comment">' シェルスクリプトが異常終了の終了ステータスを返した場合は AppleScript のランタイムエラー扱いになり、エラー 5 としてこのブロックに入る</span>
+  <span class="token comment">' find コマンドで Operation not permitted エラーが発生したときもココ</span>
+<span class="token keyword">End</span> <span class="token keyword">If</span>
+
+<span class="token keyword">On</span> <span class="token keyword">Error</span> <span class="token keyword">GoTo</span> <span class="token number">0</span>
+
+<span class="token comment">' 取得したファイル一覧を見る</span>
+Debug<span class="token punctuation">.</span>Print result
+</code></pre>
+<p>こんな感じ。</p>
+<h2 id="参考にした文献"><a class="header-link" href="#参考にした文献"><span class="header-link-mark"></span></a>参考にした文献</h2>
+<p>今回のコードは以下の文献より参考にした。</p>
+<ul>
+  <li>参考：<a href="https://www.rondebruin.nl/mac/mac013.htm">Loop through Files in Folder on a Mac (Dir for Mac Excel)</a></li>
+</ul>
+<p>Excel ブックに組み込み済みのモノが Zip ファイルで展開されているので、コードを読みやすいよう Gist に転載させていただいた。</p>
+<ul>
+  <li><a href="https://gist.github.com/Neos21/3d3ff72c9cde3e26c01eec428cacdd1f">Backup : https://www.rondebruin.nl/mac/mac013.htm : Loop through Files in Folder on a Mac (Dir for Mac Excel) · GitHub</a></li>
+</ul>
+<p>グローバル変数 <code>MyFiles</code> に結果を返すようにしている他、<code>Application.Version</code> が <code>15</code> 未満の MacOS は AppleScript の書き方が異なる。少し古い Excel for Mac での動作検証はしていないので、上述の簡素化したコードは環境によっては動かないかもしれない。</p>
+<p>あとは以前紹介した OS 判定コードと組み合わせて、「Mac では AppleScript を使ってファイル一覧を取得する」「Windows では <code>Dir()</code> 等を使ってファイル一覧を取得する」という風に作ればよかろう。ただ、<code>Dir()</code> 関数はフルパスを返さないことに注意。フルパスを返すよう文字列結合して、配列を返すようにすると、どちらの OS でも同じように関数を使えるようになるだろう。</p>
+<h2 id="ちなみに-mkdir-は"><a class="header-link" href="#ちなみに-mkdir-は"><span class="header-link-mark"></span></a>ちなみに <code>MkDir()</code> は…</h2>
+<p>ちなみに、<code>MkDir()</code> は、パスをスラッシュ <code>/</code> 区切りで書いてやれば上手くいった。ディレクトリ単体の存在チェックなら Mac でも <code>Dir()</code> 関数が使えたので、以下のようなコードで動作した。</p>
+<pre class="language-vb"><code class="language-vb"><span class="token comment">' 起点とするディレクトリ</span>
+<span class="token keyword">Dim</span> targetDirectoryPath <span class="token keyword">As</span> <span class="token keyword">String</span><span class="token punctuation">:</span> targetDirectoryPath <span class="token operator">=</span> <span class="token string">"/Users/Neo/work"</span>
+<span class="token comment">' このディレクトリの下に作りたいディレクトリ名</span>
+<span class="token keyword">Dim</span> newDirectoryName <span class="token keyword">As</span> <span class="token keyword">String</span><span class="token punctuation">:</span> newDirectoryName <span class="token operator">=</span> <span class="token string">"test"</span>
+<span class="token comment">' パス区切り文字 : ココでは Mac 向けのスラッシュとして定義しておく</span>
+<span class="token keyword">Dim</span> pathSplitter <span class="token keyword">As</span> <span class="token keyword">String</span><span class="token punctuation">:</span> pathSplitter <span class="token operator">=</span> <span class="token string">"/"</span>
+
+<span class="token comment">' 指定のディレクトリ (ココでは /Users/Neo/work/ 配下に test/ ディレクトリ) が存在するかどうか</span>
+<span class="token keyword">Dim</span> pathExists <span class="token keyword">As</span> <span class="token keyword">String</span>
+<span class="token comment">' Mac では Dir() の第2引数で vbDirectory の指定が必要</span>
+pathExists <span class="token operator">=</span> Dir<span class="token punctuation">(</span>targetDirectoryPath <span class="token operator">&#x26;</span> pathSplitter <span class="token operator">&#x26;</span> newDirectoryName<span class="token punctuation">,</span> vbDirectory<span class="token punctuation">)</span>  
+
+<span class="token comment">' なければ test/ ディレクトリを作る</span>
+<span class="token keyword">If</span> pathExists <span class="token operator">=</span> <span class="token string">""</span> <span class="token keyword">Then</span>
+  MkDir targetDirectoryPath <span class="token operator">&#x26;</span> pathSplitter <span class="token operator">&#x26;</span> newDirectoryName
+<span class="token keyword">End</span> <span class="token keyword">If</span>
+</code></pre>
+<h2 id="その他参考文献"><a class="header-link" href="#その他参考文献"><span class="header-link-mark"></span></a>その他参考文献</h2>
+<p>その他、Mac 版 Excel VBA における <code>Dir()</code> 関数に関する参考文献。</p>
+<ul>
+  <li><a href="https://stackoverflow.com/questions/10045474/dir-function-not-working-in-mac-excel-2011-vba">Dir() function not working in Mac Excel 2011 VBA - Stack Overflow</a> … <code>Dir()</code> 関数の第2引数に指定する MacID について。<code>.xlsx</code> のみ対象にするなら <code>MacID("XLSX")</code> で良い</li>
+</ul>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2019-01-21</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2019-01-21</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

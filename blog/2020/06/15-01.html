@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>完全無料。GCE で公開している HTTP サーバを Freenom 独自ドメイン + Let&#39;s Encrypt で HTTPS 化した - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2020/06/15-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2020/index.html">2020年</a></li>
+            <li><a href="/blog/2020/06/index.html">06月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2020-06-15</time></div>
+        <h1 id="page-title">完全無料。GCE で公開している HTTP サーバを Freenom 独自ドメイン + Let&#39;s Encrypt で HTTPS 化した</h1>
+
+<p>無料枠の GCE (Google Compute Engine) インスタンスを使って、Apache サーバを公開している。コレまでサーバ証明書を用意していなかったので、IP アドレス直打ちの HTTP でしかアクセスできなかった。</p>
+<ul>
+  <li><a href="/blog/2019/12/13-01.html">GCE インスタンスに Apache と PHP をインストールして Web サーバを公開してみた</a></li>
+</ul>
+<p>今回この環境を、無料で独自ドメインが取得できる <strong>Freenom</strong> と、無料でサーバ証明書が取得できる <strong>Let's Encrypt</strong> を使って、完全無料で HTTPS 化することにした。</p>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#%E5%89%8D%E6%8F%90%E6%9D%A1%E4%BB%B6">前提条件</a></li>
+  <li><a href="#freenom-%E3%81%A7%E3%83%89%E3%83%A1%E3%82%A4%E3%83%B3%E5%8F%96%E5%BE%97%E3%83%BBdns-%E8%A8%AD%E5%AE%9A">Freenom でドメイン取得・DNS 設定</a></li>
+  <li><a href="#lets-encrypt-%E3%81%A7%E3%82%B5%E3%83%BC%E3%83%90%E8%A8%BC%E6%98%8E%E6%9B%B8%E3%82%92%E5%8F%96%E5%BE%97%E3%81%99%E3%82%8B">Let's Encrypt でサーバ証明書を取得する</a></li>
+  <li><a href="#apache-%E8%A8%AD%E5%AE%9A%E3%83%95%E3%82%A1%E3%82%A4%E3%83%AB%E3%81%AB%E3%82%B5%E3%83%BC%E3%83%90%E8%A8%BC%E6%98%8E%E6%9B%B8%E3%82%92%E8%AA%AD%E3%81%BF%E8%BE%BC%E3%81%BE%E3%81%9B%E3%82%8B">Apache 設定ファイルにサーバ証明書を読み込ませる</a>
+    <ul>
+      <li><a href="#%E3%81%AA%E3%81%9C%E3%81%8B%E5%86%8D%E8%B5%B7%E5%8B%95%E3%81%8C%E4%B8%8A%E6%89%8B%E3%81%8F%E8%A1%8C%E3%81%8B%E3%81%9A">なぜか再起動が上手く行かず</a></li>
+    </ul>
+  </li>
+  <li><a href="#%E3%82%A2%E3%82%AF%E3%82%BB%E3%82%B9%E3%81%97%E3%81%A6%E3%81%BF%E3%82%8B">アクセスしてみる</a></li>
+  <li><a href="#%E3%82%B5%E3%83%BC%E3%83%90%E8%A8%BC%E6%98%8E%E6%9B%B8%E3%82%92%E8%87%AA%E5%8B%95%E6%9B%B4%E6%96%B0%E3%81%99%E3%82%8B">サーバ証明書を自動更新する</a></li>
+</ul>
+<h2 id="前提条件"><a class="header-link" href="#前提条件"><span class="header-link-mark"></span></a>前提条件</h2>
+<ul>
+  <li>GCE インスタンスはグローバル IP を持っていること</li>
+  <li>GCE インスタンスは80・443番ポートを開放しており、ファイアウォールで塞がれていないこと (<code>https</code> でアクセスしようとすると、証明書エラーになるもののアクセスできる、という状態を前提にする)</li>
+  <li>OS は CentOS 7 を前提とする。他のディストリビューションの場合は certbot の導入方法が異なる</li>
+  <li>HTTP サーバは Apache を使用している前提とする。nginx などの場合はサーバ証明書の適用方法が異なる</li>
+</ul>
+<h2 id="freenom-でドメイン取得・dns-設定"><a class="header-link" href="#freenom-でドメイン取得・dns-設定"><span class="header-link-mark"></span></a>Freenom でドメイン取得・DNS 設定</h2>
+<p>まずは Freenom でドメインを取得する。今回は <code>neos21-gce.ga</code> というドメインを取った。</p>
+<ul>
+  <li><a href="https://www.freenom.com/ja/index.html">Freenom - 誰でも利用できる名前</a></li>
+  <li><a href="/blog/2018/12/03-01.html">独自ドメインを無料で取得できる Freenom を使ってみた</a></li>
+</ul>
+<p>ドメインを取得する際でも良いし、取得後の画面でも良いが、<em>Freenom DNS の設定画面</em>を開く。</p>
+<ul>
+  <li>上部メニュー Services → My Domains → 「Manage Domain」 → 「Manage Freenom DNS」タブ</li>
+</ul>
+<p>そしたら次のキャプチャのように設定する。</p>
+<p>
+  <img src="15-01-01.png" alt="Freenom 設定">
+</p>
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Type</th>
+      <th>TTL</th>
+      <th>Target</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>(空白)</td>
+      <td>A</td>
+      <td>300</td>
+      <td>【GCE の Public IP】</td>
+    </tr>
+    <tr>
+      <td><code>www</code></td>
+      <td>A</td>
+      <td>300</td>
+      <td>【GCE の Public IP】</td>
+    </tr>
+  </tbody>
+</table>
+<p>いわゆる「A レコード」を指定している。このドメインはこの IP アドレスに紐付けるぞー、という指定。</p>
+<p>設定後、5～10分くらいすると、取得した独自ドメインで GCE に対して HTTP アクセスができるようになっているはず。</p>
+<ul>
+  <li><a href="http://neos21-gce.ga/">http://neos21-gce.ga/</a></li>
+  <li><a href="http://www.neos21-gce.ga/">http://www.neos21-gce.ga/</a></li>
+</ul>
+<p>HTTPS でアクセスしようとすると、証明書エラーの警告が出る状態であろう。</p>
+<h2 id="lets-encrypt-でサーバ証明書を取得する"><a class="header-link" href="#lets-encrypt-でサーバ証明書を取得する"><span class="header-link-mark"></span></a>Let's Encrypt でサーバ証明書を取得する</h2>
+<p>HTTP アクセスができるようになったら、続いてサーバ証明書の取得に移る。</p>
+<p>GCE インスタンスに SSH 接続し、次のように叩いていく。</p>
+<pre class="language-bash"><code class="language-bash">$ yum <span class="token function">install</span> -y epel-release
+$ yum <span class="token function">install</span> -y certbot python-certbot-apache
+
+<span class="token comment"># Apache で公開しているディレクトリと、取得したドメイン名を指定する</span>
+$ certbot certonly --webroot -w /var/www/html -d neos21-gce.ga
+Saving debug log to /var/log/letsencrypt/letsencrypt.log
+Plugins selected: Authenticator webroot, Installer None
+Starting new HTTPS connection <span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">)</span>: acme-v02.api.letsencrypt.org
+Obtaining a new certificate
+Performing the following challenges:
+http-01 challenge <span class="token keyword">for</span> neos21-gce.ga
+Using the webroot path /var/www/html <span class="token keyword">for</span> all unmatched domains.
+Waiting <span class="token keyword">for</span> verification<span class="token punctuation">..</span>.
+Cleaning up challenges
+
+IMPORTANT NOTES:
+ - Congratulations<span class="token operator">!</span> Your certificate and chain have been saved at:
+   /etc/letsencrypt/live/neos21-gce.ga/fullchain.pem
+   Your key <span class="token function">file</span> has been saved at:
+   /etc/letsencrypt/live/neos21-gce.ga/privkey.pem
+   Your cert will expire on <span class="token number">2020</span>-08-25. To obtain a new or tweaked
+   version of this certificate <span class="token keyword">in</span> the future, simply run certbot
+   again. To non-interactively renew *all* of your certificates, run
+   <span class="token string">"certbot renew"</span>
+ - If you like Certbot, please consider supporting our work by:
+
+   Donating to ISRG / Let's Encrypt:   https://letsencrypt.org/donate
+   Donating to EFF:                    https://eff.org/donate-le
+</code></pre>
+<p>このように、コマンドを叩くだけで証明書が取得できた。各種ファイルは以下にある。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">ls</span> -l /etc/letsencrypt/live/neos21-gce.ga/
+合計 <span class="token number">4</span>
+-rw-r--r-- <span class="token number">1</span> root root <span class="token number">692</span> <span class="token number">2020</span>-05-27 <span class="token number">18</span>:25 README
+lrwxrwxrwx <span class="token number">1</span> root root  <span class="token number">37</span> <span class="token number">2020</span>-05-27 <span class="token number">18</span>:25 cert.pem -<span class="token operator">></span> <span class="token punctuation">..</span>/<span class="token punctuation">..</span>/archive/neos21-gce.ga/cert1.pem
+lrwxrwxrwx <span class="token number">1</span> root root  <span class="token number">38</span> <span class="token number">2020</span>-05-27 <span class="token number">18</span>:25 chain.pem -<span class="token operator">></span> <span class="token punctuation">..</span>/<span class="token punctuation">..</span>/archive/neos21-gce.ga/chain1.pem
+lrwxrwxrwx <span class="token number">1</span> root root  <span class="token number">42</span> <span class="token number">2020</span>-05-27 <span class="token number">18</span>:25 fullchain.pem -<span class="token operator">></span> <span class="token punctuation">..</span>/<span class="token punctuation">..</span>/archive/neos21-gce.ga/fullchain1.pem
+lrwxrwxrwx <span class="token number">1</span> root root  <span class="token number">40</span> <span class="token number">2020</span>-05-27 <span class="token number">18</span>:25 privkey.pem -<span class="token operator">></span> <span class="token punctuation">..</span>/<span class="token punctuation">..</span>/archive/neos21-gce.ga/privkey1.pem
+</code></pre>
+<h2 id="apache-設定ファイルにサーバ証明書を読み込ませる"><a class="header-link" href="#apache-設定ファイルにサーバ証明書を読み込ませる"><span class="header-link-mark"></span></a>Apache 設定ファイルにサーバ証明書を読み込ませる</h2>
+<p>コレだけだと Let's Encrypt のサーバ証明書を取得しただけで、Apache サーバがこの証明書を利用していないので、状況が変わらない。</p>
+<p>次の設定ファイルを開き、以下の抜粋のとおりに編集する。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">vi</span> /etc/httpd/conf.d/ssl.conf
+</code></pre>
+<p>元の行と、書き換えた行を記載している。ディレクトリパスなどは各自のモノに読み替えること。</p>
+<pre class="language-apacheconf"><code class="language-apacheconf"><span class="token comment">#   Server Certificate:</span>
+<span class="token comment"># Point SSLCertificateFile at a PEM encoded certificate.  If</span>
+<span class="token comment"># the certificate is encrypted, then you will be prompted for a</span>
+<span class="token comment"># pass phrase.  Note that a kill -HUP will prompt again.  A new</span>
+<span class="token comment"># certificate can be generated using the genkey(1) command.</span>
+
+<span class="token comment"># Original</span>
+<span class="token comment">#SSLCertificateFile /etc/pki/tls/certs/localhost.crt</span>
+<span class="token comment"># My Domain</span>
+<span class="token directive-inline property">SSLCertificateFile</span> /etc/letsencrypt/live/neos21-gce.ga/cert.pem
+
+<span class="token comment">#   Server Private Key:</span>
+<span class="token comment">#   If the key is not combined with the certificate, use this</span>
+<span class="token comment">#   directive to point at the key file.  Keep in mind that if</span>
+<span class="token comment">#   you've both a RSA and a DSA private key you can configure</span>
+<span class="token comment">#   both in parallel (to also allow the use of DSA ciphers, etc.)</span>
+
+<span class="token comment"># Original</span>
+<span class="token comment">#SSLCertificateKeyFile /etc/pki/tls/private/localhost.key</span>
+<span class="token comment"># My Domain</span>
+<span class="token directive-inline property">SSLCertificateKeyFile</span> /etc/letsencrypt/live/neos21-gce.ga/privkey.pem
+
+<span class="token comment">#   Server Certificate Chain:</span>
+<span class="token comment">#   Point SSLCertificateChainFile at a file containing the</span>
+<span class="token comment">#   concatenation of PEM encoded CA certificates which form the</span>
+<span class="token comment">#   certificate chain for the server certificate. Alternatively</span>
+<span class="token comment">#   the referenced file can be the same as SSLCertificateFile</span>
+<span class="token comment">#   when the CA certificates are directly appended to the server</span>
+<span class="token comment">#   certificate for convinience.</span>
+
+<span class="token comment"># Original (Comment-out)</span>
+<span class="token comment">#SSLCertificateChainFile /etc/pki/tls/certs/server-chain.crt</span>
+<span class="token comment"># My Domain</span>
+<span class="token directive-inline property">SSLCertificateChainFile</span> /etc/letsencrypt/live/neos21-gce.ga/chain.pem
+</code></pre>
+<p>設定ファイルを書き換えたら、Apache サーバを再起動する。</p>
+<pre class="language-bash"><code class="language-bash">$ systemctl restart httpd
+</code></pre>
+<h3 id="なぜか再起動が上手く行かず"><a class="header-link" href="#なぜか再起動が上手く行かず"><span class="header-link-mark"></span></a>なぜか再起動が上手く行かず</h3>
+<p>当方環境ではなぜか Apache サーバの再起動が上手く行かなくて詰まった。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># よー分からん</span>
+$ systemctl status httpd
+● httpd.service - The Apache HTTP Server
+   Loaded: loaded <span class="token punctuation">(</span>/usr/lib/systemd/system/httpd.service<span class="token punctuation">;</span> enabled<span class="token punctuation">;</span> vendor preset: disabled<span class="token punctuation">)</span>
+   Active: failed <span class="token punctuation">(</span>Result: exit-code<span class="token punctuation">)</span> since 水 <span class="token number">2020</span>-05-27 <span class="token number">18</span>:44:23 JST<span class="token punctuation">;</span> 3min 58s ago
+     Docs: man:httpd<span class="token punctuation">(</span><span class="token number">8</span><span class="token punctuation">)</span>
+           man:apachectl<span class="token punctuation">(</span><span class="token number">8</span><span class="token punctuation">)</span>
+  Process: <span class="token number">29373</span> <span class="token assign-left variable">ExecStop</span><span class="token operator">=</span>/bin/kill -WINCH <span class="token variable">${MAINPID}</span> <span class="token punctuation">(</span>code<span class="token operator">=</span>exited, <span class="token assign-left variable">status</span><span class="token operator">=</span><span class="token number">1</span>/FAILURE<span class="token punctuation">)</span>
+  Process: <span class="token number">21731</span> <span class="token assign-left variable">ExecReload</span><span class="token operator">=</span>/usr/sbin/httpd <span class="token variable">$OPTIONS</span> -k graceful <span class="token punctuation">(</span>code<span class="token operator">=</span>exited, <span class="token assign-left variable">status</span><span class="token operator">=</span><span class="token number">0</span>/SUCCESS<span class="token punctuation">)</span>
+  Process: <span class="token number">29372</span> <span class="token assign-left variable">ExecStart</span><span class="token operator">=</span>/usr/sbin/httpd <span class="token variable">$OPTIONS</span> -DFOREGROUND <span class="token punctuation">(</span>code<span class="token operator">=</span>exited, <span class="token assign-left variable">status</span><span class="token operator">=</span><span class="token number">0</span>/SUCCESS<span class="token punctuation">)</span>
+ Main PID: <span class="token number">29372</span> <span class="token punctuation">(</span>code<span class="token operator">=</span>exited, <span class="token assign-left variable">status</span><span class="token operator">=</span><span class="token number">0</span>/SUCCESS<span class="token punctuation">)</span>
+
+ <span class="token number">5</span>月 <span class="token number">27</span> <span class="token number">18</span>:44:23 gce systemd<span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span>: Starting The Apache HTTP Server<span class="token punctuation">..</span>.
+ <span class="token number">5</span>月 <span class="token number">27</span> <span class="token number">18</span>:44:23 gce httpd<span class="token punctuation">[</span><span class="token number">29372</span><span class="token punctuation">]</span>: httpd <span class="token punctuation">(</span>pid <span class="token number">15739</span><span class="token punctuation">)</span> already running
+ <span class="token number">5</span>月 <span class="token number">27</span> <span class="token number">18</span>:44:23 gce kill<span class="token punctuation">[</span><span class="token number">29373</span><span class="token punctuation">]</span>: kill: cannot <span class="token function">find</span> process <span class="token string">""</span>
+ <span class="token number">5</span>月 <span class="token number">27</span> <span class="token number">18</span>:44:23 gce systemd<span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span>: httpd.service: control process exited, <span class="token assign-left variable">code</span><span class="token operator">=</span>exited <span class="token assign-left variable">status</span><span class="token operator">=</span><span class="token number">1</span>
+ <span class="token number">5</span>月 <span class="token number">27</span> <span class="token number">18</span>:44:23 gce systemd<span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span>: Failed to start The Apache HTTP Server.
+ <span class="token number">5</span>月 <span class="token number">27</span> <span class="token number">18</span>:44:23 gce systemd<span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span>: Unit httpd.service entered failed state.
+ <span class="token number">5</span>月 <span class="token number">27</span> <span class="token number">18</span>:44:23 gce systemd<span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span>: httpd.service failed.
+ <span class="token number">5</span>月 <span class="token number">27</span> <span class="token number">18</span>:46:08 gce systemd<span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span>: Unit httpd.service cannot be reloaded because it is inactive.
+ <span class="token number">5</span>月 <span class="token number">27</span> <span class="token number">18</span>:48:17 gce systemd<span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span>: Unit httpd.service cannot be reloaded because it is inactive.
+
+<span class="token comment"># やっぱり分からん</span>
+$ journalctl -xe
+ <span class="token number">5</span>月 <span class="token number">27</span> <span class="token number">18</span>:48:44 gce systemd<span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span>: Starting The Apache HTTP Server<span class="token punctuation">..</span>.
+-- Subject: Unit httpd.service has begun start-up
+-- Defined-By: systemd
+-- Support: http://lists.freedesktop.org/mailman/listinfo/systemd-devel
+--
+-- Unit httpd.service has begun starting up.
+ <span class="token number">5</span>月 <span class="token number">27</span> <span class="token number">18</span>:48:44 gce httpd<span class="token punctuation">[</span><span class="token number">29789</span><span class="token punctuation">]</span>: httpd <span class="token punctuation">(</span>pid <span class="token number">15739</span><span class="token punctuation">)</span> already running
+ <span class="token number">5</span>月 <span class="token number">27</span> <span class="token number">18</span>:48:44 gce kill<span class="token punctuation">[</span><span class="token number">29790</span><span class="token punctuation">]</span>: kill: cannot <span class="token function">find</span> process <span class="token string">""</span>
+ <span class="token number">5</span>月 <span class="token number">27</span> <span class="token number">18</span>:48:44 gce systemd<span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span>: httpd.service: control process exited, <span class="token assign-left variable">code</span><span class="token operator">=</span>exited <span class="token assign-left variable">status</span><span class="token operator">=</span><span class="token number">1</span>
+ <span class="token number">5</span>月 <span class="token number">27</span> <span class="token number">18</span>:48:44 gce systemd<span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span>: Failed to start The Apache HTTP Server.
+-- Subject: Unit httpd.service has failed
+-- Defined-By: systemd
+-- Support: http://lists.freedesktop.org/mailman/listinfo/systemd-devel
+--
+-- Unit httpd.service has failed.
+--
+-- The result is failed.
+ <span class="token number">5</span>月 <span class="token number">27</span> <span class="token number">18</span>:48:44 gce systemd<span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span>: Unit httpd.service entered failed state.
+ <span class="token number">5</span>月 <span class="token number">27</span> <span class="token number">18</span>:48:44 gce systemd<span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span>: httpd.service failed.
+
+<span class="token comment"># こうなってる</span>
+$ apachectl
+httpd <span class="token punctuation">(</span>pid <span class="token number">29997</span><span class="token punctuation">)</span> already running
+
+<span class="token comment"># 設定ファイルに記述誤りがあるワケではない模様</span>
+$ apachectl -t
+Syntax OK
+</code></pre>
+<p>設定ファイルの書き間違いだとそういう文言がエラーメッセージに出てくるのだが、そうではないようだった。</p>
+<p>他に原因が見当たらなかったので、<code>httpd already running</code> というところかなと思い、<strong><code>$ pkill httpd</code></strong> で一旦強引に全ての <code>httpd</code> プロセスを切った。</p>
+<p>それから <code>$ systemctl start httpd</code> でやり直したら上手くいった。よかった。</p>
+<h2 id="アクセスしてみる"><a class="header-link" href="#アクセスしてみる"><span class="header-link-mark"></span></a>アクセスしてみる</h2>
+<p>設定が終わったら HTTPS でアクセスしてみる。</p>
+<ul>
+  <li><a href="https://neos21-gce.ga/">https://neos21-gce.ga/</a></li>
+  <li><a href="https://www.neos21-gce.ga/">https://www.neos21-gce.ga/</a></li>
+</ul>
+<p>無事アクセスできた。おけおけ。</p>
+<h2 id="サーバ証明書を自動更新する"><a class="header-link" href="#サーバ証明書を自動更新する"><span class="header-link-mark"></span></a>サーバ証明書を自動更新する</h2>
+<p>Let's Encrypt の証明書は3ヶ月ごとに切れるので、毎月ぐらいのペースで</p>
+<pre class="language-bash"><code class="language-bash">$ certbot renew <span class="token operator">&#x26;&#x26;</span> systemctl restart httpd
+</code></pre>
+<p>を実行するよう cron を書いておくと良さそう。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># crontab を編集する</span>
+$ <span class="token function">crontab</span> -u root -e
+no <span class="token function">crontab</span> <span class="token keyword">for</span> root - using an empty one
+crontab: installing new <span class="token function">crontab</span>
+
+<span class="token comment"># 内容を確認する</span>
+$ <span class="token function">crontab</span> -u root -l
+00 03 01 * * certbot renew <span class="token operator">&#x26;&#x26;</span> systemctl restart httpd
+</code></pre>
+<p>以上。</p>
+<ul>
+  <li>参考：<a href="https://weblabo.oscasierra.net/letsencrypt-2/">CentOS 7 + Apache 2.4 に Let&#x26;#8217;s Encrypt の証明書を導入する手順 | WEB ARCH LABO</a></li>
+  <li>参考：<a href="https://weblabo.oscasierra.net/letsencrypt-renew-cron/">Let&#x26;#8217;s Encrypt の証明書の更新を自動化する手順 (cron) | WEB ARCH LABO</a></li>
+  <li>参考：<a href="http://dotnsf.blog.jp/archives/1075580031.html">CentOS7 のウェブサーバーを Certbot(Let's encrypt) で SSL 対応する : まだプログラマーですが何か？</a></li>
+  <li>参考：<a href="https://hackers-high.com/linux/centos-certbot-installation/">【CentOS 8・7】Certbotのインストール方法【プラグイン対応】 – Hacker's High</a></li>
+</ul>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2020-06-15</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2020-06-15</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>Angular In Memory Web API の実用性を上げるための Tips - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2018/07/26-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2018/index.html">2018年</a></li>
+            <li><a href="/blog/2018/07/index.html">07月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2018-07-26</time></div>
+        <h1 id="page-title">Angular In Memory Web API の実用性を上げるための Tips</h1>
+
+<p>以前 Angular In Memory Web API というライブラリを紹介した。Angular アプリ内に API サーバのモックを構築できるライブラリだったが、色々と癖があって扱いが大変だった。</p>
+<ul>
+  <li><a href="/blog/2018/02/09-02.html">Angular In Memory Web API を使ってモックサーバを立てる</a></li>
+</ul>
+<p>今回はこの In Memory Web API の実用性を向上させるための手法をいくつか紹介する。</p>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#%E8%A4%87%E6%95%B0%E3%81%AE%E3%83%AA%E3%82%BD%E3%83%BC%E3%82%B9%E3%82%92%E5%88%86%E5%89%B2%E3%81%97%E3%81%A6%E7%AE%A1%E7%90%86%E3%81%99%E3%82%8B%E6%96%B9%E6%B3%95">複数のリソースを分割して管理する方法</a></li>
+  <li><a href="#%E7%92%B0%E5%A2%83%E5%A4%89%E6%95%B0%E3%83%95%E3%82%A1%E3%82%A4%E3%83%AB%E3%81%A7-api-%E3%83%A2%E3%83%83%E3%82%AF%E3%81%AE%E5%88%A9%E7%94%A8%E5%88%87%E6%9B%BF%E3%82%92%E8%A1%8C%E3%81%86%E6%96%B9%E6%B3%95">環境変数ファイルで API モックの利用切替を行う方法</a></li>
+  <li><a href="#%E6%9B%B4%E6%96%B0%E3%83%87%E3%83%BC%E3%82%BF%E3%82%92%E5%B7%AE%E3%81%97%E6%9B%BF%E3%81%88%E3%82%8B%E3%81%AB%E3%81%AF-%E3%83%AA%E3%82%AF%E3%82%A8%E3%82%B9%E3%83%88%E3%83%87%E3%83%BC%E3%82%BF%E3%81%AE%E5%8A%A0%E5%B7%A5">更新データを差し替えるには (リクエストデータの加工)</a></li>
+  <li><a href="#%E3%83%AC%E3%82%B9%E3%83%9D%E3%83%B3%E3%82%B9%E3%81%99%E3%82%8B-http-%E3%82%B9%E3%83%86%E3%83%BC%E3%82%BF%E3%82%B9%E3%82%B3%E3%83%BC%E3%83%89%E3%82%92%E5%88%87%E3%82%8A%E6%9B%BF%E3%81%88%E3%81%9F%E3%81%84">レスポンスする HTTP ステータスコードを切り替えたい</a></li>
+</ul>
+<h2 id="複数のリソースを分割して管理する方法"><a class="header-link" href="#複数のリソースを分割して管理する方法"><span class="header-link-mark"></span></a>複数のリソースを分割して管理する方法</h2>
+<p>例えば <code>customers</code> (顧客情報) と <code>products</code> (商品情報) というように、複数のリソースを扱う場合、前回の記事で紹介した <code>MockWebApiService</code> クラスのみで構築しようとすると、以下のような作りになる。</p>
+<pre class="language-typescript"><code class="language-typescript"><span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">Injectable</span> <span class="token punctuation">}</span></span> <span class="token keyword">from</span> <span class="token string">'@angular/core'</span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">InMemoryDbService</span> <span class="token punctuation">}</span></span> <span class="token keyword">from</span> <span class="token string">'angular-in-memory-web-api'</span><span class="token punctuation">;</span>
+
+@<span class="token function"><span class="token maybe-class-name">Injectable</span></span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+<span class="token keyword">export</span> <span class="token keyword">class</span> <span class="token class-name"><span class="token maybe-class-name">MockWebApiService</span></span> <span class="token keyword">implements</span> <span class="token class-name"><span class="token maybe-class-name">InMemoryDbService</span></span> <span class="token punctuation">{</span>
+  <span class="token doc-comment comment">/** InMemoryDbService から継承 : モックデータを作成する */</span>
+  <span class="token function">createDb</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator">:</span> <span class="token builtin">any</span> <span class="token punctuation">{</span>
+    <span class="token keyword">return</span> <span class="token punctuation">{</span>
+      <span class="token comment">// 顧客情報</span>
+      customers<span class="token operator">:</span> <span class="token punctuation">[</span>
+        <span class="token punctuation">{</span> id<span class="token operator">:</span> <span class="token number">1</span><span class="token punctuation">,</span> name<span class="token operator">:</span> <span class="token string">'Marty'</span> <span class="token punctuation">}</span><span class="token punctuation">,</span>
+        <span class="token punctuation">{</span> id<span class="token operator">:</span> <span class="token number">2</span><span class="token punctuation">,</span> name<span class="token operator">:</span> <span class="token string">'Jennifer'</span> <span class="token punctuation">}</span>
+      <span class="token punctuation">]</span><span class="token punctuation">,</span>
+      <span class="token comment">// 商品情報</span>
+      products<span class="token operator">:</span> <span class="token punctuation">[</span>
+        <span class="token punctuation">{</span> id<span class="token operator">:</span> <span class="token number">1</span><span class="token punctuation">,</span> name<span class="token operator">:</span> <span class="token string">'DMC-12'</span><span class="token punctuation">,</span> price<span class="token operator">:</span> <span class="token number">50000</span> <span class="token punctuation">}</span><span class="token punctuation">,</span>
+        <span class="token punctuation">{</span> id<span class="token operator">:</span> <span class="token number">2</span><span class="token punctuation">,</span> name<span class="token operator">:</span> <span class="token string">'JVC'</span><span class="token punctuation">,</span> price<span class="token operator">:</span> <span class="token number">1000</span> <span class="token punctuation">}</span>
+      <span class="token punctuation">]</span>
+    <span class="token punctuation">}</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>このレベルならまだ良いかもしれないが、リソースの数とダミーデータの数で、段々と <code>this.api</code> が膨らんでいく。さらにリソースごとにカスタムハンドリングをしていくとなると、色々なリソースのビジネスロジックが1クラスにまとまってしまうことになる。</p>
+<p>そこで、リソース一つひとつを別々のクラスに分けると管理しやすくなるだろう。</p>
+<ul>
+  <li><code>./src/app/fake/mock-web-api.service.ts</code></li>
+</ul>
+<pre class="language-typescript"><code class="language-typescript"><span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">Injectable</span> <span class="token punctuation">}</span></span> <span class="token keyword">from</span> <span class="token string">'@angular/core'</span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">InMemoryDbService</span> <span class="token punctuation">}</span></span> <span class="token keyword">from</span> <span class="token string">'angular-in-memory-web-api'</span><span class="token punctuation">;</span>
+
+<span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">CustomersApiService</span> <span class="token punctuation">}</span></span> <span class="token keyword">from</span> <span class="token string">'./customers-api.service'</span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">ProductsApiService</span> <span class="token punctuation">}</span></span> <span class="token keyword">from</span> <span class="token string">'./products-api.service'</span><span class="token punctuation">;</span>
+
+@<span class="token function"><span class="token maybe-class-name">Injectable</span></span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+<span class="token keyword">export</span> <span class="token keyword">class</span> <span class="token class-name"><span class="token maybe-class-name">MockWebApiService</span></span> <span class="token keyword">implements</span> <span class="token class-name"><span class="token maybe-class-name">InMemoryDbService</span></span> <span class="token punctuation">{</span>
+  <span class="token doc-comment comment">/** コンストラクタ : リソース別のクラスを DI する */</span>
+  <span class="token keyword">constructor</span><span class="token punctuation">(</span>
+    <span class="token keyword">protected</span> customersApiService<span class="token operator">:</span> <span class="token maybe-class-name">CustomersApiService</span><span class="token punctuation">,</span>
+    <span class="token keyword">protected</span> productsApiService<span class="token operator">:</span> <span class="token maybe-class-name">ProductsApiService</span>
+  <span class="token punctuation">)</span> <span class="token punctuation">{</span> <span class="token punctuation">}</span>
+  
+  <span class="token doc-comment comment">/**
+   * InMemoryDbService から継承 : モックデータを作成する
+   * 
+   * <span class="token keyword">@return</span> モックデータ
+   */</span>
+  <span class="token function">createDb</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator">:</span> <span class="token builtin">any</span> <span class="token punctuation">{</span>
+    <span class="token keyword">const</span> api <span class="token operator">=</span> <span class="token punctuation">{</span><span class="token punctuation">}</span><span class="token punctuation">;</span>
+    <span class="token known-class-name class-name">Object</span><span class="token punctuation">.</span><span class="token method function property-access">keys</span><span class="token punctuation">(</span><span class="token keyword">this</span><span class="token punctuation">)</span>
+      <span class="token punctuation">.</span><span class="token method function property-access">filter</span><span class="token punctuation">(</span><span class="token punctuation">(</span>propName<span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+        <span class="token comment">// BaseApiService を継承したインスタンスのプロパティのみ抽出する</span>
+        <span class="token keyword">const</span> member <span class="token operator">=</span> <span class="token keyword">this</span><span class="token punctuation">[</span>propName<span class="token punctuation">]</span><span class="token punctuation">;</span>
+        <span class="token keyword">return</span> member <span class="token keyword">instanceof</span> <span class="token class-name"><span class="token maybe-class-name">BaseApiService</span></span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span><span class="token punctuation">)</span>
+      <span class="token punctuation">.</span><span class="token method function property-access">forEach</span><span class="token punctuation">(</span><span class="token punctuation">(</span>propName<span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+        <span class="token comment">// 対象の API サービスクラスの apiName プロパティを DB のリソース名にし、data プロパティの内容をデータとして渡す</span>
+        <span class="token keyword">const</span> member <span class="token operator">=</span> <span class="token keyword">this</span><span class="token punctuation">[</span>propName<span class="token punctuation">]</span><span class="token punctuation">;</span>
+        api<span class="token punctuation">[</span>member<span class="token punctuation">.</span><span class="token property-access">apiName</span><span class="token punctuation">]</span> <span class="token operator">=</span> member<span class="token punctuation">.</span><span class="token property-access">data</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">return</span> api<span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  
+  <span class="token doc-comment comment">/**
+   * InMemoryDbService から継承 : レスポンス前に実行される関数
+   * 
+   * <span class="token keyword">@param</span> <span class="token parameter">responseOptions</span> レスポンスオプション
+   * <span class="token keyword">@param</span> <span class="token parameter">requestInfo</span> リクエスト情報
+   * <span class="token keyword">@return</span> 第1引数の responseOptions を返す
+   */</span>
+  <span class="token function">responseInterceptor</span><span class="token punctuation">(</span>responseOptions<span class="token operator">:</span> <span class="token builtin">any</span><span class="token punctuation">,</span> requestInfo<span class="token operator">:</span> <span class="token builtin">any</span><span class="token punctuation">)</span><span class="token operator">:</span> <span class="token builtin">any</span> <span class="token punctuation">{</span>
+    <span class="token comment">// 各 API サービスクラスに同名の関数があれば実行する</span>
+    <span class="token known-class-name class-name">Object</span><span class="token punctuation">.</span><span class="token method function property-access">keys</span><span class="token punctuation">(</span><span class="token keyword">this</span><span class="token punctuation">)</span>
+      <span class="token punctuation">.</span><span class="token method function property-access">filter</span><span class="token punctuation">(</span><span class="token punctuation">(</span>propName<span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+        <span class="token comment">// BaseApiService を継承したインスタンスのプロパティで、リクエスト URL に合致するリソース名で、responseInterceptor() 関数を持っているか</span>
+        <span class="token keyword">const</span> member <span class="token operator">=</span> <span class="token keyword">this</span><span class="token punctuation">[</span>propName<span class="token punctuation">]</span><span class="token punctuation">;</span>
+        <span class="token keyword">return</span> member <span class="token keyword">instanceof</span> <span class="token class-name"><span class="token maybe-class-name">BaseApiService</span></span>
+          <span class="token operator">&#x26;&#x26;</span> requestInfo<span class="token punctuation">.</span><span class="token property-access">collectionName</span> <span class="token operator">===</span> member<span class="token punctuation">.</span><span class="token property-access">apiName</span>
+          <span class="token operator">&#x26;&#x26;</span> <span class="token keyword">typeof</span> member<span class="token punctuation">[</span><span class="token string">'responseInterceptor'</span><span class="token punctuation">]</span> <span class="token operator">===</span> <span class="token string">'function'</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span><span class="token punctuation">)</span>
+      <span class="token punctuation">.</span><span class="token method function property-access">forEach</span><span class="token punctuation">(</span><span class="token punctuation">(</span>propName<span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+        <span class="token comment">// 対象の API サービスクラスの responseInterceptor() 関数を実行する</span>
+        <span class="token keyword">this</span><span class="token punctuation">[</span>propName<span class="token punctuation">]</span><span class="token punctuation">.</span><span class="token method function property-access">responseInterceptor</span><span class="token punctuation">(</span>responseOptions<span class="token punctuation">,</span> requestInfo<span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">return</span> responseOptions<span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>2018-11-20 追記：<code>responseInterceptor()</code> は特に <code>return</code> しなくて良いと書いていましたが、<code>return responseOptions</code> が必要でしたので訂正しました。</p>
+<p>まずはベースクラスが以上のようになっている。この中で出てくる <code>BaseApiService</code> は以下のようになっている。</p>
+<ul>
+  <li><code>./src/app/fake/base-api.service.ts</code></li>
+</ul>
+<pre class="language-typescript"><code class="language-typescript">@<span class="token function"><span class="token maybe-class-name">Injectable</span></span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+<span class="token keyword">export</span> <span class="token keyword">class</span> <span class="token class-name"><span class="token maybe-class-name">BaseApiService</span></span> <span class="token punctuation">{</span>
+  <span class="token doc-comment comment">/** API のリソース名 (URL に使用する文字列) */</span>
+  apiName<span class="token operator">:</span> <span class="token builtin">string</span><span class="token punctuation">;</span>
+  <span class="token doc-comment comment">/** モックデータ */</span>
+  data<span class="token operator">:</span> <span class="token builtin">any</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>コンストラクタで DI している <code>CustomersApiService</code> と <code>ProductsApiService</code> は、この <code>BaseApiService</code> を継承 (<code>extends</code>) して作成する。</p>
+<ul>
+  <li><code>./src/app/fake/customers-api.service.ts</code></li>
+</ul>
+<pre class="language-typescript"><code class="language-typescript">@<span class="token function"><span class="token maybe-class-name">Injectable</span></span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+<span class="token keyword">export</span> <span class="token keyword">class</span> <span class="token class-name"><span class="token maybe-class-name">CustomersApiService</span></span> <span class="token keyword">extends</span> <span class="token class-name"><span class="token maybe-class-name">BaseApiService</span></span> <span class="token punctuation">{</span>
+  <span class="token doc-comment comment">/** API のリソース名 (URL に使用する文字列) */</span>
+  apiName<span class="token operator">:</span> <span class="token builtin">string</span> <span class="token operator">=</span> <span class="token string">'customers'</span><span class="token punctuation">;</span>
+  <span class="token doc-comment comment">/** 顧客情報のモックデータ */</span>
+  data<span class="token operator">:</span> <span class="token builtin">any</span> <span class="token operator">=</span> <span class="token punctuation">[</span>
+    <span class="token punctuation">{</span> id<span class="token operator">:</span> <span class="token number">1</span><span class="token punctuation">,</span> name<span class="token operator">:</span> <span class="token string">'Marty'</span> <span class="token punctuation">}</span><span class="token punctuation">,</span>
+    <span class="token punctuation">{</span> id<span class="token operator">:</span> <span class="token number">2</span><span class="token punctuation">,</span> name<span class="token operator">:</span> <span class="token string">'Jennifer'</span> <span class="token punctuation">}</span>
+  <span class="token punctuation">]</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<ul>
+  <li><code>./src/app/fake/products-api.service.ts</code></li>
+</ul>
+<pre class="language-typescript"><code class="language-typescript">@<span class="token function"><span class="token maybe-class-name">Injectable</span></span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+<span class="token keyword">export</span> <span class="token keyword">class</span> <span class="token class-name"><span class="token maybe-class-name">ProductssApiService</span></span> <span class="token keyword">extends</span> <span class="token class-name"><span class="token maybe-class-name">BaseApiService</span></span> <span class="token punctuation">{</span>
+  <span class="token doc-comment comment">/** API のリソース名 (URL に使用する文字列) */</span>
+  apiName<span class="token operator">:</span> <span class="token builtin">string</span> <span class="token operator">=</span> <span class="token string">'products'</span><span class="token punctuation">;</span>
+  <span class="token doc-comment comment">/** 商品情報のモックデータ */</span>
+  data<span class="token operator">:</span> <span class="token builtin">any</span> <span class="token operator">=</span> <span class="token punctuation">[</span>
+    <span class="token punctuation">{</span> id<span class="token operator">:</span> <span class="token number">1</span><span class="token punctuation">,</span> name<span class="token operator">:</span> <span class="token string">'DMC-12'</span><span class="token punctuation">,</span> price<span class="token operator">:</span> <span class="token number">50000</span> <span class="token punctuation">}</span><span class="token punctuation">,</span>
+    <span class="token punctuation">{</span> id<span class="token operator">:</span> <span class="token number">2</span><span class="token punctuation">,</span> name<span class="token operator">:</span> <span class="token string">'JVC'</span><span class="token punctuation">,</span> price<span class="token operator">:</span> <span class="token number">1000</span> <span class="token punctuation">}</span>
+  <span class="token punctuation">]</span><span class="token punctuation">;</span>
+  
+  <span class="token doc-comment comment">/** 商品情報 API ではレスポンスデータを加工したいのでこの関数を実装しておく */</span>
+  <span class="token function">responseInterceptor</span><span class="token punctuation">(</span>responseOptions<span class="token operator">:</span> <span class="token builtin">any</span><span class="token punctuation">,</span> requestInfo<span class="token operator">:</span> <span class="token builtin">any</span><span class="token punctuation">)</span><span class="token operator">:</span> <span class="token builtin">any</span> <span class="token punctuation">{</span>
+    <span class="token comment">// responseOptions.body を加工したり…</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>InMemoryDbService を implements したクラスを複数作ろうとすると、<code>app.module.ts</code> で最後に DI したクラスのみが有効になってしまう。そこで、<code>createDb()</code> 時に別々のクラスからデータをかき集めて DB を作る、というワケ。</p>
+<p>その時に、リソース別の API サービスクラスを特定するために <code>BaseApiService</code> というクラスを作っておき、それを継承する形にすることで、<code>instanceof</code> による判定ができるようにしてある。</p>
+<p>レスポンスデータを加工するための <code>responseInterceptor()</code> 関数については、「対象の関数が存在していれば実行」としたが、別途インターフェースを用意したりして強制させても良いかも。</p>
+<p>さて、こうして用意したクラスを読み込むには、<code>app.module.ts</code> の <code>providers</code> にて各種 API サービスを登録しておく必要がある。ココについては、次の章で合わせて紹介する。</p>
+<ul>
+  <li>参考：<a href="https://github.com/angular/in-memory-web-api/issues/68">Issue Multiple Services usage · Issue #68 · angular/in-memory-web-api · GitHub</a> … 複数のリソースを分割して管理しやすくする方法</li>
+</ul>
+<h2 id="環境変数ファイルで-api-モックの利用切替を行う方法"><a class="header-link" href="#環境変数ファイルで-api-モックの利用切替を行う方法"><span class="header-link-mark"></span></a>環境変数ファイルで API モックの利用切替を行う方法</h2>
+<p>これまで In Memory Web API を利用する際は、<code>app.module.ts</code> で直接 <code>imports</code> していた。</p>
+<pre class="language-typescript"><code class="language-typescript"><span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">BrowserModule</span> <span class="token punctuation">}</span></span> <span class="token keyword">from</span> <span class="token string">'@angular/platform-browser'</span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">HttpClientModule</span> <span class="token punctuation">}</span></span> <span class="token keyword">from</span> <span class="token string">'@angular/common/http'</span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">NgModule</span> <span class="token punctuation">}</span></span> <span class="token keyword">from</span> <span class="token string">'@angular/core'</span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">HttpClientInMemoryWebApiModule</span> <span class="token punctuation">}</span></span> <span class="token keyword">from</span> <span class="token string">'angular-in-memory-web-api'</span><span class="token punctuation">;</span>
+
+<span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">AppComponent</span> <span class="token punctuation">}</span></span> <span class="token keyword">from</span> <span class="token string">'./app.component'</span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">MockWebApiService</span> <span class="token punctuation">}</span></span> <span class="token keyword">from</span> <span class="token string">'./mock-web-api.service'</span><span class="token punctuation">;</span>
+
+@<span class="token function"><span class="token maybe-class-name">NgModule</span></span><span class="token punctuation">(</span><span class="token punctuation">{</span>
+  imports<span class="token operator">:</span> <span class="token punctuation">[</span>
+    <span class="token maybe-class-name">BrowserModule</span><span class="token punctuation">,</span>
+    <span class="token maybe-class-name">HttpClientModule</span><span class="token punctuation">,</span>
+    <span class="token maybe-class-name">HttpClientInMemoryWebApiModule</span><span class="token punctuation">.</span><span class="token method function property-access">forRoot</span><span class="token punctuation">(</span><span class="token maybe-class-name">MockWebApiService</span><span class="token punctuation">)</span>  <span class="token comment">// ← コレ</span>
+  <span class="token punctuation">]</span><span class="token punctuation">,</span>
+  providers<span class="token operator">:</span> <span class="token punctuation">[</span>
+    <span class="token maybe-class-name">MockWebApiService</span>  <span class="token comment">// ← コレ</span>
+  <span class="token punctuation">]</span><span class="token punctuation">,</span>
+  declarations<span class="token operator">:</span> <span class="token punctuation">[</span><span class="token maybe-class-name">AppComponent</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
+  bootstrap<span class="token operator">:</span> <span class="token punctuation">[</span><span class="token maybe-class-name">AppComponent</span><span class="token punctuation">]</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span>
+<span class="token keyword">export</span> <span class="token keyword">class</span> <span class="token class-name"><span class="token maybe-class-name">AppModule</span></span> <span class="token punctuation">{</span> <span class="token punctuation">}</span>
+</code></pre>
+<p>先程、リソース別に API サービスクラスを作成したので、<code>CustomersApiService</code> や <code>ProductsApiService</code> も <code>providers</code> に登録する必要がある。</p>
+<p>ところで、この In Memory Web API は、本番利用の際は使わないようにしたいのではないだろうか。現状は AppModule に直接書いているので、どの環境でも利用されてしまう。</p>
+<p>そこで、Angular CLI が用意してくれる環境変数ファイルを利用して、<em>「開発中のみモック API を利用する」</em>といった切替ができるようにする。</p>
+<ul>
+  <li><code>./src/environments/environment.ts</code> : 開発中に API モックを利用する環境変数ファイル</li>
+</ul>
+<pre class="language-typescript"><code class="language-typescript"><span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">CommonModule</span> <span class="token punctuation">}</span></span> <span class="token keyword">from</span> <span class="token string">'@angular/common'</span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">ModuleWithProviders</span><span class="token punctuation">,</span> <span class="token maybe-class-name">NgModule</span> <span class="token punctuation">}</span></span> <span class="token keyword">from</span> <span class="token string">'@angular/core'</span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">HttpClientInMemoryWebApiModule</span> <span class="token punctuation">}</span></span> <span class="token keyword">from</span> <span class="token string">'angular-in-memory-web-api'</span><span class="token punctuation">;</span>
+
+<span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">MockWebApiService</span> <span class="token punctuation">}</span></span> <span class="token keyword">from</span> <span class="token string">'../app/fake/mock-web-api.service'</span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">CustomersApiService</span> <span class="token punctuation">}</span></span> <span class="token keyword">from</span> <span class="token string">'../app/fake/customers-api.service'</span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">ProductsApiService</span> <span class="token punctuation">}</span></span> <span class="token keyword">from</span> <span class="token string">'../app/fake/products-api.service'</span><span class="token punctuation">;</span>
+
+<span class="token doc-comment comment">/** 環境に応じたモジュールを用意する */</span>
+@<span class="token function"><span class="token maybe-class-name">NgModule</span></span><span class="token punctuation">(</span><span class="token punctuation">{</span>
+  imports<span class="token operator">:</span> <span class="token punctuation">[</span>
+    <span class="token maybe-class-name">CommonModule</span><span class="token punctuation">,</span>
+    <span class="token comment">// apiBase の値は以下の environment.apiBaseUrl に記載の値と合わせておく</span>
+    <span class="token maybe-class-name">HttpClientInMemoryWebApiModule</span><span class="token punctuation">.</span><span class="token method function property-access">forRoot</span><span class="token punctuation">(</span><span class="token maybe-class-name">MockWebApiService</span><span class="token punctuation">,</span> <span class="token punctuation">{</span> apiBase<span class="token operator">:</span> <span class="token string">'mock-api/'</span><span class="token punctuation">,</span> delay<span class="token operator">:</span> <span class="token number">10</span> <span class="token punctuation">}</span><span class="token punctuation">)</span>
+  <span class="token punctuation">]</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span>
+<span class="token keyword">export</span> <span class="token keyword">class</span> <span class="token class-name"><span class="token maybe-class-name">EnvironmentModule</span></span> <span class="token punctuation">{</span>
+  <span class="token keyword">static</span> <span class="token function">forRoot</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator">:</span> <span class="token maybe-class-name">ModuleWithProviders</span> <span class="token punctuation">{</span>
+    <span class="token keyword">return</span> <span class="token punctuation">{</span>
+      ngModule<span class="token operator">:</span> <span class="token maybe-class-name">EnvironmentModule</span><span class="token punctuation">,</span>
+      providers<span class="token operator">:</span> <span class="token punctuation">[</span>
+        <span class="token maybe-class-name">CustomersApiService</span><span class="token punctuation">,</span>
+        <span class="token maybe-class-name">ProductsApiService</span>
+      <span class="token punctuation">]</span>
+    <span class="token punctuation">}</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+
+<span class="token doc-comment comment">/** 環境情報 */</span>
+<span class="token keyword">export</span> <span class="token keyword">const</span> environment <span class="token operator">=</span> <span class="token punctuation">{</span>
+  <span class="token doc-comment comment">/** 開発環境 */</span>
+  production<span class="token operator">:</span> <span class="token boolean">false</span><span class="token punctuation">,</span>
+  <span class="token doc-comment comment">/** モック API を利用する */</span>
+  isMock<span class="token operator">:</span> <span class="token boolean">true</span><span class="token punctuation">,</span>
+  <span class="token doc-comment comment">/** WebAPI のベース URL */</span>
+  apiBaseUrl<span class="token operator">:</span> <span class="token string">'mock-api'</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+</code></pre>
+<ul>
+  <li><code>./src/environments/environment.prod.ts</code> : 本番向け、API モックを利用しない環境変数ファイル</li>
+</ul>
+<pre class="language-typescript"><code class="language-typescript"><span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">CommonModule</span> <span class="token punctuation">}</span></span> <span class="token keyword">from</span> <span class="token string">'@angular/common'</span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">ModuleWithProviders</span><span class="token punctuation">,</span> <span class="token maybe-class-name">NgModule</span> <span class="token punctuation">}</span></span> <span class="token keyword">from</span> <span class="token string">'@angular/core'</span><span class="token punctuation">;</span>
+
+<span class="token doc-comment comment">/** 環境に応じたモジュールを用意する */</span>
+@<span class="token function"><span class="token maybe-class-name">NgModule</span></span><span class="token punctuation">(</span><span class="token punctuation">{</span>
+  imports<span class="token operator">:</span> <span class="token punctuation">[</span>
+    <span class="token maybe-class-name">CommonModule</span>
+  <span class="token punctuation">]</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span>
+<span class="token keyword">export</span> <span class="token keyword">class</span> <span class="token class-name"><span class="token maybe-class-name">EnvironmentModule</span></span> <span class="token punctuation">{</span>
+  <span class="token keyword">static</span> <span class="token function">forRoot</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator">:</span> <span class="token maybe-class-name">ModuleWithProviders</span> <span class="token punctuation">{</span>
+    <span class="token keyword">return</span> <span class="token punctuation">{</span>
+      ngModule<span class="token operator">:</span> <span class="token maybe-class-name">EnvironmentModule</span><span class="token punctuation">,</span>
+      providers<span class="token operator">:</span> <span class="token punctuation">[</span><span class="token punctuation">]</span>
+    <span class="token punctuation">}</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+
+<span class="token doc-comment comment">/** 環境情報 */</span>
+<span class="token keyword">export</span> <span class="token keyword">const</span> environment <span class="token operator">=</span> <span class="token punctuation">{</span>
+  <span class="token doc-comment comment">/** 本番環境 */</span>
+  production<span class="token operator">:</span> <span class="token boolean">true</span><span class="token punctuation">,</span>
+  <span class="token doc-comment comment">/** モック API を利用しない */</span>
+  isMock<span class="token operator">:</span> <span class="token boolean">false</span><span class="token punctuation">,</span>
+  <span class="token doc-comment comment">/** WebAPI のベース URL */</span>
+  apiBaseUrl<span class="token operator">:</span> <span class="token string">'http://example.com/api'</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+</code></pre>
+<p>このように環境変数ファイル別に用意した <code>EnvironmentModule</code> を AppModule で読み込む。</p>
+<pre class="language-typescript"><code class="language-typescript"><span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">BrowserModule</span> <span class="token punctuation">}</span></span> <span class="token keyword">from</span> <span class="token string">'@angular/platform-browser'</span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">HttpClientModule</span> <span class="token punctuation">}</span></span> <span class="token keyword">from</span> <span class="token string">'@angular/common/http'</span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">NgModule</span> <span class="token punctuation">}</span></span> <span class="token keyword">from</span> <span class="token string">'@angular/core'</span><span class="token punctuation">;</span>
+
+<span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">EnvironmentModule</span> <span class="token punctuation">}</span></span> <span class="token keyword">from</span> <span class="token string">'../environments/environment'</span><span class="token punctuation">;</span>
+
+<span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">AppComponent</span> <span class="token punctuation">}</span></span> <span class="token keyword">from</span> <span class="token string">'./app.component'</span><span class="token punctuation">;</span>
+
+@<span class="token function"><span class="token maybe-class-name">NgModule</span></span><span class="token punctuation">(</span><span class="token punctuation">{</span>
+  imports<span class="token operator">:</span> <span class="token punctuation">[</span>
+    <span class="token maybe-class-name">BrowserModule</span><span class="token punctuation">,</span>
+    <span class="token maybe-class-name">HttpClientModule</span><span class="token punctuation">,</span>
+    <span class="token maybe-class-name">EnvironmentModule</span><span class="token punctuation">.</span><span class="token method function property-access">forRoot</span><span class="token punctuation">(</span><span class="token punctuation">)</span>  <span class="token comment">// ← コレ</span>
+  <span class="token punctuation">]</span><span class="token punctuation">,</span>
+  declarations<span class="token operator">:</span> <span class="token punctuation">[</span><span class="token maybe-class-name">AppComponent</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
+  bootstrap<span class="token operator">:</span> <span class="token punctuation">[</span><span class="token maybe-class-name">AppComponent</span><span class="token punctuation">]</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span>
+<span class="token keyword">export</span> <span class="token keyword">class</span> <span class="token class-name"><span class="token maybe-class-name">AppModule</span></span> <span class="token punctuation">{</span> <span class="token punctuation">}</span>
+</code></pre>
+<p>このようにしておくと、ビルド時の環境変数ファイル指定によって、API モックサービスを利用するか否かが決められる。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># 「environment.ts」利用 … モック API を利用してサーバ起動する</span>
+$ <span class="token function">npm</span> run ng serve
+
+<span class="token comment"># 「environment.prod.ts」利用 … モック API を利用しないでサーバ起動する</span>
+$ <span class="token function">npm</span> run ng serve -- --environment<span class="token operator">=</span>prod
+</code></pre>
+<p>もちろん、<em>開発中でもモックを使いたくない</em>という場合もあると思うので、その際は開発用の環境変数ファイルを別途作成すれば良い (環境変数ファイルの作成方法は割愛)。</p>
+<p>今回、<code>environment.apiBaseUrl</code> というプロパティを用意したので、コレを利用して HttpClient から通信するようにしておけば、利用する環境変数ファイルに応じて URL を切り替えられる。</p>
+<pre class="language-typescript"><code class="language-typescript"><span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">Component</span> <span class="token punctuation">}</span></span> <span class="token keyword">from</span> <span class="token string">'@angular/core'</span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">HttpClient</span> <span class="token punctuation">}</span></span> <span class="token keyword">from</span> <span class="token string">'@angular/common/http'</span><span class="token punctuation">;</span>
+
+<span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> environment <span class="token punctuation">}</span></span> <span class="token keyword">from</span> <span class="token string">'../environments/environment'</span><span class="token punctuation">;</span>
+
+@<span class="token function"><span class="token maybe-class-name">Component</span></span><span class="token punctuation">(</span><span class="token punctuation">{</span>
+  selector<span class="token operator">:</span> <span class="token string">'app-root'</span><span class="token punctuation">,</span>
+  templateUrl<span class="token operator">:</span> <span class="token string">'./app.component.html'</span><span class="token punctuation">,</span>
+  styleUrls<span class="token operator">:</span> <span class="token punctuation">[</span><span class="token string">'./app.component.css'</span><span class="token punctuation">]</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span>
+<span class="token keyword">export</span> <span class="token keyword">class</span> <span class="token class-name"><span class="token maybe-class-name">AppComponent</span></span> <span class="token punctuation">{</span>
+  <span class="token keyword">constructor</span><span class="token punctuation">(</span><span class="token keyword">private</span> http<span class="token operator">:</span> <span class="token maybe-class-name">HttpClient</span><span class="token punctuation">)</span> <span class="token punctuation">{</span><span class="token punctuation">}</span>
+
+  <span class="token doc-comment comment">/** 顧客情報を取得する */</span>
+  <span class="token function">fetchCustomer</span><span class="token punctuation">(</span>id<span class="token operator">:</span> <span class="token builtin">string</span><span class="token punctuation">)</span><span class="token operator">:</span> <span class="token keyword">void</span> <span class="token punctuation">{</span>
+    <span class="token comment">// 前回は以下のように切り替えていたが、コレを止める</span>
+    <span class="token comment">// const serverUrl = environment.production ? 'http://example.com/api/' : 'mock-api/';</span>
+    
+    <span class="token comment">// 以下のように environment からベース URL を取得すれば良い</span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">http</span><span class="token punctuation">.</span><span class="token keyword">get</span><span class="token punctuation">(</span><span class="token template-string"><span class="token template-punctuation string">`</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>environment<span class="token punctuation">.</span><span class="token property-access">apiBaseUrl</span><span class="token interpolation-punctuation punctuation">}</span></span><span class="token string">/customers/</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>id<span class="token interpolation-punctuation punctuation">}</span></span><span class="token template-punctuation string">`</span></span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">toPromise</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+      <span class="token punctuation">.</span><span class="token method function property-access">then</span><span class="token punctuation">(</span><span class="token punctuation">(</span>response<span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+        <span class="token comment">// 成功時</span>
+      <span class="token punctuation">}</span><span class="token punctuation">)</span>
+      <span class="token punctuation">.</span><span class="token keyword">catch</span><span class="token punctuation">(</span><span class="token punctuation">(</span>error<span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+        <span class="token comment">// 失敗時</span>
+      <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<h2 id="更新データを差し替えるには-リクエストデータの加工"><a class="header-link" href="#更新データを差し替えるには-リクエストデータの加工"><span class="header-link-mark"></span></a>更新データを差し替えるには (リクエストデータの加工)</h2>
+<p>モック化する API の仕様によっては、<strong>「POST パラメータに含められるデータをそのまま DB に登録しない」</strong>作りもあると思う。</p>
+<p>例えば、データを新規作成する API があるとして、以下のようなリクエストを投げるとする。</p>
+<pre class="language-json"><code class="language-json"><span class="token punctuation">{</span>
+  <span class="token property">"name"</span><span class="token operator">:</span> <span class="token string">"Doc Brown"</span><span class="token punctuation">,</span>
+  <span class="token property">"createdBy"</span><span class="token operator">:</span> <span class="token string">"Administrator"</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>データを作成したユーザ情報を <code>createdBy</code> プロパティで投げてもらうのだが、API サーバ側ではデータを加工し、以下の形式で保持しているとする。</p>
+<pre class="language-json"><code class="language-json"><span class="token punctuation">{</span>
+  <span class="token property">"name"</span><span class="token operator">:</span> <span class="token string">"Doc Brown"</span><span class="token punctuation">,</span>
+  <span class="token property">"lastUpdatedBy"</span><span class="token operator">:</span> <span class="token string">"Administrator"</span><span class="token punctuation">,</span>
+  <span class="token property">"lastUpdatedAt"</span><span class="token operator">:</span> <span class="token string">"2018-07-01"</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p><code>createdBy</code> は <code>lasteUpdatedBy</code> になり、さらにサーバ側で登録日を生成して <code>lastUpdatedAt</code> プロパティとして保存している。POST で新規登録した後、対象のリソースを GET で取得した時に、この情報が取得できるようにしたい、とする。</p>
+<p>In Memory Web API のデフォルトの挙動だと、<code>HttpClient#post()</code> や <code>HttpClient#put()</code> で投げられたリクエストボディをそのまま対象のリソースの DB (<code>createDb()</code> のプロパティ) に追加してしまうので、投げられたリクエストデータがそのまま保持される形となる。</p>
+<p>このデータを加工して DB に入れるには、リクエストデータを加工する必要がある。</p>
+<p>先程の例を実現するとして、<em>POST</em> されたデータを加工する処理を入れてみる。まずは先程実装した <code>MockWebApiService</code> クラス内に、<code>post()</code> という関数を作る。</p>
+<ul>
+  <li><code>./src/app/fake/mock-web-api.service.ts</code></li>
+</ul>
+<pre class="language-typescript"><code class="language-typescript"><span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">Injectable</span> <span class="token punctuation">}</span></span> <span class="token keyword">from</span> <span class="token string">'@angular/core'</span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">InMemoryDbService</span> <span class="token punctuation">}</span></span> <span class="token keyword">from</span> <span class="token string">'angular-in-memory-web-api'</span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">CustomersApiService</span> <span class="token punctuation">}</span></span> <span class="token keyword">from</span> <span class="token string">'./customers-api.service'</span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">ProductsApiService</span> <span class="token punctuation">}</span></span> <span class="token keyword">from</span> <span class="token string">'./products-api.service'</span><span class="token punctuation">;</span>
+
+@<span class="token function"><span class="token maybe-class-name">Injectable</span></span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+<span class="token keyword">export</span> <span class="token keyword">class</span> <span class="token class-name"><span class="token maybe-class-name">MockWebApiService</span></span> <span class="token keyword">implements</span> <span class="token class-name"><span class="token maybe-class-name">InMemoryDbService</span></span> <span class="token punctuation">{</span>
+  <span class="token doc-comment comment">/** コンストラクタ : リソース別のクラスを DI する */</span>
+  <span class="token keyword">constructor</span><span class="token punctuation">(</span>
+    <span class="token keyword">protected</span> customersApiService<span class="token operator">:</span> <span class="token maybe-class-name">CustomersApiService</span><span class="token punctuation">,</span>
+    <span class="token keyword">protected</span> productsApiService<span class="token operator">:</span> <span class="token maybe-class-name">ProductsApiService</span>
+  <span class="token punctuation">)</span> <span class="token punctuation">{</span> <span class="token punctuation">}</span>
+  
+  <span class="token doc-comment comment">/** InMemoryDbService から継承 : モックデータを作成する */</span>
+  <span class="token function">createDb</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator">:</span> <span class="token builtin">any</span> <span class="token punctuation">{</span> <span class="token comment">/* 省略 */</span> <span class="token punctuation">}</span>
+  
+  <span class="token doc-comment comment">/** InMemoryDbService から継承 : レスポンス前に実行される関数 */</span>
+  <span class="token function">responseInterceptor</span><span class="token punctuation">(</span>responseOptions<span class="token operator">:</span> <span class="token builtin">any</span><span class="token punctuation">,</span> requestInfo<span class="token operator">:</span> <span class="token builtin">any</span><span class="token punctuation">)</span><span class="token operator">:</span> <span class="token builtin">any</span> <span class="token punctuation">{</span> <span class="token comment">/* 省略 */</span> <span class="token punctuation">}</span>
+  
+  <span class="token doc-comment comment">/** POST 時にリクエストデータを加工する */</span>
+  <span class="token function">post</span><span class="token punctuation">(</span>requestInfo<span class="token operator">:</span> <span class="token maybe-class-name">RequestInfo</span><span class="token punctuation">)</span><span class="token operator">:</span> <span class="token builtin">any</span> <span class="token punctuation">{</span>
+    <span class="token comment">// 各 API サービスクラスに同名の関数があれば実行する</span>
+    <span class="token known-class-name class-name">Object</span><span class="token punctuation">.</span><span class="token method function property-access">keys</span><span class="token punctuation">(</span><span class="token keyword">this</span><span class="token punctuation">)</span>
+      <span class="token punctuation">.</span><span class="token method function property-access">filter</span><span class="token punctuation">(</span><span class="token punctuation">(</span>propName<span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+        <span class="token comment">// BaseApiService を継承したインスタンスのプロパティで、リクエスト URL に合致するリソース名で、post() 関数を持っているか</span>
+        <span class="token keyword">const</span> member <span class="token operator">=</span> <span class="token keyword">this</span><span class="token punctuation">[</span>propName<span class="token punctuation">]</span><span class="token punctuation">;</span>
+        <span class="token keyword">return</span> member <span class="token keyword">instanceof</span> <span class="token class-name"><span class="token maybe-class-name">BaseApiService</span></span>
+          <span class="token operator">&#x26;&#x26;</span> requestInfo<span class="token punctuation">.</span><span class="token property-access">collectionName</span> <span class="token operator">===</span> member<span class="token punctuation">.</span><span class="token property-access">apiName</span>
+          <span class="token operator">&#x26;&#x26;</span> <span class="token keyword">typeof</span> member<span class="token punctuation">[</span><span class="token string">'post'</span><span class="token punctuation">]</span> <span class="token operator">===</span> <span class="token string">'function'</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span><span class="token punctuation">)</span>
+      <span class="token punctuation">.</span><span class="token method function property-access">forEach</span><span class="token punctuation">(</span><span class="token punctuation">(</span>propName<span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+        <span class="token comment">// 対象の API サービスクラスの post() 関数を実行する</span>
+        <span class="token keyword">this</span><span class="token punctuation">[</span>propName<span class="token punctuation">]</span><span class="token punctuation">.</span><span class="token method function property-access">post</span><span class="token punctuation">(</span>requestInfo<span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>やっていることは <code>responseInterceptor()</code> 関数を実装した時と同じ。リクエスト URL に対応する API サービスクラスに実装されている <code>post()</code> 関数を実行するようにしている。</p>
+<p>今回は <code>CustomersApiService</code> (<code>/customers</code>) の POST 時にデータを変換して登録することとする。</p>
+<ul>
+  <li><code>./src/app/fake/customers-api.service.ts</code></li>
+</ul>
+<pre class="language-typescript"><code class="language-typescript">@<span class="token function"><span class="token maybe-class-name">Injectable</span></span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+<span class="token keyword">export</span> <span class="token keyword">class</span> <span class="token class-name"><span class="token maybe-class-name">CustomersApiService</span></span> <span class="token keyword">extends</span> <span class="token class-name"><span class="token maybe-class-name">BaseApiService</span></span> <span class="token punctuation">{</span>
+  <span class="token doc-comment comment">/** API のリソース名 (URL に使用する文字列) */</span>
+  apiName<span class="token operator">:</span> <span class="token builtin">string</span> <span class="token operator">=</span> <span class="token string">'customers'</span><span class="token punctuation">;</span>
+  <span class="token doc-comment comment">/** 顧客情報のモックデータ : 先程までの例では lastUpdatedBy と lastUpdatedAt がなかったが、話の辻褄を合わせるために書いた */</span>
+  data<span class="token operator">:</span> <span class="token builtin">any</span> <span class="token operator">=</span> <span class="token punctuation">[</span>
+    <span class="token punctuation">{</span> id<span class="token operator">:</span> <span class="token number">1</span><span class="token punctuation">,</span> name<span class="token operator">:</span> <span class="token string">'Marty'</span><span class="token punctuation">,</span> lastUpdatedBy<span class="token operator">:</span> <span class="token string">'Rob'</span><span class="token punctuation">,</span> lastUpdatedAt<span class="token operator">:</span> <span class="token string">'2017-01-02'</span> <span class="token punctuation">}</span><span class="token punctuation">,</span>
+    <span class="token punctuation">{</span> id<span class="token operator">:</span> <span class="token number">2</span><span class="token punctuation">,</span> name<span class="token operator">:</span> <span class="token string">'Jennifer'</span><span class="token punctuation">,</span> lastUpdatedBy<span class="token operator">:</span> <span class="token string">'Rob'</span><span class="token punctuation">,</span> lastUpdatedAt<span class="token operator">:</span> <span class="token string">'2017-01-02'</span> <span class="token punctuation">}</span>
+  <span class="token punctuation">]</span><span class="token punctuation">;</span>
+  
+  <span class="token doc-comment comment">/** 顧客情報 API への POST 時にリクエストデータを加工する */</span>
+  <span class="token function">post</span><span class="token punctuation">(</span>requestInfo<span class="token operator">:</span> <span class="token maybe-class-name">RequestInfo</span><span class="token punctuation">)</span><span class="token operator">:</span> <span class="token builtin">any</span> <span class="token punctuation">{</span>
+    <span class="token comment">// lastUpdatedBy プロパティを生成する : 値はリクエスト中の createdBy プロパティを利用する</span>
+    requestInfo<span class="token punctuation">.</span><span class="token property-access">req</span><span class="token punctuation">.</span><span class="token property-access">body</span><span class="token punctuation">.</span><span class="token property-access">lastUpdatedBy</span> <span class="token operator">=</span> requestInfo<span class="token punctuation">.</span><span class="token property-access">req</span><span class="token punctuation">.</span><span class="token property-access">body</span><span class="token punctuation">.</span><span class="token property-access">createdBy</span><span class="token punctuation">;</span>
+    <span class="token comment">// DB に保存したくない createdBy プロパティは削除する</span>
+    <span class="token keyword">delete</span> requestInfo<span class="token punctuation">.</span><span class="token property-access">req</span><span class="token punctuation">.</span><span class="token property-access">body</span><span class="token punctuation">.</span><span class="token property-access">createdBy</span><span class="token punctuation">;</span>
+    <span class="token comment">// 同様に lastUpdatedAt プロパティを生成する : 値は適当にダミーデータを入れる</span>
+    requestInfo<span class="token punctuation">.</span><span class="token property-access">req</span><span class="token punctuation">.</span><span class="token property-access">body</span><span class="token punctuation">.</span><span class="token property-access">lastUpdatedAt</span> <span class="token operator">=</span> <span class="token string">'2018-06-05'</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>なお、<strong><code>id</code> プロパティだけは Angular In Memory Web API が自動的にインクリメントして生成してくれる。</strong>コレで準備完了。</p>
+<p>画面から以下のような関数で POST したとする。</p>
+<pre class="language-typescript"><code class="language-typescript"><span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">http</span><span class="token punctuation">.</span><span class="token method function property-access">post</span><span class="token punctuation">(</span><span class="token template-string"><span class="token template-punctuation string">`</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>environment<span class="token punctuation">.</span><span class="token property-access">apiBaseUrl</span><span class="token interpolation-punctuation punctuation">}</span></span><span class="token string">/customers/</span><span class="token template-punctuation string">`</span></span><span class="token punctuation">,</span> <span class="token punctuation">{</span>
+  name<span class="token operator">:</span> <span class="token string">'Doc Brown'</span><span class="token punctuation">,</span>
+  createdBy<span class="token operator">:</span> <span class="token string">'Administrator'</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span>
+  <span class="token punctuation">.</span><span class="token method function property-access">toPromise</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+  <span class="token punctuation">.</span><span class="token method function property-access">then</span><span class="token punctuation">(</span><span class="token punctuation">(</span>response<span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+     <span class="token comment">// 成功時 : 生成したデータを取得してみる</span>
+     <span class="token keyword">return</span> <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">http</span><span class="token punctuation">.</span><span class="token keyword">get</span><span class="token punctuation">(</span><span class="token template-string"><span class="token template-punctuation string">`</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>environment<span class="token punctuation">.</span><span class="token property-access">apiBaseUrl</span><span class="token interpolation-punctuation punctuation">}</span></span><span class="token string">/customers/</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>response<span class="token punctuation">.</span><span class="token property-access">id</span><span class="token interpolation-punctuation punctuation">}</span></span><span class="token template-punctuation string">`</span></span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span>
+  <span class="token punctuation">.</span><span class="token method function property-access">then</span><span class="token punctuation">(</span><span class="token punctuation">(</span>response<span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+    <span class="token comment">// 成功時 : 生成したデータに createdBy プロパティがなく、lastUpdatedBy・lastUpdatedAt・ついでに id プロパティが付与されている</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span>
+  <span class="token punctuation">.</span><span class="token keyword">catch</span><span class="token punctuation">(</span><span class="token punctuation">(</span>error<span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+    <span class="token comment">// 失敗時</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>このようになる。</p>
+<p>今回は <code>post()</code> だったが、同様の関数は <code>get()</code>・<code>put()</code>・<code>patch()</code>・<code>delete()</code> と用意されているので、色々と処理を切り替えられるだろう。</p>
+<h2 id="レスポンスする-http-ステータスコードを切り替えたい"><a class="header-link" href="#レスポンスする-http-ステータスコードを切り替えたい"><span class="header-link-mark"></span></a>レスポンスする HTTP ステータスコードを切り替えたい</h2>
+<p>削除済みのリソースに対して <code>DELETE</code> メソッドを発行した時に、In Memory Web API のデフォルトでは正常動作として HTTP 204 (No Content) を返すが、今回独自に、HTTP 404 (Not Found) を返すようにしたいとする。</p>
+<p>レスポンスする HTTP ステータスコードを切り替えるには、<code>responseInterceptor()</code> 関数のタイミングで、<em><code>responseOptions.status</code> プロパティの値を書き換えてやれば良い。</em><code>status</code> プロパティを書き換えると、<code>statusText</code> は自動的に変わってくれるので楽チン。</p>
+<p>GET メソッド時にワケあって 404 を返したりしたい時はコレで良いが、DELETE 時はちょっと厄介で、In Memory Web API のデフォルトでは正常扱いになるものを異常扱いにする必要があるので、リクエストデータを先に書き換えてやる。</p>
+<p><em>予め、先程紹介した <code>post()</code> メソッドと同じ要領で、<code>delete()</code> メソッドを API サービスクラスに実装して呼び出せるようしておくこと。</em></p>
+<ul>
+  <li><code>./src/app/fake/customers-api.service.ts</code></li>
+</ul>
+<pre class="language-typescript"><code class="language-typescript">@<span class="token function"><span class="token maybe-class-name">Injectable</span></span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+<span class="token keyword">export</span> <span class="token keyword">class</span> <span class="token class-name"><span class="token maybe-class-name">CustomersApiService</span></span> <span class="token keyword">extends</span> <span class="token class-name"><span class="token maybe-class-name">BaseApiService</span></span> <span class="token punctuation">{</span>
+  <span class="token doc-comment comment">/** API のリソース名 (URL に使用する文字列) */</span>
+  apiName<span class="token operator">:</span> <span class="token builtin">string</span> <span class="token operator">=</span> <span class="token string">'customers'</span><span class="token punctuation">;</span>
+  <span class="token doc-comment comment">/** 顧客情報のモックデータ
+  data: any = [ /* 省略 */</span> <span class="token punctuation">]</span><span class="token punctuation">;</span>
+  
+  <span class="token doc-comment comment">/** 顧客情報 API への POST 時にリクエストデータを加工する */</span>
+  <span class="token function">post</span><span class="token punctuation">(</span>requestInfo<span class="token operator">:</span> <span class="token maybe-class-name">RequestInfo</span><span class="token punctuation">)</span><span class="token operator">:</span> <span class="token builtin">any</span> <span class="token punctuation">{</span> <span class="token comment">/* 省略 */</span> <span class="token punctuation">}</span>
+  
+  <span class="token doc-comment comment">/** 削除済みのデータに対する DELETE で 404 を返すようリクエストデータを加工する */</span>
+  <span class="token keyword">delete</span><span class="token punctuation">(</span>requestInfo<span class="token operator">:</span> <span class="token maybe-class-name">RequestInfo</span><span class="token punctuation">)</span><span class="token operator">:</span> <span class="token builtin">any</span> <span class="token punctuation">{</span>
+    <span class="token comment">// DELETE 時は requestInfo.id を指定しているはずなので、この ID に合致するデータが this.data に存在するか確認する</span>
+    <span class="token keyword">const</span> targetData <span class="token operator">=</span> <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">data</span><span class="token punctuation">.</span><span class="token method function property-access">find</span><span class="token punctuation">(</span><span class="token punctuation">(</span>item<span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+      <span class="token keyword">return</span> item<span class="token punctuation">.</span><span class="token property-access">id</span> <span class="token operator">===</span> requestInfo<span class="token punctuation">.</span><span class="token property-access">id</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    
+    <span class="token comment">// もし対象のデータが存在しなければ、既に削除済みなので、HTTP 404 を返すためのフラグを用意しておく</span>
+    <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token operator">!</span>targetData<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      requestInfo<span class="token punctuation">.</span><span class="token property-access">isAlreadyDeleted</span> <span class="token operator">=</span> <span class="token boolean">true</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span>
+  
+  <span class="token doc-comment comment">/** リクエスト情報を加工する */</span>
+  <span class="token function">responseInterceptor</span><span class="token punctuation">(</span>responseOptions<span class="token operator">:</span> <span class="token maybe-class-name">ResponseOptions</span><span class="token punctuation">,</span> requestInfo<span class="token operator">:</span> <span class="token maybe-class-name">RequestInfo</span><span class="token punctuation">)</span><span class="token operator">:</span> <span class="token builtin">any</span> <span class="token punctuation">{</span>
+    <span class="token keyword">if</span><span class="token punctuation">(</span>requestInfo<span class="token punctuation">.</span><span class="token property-access">method</span><span class="token punctuation">.</span><span class="token method function property-access">toUpperCase</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">===</span> <span class="token string">'DELETE'</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token comment">// DELETE メソッド実行時 : 「isAlreadyDeleted」フラグがリクエスト情報に含まれていれば、レスポンスを 404 にする</span>
+      <span class="token keyword">if</span><span class="token punctuation">(</span>requestInfo<span class="token punctuation">[</span><span class="token string">'isAlreadyDeleted'</span><span class="token punctuation">]</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        responseOptions<span class="token punctuation">.</span><span class="token property-access">status</span> <span class="token operator">=</span> <span class="token number">404</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span>
+    <span class="token keyword">else</span> <span class="token punctuation">{</span>
+      <span class="token comment">// それ以外のメソッドでのリクエスト時…</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>こんな感じ。なかなか力技だが、Angular In Memory Web API が用意しているデフォルトの挙動を変えられた。</p>
+<hr>
+<p>以上。API サーバって結局はゴリゴリ実装するしかないのねん…。</p>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2018-07-26</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2018-07-26</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

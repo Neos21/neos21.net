@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>Oracle Application Container Cloud をコマンドラインで操作できる PSM CLI と、さらにもうちょっとだけ便利にするシェルスクリプト - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2019/03/23-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2019/index.html">2019年</a></li>
+            <li><a href="/blog/2019/03/index.html">03月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2019-03-23</time></div>
+        <h1 id="page-title">Oracle Application Container Cloud をコマンドラインで操作できる PSM CLI と、さらにもうちょっとだけ便利にするシェルスクリプト</h1>
+
+<p>Oracle Application Container Cloud (ACC) は、アプリケーション資材をデプロイしたり、ログファイルを確認したりするのにブラウザ上でポチポチしないといけないのが面倒だ。</p>
+<p>そこで、Oracle が提供する <strong>PSM CLI</strong> というコマンドラインツールを使って、これらの操作をコマンドラインから行えるようにしてみる。</p>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#psm-cli-%E3%81%AE%E3%83%80%E3%82%A6%E3%83%B3%E3%83%AD%E3%83%BC%E3%83%89%E3%83%BB%E3%82%A4%E3%83%B3%E3%82%B9%E3%83%88%E3%83%BC%E3%83%AB">PSM CLI のダウンロード・インストール</a></li>
+  <li><a href="#%E3%83%AD%E3%82%B0%E3%82%92%E5%8F%96%E5%BE%97%E3%81%99%E3%82%8B">ログを取得する</a></li>
+  <li><a href="#%E3%82%A2%E3%83%97%E3%83%AA%E3%82%B1%E3%83%BC%E3%82%B7%E3%83%A7%E3%83%B3%E3%82%92%E3%83%87%E3%83%97%E3%83%AD%E3%82%A4%E3%81%99%E3%82%8B">アプリケーションをデプロイする</a></li>
+  <li><a href="#%E3%82%B7%E3%82%A7%E3%83%AB%E3%82%B9%E3%82%AF%E3%83%AA%E3%83%97%E3%83%88%E3%82%92%E6%9B%B8%E3%81%84%E3%81%A6%E5%B0%91%E3%81%97%E6%A5%BD%E3%81%99%E3%82%8B">シェルスクリプトを書いて少し楽する</a>
+    <ul>
+      <li><a href="#acc-upload"><code>acc-upload</code></a></li>
+      <li><a href="#acc-status"><code>acc-status</code></a></li>
+      <li><a href="#acc-log-req"><code>acc-log-req</code></a></li>
+      <li><a href="#acc-logs"><code>acc-logs</code></a></li>
+      <li><a href="#acc-log"><code>acc-log</code></a></li>
+    </ul>
+  </li>
+  <li><a href="#%E4%BB%A5%E4%B8%8A">以上</a></li>
+</ul>
+<h2 id="psm-cli-のダウンロード・インストール"><a class="header-link" href="#psm-cli-のダウンロード・インストール"><span class="header-link-mark"></span></a>PSM CLI のダウンロード・インストール</h2>
+<p>ACC の管理画面を開いたら、右上のヘルプ「？」アイコン → ヘルプ → ダウンロード・センター → ダイアログより「<code>Oracle offers a PaaS Service Manager (PSM) Command Line Interface (CLI)</code>」をダウンロードする。ファイル名としては <code>psmcli-1.1.28.zip</code> といったファイル名になっていると思う。</p>
+<p>インストールには Python3 の <code>pip3</code> コマンドを使うので、<code>python</code>・<code>pip</code> でそれぞれ v3 系が実行できるよう、環境設定しておくこと。自分は MacOS を使用し、Homebrew で Python3 をインストール後、PATH 設定を行った。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># Homebrew で Python3 をインストールする</span>
+$ brew <span class="token function">install</span> python
+
+<span class="token comment"># インストールできたことを確認</span>
+$ python3 -V
+Python <span class="token number">3.7</span>.2
+$ pip3 -V
+pip <span class="token number">18.1</span> from /usr/local/lib/python3.7/site-packages/pip <span class="token punctuation">(</span>python <span class="token number">3.7</span><span class="token punctuation">)</span>
+
+<span class="token comment"># `python` コマンドで v3 系が使用されるよう PATH を設定する (brew info python で紹介されている)</span>
+<span class="token builtin class-name">echo</span> <span class="token string">'PATH="/usr/local/opt/python/libexec/bin:<span class="token environment constant">$PATH</span>"'</span> <span class="token operator">>></span> ~/.bash_profile
+</code></pre>
+<p>先程ダウンロードした Zip ファイルを <code>psmcli.zip</code> として、以下のようにインストールを開始する。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">sudo</span> -H pip3 <span class="token function">install</span> -U psmcli.zip
+</code></pre>
+<p>インストールが完了したら、<code>psm setup</code> コマンドで初期設定を行う。</p>
+<pre class="language-bash"><code class="language-bash">$ psm setup
+Username:  <span class="token comment"># 【ユーザ名】</span>
+Password:  <span class="token comment"># 【パスワード】</span>
+Retype Password:  <span class="token comment"># 【パスワード 再入力】</span>
+Identity domain:  <span class="token comment"># 【ACC 管理画面の「アプリケーション詳細」から確認できる。「idcs-」から始まるアイデンティティ・ドメイン文字列】</span>
+Region <span class="token punctuation">[</span>us<span class="token punctuation">]</span>:  <span class="token comment"># リージョン。US ならこのまま Enter</span>
+Output <span class="token function">format</span> <span class="token punctuation">[</span>short<span class="token punctuation">]</span>:  <span class="token comment"># 空白のまま Enter</span>
+Use OAuth? <span class="token punctuation">[</span>n<span class="token punctuation">]</span>:  <span class="token comment"># 空白のまま Enter</span>
+----------------------------------------------------
+<span class="token string">'psm setup'</span> was successful. Available services are:
+</code></pre>
+<h2 id="ログを取得する"><a class="header-link" href="#ログを取得する"><span class="header-link-mark"></span></a>ログを取得する</h2>
+<p>まずはログを取得してみる。</p>
+<pre class="language-bash"><code class="language-bash">$ psm accs log --name 【アプリ名】 --instance-name web.1
+ Name                                       URL                                        Content Type     File Size  Last Modified On              
+ 4133174974_web.1_8f5b2a3f_2019-01-10-0<span class="token punctuation">..</span>.  https://neos21.us.storage.oraclecloud<span class="token punctuation">..</span><span class="token punctuation">..</span>  application/zip  <span class="token number">600</span>        <span class="token number">2019</span>-01-10T07:50:26.000+0000  
+ 4133177343_web.1_8f5b2a3f_2019-01-10-0<span class="token punctuation">..</span>.  https://neos21.us.storage.oraclecloud<span class="token punctuation">..</span><span class="token punctuation">..</span>  application/zip  <span class="token number">548</span>        <span class="token number">2019</span>-01-10T07:10:57.000+0000  
+ 4133177541_web.1_a4accc1e_2019-01-10-0<span class="token punctuation">..</span>.  https://neos21.us.storage.oraclecloud<span class="token punctuation">..</span><span class="token punctuation">..</span>  application/zip  <span class="token number">2222</span>       <span class="token number">2019</span>-01-10T07:07:39.000+0000  
+</code></pre>
+<p>省略表示されているが、<strong>コレって結局、管理画面上で見える「ログの Zip ファイル」の羅列では…。</strong></p>
+<h2 id="アプリケーションをデプロイする"><a class="header-link" href="#アプリケーションをデプロイする"><span class="header-link-mark"></span></a>アプリケーションをデプロイする</h2>
+<p>資材のデプロイは、以下のように行える。</p>
+<pre class="language-bash"><code class="language-bash">$ psm accs push --name 【アプリ名】 --archive-path my-project.zip
+</code></pre>
+<p><em>…Zip 化はやっぱり必要なのね。</em></p>
+<h2 id="シェルスクリプトを書いて少し楽する"><a class="header-link" href="#シェルスクリプトを書いて少し楽する"><span class="header-link-mark"></span></a>シェルスクリプトを書いて少し楽する</h2>
+<p>せっかくコマンドラインが用意できたのに、このままでは画面ポチポチと大差なさそうなので、少し便利にするシェルスクリプトを書いてみた。いずれも MacOS でのみ動作検証済。</p>
+<h3 id="acc-upload"><a class="header-link" href="#acc-upload"><span class="header-link-mark"></span></a><code>acc-upload</code></h3>
+<p>カレントディレクトリ配下の資材を Zip 圧縮してアップロードする。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token shebang important">#!/bin/bash</span>
+
+<span class="token comment"># サービス名</span>
+<span class="token assign-left variable">service_name</span><span class="token operator">=</span><span class="token string">"【アプリ名】"</span>
+<span class="token comment"># Zip ファイル名</span>
+<span class="token assign-left variable">zip_file_name</span><span class="token operator">=</span><span class="token string">"my-project.zip"</span>
+
+<span class="token comment"># 古い Zip ファイルがあれば消しておく</span>
+<span class="token function">rm</span> -f <span class="token string">"<span class="token variable">$zip_file_name</span>"</span>
+
+<span class="token comment"># Zip 化する : 必要なファイルを指定していく</span>
+<span class="token function">zip</span> -r <span class="token string">"<span class="token variable">$zip_file_name</span>"</span> package.json deployment.json manifest.json index.js app/ node_modules/
+<span class="token comment"># 安全のため少しだけ待つ</span>
+<span class="token function">sleep</span> <span class="token number">1</span>
+
+<span class="token comment"># Zip ファイルをデプロイする</span>
+psm accs push --name <span class="token string">"<span class="token variable">$service_name</span>"</span> --archive-path <span class="token string">"<span class="token variable">$zip_file_name</span>"</span>
+
+<span class="token comment"># 少し待つ</span>
+<span class="token function">sleep</span> <span class="token number">2</span>
+<span class="token comment"># デプロイ中ステータスになっているか確認する</span>
+psm accs activities --service-name <span class="token string">"<span class="token variable">$service_name</span>"</span>
+
+<span class="token comment"># Zip ファイルを消しておく</span>
+<span class="token function">rm</span> -f <span class="token string">"<span class="token variable">$zip_file_name</span>"</span>
+</code></pre>
+<h3 id="acc-status"><a class="header-link" href="#acc-status"><span class="header-link-mark"></span></a><code>acc-status</code></h3>
+<p>資材のデプロイには4・5分かかるので、ステータス確認コマンドを繰り返し叩きやすくする。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token shebang important">#!/bin/bash</span>
+
+<span class="token comment"># サービス名</span>
+<span class="token assign-left variable">service_name</span><span class="token operator">=</span><span class="token string">"【アプリ名】"</span>
+
+<span class="token comment"># ステータス確認</span>
+psm accs activities --service-name <span class="token string">"<span class="token variable">$service_name</span>"</span>
+</code></pre>
+<h3 id="acc-log-req"><a class="header-link" href="#acc-log-req"><span class="header-link-mark"></span></a><code>acc-log-req</code></h3>
+<p>アプリの動作ログが Zip ファイルとして用意されるまでには数分のラグがあるのだが、コレを強制的にリクエストするためのコマンド。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token shebang important">#!/bin/bash</span>
+
+<span class="token comment"># サービス名</span>
+<span class="token assign-left variable">service_name</span><span class="token operator">=</span><span class="token string">"【アプリ名】"</span>
+
+<span class="token comment"># 最新のログをリクエストする</span>
+psm accs get-logs --name <span class="token string">"<span class="token variable">$service_name</span>"</span> --instance-name web.1 --output-format json
+</code></pre>
+<h3 id="acc-logs"><a class="header-link" href="#acc-logs"><span class="header-link-mark"></span></a><code>acc-logs</code></h3>
+<p>アプリの動作ログの最新5件を確認する。ココで確認できるのは「ログの Zip ファイルをダウンロードするための URL」までだが、ログの生成日時が確認できるので、目安として。<code>jq</code> コマンドが必要。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token shebang important">#!/bin/bash</span>
+
+<span class="token comment"># サービス名</span>
+<span class="token assign-left variable">service_name</span><span class="token operator">=</span><span class="token string">"【アプリ名】"</span>
+
+<span class="token comment"># 最新5件のログを確認する</span>
+psm accs log --name <span class="token string">"<span class="token variable">$service_name</span>"</span> --instance-name web.1 --output-format json <span class="token operator">|</span> jq --raw-output <span class="token string">'.logs | map(.lastModifiedTime + " : " + .logURL)[]'</span> <span class="token operator">|</span> <span class="token function">head</span> -5
+</code></pre>
+<h3 id="acc-log"><a class="header-link" href="#acc-log"><span class="header-link-mark"></span></a><code>acc-log</code></h3>
+<p>最新のログファイルをダウンロードして、その場でコンソール出力する。コレがログを参照するためのほぼ最速なコマンド。<em>こんな手間なのか ACC。</em></p>
+<pre class="language-bash"><code class="language-bash"><span class="token shebang important">#!/bin/bash</span>
+
+<span class="token comment"># サービス名</span>
+<span class="token assign-left variable">service_name</span><span class="token operator">=</span><span class="token string">"【アプリ名】"</span>
+<span class="token comment"># ユーザ名</span>
+<span class="token assign-left variable">user_name</span><span class="token operator">=</span><span class="token string">"【ユーザ名】"</span>
+<span class="token comment"># パスワード</span>
+<span class="token assign-left variable">password</span><span class="token operator">=</span><span class="token string">"【パスワード】"</span>
+
+<span class="token comment"># 最新のログ Zip ファイルの URL を取得する</span>
+<span class="token assign-left variable">log_url</span><span class="token operator">=</span><span class="token string">"<span class="token variable"><span class="token variable">$(</span>psm accs log --name <span class="token string">"<span class="token variable">$service_name</span>"</span> --instance-name web.1 --output-format json <span class="token operator">|</span> jq --raw-output <span class="token string">'.logs[0].logURL'</span><span class="token variable">)</span></span>"</span>
+
+<span class="token comment"># 一時的にログ Zip ファイルをダウンロードして置いておくパスを指定する。ココでは `~/Downloads/` ディレクトリを使用する</span>
+<span class="token assign-left variable">log_file_path</span><span class="token operator">=</span><span class="token string">"<span class="token environment constant">$HOME</span>/Downloads/<span class="token variable"><span class="token variable">$(</span><span class="token function">basename</span> <span class="token string">"<span class="token variable">$log_url</span>"</span><span class="token variable">)</span></span>"</span>
+
+<span class="token comment"># ログ Zip ファイルをダウンロードする : BASIC 認証を使用するためユーザ名とパスワードを指定する</span>
+<span class="token function">curl</span> --user <span class="token string">"<span class="token variable">$user_name</span>"</span><span class="token builtin class-name">:</span><span class="token string">"<span class="token variable">$password</span>"</span> <span class="token string">"<span class="token variable">$log_url</span>"</span> --output <span class="token string">"<span class="token variable">$log_file_path</span>"</span>
+
+<span class="token comment"># unzip コマンドの -c オプションを使い、解凍結果をコンソール出力する</span>
+<span class="token function">unzip</span> -c <span class="token string">"<span class="token variable">$log_file_path</span>"</span>
+
+<span class="token comment"># curl でダウンロードしたログ Zip ファイルを削除する</span>
+<span class="token function">rm</span> <span class="token string">"<span class="token variable">$log_file_path</span>"</span>
+</code></pre>
+<h2 id="以上"><a class="header-link" href="#以上"><span class="header-link-mark"></span></a>以上</h2>
+<p>PSM CLI がショボくてつらい…。おまけにしばらくしたら <code>Unauthorized</code> なるエラーが出てしまい、<code>psm setup</code> コマンドも通らなくなってしまった。マジ使えん。ACC はもう終わり。Heroku 使おう。</p>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2019-03-23</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2019-03-23</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

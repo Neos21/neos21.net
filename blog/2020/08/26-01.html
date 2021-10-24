@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>Webpack 入門 その2：SCSS のトランスパイル・Autoprefixer による Browserslist 参照 - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2020/08/26-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2020/index.html">2020年</a></li>
+            <li><a href="/blog/2020/08/index.html">08月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2020-08-26</time></div>
+        <h1 id="page-title">Webpack 入門 その2：SCSS のトランスパイル・Autoprefixer による Browserslist 参照</h1>
+
+<p>前回に引き続き、Webpack を利用して色々トランスパイルしつつ、Browserslist の効果を確認していく企画。前回の記事の続きなので未見の方はソチラを先にドウゾ。</p>
+<p>また、最終成果物のコードは以下の GitHub リポジトリで公開しているのでコチラもドウゾ。</p>
+<ul>
+  <li><a href="https://github.com/Neos21/practice-browserslist">Neos21/practice-browserslist</a></li>
+</ul>
+<p>今回は <strong>SCSS ファイル</strong>を CSS ファイルとしてトランスパイルして出力しつつ、そこに Browserslist を参照しての Autoprefixer を効かせてみる。</p>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#%E4%BB%95%E7%B5%84%E3%81%BF%E3%82%92%E7%90%86%E8%A7%A3%E3%81%99%E3%82%8B">仕組みを理解する</a></li>
+  <li><a href="#%E3%83%93%E3%83%AB%E3%83%89%E6%89%8B%E9%A0%86%E3%81%A8%E4%BD%BF%E7%94%A8%E3%83%84%E3%83%BC%E3%83%AB">ビルド手順と使用ツール</a></li>
+  <li><a href="#webpack-%E3%81%A1%E3%81%8B%E3%82%89%E3%81%AE%E9%A4%8A%E3%81%84%E6%96%B9">Webpack ちからの養い方</a></li>
+  <li><a href="#%E5%BF%85%E8%A6%81%E3%81%AA-loader%E3%83%BBplugin-%E3%82%92%E3%82%A4%E3%83%B3%E3%82%B9%E3%83%88%E3%83%BC%E3%83%AB%E3%81%99%E3%82%8B">必要な Loader・Plugin をインストールする</a></li>
+  <li><a href="#%E7%B4%A0%E3%81%AE-css-%E3%82%92%E6%89%B1%E3%81%A3%E3%81%A6%E3%81%BF%E3%82%8B">素の CSS を扱ってみる</a></li>
+  <li><a href="#scss-%E3%82%92%E5%A4%89%E6%8F%9B%E3%81%97%E3%81%A6%E3%81%BF%E3%82%8B">SCSS を変換してみる</a></li>
+  <li><a href="#css-%E3%83%95%E3%82%A1%E3%82%A4%E3%83%AB%E3%82%92%E5%88%A5%E3%81%AB%E5%87%BA%E5%8A%9B%E3%81%99%E3%82%8B">CSS ファイルを別に出力する</a></li>
+  <li><a href="#postcss--autoprefixer--browserslist-%E3%81%AB%E3%82%88%E3%82%8B%E3%83%99%E3%83%B3%E3%83%80%E3%83%97%E3%83%AC%E3%83%95%E3%82%A3%E3%83%83%E3%82%AF%E3%82%B9%E4%BB%98%E4%B8%8E%E3%82%92%E8%A9%A6%E3%81%99">PostCSS + Autoprefixer + Browserslist によるベンダプレフィックス付与を試す</a></li>
+  <li><a href="#%E6%AC%A1%E5%9B%9E%E3%81%AB%E7%B6%9A%E3%81%8F">次回に続く</a></li>
+</ul>
+<h2 id="仕組みを理解する"><a class="header-link" href="#仕組みを理解する"><span class="header-link-mark"></span></a>仕組みを理解する</h2>
+<p>最初は手前の一文を理解するのが難しいと思う (自分も理解が追いつかなかった) ので、仕組みを整理する。</p>
+<p>SCSS ファイルはそのままではブラウザで認識されない。生の CSS にトランスパイルする必要がある。ココまでは良いだろう。</p>
+<p>今回、Browserslist の設定を利用して、新しめのコードにはベンダプレフィックス等のフォールバックを追加させたいと考えている (Browserslist の効果を知るのが当初の目的だったので…)。</p>
+<p>SCSS コードに Browserslist を適用させるには、まず SCSS から CSS へトランスパイルを済ませてしまい、その CSS に対して、<strong>Autoprefixer</strong> がベンダプレフィックスをブチ込む流れになる。Autoprefixer が Browserslist の設定ファイルを参照して、どの程度ベンダプレフィックスを追加するか決めるというワケ。</p>
+<p>CSS コードに Autoprefixer を効かせるためには、<em>PostCSS</em> というパーサが間に入ることになる。</p>
+<p>ココまでで SCSS ファイルを CSS コードに変換できたワケだが、その CSS コードを Webpack で処理できるようにするため、<code>css-loader</code> という Loader が必要になる。</p>
+<p><code>css-loader</code> をかませると、CSS コードを <code>./dist/js/main.js</code> 内にバンドル出来るようになるのだが、今回は JS ファイル内にバンドルするのではなく、<code>.css</code> ファイルとして別に書き出したい。そこでさらに <code>mini-css-extract-plugin</code> という Webpack プラグインをかませる。</p>
+<h2 id="ビルド手順と使用ツール"><a class="header-link" href="#ビルド手順と使用ツール"><span class="header-link-mark"></span></a>ビルド手順と使用ツール</h2>
+<p>ということで、手順と関連しそうなツールを並べると、次のとおり。</p>
+<ol>
+  <li>元の SCSS コードを CSS にトランスパイルする
+    <ul>
+      <li><code>sass-loader</code> という Loader でファイルを読み込む</li>
+      <li>トランスパイル自体は <em>sass</em> パッケージが行う</li>
+    </ul>
+  </li>
+  <li>CSS コードにベンダプレフィックスを追加する
+    <ul>
+      <li><em>PostCSS</em> が間に入り、<strong>Autoprefixer</strong> が対応する</li>
+      <li>Autoprefixer は <em>Browserslist</em> 設定ファイルを参照する</li>
+    </ul>
+  </li>
+  <li>生成された CSS コードを Webpack が操作できるようにする
+    <ul>
+      <li><code>css-loader</code></li>
+    </ul>
+  </li>
+  <li>JS ファイル内にバンドルするのではなく、CSS ファイルとして書き出させる
+    <ul>
+      <li><code>mini-css-extract-plugin</code></li>
+    </ul>
+  </li>
+</ol>
+<p>うーむ。何やら色々出てきたな…。Gulp プラグインが大量に必要になるのと同じことが Webpack でも起きている…。</p>
+<p>ちなみに、<code>style-loader</code> という似たような名前の Loader もあるのだが、コチラは JS 内に取り込んだ CSS コードを、HTML 中に <code>style</code> 要素で直接流し込むための Loader。SPA でコンポーネント単位にカプセル化する仕組みに利用したりだとか、用途が異なる。</p>
+<ul>
+  <li>参考：<a href="https://qiita.com/morishitter/items/4a04eb144abf49f41d7d">PostCSS まとめ - Qiita</a></li>
+  <li>参考：<a href="https://reffect.co.jp/html/webpack-loader-setting-for-beginner">入門者/初心者にもわかるwebpackの基礎(Loader編) | アールエフェクト</a></li>
+  <li>参考：<a href="https://qiita.com/oreo3@github/items/dc7d570c2798e82433ca">autoprefixer 基本 - Qiita</a></li>
+</ul>
+<h2 id="webpack-ちからの養い方"><a class="header-link" href="#webpack-ちからの養い方"><span class="header-link-mark"></span></a>Webpack ちからの養い方</h2>
+<p>何度か出てきている Loader って何やねん、というと、雑に言えば Loader はファイルを扱うプラグイン的なモノ。英語ながら公式サイトに解説がある。</p>
+<ul>
+  <li>参考：<a href="https://webpack.js.org/loaders/">Loaders | webpack</a></li>
+</ul>
+<p>どうやったらそういう Loader があるの分かんねん、というと、公式サイトに各 Loader の解説があるので、コレを読みながら何となく触る。</p>
+<ul>
+  <li>参考：<a href="https://webpack.js.org/loaders/sass-loader/">sass-loader | webpack</a></li>
+  <li>参考：<a href="https://webpack.js.org/loaders/css-loader/">css-loader | webpack</a></li>
+  <li>参考：<a href="https://webpack.js.org/loaders/style-loader/">style-loader | webpack</a></li>
+</ul>
+<h2 id="必要な-loader・plugin-をインストールする"><a class="header-link" href="#必要な-loader・plugin-をインストールする"><span class="header-link-mark"></span></a>必要な Loader・Plugin をインストールする</h2>
+<p>それでは必要なツール類をインストールしよう。ベースとなるのは前回の記事までで、<code>webpack</code> と <code>webpack-cli</code> がインストール済のプロジェクトとする。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">npm</span> <span class="token function">install</span> -D sass sass-loader autoprefixer postcss-loader css-loader mini-css-extract-plugin
+</code></pre>
+<ul>
+  <li><code>package.json</code> : インストールされたバージョン</li>
+</ul>
+<pre class="language-json"><code class="language-json"><span class="token property">"devDependencies"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+  <span class="token property">"autoprefixer"</span><span class="token operator">:</span> <span class="token string">"9.8.5"</span><span class="token punctuation">,</span>
+  <span class="token property">"css-loader"</span><span class="token operator">:</span> <span class="token string">"4.0.0"</span><span class="token punctuation">,</span>
+  <span class="token property">"mini-css-extract-plugin"</span><span class="token operator">:</span> <span class="token string">"0.9.0"</span><span class="token punctuation">,</span>
+  <span class="token property">"postcss-loader"</span><span class="token operator">:</span> <span class="token string">"3.0.0"</span><span class="token punctuation">,</span>
+  <span class="token property">"sass"</span><span class="token operator">:</span> <span class="token string">"1.26.10"</span><span class="token punctuation">,</span>
+  <span class="token property">"sass-loader"</span><span class="token operator">:</span> <span class="token string">"9.0.2"</span><span class="token punctuation">,</span>
+  
+  <span class="token property">"webpack"</span><span class="token operator">:</span> <span class="token string">"4.44.0"</span><span class="token punctuation">,</span>
+  <span class="token property">"webpack-cli"</span><span class="token operator">:</span> <span class="token string">"3.3.12"</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>あぁー多いなぁー。依存パッケージが多くて嫌だなぁー。ｗ</p>
+<h2 id="素の-css-を扱ってみる"><a class="header-link" href="#素の-css-を扱ってみる"><span class="header-link-mark"></span></a>素の CSS を扱ってみる</h2>
+<p>いきなり全ての Loader や Plugin を使うと混乱するので、順に行こう。</p>
+<p>まずは最も基礎となる <code>css-loader</code> だけを使って、CSS ファイルを JS ファイル内にバンドルしてみる。</p>
+<p>次の2ファイルを書いていく。</p>
+<ul>
+  <li><code>src/js/main.js</code>
+    <ul>
+      <li>このファイルがエントリポイントとなるので、このファイルから CSS ファイルに辿り着けるよう、CSS ファイルを <code>import</code> してやる</li>
+      <li>今回は JS はこの1行だけ</li>
+    </ul>
+  </li>
+</ul>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword module">import</span> <span class="token string">'../css/main.css'</span><span class="token punctuation">;</span>
+</code></pre>
+<ul>
+  <li><code>src/css/main.css</code>
+    <ul>
+      <li>中身は適当に</li>
+    </ul>
+  </li>
+</ul>
+<pre class="language-css"><code class="language-css"><span class="token selector">body</span> <span class="token punctuation">{</span>
+  <span class="token property">color</span><span class="token punctuation">:</span> <span class="token color">red</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>ソースコードができたら、ビルド設定を次のように記述する。</p>
+<ul>
+  <li><code>webpack.config.js</code>
+    <ul>
+      <li><code>.css</code> ファイルを見つけたら <code>css-loader</code> で処理する、というルールを記述</li>
+    </ul>
+  </li>
+</ul>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword">const</span> path <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'path'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+module<span class="token punctuation">.</span><span class="token property-access">exports</span> <span class="token operator">=</span> <span class="token punctuation">{</span>
+  mode<span class="token operator">:</span> <span class="token string">'production'</span><span class="token punctuation">,</span>
+  entry<span class="token operator">:</span> <span class="token string">'./src/js/main.ts'</span><span class="token punctuation">,</span>
+  output<span class="token operator">:</span> <span class="token punctuation">{</span>
+    path    <span class="token operator">:</span> path<span class="token punctuation">.</span><span class="token method function property-access">resolve</span><span class="token punctuation">(</span>__dirname<span class="token punctuation">,</span> <span class="token string">'dist/'</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+    filename<span class="token operator">:</span> <span class="token string">'js/[name].js'</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token comment">// ↓ 以下を追加</span>
+  module<span class="token operator">:</span> <span class="token punctuation">{</span>
+    rules<span class="token operator">:</span> <span class="token punctuation">[</span>
+      <span class="token punctuation">{</span>
+        test<span class="token operator">:</span> <span class="token punctuation">(</span><span class="token regex"><span class="token regex-delimiter">/</span><span class="token regex-source language-regex">\.css$</span><span class="token regex-delimiter">/</span><span class="token regex-flags">u</span></span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+        use<span class="token operator">:</span> <span class="token punctuation">[</span>
+          <span class="token string">'css-loader'</span>
+        <span class="token punctuation">]</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">]</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+</code></pre>
+<p>コレでビルドしてみると、<code>./dist/js/main.js</code> の中に、次のような CSS コードが含まれていることが分かるだろう。</p>
+<pre class="language-javascript"><code class="language-javascript">o<span class="token punctuation">.</span><span class="token method function property-access">push</span><span class="token punctuation">(</span><span class="token punctuation">[</span>t<span class="token punctuation">.</span><span class="token property-access">i</span><span class="token punctuation">,</span> <span class="token string">"body {\n  color: red;\n}"</span><span class="token punctuation">,</span> <span class="token string">""</span><span class="token punctuation">]</span><span class="token punctuation">)</span>
+</code></pre>
+<p>なるほど、<code>css-loader</code> を使うと、CSS ファイルを読み込んで JS にバンドルできた。</p>
+<h2 id="scss-を変換してみる"><a class="header-link" href="#scss-を変換してみる"><span class="header-link-mark"></span></a>SCSS を変換してみる</h2>
+<p>次は CSS ではなく SCSS ファイルを変換してみる。</p>
+<ul>
+  <li><code>src/js/main.js</code>
+    <ul>
+      <li><code>import</code> するファイルを SCSS に変更した</li>
+    </ul>
+  </li>
+</ul>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword module">import</span> <span class="token string">'../scss/main.scss'</span><span class="token punctuation">;</span>
+</code></pre>
+<ul>
+  <li><code>src/scss/main.scss</code>
+    <ul>
+      <li>先程とはディレクトリと拡張子が違う</li>
+    </ul>
+  </li>
+</ul>
+<pre class="language-scss"><code class="language-scss"><span class="token selector">body </span><span class="token punctuation">{</span>
+  <span class="token property">color</span><span class="token punctuation">:</span> <span class="token color">red</span><span class="token punctuation">;</span>
+  
+  <span class="token selector">p </span><span class="token punctuation">{</span>
+    <span class="token property">color</span><span class="token punctuation">:</span> <span class="token color">blue</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<ul>
+  <li><code>webpack.config.js</code>
+    <ul>
+      <li>ルール部分を次のように変更する</li>
+    </ul>
+  </li>
+</ul>
+<pre class="language-javascript"><code class="language-javascript"><span class="token comment">// .sass・.scss・.css ファイルを対象にする</span>
+<span class="token punctuation">{</span>
+  test<span class="token operator">:</span> <span class="token punctuation">(</span><span class="token regex"><span class="token regex-delimiter">/</span><span class="token regex-source language-regex">\.(sa|sc|c)ss$</span><span class="token regex-delimiter">/</span><span class="token regex-flags">u</span></span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+  use<span class="token operator">:</span> <span class="token punctuation">[</span>
+    <span class="token string">'css-loader'</span><span class="token punctuation">,</span>
+    <span class="token string">'sass-loader'</span>
+  <span class="token punctuation">]</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>ココで重要なのは、<code>use</code> 配列の順番。Webpack のルールは<strong>配列の最後に書いた Loader・Plugin から順に適用される。</strong>よって、配列の並びとしては <code>css-loader</code> が先に来ているが、実際に適用されるのは <code>sass-loder</code> が最初で、次に <code>css-loader</code> となる。</p>
+<p>このように設定してビルドすると、<code>./dist/js/main.js</code> の中に、次のような文字列を確認できると思う。</p>
+<pre class="language-javascript"><code class="language-javascript">o<span class="token punctuation">.</span><span class="token method function property-access">push</span><span class="token punctuation">(</span><span class="token punctuation">[</span>t<span class="token punctuation">.</span><span class="token property-access">i</span><span class="token punctuation">,</span> <span class="token string">"body{color:red}body p{color:blue}"</span><span class="token punctuation">,</span> <span class="token string">""</span><span class="token punctuation">]</span><span class="token punctuation">)</span>
+</code></pre>
+<p><code>body p {}</code> の指定などを見ると、<code>sass-loader</code> によって SCSS をトランスパイルできていることが分かる。</p>
+<h2 id="css-ファイルを別に出力する"><a class="header-link" href="#css-ファイルを別に出力する"><span class="header-link-mark"></span></a>CSS ファイルを別に出力する</h2>
+<p>トランスパイルができたので、CSS ファイルを別に書き出すところをやってみる。</p>
+<p>ソースコードはそのままに、ビルド設定を書き換える。</p>
+<ul>
+  <li><code>webpack.config.js</code></li>
+</ul>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword">const</span> path <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'path'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// ↓ 追加</span>
+<span class="token keyword">const</span> <span class="token maybe-class-name">MiniCssExtractPlugin</span> <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'mini-css-extract-plugin'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+module<span class="token punctuation">.</span><span class="token property-access">exports</span> <span class="token operator">=</span> <span class="token punctuation">{</span>
+  mode<span class="token operator">:</span> <span class="token string">'production'</span><span class="token punctuation">,</span>
+  entry<span class="token operator">:</span> <span class="token string">'./src/js/main.ts'</span><span class="token punctuation">,</span>
+  output<span class="token operator">:</span> <span class="token punctuation">{</span>
+    path    <span class="token operator">:</span> path<span class="token punctuation">.</span><span class="token method function property-access">resolve</span><span class="token punctuation">(</span>__dirname<span class="token punctuation">,</span> <span class="token string">'dist/'</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+    filename<span class="token operator">:</span> <span class="token string">'js/[name].js'</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token comment">// ↓ plugins セクションを追加</span>
+  plugins<span class="token operator">:</span> <span class="token punctuation">[</span>
+    <span class="token keyword">new</span> <span class="token class-name">MiniCssExtractPlugin</span><span class="token punctuation">(</span><span class="token punctuation">{</span>
+      filename<span class="token operator">:</span> <span class="token string">'/css/[name].css'</span>
+    <span class="token punctuation">}</span><span class="token punctuation">)</span>
+  <span class="token punctuation">]</span><span class="token punctuation">,</span>
+  module<span class="token operator">:</span> <span class="token punctuation">{</span>
+    rules<span class="token operator">:</span> <span class="token punctuation">[</span>
+      <span class="token punctuation">{</span>
+        test<span class="token operator">:</span> <span class="token punctuation">(</span><span class="token regex"><span class="token regex-delimiter">/</span><span class="token regex-source language-regex">\.(sa|sc|c)ss$</span><span class="token regex-delimiter">/</span><span class="token regex-flags">u</span></span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+        use<span class="token operator">:</span> <span class="token punctuation">[</span>
+          <span class="token maybe-class-name">MiniCssExtractPlugin</span><span class="token punctuation">.</span><span class="token property-access">loader</span><span class="token punctuation">,</span>  <span class="token comment">// ← ココに追加</span>
+          <span class="token string">'css-loader'</span><span class="token punctuation">,</span>
+          <span class="token string">'sass-loader'</span>
+        <span class="token punctuation">]</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">]</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+</code></pre>
+<p><code>use</code> 配列の最初に <code>mini-css-extract-plugin</code> を配置したので、処理順としては最後に適用されることになる。つまり、SCSS を <code>sass-loader</code> がトランスパイル、それを JS で扱えるよう <code>css-loader</code> が加工するが、その結果を別ファイルに書き出すということで <code>mini-css-extract-plugin</code> が働く、という順番だ。</p>
+<p><code>mini-css-extract-plugin</code> は <code>plugins</code> セクションで、出力ファイルのパスを設定している。</p>
+<p>コレでビルドしてみると、<code>./dist/js/main.js</code> の中から CSS コードの記述が消え、代わりに <em><code>./dist/css/main.css</code></em> が出力されていることが分かるだろう。この中身は <code>./src/scss/main.scss</code> がトランスパイルされたモノとなる。</p>
+<h2 id="postcss--autoprefixer--browserslist-によるベンダプレフィックス付与を試す"><a class="header-link" href="#postcss--autoprefixer--browserslist-によるベンダプレフィックス付与を試す"><span class="header-link-mark"></span></a>PostCSS + Autoprefixer + Browserslist によるベンダプレフィックス付与を試す</h2>
+<p>ココまでで SCSS のトランスパイルは完璧に出来るようになった。最後に、Autoprefixer をかませてベンダプレフィックスを付与させてみよう。</p>
+<p>Autoprefixer をかませるためのツールとして PostCSS (<code>postcss-loader</code>) が登場し、Autoprefixer がどのベンダプレフィックスを適用すべきかを判断するために、内部で Browserslist を使用する、という関係だ。</p>
+<ul>
+  <li><code>src/scss/main.scss</code>
+    <ul>
+      <li>古いブラウザではベンダプレフィックスが必要になりそうなコードを書いていく</li>
+    </ul>
+  </li>
+</ul>
+<pre class="language-scss"><code class="language-scss"><span class="token selector">.container </span><span class="token punctuation">{</span>
+  <span class="token property">box-sizing</span><span class="token punctuation">:</span> border-box<span class="token punctuation">;</span>
+  <span class="token property">display</span><span class="token punctuation">:</span> grid<span class="token punctuation">;</span>
+  <span class="token property">grid-gap</span><span class="token punctuation">:</span> <span class="token number">1</span><span class="token unit">rem</span><span class="token punctuation">;</span>
+  <span class="token property">grid-template</span><span class="token punctuation">:</span> <span class="token string">"header  header"</span>  <span class="token number">1</span><span class="token unit">fr</span>
+                 <span class="token string">"nav     main  "</span>  <span class="token function">minmax</span><span class="token punctuation">(</span><span class="token number">100</span><span class="token unit">px</span><span class="token punctuation">,</span> <span class="token number">2</span><span class="token unit">fr</span><span class="token punctuation">)</span>
+                 <span class="token string">"nav     footer"</span>  <span class="token number">1</span><span class="token unit">fr</span> <span class="token operator">/</span>
+                  <span class="token number">300</span><span class="token unit">px</span>   <span class="token number">1</span><span class="token unit">fr</span><span class="token punctuation">;</span>
+  
+  <span class="token selector">header </span><span class="token punctuation">{</span> <span class="token property">grid-area</span><span class="token punctuation">:</span> header<span class="token punctuation">;</span> <span class="token punctuation">}</span>
+  <span class="token selector">nav    </span><span class="token punctuation">{</span> <span class="token property">grid-area</span><span class="token punctuation">:</span> nav   <span class="token punctuation">;</span> <span class="token punctuation">}</span>
+  <span class="token selector">main   </span><span class="token punctuation">{</span> <span class="token property">grid-area</span><span class="token punctuation">:</span> main  <span class="token punctuation">;</span> <span class="token punctuation">}</span>
+  <span class="token selector">footer </span><span class="token punctuation">{</span> <span class="token property">grid-area</span><span class="token punctuation">:</span> footer<span class="token punctuation">;</span> <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<ul>
+  <li><code>.browserslistrc</code>
+    <ul>
+      <li>新規で設定ファイルを作る</li>
+      <li>ベンダプレフィックスを適用させるため、今回は古めの IE を対象に入れてみる</li>
+    </ul>
+  </li>
+</ul>
+<pre><code>> 5%
+last 2 versions
+Firefox ESR
+dead
+
+# IE に対応させる
+ie >= 6
+</code></pre>
+<ul>
+  <li><code>postcss.config.js</code>
+    <ul>
+      <li>コチラも新規で設定ファイルを作る</li>
+      <li>ココで Autoprefix を読み込んでおり、さらに CSS Grid 用のベンダプレフィックスを付与させる設定を書いている</li>
+    </ul>
+  </li>
+</ul>
+<pre class="language-javascript"><code class="language-javascript"><span class="token comment">// PostCSS 実行時に Autoprefixer を読み込み、Browserslist の指定を利用させる</span>
+module<span class="token punctuation">.</span><span class="token property-access">exports</span> <span class="token operator">=</span> <span class="token punctuation">{</span>
+  plugins<span class="token operator">:</span> <span class="token punctuation">[</span>
+    <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'autoprefixer'</span><span class="token punctuation">)</span><span class="token punctuation">(</span><span class="token punctuation">{</span>
+      <span class="token comment">// CSS Grid に関する対応を入れる (IE 向け)</span>
+      grid<span class="token operator">:</span> <span class="token boolean">true</span>
+    <span class="token punctuation">}</span><span class="token punctuation">)</span>
+  <span class="token punctuation">]</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+</code></pre>
+<ul>
+  <li><code>webpack.config.js</code></li>
+</ul>
+<pre class="language-javascript"><code class="language-javascript"><span class="token punctuation">{</span>
+  test<span class="token operator">:</span> <span class="token punctuation">(</span><span class="token regex"><span class="token regex-delimiter">/</span><span class="token regex-source language-regex">\.(sa|sc|c)ss$</span><span class="token regex-delimiter">/</span><span class="token regex-flags">u</span></span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+  use<span class="token operator">:</span> <span class="token punctuation">[</span>
+    <span class="token maybe-class-name">MiniCssExtractPlugin</span><span class="token punctuation">.</span><span class="token property-access">loader</span><span class="token punctuation">,</span>
+    <span class="token string">'css-loader'</span><span class="token punctuation">,</span>
+    <span class="token string">'postcss-loader'</span><span class="token punctuation">,</span>  <span class="token comment">// ← 追加。Autoprefixer の指定は postcss.config.js で行う</span>
+    <span class="token string">'sass-loader'</span>
+  <span class="token punctuation">]</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>こんな感じ。いざビルドしてみると、<code>./dist/css/main.css</code> にベンダプレフィックスが追加されているのが確認できるはずだ。</p>
+<ul>
+  <li><code>dist/css/main.css</code>
+    <ul>
+      <li>実際は1行にまとめられているが、Beautify をかけて一部抜粋</li>
+    </ul>
+  </li>
+</ul>
+<pre class="language-css"><code class="language-css"><span class="token selector"><span class="token class">.container</span></span> <span class="token punctuation">{</span>
+  <span class="token property">-webkit-box-sizing</span><span class="token punctuation">:</span> border-box<span class="token punctuation">;</span>
+  <span class="token property">box-sizing</span><span class="token punctuation">:</span> border-box<span class="token punctuation">;</span>
+  <span class="token property">display</span><span class="token punctuation">:</span> -ms-grid<span class="token punctuation">;</span>
+  <span class="token property">display</span><span class="token punctuation">:</span> grid<span class="token punctuation">;</span>
+  <span class="token property">grid-gap</span><span class="token punctuation">:</span> <span class="token number">1</span><span class="token unit">rem</span><span class="token punctuation">;</span>
+  <span class="token property">-ms-grid-rows</span><span class="token punctuation">:</span> <span class="token number">1</span><span class="token unit">fr</span> <span class="token number">1</span><span class="token unit">rem</span> <span class="token function">minmax</span><span class="token punctuation">(</span><span class="token number">100</span><span class="token unit">px</span><span class="token punctuation">,</span> <span class="token number">2</span><span class="token unit">fr</span><span class="token punctuation">)</span> <span class="token number">1</span><span class="token unit">rem</span> <span class="token number">1</span><span class="token unit">fr</span><span class="token punctuation">;</span>
+  <span class="token property">-ms-grid-columns</span><span class="token punctuation">:</span> <span class="token number">300</span><span class="token unit">px</span> <span class="token number">1</span><span class="token unit">rem</span> <span class="token number">1</span><span class="token unit">fr</span><span class="token punctuation">;</span>
+  <span class="token property">grid-template</span><span class="token punctuation">:</span> <span class="token string">"header  header"</span><span class="token number">1</span><span class="token unit">fr</span> <span class="token string">"nav     main  "</span><span class="token function">minmax</span><span class="token punctuation">(</span><span class="token number">100</span><span class="token unit">px</span><span class="token punctuation">,</span> <span class="token number">2</span><span class="token unit">fr</span><span class="token punctuation">)</span> <span class="token string">"nav     footer"</span><span class="token number">1</span><span class="token unit">fr</span>/<span class="token number">300</span><span class="token unit">px</span> <span class="token number">1</span><span class="token unit">fr</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>スバラシイ。</p>
+<p><code>.browserslistrc</code> の内容をいじくったりすると、ベンダプレフィックスの付き方が変わることが確認できるはずだ。</p>
+<h2 id="次回に続く"><a class="header-link" href="#次回に続く"><span class="header-link-mark"></span></a>次回に続く</h2>
+<p>SCSS のトランスパイルと、Autoprefixer による Browserslist の利用はココまで。</p>
+<p>次回は ECMAScript や TypeScript を Babel でトランスパイルしてみる。</p>
+<ul>
+  <li>参考：<a href="https://note.com/kaito_takase/n/n58a325909bd0">【webpack】最低限開発できそうな環境まとめ｜KaitoTakase｜note</a></li>
+  <li>参考：<a href="https://qiita.com/olt/items/f9a17ab5830583504231">TypeScript + React + Sass + Babelを利用したWebpack環境構築 - Qiita</a></li>
+</ul>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2020-08-26</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2020-08-26</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

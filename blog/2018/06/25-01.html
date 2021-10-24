@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>PowerShell から Oracle DB に接続してみる - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2018/06/25-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2018/index.html">2018年</a></li>
+            <li><a href="/blog/2018/06/index.html">06月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2018-06-25</time></div>
+        <h1 id="page-title">PowerShell から Oracle DB に接続してみる</h1>
+
+<p>前回は PowerShell から ODBC データソースを利用して DB 接続してみたが、今度は Oracle DB の接続文字列を用意して直接 Oracle DB にアクセスしてみる。</p>
+<ul>
+  <li><a href="/blog/2018/06/17-02.html">PowerShell で ODBC 接続してみる</a></li>
+</ul>
+<pre class="language-powershell"><code class="language-powershell"><span class="token comment"># SQL 文作成 Function</span>
+<span class="token keyword">function</span> createSelectSQL<span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token variable">$SQL</span> = <span class="token function">New-Object</span> System<span class="token punctuation">.</span>Text<span class="token punctuation">.</span>StringBuilder
+  <span class="token comment"># [void] を書く必要がある</span>
+  <span class="token namespace">[void]</span><span class="token variable">$SQL</span><span class="token punctuation">.</span>append<span class="token punctuation">(</span><span class="token string">" SELECT "</span><span class="token punctuation">)</span>
+  <span class="token namespace">[void]</span><span class="token variable">$SQL</span><span class="token punctuation">.</span>append<span class="token punctuation">(</span><span class="token string">"     * "</span><span class="token punctuation">)</span>
+  <span class="token namespace">[void]</span><span class="token variable">$SQL</span><span class="token punctuation">.</span>append<span class="token punctuation">(</span><span class="token string">" FROM "</span><span class="token punctuation">)</span>
+  <span class="token namespace">[void]</span><span class="token variable">$SQL</span><span class="token punctuation">.</span>append<span class="token punctuation">(</span><span class="token string">"     my_table "</span><span class="token punctuation">)</span>
+  <span class="token namespace">[void]</span><span class="token variable">$SQL</span><span class="token punctuation">.</span>append<span class="token punctuation">(</span><span class="token string">" WHERE "</span><span class="token punctuation">)</span>
+  <span class="token namespace">[void]</span><span class="token variable">$SQL</span><span class="token punctuation">.</span>append<span class="token punctuation">(</span><span class="token string">"     id LIKE '11%' "</span><span class="token punctuation">)</span>
+  <span class="token variable">$SQL</span>  <span class="token comment"># ToString しなくて OK</span>
+<span class="token punctuation">}</span>
+
+<span class="token comment"># アセンブリをロードする</span>
+<span class="token namespace">[void]</span><span class="token namespace">[System.Reflection.Assembly]</span>::LoadWithPartialName<span class="token punctuation">(</span><span class="token string">"System.Data.OracleClient"</span><span class="token punctuation">)</span>
+
+<span class="token comment"># コネクションを作成する</span>
+<span class="token comment"># - Data Source : 接続文字列。各自の Oracle DB の情報に書き換える</span>
+<span class="token comment"># - Integrated Security : Windows のログイン情報を使用して Oracle DB に接続するかどうか</span>
+<span class="token variable">$oracleConnectionString</span> = <span class="token string">"Data Source=MY_DATA_SOURCE;User ID=MY_USER_ID;Password=MY_PASSWORD;Integrated Security=false;"</span>
+<span class="token variable">$oracleConnection</span> = <span class="token function">New-Object</span> System<span class="token punctuation">.</span><span class="token keyword">Data</span><span class="token punctuation">.</span>OracleClient<span class="token punctuation">.</span>OracleConnection<span class="token punctuation">(</span><span class="token variable">$oracleConnectionString</span><span class="token punctuation">)</span>
+
+<span class="token comment"># インスタンスを初期化する</span>
+<span class="token variable">$oracleCommand</span> = <span class="token function">New-Object</span> System<span class="token punctuation">.</span><span class="token keyword">Data</span><span class="token punctuation">.</span>OracleClient<span class="token punctuation">.</span>OracleCommand
+<span class="token variable">$oracleCommand</span><span class="token punctuation">.</span>Connection = <span class="token variable">$oracleConnection</span>
+
+<span class="token comment"># DB 接続</span>
+<span class="token variable">$oracleConnection</span><span class="token punctuation">.</span>open<span class="token punctuation">(</span><span class="token punctuation">)</span>
+
+<span class="token comment"># SQL : SELECT</span>
+<span class="token variable">$oracleCommand</span><span class="token punctuation">.</span>CommandText = createSelectSQL
+<span class="token variable">$oracleReader</span> = <span class="token variable">$oracleCommand</span><span class="token punctuation">.</span>ExecuteReader<span class="token punctuation">(</span><span class="token punctuation">)</span>
+<span class="token keyword">while</span><span class="token punctuation">(</span><span class="token variable">$oracleReader</span><span class="token punctuation">.</span>Read<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token variable">$oracleReader</span><span class="token punctuation">[</span><span class="token string">"id"</span><span class="token punctuation">]</span><span class="token punctuation">.</span>ToString<span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">+</span> <span class="token string">" … "</span> <span class="token operator">+</span> <span class="token variable">$oracleReader</span><span class="token punctuation">[</span><span class="token string">"user_name"</span><span class="token punctuation">]</span><span class="token punctuation">.</span>ToString<span class="token punctuation">(</span><span class="token punctuation">)</span>
+<span class="token punctuation">}</span>
+<span class="token variable">$oracleReader</span><span class="token punctuation">.</span>Dispose<span class="token punctuation">(</span><span class="token punctuation">)</span>
+
+<span class="token comment"># DB 接続 : トランザクション実行中に Close() を呼ぶとロールバックされる</span>
+<span class="token variable">$oracleCommand</span><span class="token punctuation">.</span>Dispose<span class="token punctuation">(</span><span class="token punctuation">)</span>
+<span class="token variable">$oracleConnection</span><span class="token punctuation">.</span>Close<span class="token punctuation">(</span><span class="token punctuation">)</span>
+<span class="token variable">$oracleConnection</span><span class="token punctuation">.</span>Dispose<span class="token punctuation">(</span><span class="token punctuation">)</span>
+</code></pre>
+<p>昔作ったスクリプトが出てきたのでポイ捨て。</p>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2018-06-25</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2018-06-25</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

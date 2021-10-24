@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>Express のレスポンス関連メソッド「res.end()」「res.send()」「res.json()」の違い - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2019/03/12-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2019/index.html">2019年</a></li>
+            <li><a href="/blog/2019/03/index.html">03月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2019-03-12</time></div>
+        <h1 id="page-title">Express のレスポンス関連メソッド「res.end()」「res.send()」「res.json()」の違い</h1>
+
+<p>Express でレスポンスを返す時、<code>res.end()</code>・<code>res.send()</code>・<code>res.json()</code> などのメソッドを使用するが、それぞれの違いは何か、<code>res.end()</code> は必ず呼ばなければならないのか、あたりを調べた。</p>
+<h2 id="express-の-api-リファレンスを呼んでみる"><a class="header-link" href="#express-の-api-リファレンスを呼んでみる"><span class="header-link-mark"></span></a>Express の API リファレンスを呼んでみる</h2>
+<p>まずは Express の API リファレンスを読んでみよう。</p>
+<h3 id="ressend"><a class="header-link" href="#ressend"><span class="header-link-mark"></span></a><code>res.send()</code></h3>
+<blockquote>
+  <p>The body parameter can be a Buffer object, a String, an object, or an Array.</p>
+  <p>When the parameter is an <code>Array</code> or <code>Object</code>, Express responds with the <em>JSON representation:</em></p>
+  <ul>
+    <li>参考：<a href="http://expressjs.com/ja/api.html#res.send">Express 4.x - API リファレンス</a></li>
+  </ul>
+</blockquote>
+<p>色んなレスポンスが返せる汎用的なメソッド。引数に配列やオブジェクトを渡した場合は、<code>Content-Type</code> を <code>application/json</code> に設定して適切に処理してくれるようだ。</p>
+<p>…じゃあ、<code>res.json()</code> との違いは？</p>
+<h3 id="resjson"><a class="header-link" href="#resjson"><span class="header-link-mark"></span></a><code>res.json()</code></h3>
+<blockquote>
+  <p>Sends a JSON response. This method sends a response <em>(with the correct content-type)</em> that is <em>the parameter converted to a JSON string using JSON.stringify().</em></p>
+  <ul>
+    <li>参考：<a href="http://expressjs.com/ja/api.html#res.json">Express 4.x - API リファレンス</a></li>
+  </ul>
+</blockquote>
+<p>引数のオブジェクトや配列などを <code>JSON.stringify()</code> で <code>string</code> に直し、適切な <code>Content-Type</code> をセットしてレスポンスする。</p>
+<p>…ふむ、ココまでは <code>res.send()</code> との違いを感じられない。</p>
+<h3 id="resend"><a class="header-link" href="#resend"><span class="header-link-mark"></span></a><code>res.end()</code></h3>
+<blockquote>
+  <p><strong>Use to quickly end the response without any data.</strong> If you need to respond with data, instead use methods such as <code>res.send()</code> and <code>res.json()</code>.</p>
+  <ul>
+    <li>参考：<a href="http://expressjs.com/ja/api.html#res.end">Express 4.x - API リファレンス</a></li>
+  </ul>
+</blockquote>
+<p><strong>何のデータも返さない時に使う。</strong>データを返したい時は <code>res.send()</code> や <code>res.json()</code> を使ってね、とのこと。</p>
+<p>ということは、<strong><code>res.send('Hoge').end()</code> とか <code>res.json({ result: 'OK' }).end()</code> みたいな呼び方はしなくて良い</strong>、ってことだな。疑問の一つは解決した。</p>
+<h2 id="ressend-と-resjson-の違いは？"><a class="header-link" href="#ressend-と-resjson-の違いは？"><span class="header-link-mark"></span></a><code>res.send()</code> と <code>res.json()</code> の違いは？</h2>
+<p><code>res.send()</code> で <code>res.json()</code> と同じようなことができてるっぽいじゃん。何が違うの？ということで <code>res.json()</code> の実装を見てみよう。</p>
+<ul>
+  <li><a href="https://github.com/expressjs/express/blob/4.x/lib/response.js#L227-L268">express/response.js at 4.x · expressjs/express · GitHub</a> … <code>res.json</code></li>
+</ul>
+<p>コレを見ると、リクエストヘッダを設定し、<code>JSON.stringify()</code> したボディを <code>res.send()</code> に渡しているだけのようだ。</p>
+<p>じゃあ <code>res.send()</code> の実装はというと。</p>
+<ul>
+  <li><a href="https://github.com/expressjs/express/blob/4.x/lib/response.js#L94-L225">express/response.js at 4.x · expressjs/express · GitHub</a> … <code>res.send</code> 定義</li>
+</ul>
+<p><code>res.send()</code> の引数に Buffer でないオブジェクトが渡された場合は、<em><code>res.json()</code> を呼び出して</em> <code>JSON.stringify()</code> をかけて<strong>再度 <code>res.send()</code> 自身を呼び出している。</strong>結局は、<code>res.json()</code> は <code>res.send()</code> のエイリアス的な役割でしかなく、<code>res.send()</code> で JSON が送れるのも内部で <code>res.json()</code> を呼び出しているから、という関係のようだ。よく出来ている。</p>
+<p><code>res.send()</code> の引数 <code>body</code> が文字列になったら、ヘッダを調整して <code>res.end()</code> を呼んでレスポンスしている。この <code>res.end()</code> は <code>http.ServerResponse.prototype</code> 由来のモノのようで、Express 側では特に何もしていないようだ。</p>
+<ul>
+  <li><a href="https://github.com/expressjs/express/blob/4.x/lib/response.js#L37-L42">express/response.js at 4.x · expressjs/express · GitHub</a> … <code>var res</code> 部分</li>
+  <li><a href="https://nodejs.org/api/http.html#http_response_end_data_encoding_callback">HTTP | Node.js v11.10.0 Documentation</a> … Node.js の <code>response.end()</code> の API リファレンス</li>
+</ul>
+<p><code>res.end()</code> が「何もデータを返さないレスポンス用のメソッド」なのではなく、Node.js の <code>response.end()</code> が求める引数を与えていないために空のレスポンスが返る、という仕組みのようだ。</p>
+<h2 id="結論"><a class="header-link" href="#結論"><span class="header-link-mark"></span></a>結論</h2>
+<ul>
+  <li><em>JSON を返す時は <code>res.send({})</code> でも <code>res.json({})</code> でも全く同じ</em>結果になる。<strong>どっちでも好きに使えば良い。</strong>
+    <ul>
+      <li>内部では相互の関数を呼び合ってリクエストヘッダやリクエストボディを調整している。</li>
+    </ul>
+  </li>
+  <li><code>res.end()</code> は Node.js の <code>response.end()</code> と同じモノ。引数を渡さずに使うことで、<em>空のレスポンスを返す用に使うのが良い。</em>
+    <ul>
+      <li>Node.js の <code>response.end()</code> が求める引数を自分で与えればレスポンスデータを返せるっぽいが、Express が上手く処理してくれる <code>res.send()</code> や <code>res.json()</code> を使えば良いので、無意味なことかと。</li>
+    </ul>
+  </li>
+  <li><code>res.send().end()</code> とか <code>res.json().end()</code> といった<strong>併用は不要</strong>。
+    <ul>
+      <li><code>res.send()</code>・<code>res.json()</code> の時点で <code>res.end()</code> を呼んでレスポンスを返している。併用してもおかしくはならないようだが、不必要。</li>
+    </ul>
+  </li>
+</ul>
+<p>ということのようだ。</p>
+<ul>
+  <li>参考：<a href="https://fullstack-developer.academy/res-json-vs-res-send-vs-res-end-in-express/">res.json() vs res.send() vs res.end() in Express</a>
+    <ul>
+      <li>こちらによると、「<code>res.json()</code> の方は <code>JSON.stringify()</code> の際の <code>replacer</code> と <code>space</code> が設定されている点で <code>res.send()</code> と異なる」とされているが、Express 4.x 系の実装を見る限り、少し意味合いが違うっぽい。</li>
+    </ul>
+  </li>
+</ul>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2019-03-12</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2019-03-12</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

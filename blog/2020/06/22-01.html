@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>VSCode + WSL 開発。Remote WSL 拡張機能を使ってみた - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2020/06/22-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2020/index.html">2020年</a></li>
+            <li><a href="/blog/2020/06/index.html">06月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2020-06-22</time></div>
+        <h1 id="page-title">VSCode + WSL 開発。Remote WSL 拡張機能を使ってみた</h1>
+
+<p>前回に引き続き、<strong>VSCode Remote Development</strong> 拡張機能パックのお話。</p>
+<ul>
+  <li><a href="./21-01.html">VSCode + Docker 開発。Remote Containers 拡張機能を使ってみた</a></li>
+</ul>
+<p>今回は、WSL 内のディレクトリを Windows 側の VSCode で開ける、<strong>Remote WSL</strong> 拡張機能を使ってみる。</p>
+<ul>
+  <li><a href="https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-wsl">Remote - WSL - Visual Studio Marketplace</a></li>
+</ul>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#remote-wsl-%E3%82%92%E4%BD%BF%E3%81%86%E3%81%A8%E4%BD%95%E3%81%8C%E8%89%AF%E3%81%84%E3%81%AE%E3%81%8B">Remote WSL を使うと何が良いのか</a></li>
+  <li><a href="#%E5%89%8D%E6%8F%90%E6%9D%A1%E4%BB%B6">前提条件</a></li>
+  <li><a href="#%E5%AE%9F%E9%9A%9B%E3%81%AB%E4%BD%BF%E3%81%A3%E3%81%A6%E3%81%BF%E3%82%8B">実際に使ってみる</a></li>
+  <li><a href="#windows-%E5%81%B4%E3%81%AE%E3%83%87%E3%82%A3%E3%83%AC%E3%82%AF%E3%83%88%E3%83%AA%E3%82%92-remote-wsl-%E3%81%A7%E9%96%8B%E3%81%8B%E3%81%AA%E3%81%84%E6%96%B9%E3%81%8C%E8%89%AF%E3%81%84">Windows 側のディレクトリを Remote WSL で開かない方が良い</a></li>
+  <li><a href="#%E4%BB%A5%E4%B8%8A">以上</a></li>
+</ul>
+<h2 id="remote-wsl-を使うと何が良いのか"><a class="header-link" href="#remote-wsl-を使うと何が良いのか"><span class="header-link-mark"></span></a>Remote WSL を使うと何が良いのか</h2>
+<p>Windows OS に直接 Ruby や Python といった開発言語をインストールし、pyenv やら何やら環境をセットアップしていこうとすると、どうしても Linux 環境と同じようにセットアップできないところが出てくる。MacOS だと BSD ベースなのでまだマシなのだが、Windows は改行コードもエンコーディングも、フォルダパスの区切り文字も異なったりして、トラブルがとにかくおおい。</p>
+<p>WSL が登場し、Windows 上で簡単に Linux 環境を扱えるようになった。WSL の中なら普通の Linux マシンと同じ感覚で開発言語やパッケージ管理ツールをインストールでき、OS の差異による影響を受けにくくなった。</p>
+<p>しかし、WSL は CUI での利用が主で、GUI 環境を利用するのはなかなか難しい。WSL 側に Node.js やらをインストールしたが、VSCode は Windows 側にインストールしてあり、開発環境と実行環境を行き来するのが大変だと感じた人もいることだろう。</p>
+<p>そこでこの <em>Remote WSL</em> 拡張機能の出番である。WSL と Windows ホストをシームレスに連携できるのがこの拡張機能だ。実際にどういう動きになるのかは、このあと見ていこう。</p>
+<h2 id="前提条件"><a class="header-link" href="#前提条件"><span class="header-link-mark"></span></a>前提条件</h2>
+<p>前提条件というか、自分が検証した内容をまとめておく。</p>
+<ul>
+  <li>OS : Windows 10 Pro</li>
+  <li>WSL 2 で Ubuntu 18.04 をインストール済</li>
+  <li>次の VSCode 拡張機能をインストール済
+    <ul>
+      <li><strong><a href="https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.vscode-remote-extensionpack">Remote Development (<code>ms-vscode-remote.vscode-remote-extensionpack</code>)</a></strong> (拡張機能パック)</li>
+      <li><a href="https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-wsl">Remote - WSL (<code>ms-vscode-remote.remote-wsl</code>)</a></li>
+    </ul>
+  </li>
+</ul>
+<p>ちなみに、Remote WSL 拡張機能は MacOS なんかにインストールしても問題は起こらない。使い物にならないだけ。ｗ</p>
+<h2 id="実際に使ってみる"><a class="header-link" href="#実際に使ってみる"><span class="header-link-mark"></span></a>実際に使ってみる</h2>
+<p>それでは実際に使ってみよう。</p>
+<p>まずはターミナルで WSL にアクセスする。以下のスクショでは Windows Terminal を使い、WSL Ubuntu にアクセスしている。</p>
+<p>
+  <img src="22-01-01.png" alt="Ubuntu を開いている">
+</p>
+<p>そして WSL 内の開きたいディレクトリに移動したら、<strong><code>$ code .</code></strong> コマンドを叩いて VSCode を起動する。</p>
+<p>すると VSCode が起動し、ウィンドウ左下に <em>WSL: Ubuntu</em> と表示される。Remote WSL 拡張機能によって、WSL の当該ディレクトリと接続できていることが分かる。</p>
+<p>
+  <img src="22-01-02.png" alt="VSCode で WSL 環境が開けた">
+</p>
+<p>コレは開発用 Docker コンテナを立ち上げる「Remote Containers」拡張機能と同様の状態で、コンテナの代わりに WSL 環境が利用されているという感じ。</p>
+<p>フォルダツリーで右クリックして「新しいファイル」を作れば WSL 内にファイルが作られ、VSCode ターミナルを開けば WSL が開く。上のスクショはシェルスクリプトを (Windows ホストの) VSCode で実装して、WSL 内で実行している様子だ。</p>
+<p>
+  <img src="22-01-03.png" alt="リモート接続終了">
+</p>
+<p>接続を終了する場合は左下の青いアイコンを押下し、「リモート接続を終了する」を選べば良い。</p>
+<h2 id="windows-側のディレクトリを-remote-wsl-で開かない方が良い"><a class="header-link" href="#windows-側のディレクトリを-remote-wsl-で開かない方が良い"><span class="header-link-mark"></span></a>Windows 側のディレクトリを Remote WSL で開かない方が良い</h2>
+<p>基本的な使い方は以上のとおり。</p>
+<p>ココまでの手順では WSL 内のディレクトリを Windows ホスト側で開いたが、逆に Windows ホスト側の任意ディレクトリを WSL 側で開くこともできる。</p>
+<p>
+  <img src="22-01-04.png" alt="WSL で開き直す">
+</p>
+<p>
+  <img src="22-01-05.png" alt="Ubuntu で開く">
+</p>
+<p>↑ こんな風に、Windows 側のワークスペースを WSL Ubuntu で開き直したりは、一応できる。</p>
+<p>
+  <img src="22-01-06.png" alt="WSL で Windows 側のファイルを認識している">
+</p>
+<p>そしてこのとおり、パスとしては <strong><code>/mnt/c/</code></strong> で始まっており、Windows ホスト側のファイルを WSL で操作している状態になる。</p>
+<p>このように <code>/mnt/c/</code> 配下の操作もできてしまうのだが、ファイルシステムの違い等から不具合が起こることがあるため、Microsoft 公式としては推奨していないそうだ。</p>
+<p>というワケで、ランタイムのインストールも、ワークスペースの配置場所も、WSL 内に寄せておいて、VSCode だけホスト側に用意しておき Remote WSL 拡張機能で接続する、という使い方が安全であろう。</p>
+<h2 id="以上"><a class="header-link" href="#以上"><span class="header-link-mark"></span></a>以上</h2>
+<p>WSL 環境をほとんどネイティブに利用できるようになる拡張機能だった。</p>
+<p>まだまだ日本語文献も少なく、WSL 自体がまだ Experimental なところもあるが、コレからの Windows での開発手法として主流になりそうな拡張機能なので、今後も動向をチェックしていくとする。</p>
+<ul>
+  <li><a href="./23-02.html">VSCode + SSH 開発。Remote SSH 拡張機能を使ってみた</a></li>
+</ul>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2020-06-22</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2021-05-17</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

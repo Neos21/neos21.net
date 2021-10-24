@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>Bash で「連想配列の配列」を扱いたい…けど jq でいいか - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2021/04/04-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2021/index.html">2021年</a></li>
+            <li><a href="/blog/2021/04/index.html">04月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2021-04-04</time></div>
+        <h1 id="page-title">Bash で「連想配列の配列」を扱いたい…けど jq でいいか</h1>
+
+<p>Bash 内で、構造データを扱いたいなと思った。JSON みたいな感じで、複数の連想配列を抱えた配列を扱ったりしたいなーと。</p>
+<p>Bash での配列は <code>declare -a</code> を使って、<code>array=()</code> みたいな感じで表せる。</p>
+<ul>
+  <li><a href="https://qiita.com/b4b4r07/items/e56a8e3471fb45df2f59">bash 配列まとめ - Qiita</a></li>
+</ul>
+<p>また、連想配列についても <code>declare -A</code> で扱えるのだが、Bash v4 以降じゃないと使えない構文だった。</p>
+<ul>
+  <li><a href="https://qiita.com/YutaSaito1991/items/c7c6bacb916f41ef1471">bashで連想配列 - Qiita</a></li>
+  <li><a href="https://cloud6.net/so/bash/80292">bash - Bash 4連想配列:エラー「宣言:-A:無効なオプション」 - ITツールウェブ</a></li>
+</ul>
+<p>で、この連想配列を複数束ねた配列は作れないのかなと思って調べたが、どうも良い感じのサンプルが見つからなかった。</p>
+<p>色々調べていたら、もっと単純な方法を見つけた。</p>
+<ul>
+  <li><a href="https://dev.to/yuyatakeyama/representation-of-a-data-structure-like-an-array-of-hash-tables-in-bash-using-jq-4c3d">Representation of a Data Structure Like an Array of Hash Tables in Bash Using jq - DEV Community</a></li>
+</ul>
+<p><em>JSON をヒアドキュメントで書いて、それを <code>jq</code> コマンドに食わせて扱っていた。</em>…なんだ、それでいいのか。</p>
+<p>というワケで、ちょっとしたサンプルを作ってみた。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token shebang important">#!/bin/bash</span>
+
+<span class="token comment"># 「連想配列の配列」を JSON 形式で書く</span>
+<span class="token comment"># 構文エラーがあると `jq` コマンド実行時にエラーになるので注意</span>
+<span class="token assign-left variable">hash_array</span><span class="token operator">=</span><span class="token string">"<span class="token variable"><span class="token variable">$(</span><span class="token function">cat</span> <span class="token operator">&#x3C;&#x3C;</span> <span class="token string">EOL
+  [
+    { "id": 1, "name": "Foo" },
+    { "id": 2, "name": "Bar" },
+    { "id": 3, "name": "Baz" }
+  ]
+EOL</span>
+<span class="token variable">)</span></span>"</span>
+
+<span class="token comment"># `for` 文でループを回すため、配列の最後のインデックス値を求める</span>
+<span class="token assign-left variable">array_end_index</span><span class="token operator">=</span><span class="token string">"<span class="token variable"><span class="token variable">$(</span><span class="token builtin class-name">echo</span> <span class="token string">"<span class="token variable">${hash_array}</span>"</span> <span class="token operator">|</span> jq <span class="token string">'. | length - 1'</span><span class="token variable">)</span></span>"</span>
+
+<span class="token comment"># 連想配列を1つずつ取得して処理する例</span>
+<span class="token comment"># `$(seq)` をダブルクォートで囲んではダメ</span>
+<span class="token keyword">for</span> <span class="token for-or-select variable">index</span> <span class="token keyword">in</span> <span class="token variable"><span class="token variable">$(</span><span class="token function">seq</span> <span class="token number">0</span> <span class="token string">"<span class="token variable">${array_end_index}</span>"</span><span class="token variable">)</span></span><span class="token punctuation">;</span> <span class="token keyword">do</span>
+  <span class="token assign-left variable">object</span><span class="token operator">=</span><span class="token string">"<span class="token variable"><span class="token variable">$(</span><span class="token builtin class-name">echo</span> <span class="token string">"<span class="token variable">${hash_array}</span>"</span> <span class="token operator">|</span> jq <span class="token string">".[<span class="token variable">${index}</span>]"</span><span class="token variable">)</span></span>"</span>
+  <span class="token builtin class-name">echo</span> <span class="token string">"--- <span class="token variable">${index}</span>"</span>
+  <span class="token builtin class-name">echo</span> <span class="token string">"<span class="token variable">${object}</span>"</span>
+<span class="token keyword">done</span>
+</code></pre>
+<p>…こんな感じで、<code>jq</code> を使いまくる。<code>for</code> ループ内の変数 <code>object</code> は、一つの連想配列を蓄えているので、後はココからお好みで <code>id</code> や <code>name</code> プロパティを拾って処理したりすればよかろう。</p>
+<p>一応、出力例は以下のとおり。</p>
+<pre class="language-json"><code class="language-json">--- <span class="token number">0</span>
+<span class="token punctuation">{</span>
+  <span class="token property">"id"</span><span class="token operator">:</span> <span class="token number">1</span><span class="token punctuation">,</span>
+  <span class="token property">"name"</span><span class="token operator">:</span> <span class="token string">"Foo"</span>
+<span class="token punctuation">}</span>
+--- <span class="token number">1</span>
+<span class="token punctuation">{</span>
+  <span class="token property">"id"</span><span class="token operator">:</span> <span class="token number">2</span><span class="token punctuation">,</span>
+  <span class="token property">"name"</span><span class="token operator">:</span> <span class="token string">"Bar"</span>
+<span class="token punctuation">}</span>
+--- <span class="token number">2</span>
+<span class="token punctuation">{</span>
+  <span class="token property">"id"</span><span class="token operator">:</span> <span class="token number">3</span><span class="token punctuation">,</span>
+  <span class="token property">"name"</span><span class="token operator">:</span> <span class="token string">"Baz"</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>Bash のバージョンを求めるのは環境によって手間が大きいが、こうやって <code>jq</code> コマンドだけ用意すれば良いというのは、まだ楽だと思う。</p>
+<p>勿論、<code>jq</code> 内で Map 処理することも出来たりするが、データを元に外部コマンドを組み合わせたりする際は、こんなやり方でも良いのかも。</p><div class="ad-rakuten">
+  <div class="ad-rakuten-image">
+    <a href="https://hb.afl.rakuten.co.jp/hgc/g00reb42.waxycf23.g00reb42.waxyd080/?pc=https%3A%2F%2Fitem.rakuten.co.jp%2Frakutenkobo-ebooks%2Fa31e70cdba6a35e684c4e164fd450608%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Frakutenkobo-ebooks%2Fi%2F13192330%2F">
+      <img src="https://thumbnail.image.rakuten.co.jp/@0_mall/rakutenkobo-ebooks/cabinet/2875/2000001862875.jpg?_ex=128x128">
+    </a>
+  </div>
+  <div class="ad-rakuten-info">
+    <div class="ad-rakuten-title">
+      <a href="https://hb.afl.rakuten.co.jp/hgc/g00reb42.waxycf23.g00reb42.waxyd080/?pc=https%3A%2F%2Fitem.rakuten.co.jp%2Frakutenkobo-ebooks%2Fa31e70cdba6a35e684c4e164fd450608%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Frakutenkobo-ebooks%2Fi%2F13192330%2F">電子書籍で学ぶシェルスクリプト基礎編［bash/zsh/tcsh］ 〜今すぐ使える設定ファイル大公開【電子書籍】[ 後藤大地 ]</a>
+    </div>
+    <div class="ad-rakuten-shop">
+      <a href="https://hb.afl.rakuten.co.jp/hgc/g00reb42.waxycf23.g00reb42.waxyd080/?pc=https%3A%2F%2Fwww.rakuten.co.jp%2Frakutenkobo-ebooks%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Frakutenkobo-ebooks%2F">楽天Kobo電子書籍ストア</a>
+    </div>
+    <div class="ad-rakuten-price">価格 : 550円</div>
+  </div>
+</div>
+<div class="ad-amazon">
+  <div class="ad-amazon-image">
+    <a href="https://www.amazon.co.jp/dp/B071414NJZ?tag=neos21-22&amp;linkCode=osi&amp;th=1&amp;psc=1">
+      <img src="https://m.media-amazon.com/images/I/41iO62jo5RL._SL160_.jpg" width="113" height="160">
+    </a>
+  </div>
+  <div class="ad-amazon-info">
+    <div class="ad-amazon-title">
+      <a href="https://www.amazon.co.jp/dp/B071414NJZ?tag=neos21-22&amp;linkCode=osi&amp;th=1&amp;psc=1">Linuxシェルスクリプトショートガイダンス</a>
+    </div>
+  </div>
+</div>
+<ul>
+  <li><a href="https://webkaru.net/dev/bash-loop-for-while/">Bash の繰り返し処理でインデックス番号を使う（表示する） - 開発メモ - Webkaru</a></li>
+  <li><a href="https://tech.mktime.com/entry/127">コマンドラインJSONプロセッサー jqの演算子と関数 – エラーの向こうへ</a></li>
+</ul>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2021-04-04</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2021-04-04</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

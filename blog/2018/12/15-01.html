@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>Sequelize で1対多の関係のテーブル定義を作る方法 - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2018/12/15-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2018/index.html">2018年</a></li>
+            <li><a href="/blog/2018/12/index.html">12月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2018-12-15</time></div>
+        <h1 id="page-title">Sequelize で1対多の関係のテーブル定義を作る方法</h1>
+
+<p>Heroku Postgres を扱うために、以前試した <strong>Sequelize</strong> を使うことにした。そこで、「1対多」の関係にあるテーブルの関係を定義する必要が出てきたので、そのやり方をまとめる。</p>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#sequelize-%E3%81%AE%E3%81%8A%E3%81%95%E3%82%89%E3%81%84">Sequelize のおさらい</a></li>
+  <li><a href="#%E8%A4%87%E6%95%B0%E3%81%AE%E3%83%A2%E3%83%87%E3%83%AB%E3%82%92%E5%AE%9A%E7%BE%A9%E3%81%99%E3%82%8B%E5%A0%B4%E5%90%88%E3%81%AE%E3%82%88%E3%81%8F%E3%81%82%E3%82%8B%E9%9B%9B%E5%BD%A2">複数のモデルを定義する場合のよくある雛形</a></li>
+  <li><a href="#%E8%A6%AA%E5%AD%90%E9%96%A2%E4%BF%82%E3%81%AB%E3%81%82%E3%82%8B%E3%83%86%E3%83%BC%E3%83%96%E3%83%AB%E3%81%AE%E5%AE%9A%E7%BE%A9">親子関係にあるテーブルの定義</a>
+    <ul>
+      <li><a href="#%E8%87%AA%E5%88%86%E3%81%AB%E7%B4%90%E3%81%A5%E3%81%8F%E8%A4%87%E6%95%B0%E3%81%AE%E5%AD%90%E3%81%8C%E5%AD%98%E5%9C%A8%E3%81%99%E3%82%8B--hasmany">自分に紐づく複数の子が存在する : <code>hasMany</code></a></li>
+      <li><a href="#%E4%B8%80%E3%81%A4%E3%81%AE%E8%A6%AA%E3%81%8C%E5%AD%98%E5%9C%A8%E3%81%99%E3%82%8B--belongsto">一つの親が存在する : <code>belongsTo</code></a></li>
+    </ul>
+  </li>
+  <li><a href="#%E9%96%A2%E4%BF%82%E3%81%AE%E5%AE%9A%E7%BE%A9%E3%82%92%E3%83%A2%E3%83%87%E3%83%AB%E7%94%9F%E6%88%90%E5%BE%8C%E3%81%AB%E4%B8%80%E6%8B%AC%E5%AE%9F%E8%A1%8C%E3%81%99%E3%82%8B">関係の定義をモデル生成後に一括実行する</a></li>
+  <li><a href="#%E9%96%A2%E4%BF%82%E3%82%92%E5%AE%9A%E7%BE%A9%E3%81%99%E3%82%8B%E3%83%A1%E3%83%AA%E3%83%83%E3%83%88--join-%E3%81%97%E3%82%84%E3%81%99%E3%81%8F%E3%81%AA%E3%82%8B">関係を定義するメリット : <code>JOIN</code> しやすくなる</a></li>
+  <li><a href="#%E5%8F%82%E8%80%83%E6%96%87%E7%8C%AE">参考文献</a></li>
+</ul>
+<h2 id="sequelize-のおさらい"><a class="header-link" href="#sequelize-のおさらい"><span class="header-link-mark"></span></a>Sequelize のおさらい</h2>
+<p>Sequelize は Node.js 向けの O/R マッパー。PostgreSQL、SQLite、MySQL などに対応していて、テーブルに対応するモデルを定義することで CRUD 操作を行える。</p>
+<p>PostgreSQL との接続時は、Sequelize と一緒に <code>pg</code> パッケージも一緒にインストールしておく。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">npm</span> <span class="token function">install</span> --save sequelize pg
+</code></pre>
+<p>Heroku Postgres との接続は、<code>process.env.DATABASE_URL</code> で参照できる接続文字列を利用するのが手っ取り早い。詳しくはこの次のサンプルコードで説明する。</p>
+<h2 id="複数のモデルを定義する場合のよくある雛形"><a class="header-link" href="#複数のモデルを定義する場合のよくある雛形"><span class="header-link-mark"></span></a>複数のモデルを定義する場合のよくある雛形</h2>
+<p>Sequelize で複数のモデル (= テーブル) を扱いたい場合は、以下のような単一のファイルを作ると操作しやすい。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token comment">// model.js</span>
+
+<span class="token keyword">const</span> <span class="token maybe-class-name">Sequelize</span> <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'sequelize'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// 必要に応じて dotenv パッケージで環境変数をロードする</span>
+<span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'dotenv'</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">config</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token doc-comment comment">/** Sequelize と生成したモデルを束ねる */</span>
+<span class="token keyword">const</span> <span class="token maybe-class-name">Model</span> <span class="token operator">=</span> <span class="token punctuation">{</span><span class="token punctuation">}</span><span class="token punctuation">;</span>
+
+<span class="token comment">// DB 接続する</span>
+<span class="token keyword">const</span> connectionString <span class="token operator">=</span> process<span class="token punctuation">.</span><span class="token property-access">env</span><span class="token punctuation">.</span><span class="token constant">DATABASE_URL</span><span class="token punctuation">;</span>
+<span class="token keyword">const</span> sequelize <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">Sequelize</span><span class="token punctuation">(</span>connectionString<span class="token punctuation">,</span> <span class="token punctuation">{</span>
+  timezone<span class="token operator">:</span> <span class="token string">'+09:00'</span><span class="token punctuation">,</span>  <span class="token comment">// JST タイムゾーン : Sequelize で SELECT した値は UTC 形式 (ISOString) になっている</span>
+  logging<span class="token operator">:</span> <span class="token boolean">false</span>       <span class="token comment">// ログ出力を抑制する</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// TODO : 各モデルを定義する</span>
+<span class="token maybe-class-name">Model</span><span class="token punctuation">.</span><span class="token property-access"><span class="token maybe-class-name">User</span></span> <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'./user-model'</span><span class="token punctuation">)</span><span class="token punctuation">(</span>sequelize<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// Sequelize を格納する</span>
+<span class="token maybe-class-name">Model</span><span class="token punctuation">.</span><span class="token property-access"><span class="token maybe-class-name">Sequelize</span></span> <span class="token operator">=</span> <span class="token maybe-class-name">Sequelize</span><span class="token punctuation">;</span>
+<span class="token maybe-class-name">Model</span><span class="token punctuation">.</span><span class="token property-access">sequelize</span> <span class="token operator">=</span> sequelize<span class="token punctuation">;</span>
+
+module<span class="token punctuation">.</span><span class="token property-access">exports</span> <span class="token operator">=</span> <span class="token maybe-class-name">Model</span><span class="token punctuation">;</span>
+</code></pre>
+<p>途中に出てきた <code>user-model.js</code> はこんな感じで作る。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token comment">// user-model.js</span>
+
+<span class="token keyword">const</span> <span class="token maybe-class-name">Sequelize</span> <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'sequelize'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token doc-comment comment">/** users テーブルのモデルを定義する */</span>
+module<span class="token punctuation">.</span><span class="token method-variable function-variable method function property-access">exports</span> <span class="token operator">=</span> <span class="token punctuation">(</span><span class="token parameter">sequelize</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token comment">// define() の第1引数がテーブル名</span>
+  <span class="token comment">// 第2引数のキーが、モデルのプロパティ名になり、実際のテーブルのカラム名は field プロパティで示す</span>
+  <span class="token keyword">const</span> <span class="token maybe-class-name">User</span> <span class="token operator">=</span> sequelize<span class="token punctuation">.</span><span class="token method function property-access">define</span><span class="token punctuation">(</span><span class="token string">'users'</span><span class="token punctuation">,</span> <span class="token punctuation">{</span>
+    id      <span class="token operator">:</span> <span class="token punctuation">{</span> field<span class="token operator">:</span> <span class="token string">'id'</span>       <span class="token punctuation">,</span> type<span class="token operator">:</span> <span class="token maybe-class-name">Sequelize</span><span class="token punctuation">.</span><span class="token constant">INTEGER</span><span class="token punctuation">,</span> primaryKey<span class="token operator">:</span> <span class="token boolean">true</span><span class="token punctuation">,</span> autoIncrement<span class="token operator">:</span> <span class="token boolean">true</span> <span class="token punctuation">}</span><span class="token punctuation">,</span>
+    userName<span class="token operator">:</span> <span class="token punctuation">{</span> field<span class="token operator">:</span> <span class="token string">'user_name'</span><span class="token punctuation">,</span> type<span class="token operator">:</span> <span class="token maybe-class-name">Sequelize</span><span class="token punctuation">.</span><span class="token constant">TEXT</span>   <span class="token punctuation">,</span> allowNull<span class="token operator">:</span> <span class="token boolean">false</span> <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token comment">// テーブルがなければ作成し、同期する</span>
+  <span class="token maybe-class-name">User</span><span class="token punctuation">.</span><span class="token method function property-access">sync</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token comment">// モデルを返す</span>
+  <span class="token keyword control-flow">return</span> <span class="token maybe-class-name">User</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+</code></pre>
+<p>このように作っておくことで、モデルを利用したいところでは、以下のように利用できる。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token comment">// モデルを取得する</span>
+<span class="token keyword">const</span> <span class="token maybe-class-name">Model</span> <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'./model'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// ユーザ名が「サンプルユーザ」に合致するデータを1件取得する</span>
+<span class="token maybe-class-name">Model</span><span class="token punctuation">.</span><span class="token property-access"><span class="token maybe-class-name">User</span></span><span class="token punctuation">.</span><span class="token method function property-access">findOne</span><span class="token punctuation">(</span><span class="token punctuation">{</span>
+  where<span class="token operator">:</span> <span class="token punctuation">{</span>
+    userName<span class="token operator">:</span> <span class="token string">'サンプルユーザ'</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span>
+  <span class="token punctuation">.</span><span class="token method function property-access">then</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token parameter">result</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+    <span class="token comment">// 結果は result.dataValues 配下にあり、プロパティ名はモデル定義のキーになる</span>
+    <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'ユーザ情報を取得'</span><span class="token punctuation">,</span> result<span class="token punctuation">.</span><span class="token property-access">dataValues</span><span class="token punctuation">.</span><span class="token property-access">id</span><span class="token punctuation">,</span> result<span class="token punctuation">.</span><span class="token property-access">dataValues</span><span class="token punctuation">.</span><span class="token property-access">userName</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span>
+  <span class="token punctuation">.</span><span class="token keyword control-flow">catch</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token parameter">error</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+    <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">error</span><span class="token punctuation">(</span>error<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>この時、<code>require('./model');</code> という <code>require()</code> が複数のファイルに記述されていても、DB 接続の処理は1回しか実行されないので一安心。</p>
+<h2 id="親子関係にあるテーブルの定義"><a class="header-link" href="#親子関係にあるテーブルの定義"><span class="header-link-mark"></span></a>親子関係にあるテーブルの定義</h2>
+<p>ココまでの例では、<code>users</code> テーブルは単独で存在するテーブルだったので、コレで十分だった。</p>
+<p>ココからは、<strong>「1つのカテゴリに複数の書籍が登録されているデータベース」</strong>を表現する、2つのテーブルを作ろうと思う。</p>
+<ul>
+  <li><code>categories</code> テーブル
+    <ul>
+      <li><code>id</code> カラム : カテゴリ ID (カテゴリごとに一意に設定される)</li>
+      <li><code>name</code> カラム : カテゴリ名 (「小説」「雑誌」みたいなイメージ)</li>
+    </ul>
+  </li>
+  <li><code>books</code> テーブル
+    <ul>
+      <li><code>id</code> カラム : 書籍 ID (1つの書籍に一意に設定される)</li>
+      <li><code>category_id</code> カラム : その書籍が登録されているカテゴリの ID</li>
+      <li><code>name</code> カラム : 書籍名</li>
+    </ul>
+  </li>
+</ul>
+<p>ココでは、<code>books</code> テーブルの1レコード、つまり1つの書籍は、必ず1つのカテゴリに所属する、という関係とする。つまり<em>「カテゴリ：書籍」は「1：n」</em> (= 1 対 多 = one-to-many) となる。</p>
+<p>この関係を Sequelize 上で定義しておくと、<code>books.category_id</code> を「外部キー」として宣言できるようになる。<code>sync()</code> によって Sequelize のモデルからテーブルを生成させる時に、実際の DB 上に制約を付与できるようになるので、上手く定義してやりたい。</p>
+<h3 id="自分に紐づく複数の子が存在する--hasmany"><a class="header-link" href="#自分に紐づく複数の子が存在する--hasmany"><span class="header-link-mark"></span></a>自分に紐づく複数の子が存在する : <code>hasMany</code></h3>
+<p>まず、「1：n」の「1」側となる、<code>categories</code> テーブルに、子テーブルが存在することを定義する。先程の <code>user-model.js</code> と同じ作りで、<code>category-model.js</code> を作ったとする。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword">const</span> <span class="token maybe-class-name">Sequelize</span> <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'sequelize'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+module<span class="token punctuation">.</span><span class="token method-variable function-variable method function property-access">export</span> <span class="token operator">=</span> <span class="token punctuation">(</span><span class="token parameter">sequelize</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token keyword">const</span> <span class="token maybe-class-name">Category</span> <span class="token operator">=</span> sequelize<span class="token punctuation">.</span><span class="token method function property-access">define</span><span class="token punctuation">(</span><span class="token string">'categories'</span><span class="token punctuation">,</span> <span class="token punctuation">{</span>
+    id  <span class="token operator">:</span> <span class="token punctuation">{</span> field<span class="token operator">:</span> <span class="token string">'id'</span>  <span class="token punctuation">,</span> type<span class="token operator">:</span> <span class="token maybe-class-name">Sequelize</span><span class="token punctuation">.</span><span class="token constant">INTEGER</span><span class="token punctuation">,</span> primaryKey<span class="token operator">:</span> <span class="token boolean">true</span><span class="token punctuation">,</span> autoIncrement<span class="token operator">:</span> <span class="token boolean">true</span> <span class="token punctuation">}</span><span class="token punctuation">,</span>  <span class="token comment">// カテゴリ ID</span>
+    name<span class="token operator">:</span> <span class="token punctuation">{</span> field<span class="token operator">:</span> <span class="token string">'name'</span><span class="token punctuation">,</span> type<span class="token operator">:</span> <span class="token maybe-class-name">Sequelize</span><span class="token punctuation">.</span><span class="token constant">TEXT</span><span class="token punctuation">,</span> allowNull<span class="token operator">:</span> <span class="token boolean">false</span> <span class="token punctuation">}</span><span class="token punctuation">,</span>  <span class="token comment">// カテゴリ名</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  
+  <span class="token comment">// categories : books で 1:n の関係であることを示す</span>
+  <span class="token comment">// FIXME : このコードは動かない</span>
+  <span class="token maybe-class-name">Category</span><span class="token punctuation">.</span><span class="token method function property-access">hasMany</span><span class="token punctuation">(</span><span class="token maybe-class-name">Model</span><span class="token punctuation">.</span><span class="token property-access"><span class="token maybe-class-name">Book</span></span><span class="token punctuation">,</span> <span class="token punctuation">{</span>
+    foreignKey<span class="token operator">:</span> <span class="token string">'categoryId'</span>  <span class="token comment">// 対象 (book テーブル) のカラム名を指定する</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  
+  <span class="token maybe-class-name">Category</span><span class="token punctuation">.</span><span class="token method function property-access">sync</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword control-flow">return</span> <span class="token maybe-class-name">Category</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+</code></pre>
+<p>この時点で分かるかもしれないが、<strong>このコードは動かない。</strong>Sequelize の <em><code>hasMany()</code></em> の仕様では、子テーブルを示すために、<code>hasMany()</code> の第1引数に対象のモデルを渡す必要がある。つまり今回の場合は、このあと示す <code>Book</code> モデルを渡す必要があるのだが、このタイミングでは <code>Book</code> モデルの存在は分からないのである。</p>
+<p>この点は後で直すとして、ひとまず API としては、<code>hasMany()</code> を使うと子テーブルとの関係を示せる、ということだけ押さえておこう。</p>
+<h3 id="一つの親が存在する--belongsto"><a class="header-link" href="#一つの親が存在する--belongsto"><span class="header-link-mark"></span></a>一つの親が存在する : <code>belongsTo</code></h3>
+<p>次に「1：n」の「n」側となる、<code>books</code> テーブルを定義する。<code>book-model.js</code> を作ったとする。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword">const</span> <span class="token maybe-class-name">Sequelize</span> <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'sequelize'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+module<span class="token punctuation">.</span><span class="token method-variable function-variable method function property-access">export</span> <span class="token operator">=</span> <span class="token punctuation">(</span><span class="token parameter">sequelize</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token keyword">const</span> <span class="token maybe-class-name">Book</span> <span class="token operator">=</span> sequelize<span class="token punctuation">.</span><span class="token method function property-access">define</span><span class="token punctuation">(</span><span class="token string">'books'</span><span class="token punctuation">,</span> <span class="token punctuation">{</span>
+    id        <span class="token operator">:</span> <span class="token punctuation">{</span> field<span class="token operator">:</span> <span class="token string">'id'</span>         <span class="token punctuation">,</span> type<span class="token operator">:</span> <span class="token maybe-class-name">Sequelize</span><span class="token punctuation">.</span><span class="token constant">INTEGER</span><span class="token punctuation">,</span> primaryKey<span class="token operator">:</span> <span class="token boolean">true</span><span class="token punctuation">,</span> autoIncrement<span class="token operator">:</span> <span class="token boolean">true</span> <span class="token punctuation">}</span><span class="token punctuation">,</span>  <span class="token comment">// 書籍 ID</span>
+    categoryId<span class="token operator">:</span> <span class="token punctuation">{</span> field<span class="token operator">:</span> <span class="token string">'category_id'</span><span class="token punctuation">,</span> type<span class="token operator">:</span> <span class="token maybe-class-name">Sequelize</span><span class="token punctuation">.</span><span class="token constant">INTEGER</span><span class="token punctuation">,</span> allowNull<span class="token operator">:</span> <span class="token boolean">false</span> <span class="token punctuation">}</span><span class="token punctuation">,</span>  <span class="token comment">// 紐付くカテゴリ ID</span>
+    name      <span class="token operator">:</span> <span class="token punctuation">{</span> field<span class="token operator">:</span> <span class="token string">'name'</span>       <span class="token punctuation">,</span> type<span class="token operator">:</span> <span class="token maybe-class-name">Sequelize</span><span class="token punctuation">.</span><span class="token constant">TEXT</span><span class="token punctuation">,</span> allowNull<span class="token operator">:</span> <span class="token boolean">false</span> <span class="token punctuation">}</span>      <span class="token comment">// カテゴリ名</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  
+  <span class="token comment">// categories : books で 1:n の関係であることを示す</span>
+  <span class="token comment">// FIXME : このコードは動かない</span>
+  <span class="token maybe-class-name">Book</span><span class="token punctuation">.</span><span class="token method function property-access">belongsTo</span><span class="token punctuation">(</span><span class="token maybe-class-name">Model</span><span class="token punctuation">.</span><span class="token property-access"><span class="token maybe-class-name">Category</span></span><span class="token punctuation">,</span> <span class="token punctuation">{</span>
+    foreignKey<span class="token operator">:</span> <span class="token string">'categoryId'</span><span class="token punctuation">,</span> <span class="token comment">// books.category_id のカラム名を指定する</span>
+    targetKey <span class="token operator">:</span> <span class="token string">'id'</span>          <span class="token comment">// 対応する category テーブルのカラム名を指定する</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  
+  <span class="token maybe-class-name">Book</span><span class="token punctuation">.</span><span class="token method function property-access">sync</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword control-flow">return</span> <span class="token maybe-class-name">Book</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+</code></pre>
+<p>こちらも<em>動作しないコード</em>であることが分かるだろうか。親テーブルの存在を示す <strong><code>belongsTo()</code></strong> メソッドの第1引数に、対象のモデルクラスを与える必要があるのだ。</p>
+<p>さて、コレをどう解決するか。</p>
+<h2 id="関係の定義をモデル生成後に一括実行する"><a class="header-link" href="#関係の定義をモデル生成後に一括実行する"><span class="header-link-mark"></span></a>関係の定義をモデル生成後に一括実行する</h2>
+<p>親と子のテーブルモデルで、それぞれお互いを参照する必要がある。ということは、<code>hasMany()</code>・<code>belongsTo()</code> のいずれかを実行するタイミングでは、2つのモデルの定義が完了していないといけない、ということだ。コレをどのように実現するか。</p>
+<p>色々な文献を見ていたところ、良いやり方が見つかったので紹介する。</p>
+<ul>
+  <li><code>category-model.js</code></li>
+</ul>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword">const</span> <span class="token maybe-class-name">Sequelize</span> <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'sequelize'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+module<span class="token punctuation">.</span><span class="token method-variable function-variable method function property-access">export</span> <span class="token operator">=</span> <span class="token punctuation">(</span><span class="token parameter">sequelize</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token keyword">const</span> <span class="token maybe-class-name">Category</span> <span class="token operator">=</span> sequelize<span class="token punctuation">.</span><span class="token method function property-access">define</span><span class="token punctuation">(</span><span class="token string">'categories'</span><span class="token punctuation">,</span> <span class="token punctuation">{</span>
+    id  <span class="token operator">:</span> <span class="token punctuation">{</span> field<span class="token operator">:</span> <span class="token string">'id'</span>  <span class="token punctuation">,</span> type<span class="token operator">:</span> <span class="token maybe-class-name">Sequelize</span><span class="token punctuation">.</span><span class="token constant">INTEGER</span><span class="token punctuation">,</span> primaryKey<span class="token operator">:</span> <span class="token boolean">true</span><span class="token punctuation">,</span> autoIncrement<span class="token operator">:</span> <span class="token boolean">true</span> <span class="token punctuation">}</span><span class="token punctuation">,</span>  <span class="token comment">// カテゴリ ID</span>
+    name<span class="token operator">:</span> <span class="token punctuation">{</span> field<span class="token operator">:</span> <span class="token string">'name'</span><span class="token punctuation">,</span> type<span class="token operator">:</span> <span class="token maybe-class-name">Sequelize</span><span class="token punctuation">.</span><span class="token constant">TEXT</span><span class="token punctuation">,</span> allowNull<span class="token operator">:</span> <span class="token boolean">false</span> <span class="token punctuation">}</span><span class="token punctuation">,</span>  <span class="token comment">// カテゴリ名</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  
+  <span class="token comment">// categories : books で 1:n の関係であることを示す</span>
+  <span class="token maybe-class-name">Category</span><span class="token punctuation">.</span><span class="token method-variable function-variable method function property-access">associate</span> <span class="token operator">=</span> <span class="token punctuation">(</span><span class="token parameter"><span class="token maybe-class-name">Model</span></span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+    <span class="token maybe-class-name">Category</span><span class="token punctuation">.</span><span class="token method function property-access">hasMany</span><span class="token punctuation">(</span><span class="token maybe-class-name">Model</span><span class="token punctuation">.</span><span class="token property-access"><span class="token maybe-class-name">Book</span></span><span class="token punctuation">,</span> <span class="token punctuation">{</span>
+      foreignKey<span class="token operator">:</span> <span class="token string">'categoryId'</span>  <span class="token comment">// 対象 (book テーブル) のカラム名を指定する</span>
+    <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span><span class="token punctuation">;</span>
+  
+  <span class="token maybe-class-name">Category</span><span class="token punctuation">.</span><span class="token method function property-access">sync</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword control-flow">return</span> <span class="token maybe-class-name">Category</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+</code></pre>
+<ul>
+  <li><code>book-model.js</code></li>
+</ul>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword">const</span> <span class="token maybe-class-name">Sequelize</span> <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'sequelize'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+module<span class="token punctuation">.</span><span class="token method-variable function-variable method function property-access">export</span> <span class="token operator">=</span> <span class="token punctuation">(</span><span class="token parameter">sequelize</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token keyword">const</span> <span class="token maybe-class-name">Book</span> <span class="token operator">=</span> sequelize<span class="token punctuation">.</span><span class="token method function property-access">define</span><span class="token punctuation">(</span><span class="token string">'books'</span><span class="token punctuation">,</span> <span class="token punctuation">{</span>
+    id        <span class="token operator">:</span> <span class="token punctuation">{</span> field<span class="token operator">:</span> <span class="token string">'id'</span>         <span class="token punctuation">,</span> type<span class="token operator">:</span> <span class="token maybe-class-name">Sequelize</span><span class="token punctuation">.</span><span class="token constant">INTEGER</span><span class="token punctuation">,</span> primaryKey<span class="token operator">:</span> <span class="token boolean">true</span><span class="token punctuation">,</span> autoIncrement<span class="token operator">:</span> <span class="token boolean">true</span> <span class="token punctuation">}</span><span class="token punctuation">,</span>  <span class="token comment">// 書籍 ID</span>
+    categoryId<span class="token operator">:</span> <span class="token punctuation">{</span> field<span class="token operator">:</span> <span class="token string">'category_id'</span><span class="token punctuation">,</span> type<span class="token operator">:</span> <span class="token maybe-class-name">Sequelize</span><span class="token punctuation">.</span><span class="token constant">INTEGER</span><span class="token punctuation">,</span> allowNull<span class="token operator">:</span> <span class="token boolean">false</span> <span class="token punctuation">}</span><span class="token punctuation">,</span>  <span class="token comment">// 紐付くカテゴリ ID</span>
+    name      <span class="token operator">:</span> <span class="token punctuation">{</span> field<span class="token operator">:</span> <span class="token string">'name'</span>       <span class="token punctuation">,</span> type<span class="token operator">:</span> <span class="token maybe-class-name">Sequelize</span><span class="token punctuation">.</span><span class="token constant">TEXT</span><span class="token punctuation">,</span> allowNull<span class="token operator">:</span> <span class="token boolean">false</span> <span class="token punctuation">}</span>      <span class="token comment">// カテゴリ名</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  
+  <span class="token comment">// categories : books で 1:n の関係であることを示す</span>
+  <span class="token maybe-class-name">Book</span><span class="token punctuation">.</span><span class="token method-variable function-variable method function property-access">associate</span> <span class="token operator">=</span> <span class="token punctuation">(</span><span class="token parameter"><span class="token maybe-class-name">Model</span></span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+    <span class="token maybe-class-name">Book</span><span class="token punctuation">.</span><span class="token method function property-access">belongsTo</span><span class="token punctuation">(</span><span class="token maybe-class-name">Model</span><span class="token punctuation">.</span><span class="token property-access"><span class="token maybe-class-name">Category</span></span><span class="token punctuation">,</span> <span class="token punctuation">{</span>
+      foreignKey<span class="token operator">:</span> <span class="token string">'categoryId'</span><span class="token punctuation">,</span> <span class="token comment">// books.category_id のカラム名を指定する</span>
+      targetKey <span class="token operator">:</span> <span class="token string">'id'</span>          <span class="token comment">// 対応する category テーブルのカラム名を指定する</span>
+    <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span><span class="token punctuation">;</span>
+  
+  <span class="token maybe-class-name">Book</span><span class="token punctuation">.</span><span class="token method function property-access">sync</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword control-flow">return</span> <span class="token maybe-class-name">Book</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+</code></pre>
+<p>先程動作しないと書いた <code>hasMany()</code>・<code>belongsTo()</code> の処理を、それぞれのモデルに定義した <code>associate()</code> というメソッドに内包した。つまり各ファイルの中では「<code>associate</code> プロパティに関数を定義しただけ」で、この時点では外部キーの関係を宣言できていない。</p>
+<p>この <code>associate()</code> 関数を呼び出すのは、これらのモデルを取りまとめる、メインの <code>model.js</code> となる。</p>
+<ul>
+  <li><code>model.js</code></li>
+</ul>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword">const</span> <span class="token maybe-class-name">Sequelize</span> <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'sequelize'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// 必要に応じて dotenv パッケージで環境変数をロードする</span>
+<span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'dotenv'</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">config</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token doc-comment comment">/** Sequelize と生成したモデルを束ねる */</span>
+<span class="token keyword">const</span> <span class="token maybe-class-name">Model</span> <span class="token operator">=</span> <span class="token punctuation">{</span><span class="token punctuation">}</span><span class="token punctuation">;</span>
+
+<span class="token comment">// DB 接続する</span>
+<span class="token keyword">const</span> connectionString <span class="token operator">=</span> process<span class="token punctuation">.</span><span class="token property-access">env</span><span class="token punctuation">.</span><span class="token constant">DATABASE_URL</span><span class="token punctuation">;</span>
+<span class="token keyword">const</span> sequelize <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">Sequelize</span><span class="token punctuation">(</span>connectionString<span class="token punctuation">,</span> <span class="token punctuation">{</span>
+  timezone<span class="token operator">:</span> <span class="token string">'+09:00'</span><span class="token punctuation">,</span>  <span class="token comment">// JST タイムゾーン : Sequelize で SELECT した値は UTC 形式 (ISOString) になっている</span>
+  logging<span class="token operator">:</span> <span class="token boolean">false</span>       <span class="token comment">// ログ出力を抑制する</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// 各モデルを定義する</span>
+<span class="token maybe-class-name">Model</span><span class="token punctuation">.</span><span class="token property-access"><span class="token maybe-class-name">User</span></span> <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'./user-model'</span><span class="token punctuation">)</span><span class="token punctuation">(</span>sequelize<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// --------------------------------------------------</span>
+<span class="token comment">// ココまでは前述のコードと同じ。</span>
+
+<span class="token comment">// Category と Book モデルを読み込む</span>
+<span class="token maybe-class-name">Model</span><span class="token punctuation">.</span><span class="token property-access"><span class="token maybe-class-name">Category</span></span> <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'./category-model'</span><span class="token punctuation">)</span><span class="token punctuation">(</span>sequelize<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token maybe-class-name">Model</span><span class="token punctuation">.</span><span class="token property-access"><span class="token maybe-class-name">Book</span></span> <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'./book-model'</span><span class="token punctuation">)</span><span class="token punctuation">(</span>sequelize<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// 各モデルの定義が終わったら associate 関数を呼び出し、テーブルの関係を定義させる</span>
+<span class="token known-class-name class-name">Object</span><span class="token punctuation">.</span><span class="token method function property-access">keys</span><span class="token punctuation">(</span><span class="token maybe-class-name">Model</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">forEach</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token parameter">key</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token keyword">const</span> model <span class="token operator">=</span> <span class="token maybe-class-name">Model</span><span class="token punctuation">[</span>key<span class="token punctuation">]</span><span class="token punctuation">;</span>
+  <span class="token keyword control-flow">if</span><span class="token punctuation">(</span>model<span class="token punctuation">.</span><span class="token property-access">associate</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    model<span class="token punctuation">.</span><span class="token method function property-access">associate</span><span class="token punctuation">(</span><span class="token maybe-class-name">Model</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// 追記ココまで</span>
+<span class="token comment">// --------------------------------------------------</span>
+
+<span class="token comment">// Sequelize を格納する</span>
+<span class="token maybe-class-name">Model</span><span class="token punctuation">.</span><span class="token property-access"><span class="token maybe-class-name">Sequelize</span></span> <span class="token operator">=</span> <span class="token maybe-class-name">Sequelize</span><span class="token punctuation">;</span>
+<span class="token maybe-class-name">Model</span><span class="token punctuation">.</span><span class="token property-access">sequelize</span> <span class="token operator">=</span> sequelize<span class="token punctuation">;</span>
+
+module<span class="token punctuation">.</span><span class="token property-access">exports</span> <span class="token operator">=</span> <span class="token maybe-class-name">Model</span><span class="token punctuation">;</span>
+</code></pre>
+<p>お分かりいただけただろうか。</p>
+<p>各モデルの定義は、<code>require()</code> で先に済ませておき、定数 <code>Model</code> に蓄えておく。</p>
+<p>全てのモデルの定義が終わったら、<code>Object.keys(Model)</code> で <code>Model</code> 内のプロパティをループし、モデルを走査する。この時、そのモデルが <code>associate()</code> 関数を持っていれば、引数に <code>Model</code> 自身を渡して実行する、という作りだ。</p>
+<p>コレなら、<code>Category.associate()</code> (→ <code>hasMany()</code>) が実行された時は <code>Model.Book</code> が参照できるようになっているし、<code>Book.associate()</code> (→ <code>belongsTo()</code>) が実行された時は <code>Model.Category</code> が参照できるようになっている、というワケだ。</p>
+<h2 id="関係を定義するメリット--join-しやすくなる"><a class="header-link" href="#関係を定義するメリット--join-しやすくなる"><span class="header-link-mark"></span></a>関係を定義するメリット : <code>JOIN</code> しやすくなる</h2>
+<p>このように各モデル (= テーブル) とその関係を定義してやれば、Sequzelize を通じて DB の定義も同期でるだけでなく、<code>SELECT</code> 時の <code>JOIN</code> がやりやすくなる。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token comment">// カテゴリ ID : 1 のデータと、それに紐付く書籍データを取得する</span>
+<span class="token maybe-class-name">Model</span><span class="token punctuation">.</span><span class="token property-access"><span class="token maybe-class-name">Category</span></span><span class="token punctuation">.</span><span class="token method function property-access">findById</span><span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">,</span> <span class="token punctuation">{</span>
+  include<span class="token operator">:</span> <span class="token punctuation">[</span><span class="token punctuation">{</span>
+    model<span class="token operator">:</span> <span class="token maybe-class-name">Model</span><span class="token punctuation">.</span><span class="token property-access"><span class="token maybe-class-name">Book</span></span><span class="token punctuation">,</span>  <span class="token comment">// 子テーブルを示す</span>
+    required<span class="token operator">:</span> <span class="token boolean">false</span>     <span class="token comment">// false で OUTER JOIN になる (true で INNER JOIN)</span>
+  <span class="token punctuation">}</span><span class="token punctuation">]</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span>
+  <span class="token punctuation">.</span><span class="token method function property-access">then</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token parameter">results</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+    <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span>results<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>このようにすると、次のような連想配列の構造でデータが取得できるようになる。</p>
+<pre class="language-json"><code class="language-json"><span class="token punctuation">{</span>
+  <span class="token property">"id"</span><span class="token operator">:</span> <span class="token number">1</span><span class="token punctuation">,</span>
+  <span class="token property">"name"</span><span class="token operator">:</span> <span class="token string">"小説カテゴリ"</span><span class="token punctuation">,</span>
+  <span class="token property">"books"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
+    <span class="token punctuation">{</span> id<span class="token operator">:</span> <span class="token number">101</span><span class="token punctuation">,</span> categoryId<span class="token operator">:</span> <span class="token number">1</span><span class="token punctuation">,</span> name<span class="token operator">:</span> <span class="token string">"なんたらミステリー"</span> <span class="token punctuation">}</span><span class="token punctuation">,</span>
+    <span class="token punctuation">{</span> id<span class="token operator">:</span> <span class="token number">105</span><span class="token punctuation">,</span> categoryId<span class="token operator">:</span> <span class="token number">1</span><span class="token punctuation">,</span> name<span class="token operator">:</span> <span class="token string">"なんたらサスペンス"</span> <span class="token punctuation">}</span><span class="token punctuation">,</span>
+    <span class="token punctuation">{</span> id<span class="token operator">:</span> <span class="token number">129</span><span class="token punctuation">,</span> categoryId<span class="token operator">:</span> <span class="token number">1</span><span class="token punctuation">,</span> name<span class="token operator">:</span> <span class="token string">"なんたらラブストーリー"</span> <span class="token punctuation">}</span>
+  <span class="token punctuation">]</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p><code>include : model</code> で渡したモデルのプロパティ (ココでいう <code>books</code>) が増えており、その中に <code>Book</code> モデルの形式に沿った形で、<code>category_id</code> が <code>1</code> なデータが配列で格納されているのだ。</p>
+<p>実際に SQL を書いて <code>SELECT</code> した場合は、どうしても <code>categories</code> テーブルのカラム情報が含まれたレコードの形になってしまうが、コレなら <code>Book</code> モデルの情報は <code>books</code> テーブルのカラムしか含まれない、プレーンな状態で取得できるというワケだ。テーブル構造がそのまんま連想配列で表現されていて分かりやすい。</p>
+<h2 id="参考文献"><a class="header-link" href="#参考文献"><span class="header-link-mark"></span></a>参考文献</h2>
+<ul>
+  <li><a href="https://stackoverflow.com/questions/21114499/how-to-make-sequelize-use-singular-table-names">mysql - How to make Sequelize use singular table names - Stack Overflow</a> … <code>define()</code> の第1引数で指定するモデル名は単数形で書いても「複数形」のテーブルが存在するモノとして勝手に変換されてしまう。コレを直すには <code>freezeTableName: true</code> オプションを設定するか、<code>tableName</code> オプションでテーブル名を指定する。</li>
+  <li><a href="http://docs.sequelizejs.com/manual/tutorial/models-definition.html#database-synchronization">Tutorial | Sequelize | The node.js ORM for PostgreSQL, MySQL, SQLite and MSSQL</a> … モデルの <code>sync()</code> メソッドにより、接続先の DB にそのテーブルがなければ自動的に <code>CREATE TABLE</code> 文を発行してくれる。<code>sync({ force: true })</code> とするとテーブルが存在していても強制的に <code>CREATE TABLE</code> する。</li>
+  <li><a href="https://qiita.com/NewGyu/items/83390aa17dce1ffb4cd3">Sequelizeのassociation - Qiita</a></li>
+  <li><a href="https://blog.kozakana.net/2018/03/sequelize_hasmany/">Simple is Beautiful.</a></li>
+  <li><a href="https://blog.kozakana.net/2018/04/sequelize_join/">Simple is Beautiful.</a></li>
+  <li><a href="https://github.com/sequelize/express-example/blob/605508d29ee70af5f1821a3b6f07697ecaa055c0/models/index.js#L27-L31">express-example/index.js at 605508d29ee70af5f1821a3b6f07697ecaa055c0 · sequelize/express-example · GitHub</a> … <code>associate()</code> 関数に逃がす方法の実装を参考にした</li>
+</ul>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2018-12-15</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2018-12-15</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

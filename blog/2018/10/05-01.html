@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>Jenkins のジョブ実行結果をメール送信する : Email-Ext-Plugin - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2018/10/05-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2018/index.html">2018年</a></li>
+            <li><a href="/blog/2018/10/index.html">10月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2018-10-05</time></div>
+        <h1 id="page-title">Jenkins のジョブ実行結果をメール送信する : Email-Ext-Plugin</h1>
+
+<p>Jenkins ジョブから、ジョブの実行結果などをメール送信できる、<strong>Email-ext-plugin</strong> というモノがあるので使ってみる。</p>
+<ul>
+  <li><a href="https://wiki.jenkins.io/display/JENKINS/Email-ext+plugin">Email-ext plugin - Jenkins - Jenkins Wiki</a></li>
+</ul>
+<p>プラグインのインストールは管理画面よりいつもどおり。</p>
+<p>プラグインがインストールできると、「システムの設定」画面に「拡張E-mail通知」という項目が登場する。ココで SMTP サーバを指定したり、デフォルトの送り主 (Default Recipients)、送信先 (Reply To List)、件名、本文などを指定できる。</p>
+<p>ジョブ設定画面の「ビルド後の処理」の中にも「拡張 E-mail 通知」というメニューが登場し、ココでジョブごとにメール送信の設定ができる。</p>
+<p>メールの件名や本文では、「シェルスクリプトの実行」などと同じように環境変数を参照できる。<code>env-vars.html</code> で確認できる <code>$BUILD_URL</code> などの環境変数はもちろん、<em>Build Timestamp Plugin</em> を入れていれば、<code>$BUILD_TIMESTAMP</code> 環境変数なども使えるので、「何時何分に実行したどのジョブで結果がどうだった」といった内容がメールに記述できる。</p>
+<ul>
+  <li><a href="https://wiki.jenkins-ci.org/display/JENKINS/Build+Timestamp+Plugin">Build Timestamp Plugin - Jenkins - Jenkins Wiki</a></li>
+</ul>
+<p>本文には任意のテキストファイルの内容を貼り付けることもできるので、コマンドやシェルスクリプトの実行結果などをファイルに出力しておき、その内容をメールに貼り付けたりもできる。</p>
+<ul>
+  <li>ビルド：「シェルの実行」などでファイルを生成する</li>
+</ul>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># 何かやりたいコマンド</span>
+$ <span class="token function">npm</span> <span class="token builtin class-name">test</span> <span class="token operator">></span> results.txt
+</code></pre>
+<ul>
+  <li>ビルド後の処理：拡張 E-mail 通知：「デフォルトコンテンツ」を以下のように直してみる</li>
+</ul>
+<pre><code>$BUILD_TIMESTAMP に実行された $JOB_NAME の実行結果を自動送信します。
+
+${FILE,path="./results.txt"}
+
+詳細はジョブのコンソールを確認してください。
+$BUILD_URL
+</code></pre>
+<p>このように、<em><code>${FILE,path="【パス】"}</code></em> という構文でファイルが読み込める。</p>
+<p>また、設定項目の中に「Triggers」という項目があり、ココで「Unstable (Test Failures)」を選べば、Unstable な結果の時にだけメール送信をしたりできる。</p>
+<p>以前紹介した <em>TextFinder plugin</em>・「Jenkins 文字列検索」を利用して、「検出時に不安定扱いにする」設定を入れておき、その後で「Unstable (Test Failures)」な Trigger の時にメール送信するようにすれば、単純なジョブの成功時・失敗時は何もせず、特殊な状況の時のみメール送信したりもできる。</p>
+<ul>
+  <li><a href="http://wiki.jenkins-ci.org/display/JENKINS/Text-finder+Plugin">Text-finder Plugin - Jenkins - Jenkins Wiki</a></li>
+</ul>
+<p>ChatOps とか云われている時代でも、まだまだメール送信した方が有用なこともあるだろうから、覚えておいて損はないだろう。</p>
+<ul>
+  <li>参考：<a href="https://qiita.com/nakashii_/items/fb46147c9cd15e637171">jenkinsから送信されるメールの件名にshell実行時の変数を使う</a></li>
+</ul>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2018-10-05</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2018-10-05</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

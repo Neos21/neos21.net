@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>「pg」パッケージを使ってローカルの PostgreSQL や Heroku Postgres に接続する - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2018/12/09-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2018/index.html">2018年</a></li>
+            <li><a href="/blog/2018/12/index.html">12月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2018-12-09</time></div>
+        <h1 id="page-title">「pg」パッケージを使ってローカルの PostgreSQL や Heroku Postgres に接続する</h1>
+
+<p>Heroku Postgres をいじり始め、ローカルにも PostgreSQL 環境を構築したので、Node.js スクリプトから PostgreSQL DB に接続してみようと思う。</p>
+<p>今回は、Heroku の公式リファレンスにも紹介されていた <strong><code>pg</code></strong> という npm パッケージを使ってみる。</p>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#%E7%B4%A0%E6%8C%AF%E3%82%8A%E7%92%B0%E5%A2%83%E3%81%AE%E7%94%A8%E6%84%8F">素振り環境の用意</a></li>
+  <li><a href="#postgresql-%E3%81%B8%E3%81%AE%E6%8E%A5%E7%B6%9A%E6%96%87%E5%AD%97%E5%88%97%E3%82%92%E7%A2%BA%E8%AA%8D%E3%81%99%E3%82%8B">PostgreSQL への接続文字列を確認する</a></li>
+  <li><a href="#%E3%83%AD%E3%83%BC%E3%82%AB%E3%83%AB%E3%81%AE-postgresql-%E3%81%AB%E3%83%86%E3%82%B9%E3%83%88%E7%94%A8%E3%83%87%E3%83%BC%E3%82%BF%E3%83%99%E3%83%BC%E3%82%B9%E3%81%A8%E3%83%86%E3%83%BC%E3%83%96%E3%83%AB%E3%82%92%E7%94%A8%E6%84%8F%E3%81%99%E3%82%8B">ローカルの PostgreSQL にテスト用データベースとテーブルを用意する</a></li>
+  <li><a href="#heroku-postgres-%E3%81%AB%E3%82%82%E3%83%86%E3%82%B9%E3%83%88%E7%94%A8%E3%83%87%E3%83%BC%E3%82%BF%E3%82%92%E5%85%A5%E3%82%8C%E3%82%8B">Heroku Postgres にもテスト用データを入れる</a></li>
+  <li><a href="#%E3%83%AD%E3%83%BC%E3%82%AB%E3%83%AB%E3%81%AE-postgresql-%E3%81%AB%E6%8E%A5%E7%B6%9A%E3%81%99%E3%82%8B-nodejs-%E3%82%B9%E3%82%AF%E3%83%AA%E3%83%97%E3%83%88%E3%82%92%E6%9B%B8%E3%81%84%E3%81%A6%E3%81%BF%E3%82%8B">ローカルの PostgreSQL に接続する Node.js スクリプトを書いてみる</a></li>
+  <li><a href="#heroku-postgres-%E3%81%AB%E6%8E%A5%E7%B6%9A%E3%81%99%E3%82%8B-nodejs-%E3%82%B9%E3%82%AF%E3%83%AA%E3%83%97%E3%83%88%E3%81%AB%E4%BD%9C%E3%82%8A%E5%A4%89%E3%81%88%E3%82%8B">Heroku Postgres に接続する Node.js スクリプトに作り変える</a></li>
+  <li><a href="#%E4%BB%A5%E4%B8%8A">以上</a></li>
+</ul>
+<h2 id="素振り環境の用意"><a class="header-link" href="#素振り環境の用意"><span class="header-link-mark"></span></a>素振り環境の用意</h2>
+<p>まずはお試し作業ディレクトリを作成し、<code>pg</code> パッケージをインストールする。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">mkdir</span> practice-pg <span class="token operator">&#x26;&#x26;</span> <span class="token builtin class-name">cd</span> <span class="token variable">$_</span>
+$ <span class="token function">npm</span> init -y
+
+<span class="token comment"># pg パッケージをインストールする</span>
+$ <span class="token function">npm</span> <span class="token function">install</span> --save pg
+
+<span class="token comment"># サンプルコードを実装するファイルを作成する</span>
+$ <span class="token function">touch</span> main.js
+</code></pre>
+<p>以降、<code>main.js</code> ファイルにコードを実装していく。</p>
+<h2 id="postgresql-への接続文字列を確認する"><a class="header-link" href="#postgresql-への接続文字列を確認する"><span class="header-link-mark"></span></a>PostgreSQL への接続文字列を確認する</h2>
+<p>PostgreSQL への接続の仕方は、ホスト・ユーザ名などをそれぞれ指定するパターンと、全てを盛り込んだ一つの「接続文字列」とするパターンがある。今回は管理が楽なので、「接続文字列」を渡して接続してみようと思う。</p>
+<p>PostgreSQL の接続文字列の書式は以下のとおり。</p>
+<pre><code>postgres://username:password@hostname:port/database
+</code></pre>
+<p>つまり、ユーザ名「postgres」、パスワードが「PASSWORD」なユーザを使い、<code>localhost:5432</code> の <code>my_local_db</code> というデータベースに接続するには、以下のように記述する。</p>
+<pre><code>postgres://postgres:PASSWORD@localhost:5432/my_local_db
+</code></pre>
+<p>Heroku Postgres の場合、Heroku Postgres をインストールすると、ダッシュボード上で確認できる環境変数の一つに <strong><code>DATABASE_URL</code></strong> というモノが追加されており、このような接続先文字列が環境変数に定義されている。本番環境ではこの環境変数を参照することを想定して、ローカル環境でも接続先文字列の書式でアクセスするコードを作っておけば、開発環境・本番環境ともにうまく動作させられるだろう。</p>
+<h2 id="ローカルの-postgresql-にテスト用データベースとテーブルを用意する"><a class="header-link" href="#ローカルの-postgresql-にテスト用データベースとテーブルを用意する"><span class="header-link-mark"></span></a>ローカルの PostgreSQL にテスト用データベースとテーブルを用意する</h2>
+<p>DB に接続するコードを書く前に、まずはお試し用のデータベースを新たに作っておき、ダミーデータを入れておこうと思う。先程の例で「<code>my_local_db</code>」というデータベースに接続するような接続文字列を作ったので、<code>my_local_db</code> データベースを作ってみる。</p>
+<pre class="language-bash"><code class="language-bash">$ psql -U postgres
+<span class="token comment"># パスワードを入力する</span>
+
+<span class="token comment"># 接続完了。「my_local_db」という名前のデータベースを新規作成する</span>
+<span class="token assign-left variable">postgres</span><span class="token operator">=</span><span class="token comment"># create database my_local_db;</span>
+CREATE DATABASE
+
+<span class="token comment"># 参照するデータベースを切り替える</span>
+<span class="token assign-left variable">postgres</span><span class="token operator">=</span><span class="token comment"># \c my_local_db;</span>
+データベース <span class="token string">"my_local_db"</span> にユーザ <span class="token string">"postgres"</span> として接続しました。
+
+<span class="token comment"># プロンプトが変わる</span>
+<span class="token assign-left variable">my_local_db</span><span class="token operator">=</span><span class="token comment">#</span>
+
+<span class="token comment"># テスト用にテーブルを作り、データを入れる</span>
+<span class="token assign-left variable">my_local_db</span><span class="token operator">=</span><span class="token comment"># create table test_table ( id integer primary key, name text );</span>
+<span class="token assign-left variable">my_local_db</span><span class="token operator">=</span><span class="token comment"># insert into test_table ( id, name ) values ( 1, 'ローカルテスト1' );</span>
+<span class="token assign-left variable">my_local_db</span><span class="token operator">=</span><span class="token comment"># insert into test_table ( id, name ) values ( 2, 'ローカルテスト2' );</span>
+<span class="token assign-left variable">my_local_db</span><span class="token operator">=</span><span class="token comment"># select * from test_table;</span>
+<span class="token comment"># データが2件取得できるはず</span>
+</code></pre>
+<p>最後に叩いた SELECT 文と同様のことを、このあと <code>pg</code> パッケージで行う、というワケ。</p>
+<ul>
+  <li>参考：<a href="http://db-study.com/archives/233">テーブルの作成(CREATE TABLE) ｜ PostgreSQLではじめるDB入門</a> … PostgreSQL の <code>CREATE TABLE</code> 文</li>
+</ul>
+<h2 id="heroku-postgres-にもテスト用データを入れる"><a class="header-link" href="#heroku-postgres-にもテスト用データを入れる"><span class="header-link-mark"></span></a>Heroku Postgres にもテスト用データを入れる</h2>
+<p>ローカル環境の PostgreSQL と同じことを、Heroku Postgres にもやってみる。Heroku CLI のコマンドを使えばデータベースごと相互に移行したりできるのだが、今回はそうしたバックアップの用途ではないので、サクッとお試しテーブルを作ることにする。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># Heroku Postgres に接続する</span>
+$ heroku psql
+
+<span class="token comment"># データベースはデフォルトのままにしておく</span>
+<span class="token comment"># テストテーブル作ってみる</span>
+example-app::DATABASE<span class="token operator">=</span><span class="token operator">></span> create table test_table <span class="token punctuation">(</span> <span class="token function">id</span> integer primary key, name text <span class="token punctuation">)</span><span class="token punctuation">;</span>
+example-app::DATABASE<span class="token operator">=</span><span class="token operator">></span> insert into test_table <span class="token punctuation">(</span> id, name <span class="token punctuation">)</span> values <span class="token punctuation">(</span> <span class="token number">1</span>, <span class="token string">'Heroku テスト1'</span> <span class="token punctuation">)</span><span class="token punctuation">;</span>
+example-app::DATABASE<span class="token operator">=</span><span class="token operator">></span> insert into test_table <span class="token punctuation">(</span> id, name <span class="token punctuation">)</span> values <span class="token punctuation">(</span> <span class="token number">2</span>, <span class="token string">'Heroku テスト2'</span> <span class="token punctuation">)</span><span class="token punctuation">;</span>
+example-app::DATABASE<span class="token operator">=</span><span class="token operator">></span> <span class="token keyword">select</span> * from test_table<span class="token punctuation">;</span>
+<span class="token comment"># データが2件取得できるはず</span>
+</code></pre>
+<p>ちょっとだけ登録したデータの文言を変えているので、このあと <code>pg</code> パッケージからデータを取得した時に、どちらに接続しているか一目瞭然になるかと思う。</p>
+<h2 id="ローカルの-postgresql-に接続する-nodejs-スクリプトを書いてみる"><a class="header-link" href="#ローカルの-postgresql-に接続する-nodejs-スクリプトを書いてみる"><span class="header-link-mark"></span></a>ローカルの PostgreSQL に接続する Node.js スクリプトを書いてみる</h2>
+<p>いよいよ <code>pg</code> パッケージを使用して DB に接続する、簡単な Node.js スクリプトを書いてみる。コードは Heroku 公式にあるサンプルコードが参考になるだろう。</p>
+<ul>
+  <li>参考：<a href="https://devcenter.heroku.com/articles/heroku-postgresql#connecting-in-node-js">Heroku Postgres | Heroku Dev Center</a> … 「Connecting in Node.js」セクション</li>
+</ul>
+<p>自分は Client ではなく Pool を使って、またコールバック関数形式ではなく Promise 形式で書いてみた。<code>main.js</code> のコードは以下のとおり。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword">const</span> pg <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'pg'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// 接続先文字列</span>
+<span class="token keyword">const</span> connectionString <span class="token operator">=</span> <span class="token string">'postgres://postgres:PASSWORD@localhost:5432/my_local_db'</span><span class="token punctuation">;</span>
+
+<span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">接続開始 : </span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>connectionString<span class="token interpolation-punctuation punctuation">}</span></span><span class="token template-punctuation string">`</span></span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">const</span> pool <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">pg<span class="token punctuation">.</span>Pool</span><span class="token punctuation">(</span><span class="token punctuation">{</span>
+  connectionString<span class="token operator">:</span> connectionString
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// SELECT してみる</span>
+pool<span class="token punctuation">.</span><span class="token method function property-access">query</span><span class="token punctuation">(</span><span class="token string">'SELECT * FROM test_table'</span><span class="token punctuation">)</span>
+  <span class="token punctuation">.</span><span class="token method function property-access">then</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token parameter">result</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+    <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'Success'</span><span class="token punctuation">,</span> result<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token comment">// 結果データの表示</span>
+    <span class="token keyword control-flow">if</span><span class="token punctuation">(</span>result<span class="token punctuation">.</span><span class="token property-access">rows</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      result<span class="token punctuation">.</span><span class="token property-access">rows</span><span class="token punctuation">.</span><span class="token method function property-access">forEach</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token parameter">row<span class="token punctuation">,</span> index</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+        <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span>index <span class="token operator">+</span> <span class="token number">1</span><span class="token punctuation">,</span> row<span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span>
+  <span class="token punctuation">.</span><span class="token keyword control-flow">catch</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token parameter">error</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+    <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'Failure'</span><span class="token punctuation">,</span> error<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span>
+  <span class="token punctuation">.</span><span class="token method function property-access">then</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+    <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'切断'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    pool<span class="token punctuation">.</span><span class="token method function property-access">end</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>あとはコレを <code>$node main.js</code> のように実行する。コンソールに SELECT したデータが表示されたことだろう。</p>
+<p>ちなみに、<code>pool.query()</code> 部分を以下のように書けば、PreparedStatement も書ける。</p>
+<pre class="language-javascript"><code class="language-javascript">pool<span class="token punctuation">.</span><span class="token method function property-access">query</span><span class="token punctuation">(</span><span class="token punctuation">{</span>
+  text<span class="token operator">:</span> <span class="token string">'UPDATE test_table SET name = $1 WHERE id = $2'</span><span class="token punctuation">,</span>
+  values<span class="token operator">:</span> <span class="token punctuation">[</span><span class="token string">'テストリネーム2'</span><span class="token punctuation">,</span> <span class="token number">2</span><span class="token punctuation">]</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span>
+</code></pre>
+<p>その他 <code>pg</code> (node-postgres) パッケージの使い方は公式を参照。</p>
+<ul>
+  <li>参考：<a href="https://node-postgres.com/features/connecting">https://node-postgres.com/features/connecting</a></li>
+</ul>
+<h2 id="heroku-postgres-に接続する-nodejs-スクリプトに作り変える"><a class="header-link" href="#heroku-postgres-に接続する-nodejs-スクリプトに作り変える"><span class="header-link-mark"></span></a>Heroku Postgres に接続する Node.js スクリプトに作り変える</h2>
+<p>さて、このままでは、<code>main.js</code> は <code>localhost</code> の DB に接続を試みてしまうので、このスクリプトを Heroku 上にデプロイしても、Heroku Postgres とは接続してくれない。</p>
+<p>そこで、先程も書いたように、Heroku Postgres アドオンをインストールした時に自動設定される <code>DATABASE_URL</code> 環境変数を参照して、接続先文字列を取得するように、スクリプトを書き換えてみる。</p>
+<p>といっても簡単で、<code>const connectionString</code> 部分を以下のように変更するだけ。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword">const</span> connectionString <span class="token operator">=</span> process<span class="token punctuation">.</span><span class="token property-access">env</span><span class="token punctuation">.</span><span class="token constant">DATABASE_URL</span> <span class="token operator">||</span> <span class="token string">'postgres://postgres:postgres@localhost:5432/my_local_db'</span><span class="token punctuation">;</span>
+</code></pre>
+<p>ローカルのコンソール上で、Heroku Postgres に接続するようにしてみたければ、以下のように環境変数を設定してから Node.js スクリプトを実行すれば良い。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># Heroku Postgres の接続先文字列を export コマンドで環境変数として設定する</span>
+$ <span class="token builtin class-name">export</span> <span class="token assign-left variable">DATABASE_URL</span><span class="token operator">=</span>postgres://hogehoge:fugafuga@ec0-00-00-00-000.compute-1.amazonaws.com:5432/useruser
+
+<span class="token comment"># 先程のスクリプトを実行する</span>
+$ node main.js
+</code></pre>
+<p>ココで、自分の場合は以下のようなエラーメッセージが表示された。</p>
+<pre><code>Failure { error: no pg_hba.conf entry for host "153.184.168.17", user "USERNAME", database "MY_POSTGRES_DB", SSL off
+</code></pre>
+<p>どうも Heroku Postgres と SSL 通信ができていないせいみたい。色々調べたが、Heroku 上の環境変数に <strong><code>PGSSLMODE=require</code> もしくは <code>PGSSLMODE=allow</code></strong> というモノを設定しておくと上手く行った。ローカルのターミナルでは同じく <code>export</code> コマンドで設定しておけば動作する。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token builtin class-name">export</span> <span class="token assign-left variable">PGSSLMODE</span><span class="token operator">=</span>allow
+</code></pre>
+<p>Heroku の環境変数は Heroku CLI から <strong>heroku-config</strong> というプラグインを使って設定できるので、以下のように設定してみよう。ブラウザでダッシュボードを開いた時に、ちゃんと環境変数が設定されているはずだ。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># 環境変数を扱うためのプラグインをインストールしておく</span>
+$ heroku plugins:install heroku-config
+
+<span class="token comment"># 環境変数を設定する</span>
+$ heroku config:set <span class="token assign-left variable">PGSSLMODE</span><span class="token operator">=</span>allow
+Setting PGSSLMODE and restarting ⬢ example-app<span class="token punctuation">..</span>. done, v6
+</code></pre>
+<ul>
+  <li>参考：<a href="https://code.i-harness.com/ja/q/9cdc1d">Heroku PostgreSQLデータベースに接続する際の認証エラー node.js authentication | CODE Q&#x26;A 問題解決 日本語</a></li>
+</ul>
+<p>この辺イマイチ分かっていない。</p>
+<ul>
+  <li>参考：<a href="https://devcenter.heroku.com/articles/connecting-to-heroku-postgres-databases-from-outside-of-heroku#ssl">Connecting to Heroku Postgres Databases from Outside of Heroku | Heroku Dev Center</a>
+    <ul>
+      <li>接続文字列の末尾に <code>?sslmode=require</code> とパラメータを付けるという回避方法だが、上手くいかなかった。</li>
+    </ul>
+  </li>
+  <li>参考：<a href="https://stackoverflow.com/questions/25000183/node-js-postgresql-error-no-pg-hba-conf-entry-for-host">Node.js, PostgreSQL error: no pg_hba.conf entry for host - Stack Overflow</a>
+    <ul>
+      <li>Node.js スクリプト中で、<code>pg.defaults.ssl = true;</code> と記述するという回避方法だが、上手くいかなかった。</li>
+    </ul>
+  </li>
+  <li>参考：<a href="https://stackoverflow.com/a/36351110/10092546">database - psql: server does not support SSL, but SSL was required - Stack Overflow</a>
+    <ul>
+      <li>Mac のローカルの PostgreSQL に接続する際は、逆に <code>PGSSLMODE=allow</code> や <code>PGSSLMODE=require</code> が邪魔して SSL 通信に失敗してしまったので、ローカルの DB との通信時は回避すると良いかも</li>
+    </ul>
+  </li>
+</ul>
+<h2 id="以上"><a class="header-link" href="#以上"><span class="header-link-mark"></span></a>以上</h2>
+<p>ざっとこんな感じ。このままでは <code>main.js</code> はただの Node.js スクリプトなので、Web アプリからのリクエストに応じて呼び出し、データを返すような実装にしていかないと、アプリっぽくならない。</p>
+<p>また、生の SQL をシコシコ書くのは大変なので、実際のアプリ開発では <em>Sequelize</em> などもう少し楽になるライブラリを使って DB 接続した方が良さそうだ。</p>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2018-12-09</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2018-12-09</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

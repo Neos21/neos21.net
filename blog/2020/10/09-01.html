@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>Freenom ドメイン・Let&#39;s Encrypt 証明書の有効期限を確認・通知する仕組みを作った - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2020/10/09-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2020/index.html">2020年</a></li>
+            <li><a href="/blog/2020/10/index.html">10月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2020-10-09</time></div>
+        <h1 id="page-title">Freenom ドメイン・Let&#39;s Encrypt 証明書の有効期限を確認・通知する仕組みを作った</h1>
+
+<p>最近、いくつかのサイトで Freenom で独自ドメインを取ったり、Let's Encrypt で証明書を取って HTTPS 化したりしている。</p>
+<ul>
+  <li>GCE
+    <ul>
+      <li><a href="https://neos21-gce.ga/">https://neos21-gce.ga/</a></li>
+      <li>CentOS + Apache → Let's Encrypt を手動設定</li>
+    </ul>
+  </li>
+  <li>OCI 1
+    <ul>
+      <li><a href="https://neos21-oci.cf/">https://neos21-oci.cf/</a></li>
+      <li>Oracle Linux + nginx → Let's Encrypt を手動設定</li>
+    </ul>
+  </li>
+  <li>OCI 2
+    <ul>
+      <li><a href="https://neos21-oci.ml">https://neos21-oci.ml</a></li>
+      <li>Ubuntu + nginx → Let's Encrypt を手動設定</li>
+    </ul>
+  </li>
+  <li><a href="http://neo.s21.xrea.com/">Neo's World</a>
+    <ul>
+      <li><a href="https://neos21.tk/">https://neos21.tk/</a></li>
+      <li>XREA の無料 SSL を使っているので、このサイトだけは証明書のメンテナンスが不要</li>
+    </ul>
+  </li>
+</ul>
+<p>Freenom のドメインは12ヶ月ごとに更新手続きを行わないといけないのだが、Freenom API は通常ユーザは使えないらしく、<strong>手作業が必要になるので、この気付きを得たい。</strong></p>
+<p>上3つの Always Free IaaS で動かしているサイトは、cron で certbot の更新処理を定義して毎月動かしているが、<em>ちゃんと証明書が更新できているか一応チェックしておきたい</em>なーと思った。</p>
+<p>そんなワケで、<strong>ドメインと証明書の有効期限をチェックして Slack 通知する仕組み</strong>を作り込むことにする。</p>
+<h2 id="証明書の更新状況を-json-ファイルに出力する"><a class="header-link" href="#証明書の更新状況を-json-ファイルに出力する"><span class="header-link-mark"></span></a>証明書の更新状況を JSON ファイルに出力する</h2>
+<p>まずはサイトごとに、証明書の更新状況を JSON ファイルに出力する仕組みを作る。</p>
+<p>cron で毎月証明書を更新している処理の最後に、シェルスクリプトを実行する設定を入れる。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">crontab</span> -l
+00 03 01 * * /root/certbot/certbot-auto renew <span class="token operator">&#x26;&#x26;</span> systemctl restart nginx <span class="token operator">&#x26;&#x26;</span> /root/certbot/update-status.sh
+</code></pre>
+<p>スクリプトの内容は以下のとおり。</p>
+<ul>
+  <li><code>/root/certbot/update-status.sh</code></li>
+</ul>
+<pre class="language-bash"><code class="language-bash"><span class="token shebang important">#!/bin/bash</span>
+
+<span class="token assign-left variable">cert_renew_date</span><span class="token operator">=</span><span class="token string">"<span class="token variable"><span class="token variable">$(</span><span class="token function">date</span> <span class="token string">'+%Y-%m-%d'</span><span class="token variable">)</span></span>"</span>
+<span class="token assign-left variable">cert_expiry_date</span><span class="token operator">=</span><span class="token string">"<span class="token variable"><span class="token variable">$(</span>/root/certbot/certbot-auto certificates <span class="token operator"><span class="token file-descriptor important">2</span>></span><span class="token file-descriptor important">&#x26;1</span> <span class="token operator">|</span> <span class="token function">grep</span> <span class="token string">'Expiry Date'</span> <span class="token operator">|</span> <span class="token function">sed</span> <span class="token string">'s/^.*Date\: //'</span> <span class="token operator">|</span> <span class="token function">sed</span> <span class="token string">'s/ .*$//'</span><span class="token variable">)</span></span>"</span>
+
+<span class="token function">cat</span> <span class="token operator">&#x3C;&#x3C;</span><span class="token string">EOL<span class="token bash punctuation"> <span class="token operator">></span> /var/www/html/status.json</span>
+{
+  "global_ip"               : "140.238.56.203",
+  "domain_name"             : "neos21-oci.cf",
+  "domain_registration_date": "2020-08-22",
+  "domain_expiry_date"      : "2021-08-22",
+  "cert_renew_date"         : "<span class="token variable">${cert_renew_date}</span>",
+  "cert_expiry_date"        : "<span class="token variable">${cert_expiry_date}</span>"
+}
+EOL</span>
+
+<span class="token builtin class-name">echo</span> <span class="token string">'Update Status Finished'</span>
+</code></pre>
+<p>Global IP とドメイン名はベタ書き。</p>
+<p>ドメインの取得日、有効期限日もベタ書き。Freenom API が使えないので仕方ない。1年に1回手動で更新した時に、ココの内容を手で書き換える運用とする。</p>
+<p>証明書の更新日は処理した日付、有効期限日は <code>certbot</code> から泥臭く取得している。</p>
+<p>このような JSON を組み立てて、<code>/var/www/html/</code> 配下に書き込んでいる。すなわち、</p>
+<ul>
+  <li><a href="https://neos21-oci.cf/status.json">https://neos21-oci.cf/status.json</a></li>
+</ul>
+<p>という URL で、ココで組み立てた JSON ファイルにアクセスできるようにするワケだ。</p>
+<p>このようなスクリプトと cron 定義を、IaaS の3サイトでそれぞれ設定しておく。</p>
+<p>XREA に関しては証明書更新が要らないので、次のようなベタ書きの JSON ファイルだけをただ置いておく。</p>
+<ul>
+  <li><a href="https://neos21.tk/status.json">https://neos21.tk/status.json</a></li>
+</ul>
+<pre class="language-json"><code class="language-json"><span class="token punctuation">{</span>
+  <span class="token property">"global_ip"</span>               <span class="token operator">:</span> <span class="token string">"neo.s21.xrea.com"</span><span class="token punctuation">,</span>
+  <span class="token property">"domain_name"</span>             <span class="token operator">:</span> <span class="token string">"neos21.tk"</span><span class="token punctuation">,</span>
+  <span class="token property">"domain_registration_date"</span><span class="token operator">:</span> <span class="token string">"2020-08-22"</span><span class="token punctuation">,</span>
+  <span class="token property">"domain_expiry_date"</span>      <span class="token operator">:</span> <span class="token string">"2021-08-22"</span><span class="token punctuation">,</span>
+  <span class="token property">"cert_renew_date"</span>         <span class="token operator">:</span> <span class="token string">"-"</span><span class="token punctuation">,</span>
+  <span class="token property">"cert_expiry_date"</span>        <span class="token operator">:</span> <span class="token string">"-"</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<h2 id="statusjson-を収集しヘルスチェックするスクリプトを組む"><a class="header-link" href="#statusjson-を収集しヘルスチェックするスクリプトを組む"><span class="header-link-mark"></span></a><code>status.json</code> を収集しヘルスチェックするスクリプトを組む</h2>
+<p>4つのサイトのルート直下に <code>status.json</code> が配備され、ドメインの有効期限や証明書の有効期限が確認できるようになった。</p>
+<p>続いてはこれらを収集してヘルスチェックし、よき感じにステータス状況を組み上げるスクリプトを書く。</p>
+<p>ということで、ステータスチェック用の GitHub リポジトリを作った。</p>
+<ul>
+  <li><a href="https://github.com/Neos21/site-status">Neos21/site-status</a></li>
+</ul>
+<p>実処理は以下の2つ。</p>
+<ul>
+  <li><a href="https://github.com/Neos21/site-status/blob/master/.github/workflows/check-status.yaml">site-status/check-status.yaml at master · Neos21/site-status · GitHub</a>
+    <ul>
+      <li>GitHub Actions として、毎日朝4時に以下のスクリプトを実行する</li>
+      <li>以下のスクリプトが書き換えた <code>README.md</code> を <code>git commit</code> する処理までが入っている</li>
+    </ul>
+  </li>
+  <li><a href="https://github.com/Neos21/site-status/blob/master/.github/workflows/check-status.js">site-status/check-status.js at master · Neos21/site-status · GitHub</a>
+    <ul>
+      <li>各サイトの <code>status.json</code> を収集し、有効期限日をチェックする</li>
+      <li>確認した結果をリポジトリ直下の <code>README.md</code> に書き込む (ファイルの更新までで、<code>git commit</code> 処理は上の GitHub Actions ワークフローで行う)</li>
+      <li>ヘルス異常があれば Slack 通知する仕組みも入れた (Slack の Webhook URL は GitHub Secrets として注入)</li>
+    </ul>
+  </li>
+</ul>
+<p>実処理を持つ Node.js スクリプトは、愚直にコーディングした。外部パッケージをインストールしたくなかったので、お手製感が強い。</p>
+<p>ドメインの期限切れまで30日を切った時、証明書の期限切れまで10日を切った時は「ヘルス異常」と見なして、Slack 通知するようにした。また、そもそも <code>status.json</code> がそのサイトから取得できなかった場合はサイトが落ちているものと見なし、通知するようにした。</p>
+<p>GitHub リポジトリ直下の <code>README.md</code> を毎日書き換えるようなスクリプトになったので、</p>
+<ul>
+  <li><a href="https://github.com/Neos21/site-status">GitHub - Neos21/site-status: Site Status</a></li>
+</ul>
+<p>毎日このページさえ開けば、各サイトが落ちていないか、期限切れが迫っていないかを一覧で把握できる。</p>
+<p>とりまコレでよきよき。</p>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2020-10-09</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2020-10-09</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

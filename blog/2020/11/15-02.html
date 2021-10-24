@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>Rehype プラグインで Markdown からキレイな HTML ドキュメントを生成する - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2020/11/15-02.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2020/index.html">2020年</a></li>
+            <li><a href="/blog/2020/11/index.html">11月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2020-11-15</time></div>
+        <h1 id="page-title">Rehype プラグインで Markdown からキレイな HTML ドキュメントを生成する</h1>
+
+<p>Markdown から HTML にパースしてくれる、Remark・Rehype プラグイン。コレまでも色々なプラグインを紹介してきたが、生成される HTML のインデントなど整形されておらず、読みづらかった。また、<code>html</code>・<code>head</code>・<code>body</code> 要素などがイマイチで、素のままだと正しい HTML ファイルとして扱えなかった。</p>
+<p>今回は、<code>html</code> 要素などをキレイに挿入し、インデントを調整してキレイな HTML ソースを出力するためのプラグインを紹介する。</p>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#%E3%82%A4%E3%83%B3%E3%82%B9%E3%83%88%E3%83%BC%E3%83%AB%E3%81%99%E3%82%8B%E3%83%91%E3%83%83%E3%82%B1%E3%83%BC%E3%82%B8">インストールするパッケージ</a></li>
+  <li><a href="#%E3%82%B5%E3%83%B3%E3%83%97%E3%83%AB%E3%82%B3%E3%83%BC%E3%83%89">サンプルコード</a></li>
+  <li><a href="#title-%E3%82%AA%E3%83%97%E3%82%B7%E3%83%A7%E3%83%B3%E3%81%AE%E5%80%A4%E3%82%92-front-matter-%E3%81%8B%E3%82%89%E6%8A%BD%E5%87%BA%E3%81%99%E3%82%8B"><code>title</code> オプションの値を Front Matter から抽出する</a></li>
+</ul>
+<h2 id="インストールするパッケージ"><a class="header-link" href="#インストールするパッケージ"><span class="header-link-mark"></span></a>インストールするパッケージ</h2>
+<p>今回使うパッケージは以下。</p>
+<ul>
+  <li><a href="https://github.com/rehypejs/rehype-document">rehype-document</a></li>
+  <li><a href="https://github.com/rehypejs/rehype-format">rehype-format</a></li>
+</ul>
+<p>Markdown から HTML へのパースに備えて、次の npm パッケージが必要となる。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># Markdown を HTML へと変換するために必要な最低限の Unified・Remark・Rehype 関連パッケージ</span>
+$ <span class="token function">npm</span> <span class="token function">install</span> --save-dev unified remark-parse remark-rehype rehype-stringify
+
+<span class="token comment"># HTML ドキュメントの出力と、フォーマット用のプラグイン</span>
+$ <span class="token function">npm</span> <span class="token function">install</span> --save-dev rehype-document rehype-format
+</code></pre>
+<h2 id="サンプルコード"><a class="header-link" href="#サンプルコード"><span class="header-link-mark"></span></a>サンプルコード</h2>
+<p>次のようなコードで、Markdown ファイルから「キレイな HTML ドキュメント」が出力できる。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword">const</span> fs <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'fs'</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token property-access">promises</span><span class="token punctuation">;</span>
+
+<span class="token keyword">const</span> unified <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'unified'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">const</span> remarkParse <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'remark-parse'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">const</span> remarkRehype <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'remark-rehype'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">const</span> rehypeDocument <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'rehype-document'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">const</span> rehypeStringify <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'rehype-stringify'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">const</span> rehypeFormat <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'rehype-format'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token punctuation">(</span><span class="token keyword">async</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token keyword">const</span> inputMarkdown <span class="token operator">=</span> <span class="token keyword control-flow">await</span> fs<span class="token punctuation">.</span><span class="token method function property-access">readFile</span><span class="token punctuation">(</span><span class="token string">'./example.md'</span><span class="token punctuation">,</span> <span class="token string">'utf-8'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  
+  <span class="token keyword">const</span> processor <span class="token operator">=</span> <span class="token function">unified</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+    <span class="token punctuation">.</span><span class="token method function property-access">use</span><span class="token punctuation">(</span>remarkParse<span class="token punctuation">)</span>
+    <span class="token punctuation">.</span><span class="token method function property-access">use</span><span class="token punctuation">(</span>remarkRehype<span class="token punctuation">,</span> <span class="token punctuation">{</span>        <span class="token comment">// Markdown から HTML に変換する</span>
+      allowDangerousHtml<span class="token operator">:</span> <span class="token boolean">true</span>  <span class="token comment">// Markdown 中に `script`・`style` 要素などが記述されていてもそのまま HTML 出力する</span>
+    <span class="token punctuation">}</span><span class="token punctuation">)</span>
+    <span class="token punctuation">.</span><span class="token method function property-access">use</span><span class="token punctuation">(</span>rehypeDocument<span class="token punctuation">,</span> <span class="token punctuation">{</span>
+      title<span class="token operator">:</span> <span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">ほーむぺーじ</span><span class="token template-punctuation string">`</span></span><span class="token punctuation">,</span>  <span class="token comment">// `title` 要素の値</span>
+      language<span class="token operator">:</span> <span class="token string">'ja'</span><span class="token punctuation">,</span>         <span class="token comment">// `html` 要素に付与する `lang` 属性値</span>
+      responsive<span class="token operator">:</span> <span class="token boolean">true</span><span class="token punctuation">,</span>       <span class="token comment">// `&#x3C;meta name="viewport">` 指定を自動付与してくれる</span>
+      meta<span class="token operator">:</span> <span class="token punctuation">[</span>                 <span class="token comment">// 独自の `meta` 要素を追加できる</span>
+        <span class="token punctuation">{</span> name<span class="token operator">:</span> <span class="token string">'robots'</span><span class="token punctuation">,</span> content<span class="token operator">:</span> <span class="token string">'index, follow'</span> <span class="token punctuation">}</span>
+      <span class="token punctuation">]</span><span class="token punctuation">,</span>
+      link<span class="token operator">:</span> <span class="token punctuation">[</span>                 <span class="token comment">// 独自の `link` 要素を追加できる</span>
+        <span class="token punctuation">{</span> rel<span class="token operator">:</span> <span class="token string">'icon'</span><span class="token punctuation">,</span> href<span class="token operator">:</span> <span class="token string">'./favicon.ico'</span> <span class="token punctuation">}</span>
+      <span class="token punctuation">]</span><span class="token punctuation">,</span>
+      style<span class="token operator">:</span> <span class="token punctuation">[</span><span class="token string">'\nbody {\n  font-size: 1rem;\n}\n'</span><span class="token punctuation">]</span><span class="token punctuation">,</span>  <span class="token comment">// `head` 要素内に `style` 要素を配置してインラインスタイルを書ける</span>
+      css<span class="token operator">:</span> <span class="token punctuation">[</span><span class="token string">'./styles.css'</span><span class="token punctuation">]</span><span class="token punctuation">,</span>  <span class="token comment">// 外部 CSS ファイルを読み込める</span>
+      script<span class="token operator">:</span> <span class="token punctuation">[</span><span class="token string">'\nfunction example() {\n  alert("Hello");\n}\n'</span><span class="token punctuation">]</span><span class="token punctuation">,</span>  <span class="token comment">// `body` 要素の最後に `script` 要素を配置してインラインスクリプトを書く</span>
+      js<span class="token operator">:</span> <span class="token punctuation">[</span><span class="token string">'./scripts.js'</span><span class="token punctuation">]</span>  <span class="token comment">// `body` 要素の最後で外部 JS ファイルを読み込める</span>
+    <span class="token punctuation">}</span><span class="token punctuation">)</span>
+    <span class="token punctuation">.</span><span class="token method function property-access">use</span><span class="token punctuation">(</span>rehypeStringify<span class="token punctuation">,</span> <span class="token punctuation">{</span>
+      upperDoctype<span class="token operator">:</span> <span class="token boolean">true</span><span class="token punctuation">,</span>       <span class="token comment">// `&#x3C;!DOCTYPE html>` と大文字で表記する</span>
+      allowDangerousHtml<span class="token operator">:</span> <span class="token boolean">true</span>  <span class="token comment">// `script`・`style` 要素などが記述されていてもそのまま HTML 出力する</span>
+    <span class="token punctuation">}</span><span class="token punctuation">)</span>
+    <span class="token punctuation">.</span><span class="token method function property-access">use</span><span class="token punctuation">(</span>rehypeFormat<span class="token punctuation">,</span> <span class="token punctuation">{</span>   <span class="token comment">// HTML フォーマットする</span>
+      indent<span class="token operator">:</span> <span class="token number">2</span><span class="token punctuation">,</span>           <span class="token comment">// インデントのスペース数 (デフォルト `2`)</span>
+      indentInitial<span class="token operator">:</span> <span class="token boolean">true</span>  <span class="token comment">// 最初のネストからインデントを付ける (デフォルト `true`)</span>
+    <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">const</span> result <span class="token operator">=</span> <span class="token keyword control-flow">await</span> processor<span class="token punctuation">.</span><span class="token method function property-access">process</span><span class="token punctuation">(</span>inputMarkdown<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  
+  <span class="token keyword">const</span> outputHtml <span class="token operator">=</span> result<span class="token punctuation">.</span><span class="token property-access">contents</span><span class="token punctuation">;</span>
+  <span class="token keyword control-flow">await</span> fs<span class="token punctuation">.</span><span class="token method function property-access">writeFile</span><span class="token punctuation">(</span><span class="token string">'./example.html'</span><span class="token punctuation">,</span> outputHtml<span class="token punctuation">,</span> <span class="token string">'utf-8'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p><code>rehype-document</code> のオプションが豊富。<code>meta</code>・<code>link</code>・<code>style</code>・<code>script</code> 要素などを柔軟に埋め込める。特に必要がなければオプションを省略すれば良い。</p>
+<p><code>remark-rehype</code> で <code>allowDangerousHtml: true</code> を指定しているが、コレは Markdown 中に <code>style</code> や <code>script</code> 要素が記述されていた時に、それを残すための指定。</p>
+<p><code>rehype-stringify</code> で <code>allowDangerousHtml: true</code> を指定しているのは、Markdown 中の記述の他、<code>rehype-document</code> で追加した <code>style</code> や <code>script</code> 要素が消えないようにするためだ。</p>
+<p><code>rehype-format</code> は <code>rehype-stringify</code> の後に使う。デフォルトで2スペースインデントなので、実はオプション指定しなくても良い感じになる。</p>
+<p>コレで次のような HTML が生成できる。</p>
+<pre class="language-html"><code class="language-html"><span class="token doctype"><span class="token punctuation">&#x3C;!</span><span class="token doctype-tag">DOCTYPE</span> <span class="token name">html</span><span class="token punctuation">></span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>html</span> <span class="token attr-name">lang</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>ja<span class="token punctuation">"</span></span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>head</span><span class="token punctuation">></span></span>
+    <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>meta</span> <span class="token attr-name">charset</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>utf-8<span class="token punctuation">"</span></span><span class="token punctuation">></span></span>
+    <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>title</span><span class="token punctuation">></span></span>ほーむぺーじ<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>title</span><span class="token punctuation">></span></span>
+    <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>meta</span> <span class="token attr-name">name</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>viewport<span class="token punctuation">"</span></span> <span class="token attr-name">content</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>width=device-width, initial-scale=1<span class="token punctuation">"</span></span><span class="token punctuation">></span></span>
+    <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>meta</span> <span class="token attr-name">name</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>robots<span class="token punctuation">"</span></span> <span class="token attr-name">content</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>index, follow<span class="token punctuation">"</span></span><span class="token punctuation">></span></span>
+    <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>link</span> <span class="token attr-name">rel</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>icon<span class="token punctuation">"</span></span> <span class="token attr-name">href</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>./favicon.ico<span class="token punctuation">"</span></span><span class="token punctuation">></span></span>
+    <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>style</span><span class="token punctuation">></span></span><span class="token style"><span class="token language-css"><span class="token selector">body</span> <span class="token punctuation">{</span>
+<span class="token property">font-size</span><span class="token punctuation">:</span> <span class="token number">1</span><span class="token unit">rem</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span></span></span><span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>style</span><span class="token punctuation">></span></span>
+    <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>link</span> <span class="token attr-name">rel</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>stylesheet<span class="token punctuation">"</span></span> <span class="token attr-name">href</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>./styles.css<span class="token punctuation">"</span></span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>head</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>body</span><span class="token punctuation">></span></span>
+    <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>h1</span><span class="token punctuation">></span></span>タイトル<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>h1</span><span class="token punctuation">></span></span>
+    <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>p</span><span class="token punctuation">></span></span>文章<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>p</span><span class="token punctuation">></span></span>
+    <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>h2</span><span class="token punctuation">></span></span>はじめに<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>h2</span><span class="token punctuation">></span></span>
+    <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>p</span><span class="token punctuation">></span></span>文章…<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>p</span><span class="token punctuation">></span></span>
+    <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>script</span><span class="token punctuation">></span></span><span class="token script"><span class="token language-javascript"><span class="token keyword">function</span> <span class="token function">example</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+<span class="token function">alert</span><span class="token punctuation">(</span><span class="token string">"Hello"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span></span></span><span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>script</span><span class="token punctuation">></span></span>
+    <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>script</span> <span class="token attr-name">src</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>./scripts.js<span class="token punctuation">"</span></span><span class="token punctuation">></span></span><span class="token script"></span><span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>script</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>body</span><span class="token punctuation">></span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>html</span><span class="token punctuation">></span></span>
+</code></pre>
+<p>元の Markdown は</p>
+<pre class="language-markdown"><code class="language-markdown"><span class="token title important"><span class="token punctuation">#</span> タイトル</span>
+文章
+
+<span class="token title important"><span class="token punctuation">##</span> はじめに</span>
+文章…
+</code></pre>
+<p>だけだったのに、Valid で Formatting された HTML に変換できた。</p>
+<p>挙動が分かるように、わざと <code>style</code> と <code>script</code> オプションで指定したコードの前後に改行コードを入れたのだが、出力結果を見てもらえば分かるとおり、</p>
+<ul>
+  <li><code>&#x3C;style>body {</code> だとか</li>
+  <li><code>}&#x3C;/script></code> だとか</li>
+</ul>
+<p>いうように、タグの前後で改行されないのがちょっと惜しいところ。個人的には</p>
+<pre class="language-html"><code class="language-html"><span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>style</span><span class="token punctuation">></span></span><span class="token style"><span class="token language-css">
+  <span class="token selector">body</span> <span class="token punctuation">{</span>
+  <span class="token property">font-size</span><span class="token punctuation">:</span> <span class="token number">1</span><span class="token unit">rem</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+</span></span><span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>style</span><span class="token punctuation">></span></span>
+
+ないしは
+
+<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>script</span><span class="token punctuation">></span></span><span class="token script"><span class="token language-javascript">
+<span class="token keyword">function</span> <span class="token function">example</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token function">alert</span><span class="token punctuation">(</span><span class="token string">"Hello"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</span></span><span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>script</span><span class="token punctuation">></span></span>
+</code></pre>
+<p>のようにインデントと改行を入れて欲しいところだったが…。</p>
+<h2 id="title-オプションの値を-front-matter-から抽出する"><a class="header-link" href="#title-オプションの値を-front-matter-から抽出する"><span class="header-link-mark"></span></a><code>title</code> オプションの値を Front Matter から抽出する</h2>
+<p><code>rehype-document</code> の <code>title</code> オプションでページタイトルを指定できるのだが、コレを Markdown ファイルごとに変えたい。</p>
+<p>もっというと、<code>css</code> や <code>js</code> オプションの値なんかも、個々の Markdown ファイルで管理できたら柔軟性が高くなって嬉しい。</p>
+<p>そこで考えたのが、以前紹介した <a href="https://github.com/mrzmmr/remark-extract-frontmatter">remark-extract-frontmatter</a> をつかって、事前に Front Matter 部分を抽出しておき、それを使って改めてパースしてやる、という方法だ。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># 追加で以下のパッケージをインストールする</span>
+$ <span class="token function">npm</span> <span class="token function">install</span> --save-dev remark-frontmatter remark-extract-frontmatter yaml
+</code></pre>
+<p>Markdown ファイルには次のように Front Maatter セクションを用意する。</p>
+<pre class="language-markdown"><code class="language-markdown"><span class="token hr punctuation">---</span>
+title: サンプルページ
+language: ja,
+meta:
+  <span class="token list punctuation">-</span> name   : robots
+    content: index, follow
+link:
+  <span class="token list punctuation">-</span> rel : icon
+    href: ./favicon.ico
+style:
+  <span class="token list punctuation">-</span> |
+    body {
+      font-size: 1rem;
+    }
+css:
+  <span class="token list punctuation">-</span> ./styles.css
+script:
+  <span class="token list punctuation">-</span> |
+    function example() {
+      alert("Hello");
+    }
+js:
+  <span class="token title important">- ./scripts.js
+<span class="token punctuation">---</span></span>
+
+<span class="token title important"><span class="token punctuation">#</span> タイトル</span>
+文章
+
+<span class="token title important"><span class="token punctuation">##</span> つぎに</span>
+文章…
+</code></pre>
+<p>そして、次のようにパースする。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword">const</span> fs <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'fs'</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token property-access">promises</span><span class="token punctuation">;</span>
+
+<span class="token keyword">const</span> unified <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'unified'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">const</span> remarkParse <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'remark-parse'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">const</span> remarkFrontmatter <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'remark-frontmatter'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">const</span> remarkExtractFrontmatter <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'remark-extract-frontmatter'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">const</span> yaml <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'yaml'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">const</span> remarkRehype <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'remark-rehype'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">const</span> rehypeDocument <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'rehype-document'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">const</span> rehypeStringify <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'rehype-stringify'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">const</span> rehypeFormat <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'rehype-format'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token punctuation">(</span><span class="token keyword">async</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token keyword">const</span> inputMarkdown <span class="token operator">=</span> <span class="token keyword control-flow">await</span> fs<span class="token punctuation">.</span><span class="token method function property-access">readFile</span><span class="token punctuation">(</span><span class="token string">'./example.md'</span><span class="token punctuation">,</span> <span class="token string">'utf-8'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  
+  <span class="token comment">// 先に Front Matter 部分だけ抽出する</span>
+  <span class="token keyword">const</span> preprocessor <span class="token operator">=</span> <span class="token function">unified</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+    <span class="token punctuation">.</span><span class="token method function property-access">use</span><span class="token punctuation">(</span>remarkParse<span class="token punctuation">)</span>
+    <span class="token punctuation">.</span><span class="token method function property-access">use</span><span class="token punctuation">(</span>remarkFrontmatter<span class="token punctuation">,</span> <span class="token punctuation">[</span><span class="token punctuation">{</span>
+      type<span class="token operator">:</span> <span class="token string">'yaml'</span><span class="token punctuation">,</span>
+      marker<span class="token operator">:</span> <span class="token string">'-'</span><span class="token punctuation">,</span>
+      anywhere<span class="token operator">:</span> <span class="token boolean">false</span>
+    <span class="token punctuation">}</span><span class="token punctuation">]</span><span class="token punctuation">)</span>
+    <span class="token punctuation">.</span><span class="token method function property-access">use</span><span class="token punctuation">(</span>remarkExtractFrontmatter<span class="token punctuation">,</span> <span class="token punctuation">{</span>
+      yaml<span class="token operator">:</span> yaml<span class="token punctuation">.</span><span class="token property-access">parse</span><span class="token punctuation">,</span>
+      name<span class="token operator">:</span> <span class="token string">'frontMatter'</span>
+    <span class="token punctuation">}</span><span class="token punctuation">)</span>
+    <span class="token punctuation">.</span><span class="token method function property-access">use</span><span class="token punctuation">(</span>remarkRehype<span class="token punctuation">)</span>  <span class="token comment">// `remark-stringify` だと `Error: Cannot handle unknown node `yaml`` が発生したため、とりあえず HTML に変換する</span>
+    <span class="token punctuation">.</span><span class="token method function property-access">use</span><span class="token punctuation">(</span>rehypeStringify<span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment">// `Error: Cannot `process` without `Compiler`` を回避するためとりあえず入れておく</span>
+  <span class="token keyword">const</span> preprosessorResult <span class="token operator">=</span> <span class="token keyword control-flow">await</span> preprocessor<span class="token punctuation">.</span><span class="token method function property-access">process</span><span class="token punctuation">(</span>inputMarkdownText<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">const</span> frontMatter <span class="token operator">=</span> preprosessorResult<span class="token punctuation">.</span><span class="token property-access">data</span><span class="token punctuation">.</span><span class="token property-access">frontMatter</span><span class="token punctuation">;</span>
+  
+  <span class="token comment">// Front Matter から特定のキーの値のみ抽出し、rehype-document のオプションを組み立てる</span>
+  <span class="token keyword">const</span> documentOptions <span class="token operator">=</span> <span class="token punctuation">[</span><span class="token string">'title'</span><span class="token punctuation">,</span> <span class="token string">'language'</span><span class="token punctuation">,</span> <span class="token string">'meta'</span><span class="token punctuation">,</span> <span class="token string">'link'</span><span class="token punctuation">,</span> <span class="token string">'style'</span><span class="token punctuation">,</span> <span class="token string">'css'</span><span class="token punctuation">,</span> <span class="token string">'script'</span><span class="token punctuation">,</span> <span class="token string">'js'</span><span class="token punctuation">]</span>
+    <span class="token punctuation">.</span><span class="token method function property-access">reduce</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token parameter">acc<span class="token punctuation">,</span> key</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> frontMatter<span class="token punctuation">[</span>key<span class="token punctuation">]</span> <span class="token operator">?</span> <span class="token punctuation">{</span> <span class="token spread operator">...</span>acc<span class="token punctuation">,</span> <span class="token punctuation">[</span>key<span class="token punctuation">]</span><span class="token operator">:</span> frontMatter<span class="token punctuation">[</span>key<span class="token punctuation">]</span> <span class="token punctuation">}</span> <span class="token operator">:</span> acc<span class="token punctuation">,</span> <span class="token punctuation">{</span><span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  
+  <span class="token comment">// 本処理</span>
+  <span class="token keyword">const</span> processor <span class="token operator">=</span> <span class="token function">unified</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+    <span class="token punctuation">.</span><span class="token method function property-access">use</span><span class="token punctuation">(</span>remarkParse<span class="token punctuation">)</span>
+    <span class="token punctuation">.</span><span class="token method function property-access">use</span><span class="token punctuation">(</span>remarkFrontmatter<span class="token punctuation">)</span>  <span class="token comment">// パースして除去しておかないと Front Matter の情報が HTML に出力されてしまう</span>
+    <span class="token punctuation">.</span><span class="token method function property-access">use</span><span class="token punctuation">(</span>remarkRehype<span class="token punctuation">)</span>
+    <span class="token punctuation">.</span><span class="token method function property-access">use</span><span class="token punctuation">(</span>rehypeDocument<span class="token punctuation">,</span> documentOptions<span class="token punctuation">)</span>  <span class="token comment">// 上でまとめたオプションを指定する</span>
+    <span class="token punctuation">.</span><span class="token method function property-access">use</span><span class="token punctuation">(</span>rehypeStringify<span class="token punctuation">)</span>
+    <span class="token punctuation">.</span><span class="token method function property-access">use</span><span class="token punctuation">(</span>rehypeFormat<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">const</span> result <span class="token operator">=</span> <span class="token keyword control-flow">await</span> processor<span class="token punctuation">.</span><span class="token method function property-access">process</span><span class="token punctuation">(</span>inputMarkdown<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  
+  <span class="token keyword">const</span> outputHtml <span class="token operator">=</span> result<span class="token punctuation">.</span><span class="token property-access">contents</span><span class="token punctuation">;</span>
+  <span class="token keyword control-flow">await</span> fs<span class="token punctuation">.</span><span class="token method function property-access">writeFile</span><span class="token punctuation">(</span><span class="token string">'./result.html'</span><span class="token punctuation">,</span> outputHtml<span class="token punctuation">,</span> <span class="token string">'utf-8'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>こんな感じ。<code>Processor#process()</code> が2回登場していて、2回パースしているのが分かる。</p>
+<p>最初の Processor で Front Matter を抽出している。Front Matter 部分が欲しいだけなのだが、Unified の仕様上、Parse・Transform・Stringify がセットになっていないと動作しないので、<code>remark-rehype</code> (Transform) と <code>rehype-stringify</code> (Stringify) を後ろに付けて、とりあえず変換をかませている。変化して生成された HTML ソースは使っていないワケだ。</p>
+<p>変数 <code>documentOptions</code> は、Front Matter から <code>rehype-document</code> で使用するプロパティのみを抽出して連想配列を作っているだけ。もしも <code>rehype-document</code> のオプションと同じ項目しか用意しないのであれば、変数 <code>frontMatter</code> を直接 <code>rehype-document</code> のオプションオブジェクトとして渡してしまっても良い。</p>
+<p>一度 Markdown の方を見てみよう。<code>rehype-document</code> のオプション名に合わせて項目を用意している。<code>title</code> と <code>language</code> 以外は配列なので、配列の形式で書いている。<code>style</code> や <code>script</code> で埋め込めるインラインコードは、パイプ <code>|</code> を用いてテンプレートリテラル的に記述している。いずれも、YAML から JSON に変換したら、<code>rehype-document</code> のオプションと同じ型になる寸法だ。要らない項目があれば、ただ書かないでおけば良い。</p>
+<p>このようにすれば、生成される HTML 中の <code>title</code> 要素の値は Front Matter で定義した <code>title</code> プロパティの値になるし、Markdown ごとに異なる CSS を適用させたりすることもできる。</p>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2020-11-15</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2020-11-15</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

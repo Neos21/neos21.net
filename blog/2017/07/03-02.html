@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>AngularJS 向けの E2E テストツール「Protractor」で要素を特定するアレコレ - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2017/07/03-02.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2017/index.html">2017年</a></li>
+            <li><a href="/blog/2017/07/index.html">07月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2017-07-03</time></div>
+        <h1 id="page-title">AngularJS 向けの E2E テストツール「Protractor」で要素を特定するアレコレ</h1>
+
+<p>Angular 製のアプリの E2E テストに用いられる <strong>Protractor</strong> (プロトラクター)。Protractor は Node.js で Selenium を利用するライブラリである「WebDriverJS」をベースに作られているので、API の感覚は Selenium に近い。テストコードは JavaScript のテストフレームワークである「Jasmine」の記法をほぼそのまま使えるので、<em>Protractor はさしずめ「Selenium + Jasmine」</em>といったところか。</p>
+<p>E2E テストでは、実際にブラウザ上で要素を特定してクリックとか文字列入力とかしてやる必要がある。この記述方法は、昔ながらの <code>document.getElementById()</code> だとか、jQuery の <code>$('.hoge > .fuga')</code> なんて書き方で DOM 操作をしたことがある人なら割と感覚が掴みやすいと思うが、他にも色々と便利な要素の特定方法があったり、かと思えば地味に引っかかるところがあったりするので、要素を特定するための書き方をまとめてみた。</p>
+<p>基本的には公式の API リファレンスを検索してもらえば分かることだが、「こういう HTML に対してこうやって取得できる」という実例を挙げて、少し感覚を掴んでもらえたらいいかなと思う。</p>
+<ul>
+  <li>参考：<a href="http://www.protractortest.org/#/api">Protractor - end-to-end testing for AngularJS</a></li>
+</ul>
+<h2 id="特定の1つの要素を取得する"><a class="header-link" href="#特定の1つの要素を取得する"><span class="header-link-mark"></span></a>特定の1つの要素を取得する</h2>
+<p>Protractor で要素を1つ特定する方法の基本は、<strong><code>element(by.LOCATOR)</code></strong> という形式だ。<code>LOCATOR</code> 部分は <code>id</code> とか <code>css</code> とか色々あるので後述するが、要するに <code>element = 要素( by.特定方法 )</code> という記述の仕方になっている。jQuery の <code>$('#id')</code> (= <code>jQuery('#id')</code>) や、jQuery を簡略化した Angular の <code>element</code> などと同じ書式といえる。</p>
+<p>以下のような HTML を取得する場合を考える。</p>
+<pre class="language-html"><code class="language-html"><span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>input</span> <span class="token attr-name">type</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>button<span class="token punctuation">"</span></span> <span class="token attr-name">id</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>login<span class="token punctuation">"</span></span> <span class="token attr-name">value</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>ログインボタン<span class="token punctuation">"</span></span><span class="token punctuation">></span></span>
+</code></pre>
+<p>この要素には id 属性が振られているので、id 属性値で一意に特定できる。つまり、以下のように書けば良い。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword">const</span> loginBtn <span class="token operator">=</span> <span class="token function">element</span><span class="token punctuation">(</span>by<span class="token punctuation">.</span><span class="token method function property-access">id</span><span class="token punctuation">(</span><span class="token string">'login'</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>感覚的には <code>document.getElementById('login')</code> や <code>$('#id')</code> とほぼ同義といえる (取得できるオブジェクト自体は通常の DOM ではなく WebElement という Protractor で操作するための型だが、要素を取得する方法としては同様、という意味)。</p>
+<p>また、改めて後述するが、<code>element()</code> は複数の要素が該当する条件を渡した時に、最初の要素を1つだけ取得して返すので、<code>element.all().first()</code> と同じように使える。</p>
+<p>なお、<code>element()</code> の戻り値は <code>ElementFinder</code> という型になっている。これにメソッドチェーンする形で、更に子要素を抽出したり、その要素自体を調べたり操作したりできる。</p>
+<h2 id="該当する複数の要素群を取得する"><a class="header-link" href="#該当する複数の要素群を取得する"><span class="header-link-mark"></span></a>該当する複数の要素群を取得する</h2>
+<p>複数の要素群を取得するには、<em><code>element.all(by.LOCATOR)</code></em> と書く。例えば</p>
+<pre class="language-html"><code class="language-html"><span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>ul</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>li</span> <span class="token attr-name">class</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>item<span class="token punctuation">"</span></span><span class="token punctuation">></span></span><span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>a</span> <span class="token attr-name">href</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>1.html<span class="token punctuation">"</span></span><span class="token punctuation">></span></span>ほげ<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>a</span><span class="token punctuation">></span></span><span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>li</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>li</span> <span class="token attr-name">class</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>item<span class="token punctuation">"</span></span><span class="token punctuation">></span></span><span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>a</span> <span class="token attr-name">href</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>2.html<span class="token punctuation">"</span></span><span class="token punctuation">></span></span>ふが<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>a</span><span class="token punctuation">></span></span><span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>li</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>li</span> <span class="token attr-name">class</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>item<span class="token punctuation">"</span></span><span class="token punctuation">></span></span><span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>a</span> <span class="token attr-name">href</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>3.html<span class="token punctuation">"</span></span><span class="token punctuation">></span></span>ぴよ<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>a</span><span class="token punctuation">></span></span><span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>li</span><span class="token punctuation">></span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>ul</span><span class="token punctuation">></span></span>
+</code></pre>
+<p>このような <code>.item</code> クラスが振られた要素が複数あったとしたら、</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token comment">// クラス名に「item」が付与されている要素群を取得する</span>
+<span class="token keyword">const</span> items <span class="token operator">=</span> element<span class="token punctuation">.</span><span class="token method function property-access">all</span><span class="token punctuation">(</span>by<span class="token punctuation">.</span><span class="token method function property-access">css</span><span class="token punctuation">(</span><span class="token string">'.item'</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>このように取得できる。<em><code>by.css()</code> では <code>item</code> ではなく <code>.item</code> とピリオドを付け、CSS セレクタとして認識させるようにする。ピリオドを付け忘れると要素名と解釈されることになるので注意。</em></p>
+<p>HTML 中に他に <code>li</code> 要素がなければ、以下のように <code>li</code> 要素を取得しても同じ結果が得られる。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token comment">// タグ名として li 要素を指定して取得する</span>
+<span class="token keyword">const</span> liElements <span class="token operator">=</span> element<span class="token punctuation">.</span><span class="token method function property-access">all</span><span class="token punctuation">(</span>by<span class="token punctuation">.</span><span class="token method function property-access">tagName</span><span class="token punctuation">(</span><span class="token string">'li'</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// もしくは CSS セレクタを用いて li 要素を取得する</span>
+<span class="token keyword">const</span> items <span class="token operator">=</span> element<span class="token punctuation">.</span><span class="token method function property-access">all</span><span class="token punctuation">(</span>by<span class="token punctuation">.</span><span class="token method function property-access">css</span><span class="token punctuation">(</span><span class="token string">'li'</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<h3 id="bycss-の柔軟さ"><a class="header-link" href="#bycss-の柔軟さ"><span class="header-link-mark"></span></a><code>by.css()</code> の柔軟さ</h3>
+<p><code>by.css()</code> は CSS セレクタのとおりに記述できるので、jQuery よろしく以下のように書いたりできる。</p>
+<ul>
+  <li><code>table tbody td.age</code> (<code>table</code>・<code>tbody</code> 要素内の <code>&#x3C;td class="age"></code> な要素)</li>
+  <li><code>.wrapper #header</code> (<code>.wrapper</code> 内の <code>#header</code> 要素。ただしこの場合は <code>by.id('header')</code> の方が直感的だが…)</li>
+  <li><code>.btn.btn-default</code> (<code>.btn</code> と <code>.btn-default</code> を同時付与されている要素)</li>
+</ul>
+<p>かなり柔軟に指定できるので、大抵は <code>by.css()</code> でやれるんじゃないかなと思う。</p>
+<p><code>element.all()</code> の戻り値は <code>ElementArrayFinder</code> という型になっている。メソッドチェーンによって子要素の数を数えたり、1つ要素を取り出したり、順に処理したり、ということが可能になる。クリックだとか要素内を覗くだとかいう操作はできないので注意。クリック等の操作を行うにはそこから1要素に特定する必要がある。</p>
+<ul>
+  <li>参考：<a href="http://www.protractortest.org/#/api?view=ElementArrayFinder">Protractor - end-to-end testing for AngularJS</a></li>
+</ul>
+<h2 id="複数の要素群から1要素を取り出す"><a class="header-link" href="#複数の要素群から1要素を取り出す"><span class="header-link-mark"></span></a>複数の要素群から1要素を取り出す</h2>
+<p>複数の要素群の中から1要素を取り出すには、</p>
+<ol>
+  <li><code>element.all(by.LOCATOR).get(0)</code> という形で添字を指定して取得する</li>
+  <li><code>element.all(by.LOCATOR).first()</code> や <code>element.all(by.LOCATOR).last()</code> という形で最初や最後の1要素を取得する</li>
+  <li>複数の要素がヒットする場合でも <code>element()</code> を使用することで最初の1要素のみ取得する</li>
+  <li><code>element.all(by.LOCATOR).element(by.LOCATOR)</code> という形で1要素を特定する</li>
+</ol>
+<p>といった方法がある。</p>
+<p>前半の 1. と 2. の方法は、先程の <code>element.all()</code> の後ろに <code>.get(INDEX)</code> だとか <code>.first()</code> だとか <code>.last()</code> だとかを付けることで、1要素を抽出できるというモノ。</p>
+<p>で、<code>.get(0)</code>・<code>.first()</code> と同じ意味になるのが、3. の <code>element()</code> を直で使う方法。</p>
+<pre class="language-html"><code class="language-html"><span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>ul</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>li</span> <span class="token attr-name">class</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>item<span class="token punctuation">"</span></span><span class="token punctuation">></span></span><span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>a</span> <span class="token attr-name">href</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>1.html<span class="token punctuation">"</span></span><span class="token punctuation">></span></span>ほげ<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>a</span><span class="token punctuation">></span></span><span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>li</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>li</span> <span class="token attr-name">class</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>item<span class="token punctuation">"</span></span><span class="token punctuation">></span></span><span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>a</span> <span class="token attr-name">href</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>2.html<span class="token punctuation">"</span></span><span class="token punctuation">></span></span>ふが<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>a</span><span class="token punctuation">></span></span><span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>li</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>li</span> <span class="token attr-name">class</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>item<span class="token punctuation">"</span></span><span class="token punctuation">></span></span><span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>a</span> <span class="token attr-name">href</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>3.html<span class="token punctuation">"</span></span><span class="token punctuation">></span></span>ぴよ<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>a</span><span class="token punctuation">></span></span><span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>li</span><span class="token punctuation">></span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>ul</span><span class="token punctuation">></span></span>
+</code></pre>
+<p>先程のこの HTML を例にすると、以下は全て同じ結果が得られる。</p>
+<pre class="language-javascript"><code class="language-javascript">element<span class="token punctuation">.</span><span class="token method function property-access">all</span><span class="token punctuation">(</span>by<span class="token punctuation">.</span><span class="token method function property-access">css</span><span class="token punctuation">(</span><span class="token string">'.item'</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">get</span><span class="token punctuation">(</span><span class="token number">0</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+element<span class="token punctuation">.</span><span class="token method function property-access">all</span><span class="token punctuation">(</span>by<span class="token punctuation">.</span><span class="token method function property-access">css</span><span class="token punctuation">(</span><span class="token string">'.item'</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">first</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token function">element</span><span class="token punctuation">(</span>by<span class="token punctuation">.</span><span class="token method function property-access">css</span><span class="token punctuation">(</span><span class="token string">'.item'</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<h2 id="メソッドチェーンでさらに深く調べる"><a class="header-link" href="#メソッドチェーンでさらに深く調べる"><span class="header-link-mark"></span></a>メソッドチェーンでさらに深く調べる</h2>
+<p><code>element()</code> と <code>element.all()</code> は互いにメソッドを繋げることができ、「この要素の、中にある子要素群の、中にあるこの要素」といった指定もできる。</p>
+<pre class="language-html"><code class="language-html"><span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>div</span> <span class="token attr-name">id</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>menu<span class="token punctuation">"</span></span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>ul</span><span class="token punctuation">></span></span>
+    <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>li</span> <span class="token attr-name">class</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>item<span class="token punctuation">"</span></span><span class="token punctuation">></span></span><span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>a</span> <span class="token attr-name">href</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>1.html<span class="token punctuation">"</span></span><span class="token punctuation">></span></span>ほげ<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>a</span><span class="token punctuation">></span></span><span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>li</span><span class="token punctuation">></span></span>
+    <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>li</span> <span class="token attr-name">class</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>item<span class="token punctuation">"</span></span><span class="token punctuation">></span></span><span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>a</span> <span class="token attr-name">href</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>2.html<span class="token punctuation">"</span></span><span class="token punctuation">></span></span>ふが<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>a</span><span class="token punctuation">></span></span><span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>li</span><span class="token punctuation">></span></span>
+    <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>li</span> <span class="token attr-name">class</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>item<span class="token punctuation">"</span></span><span class="token punctuation">></span></span><span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>a</span> <span class="token attr-name">href</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>3.html<span class="token punctuation">"</span></span><span class="token punctuation">></span></span>ぴよ<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>a</span><span class="token punctuation">></span></span><span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>li</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>ul</span><span class="token punctuation">></span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>div</span><span class="token punctuation">></span></span>
+</code></pre>
+<p>このような HTML の時に、「ほげ」を囲むリンク <code>a</code> 要素を取得するには、以下のように書ける。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword">const</span> hogeLink <span class="token operator">=</span> <span class="token function">element</span><span class="token punctuation">(</span>by<span class="token punctuation">.</span><span class="token method function property-access">id</span><span class="token punctuation">(</span><span class="token string">'menu'</span><span class="token punctuation">)</span>  <span class="token comment">// #menu 要素を1つ取得する</span>
+  <span class="token punctuation">.</span><span class="token method function property-access">all</span><span class="token punctuation">(</span>by<span class="token punctuation">.</span><span class="token method function property-access">css</span><span class="token punctuation">(</span><span class="token string">'.item'</span><span class="token punctuation">)</span><span class="token punctuation">)</span>       <span class="token comment">// #menu 配下から .item 要素群を抽出する</span>
+  <span class="token punctuation">.</span><span class="token method function property-access">first</span><span class="token punctuation">(</span><span class="token punctuation">)</span>                    <span class="token comment">// .item 要素群の最初の1要素を取得する</span>
+  <span class="token punctuation">.</span><span class="token method function property-access">element</span><span class="token punctuation">(</span>by<span class="token punctuation">.</span><span class="token method function property-access">tagName</span><span class="token punctuation">(</span><span class="token string">'a'</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment">// その要素の配下から a 要素を1つ取得する</span>
+</code></pre>
+<p>要素を掘り下げていけるという感覚を掴んでもらえれば幸い。</p>
+<h2 id="色々な-by-指定"><a class="header-link" href="#色々な-by-指定"><span class="header-link-mark"></span></a>色々な <code>by</code> 指定</h2>
+<p><code>by</code> による要素特定は Locator と呼ばれ、id や css、tagName 以外にも色々な指定方法がある。</p>
+<h3 id="bylinktext"><a class="header-link" href="#bylinktext"><span class="header-link-mark"></span></a><code>by.linkText()</code></h3>
+<p>例えば先程の「ほげ」なリンクを特定する方法は、<code>by.linkText()</code> を使うと以下のように書くことができる。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword">const</span> hogeLink <span class="token operator">=</span> <span class="token function">element</span><span class="token punctuation">(</span>by<span class="token punctuation">.</span><span class="token method function property-access">linkText</span><span class="token punctuation">(</span><span class="token string">'ほげ'</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>これで、リンク (<code>a</code> 要素内) の文字列と一致する要素を返してくれる。</p>
+<h3 id="bybuttontext"><a class="header-link" href="#bybuttontext"><span class="header-link-mark"></span></a><code>by.buttonText()</code></h3>
+<p><code>by.linkText()</code> と同様に、ボタンのラベルを見て要素を特定することもできる。</p>
+<pre class="language-html"><code class="language-html"><span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>input</span> <span class="token attr-name">type</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>button<span class="token punctuation">"</span></span> <span class="token attr-name">value</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>戻るボタン<span class="token punctuation">"</span></span><span class="token punctuation">></span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>button</span><span class="token punctuation">></span></span>進むボタン<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>button</span><span class="token punctuation">></span></span>
+</code></pre>
+<p>このような HTML の場合に、以下のようにボタンを特定できる。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword">const</span> backBtn <span class="token operator">=</span> <span class="token function">element</span><span class="token punctuation">(</span>by<span class="token punctuation">.</span><span class="token method function property-access">buttonText</span><span class="token punctuation">(</span><span class="token string">'戻るボタン'</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">const</span> nextBtn <span class="token operator">=</span> <span class="token function">element</span><span class="token punctuation">(</span>by<span class="token punctuation">.</span><span class="token method function property-access">buttonText</span><span class="token punctuation">(</span><span class="token string">'進むボタン'</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p><code>input[type="submit"]</code> なボタンでも使えたが、<code>input[type="reset"]</code> なボタンでは使えなかった。恐らく、画面遷移を伴うボタンやリンクはラベルで特定したい機会が多いことから、<code>input[type="button"]</code> と <code>input[type="submit"]</code>、<code>button</code> 要素のみ特定できるのだろう。また、<code>input[type="reset"]</code> の場合はデフォルトのラベルがブラウザ依存になることが影響するのかもしれない。</p>
+<h3 id="bymodel"><a class="header-link" href="#bymodel"><span class="header-link-mark"></span></a><code>by.model()</code></h3>
+<p>Angular 向けに作られている Protractor なので、AngularJS でよく指定する <code>ng-model</code> 属性に対応した Locator もある。</p>
+<pre class="language-html"><code class="language-html"><span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>input</span> <span class="token attr-name">type</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>text<span class="token punctuation">"</span></span> <span class="token attr-name">ng-model</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>userName<span class="token punctuation">"</span></span><span class="token punctuation">></span></span>
+</code></pre>
+<p>このように <code>ng-model</code> 属性を与えている HTML があったとして、</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword">const</span> userNameTextBox <span class="token operator">=</span> <span class="token function">element</span><span class="token punctuation">(</span>by<span class="token punctuation">.</span><span class="token method function property-access">model</span><span class="token punctuation">(</span><span class="token string">'userName'</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>このように特定することができる。</p>
+<h3 id="byrepeater"><a class="header-link" href="#byrepeater"><span class="header-link-mark"></span></a><code>by.repeater()</code></h3>
+<p>こちらも AngularJS 向けの Locator。<code>ng-repeat</code> 属性でループ処理している部分を取得することができる。</p>
+<pre class="language-html"><code class="language-html"><span class="token comment">&#x3C;!-- ng-repeat を使って items の要素を順に表示している部分 --></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>dl</span> <span class="token attr-name">ng-repeat</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>item in items<span class="token punctuation">"</span></span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>dt</span><span class="token punctuation">></span></span>{{ item.title }}<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>dt</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>dd</span><span class="token punctuation">></span></span>
+    <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>p</span><span class="token punctuation">></span></span>{{ item.price }}<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>p</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>dd</span><span class="token punctuation">></span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>dl</span><span class="token punctuation">></span></span>
+</code></pre>
+<p>このような HTML は以下のように取得できる。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword">const</span> items <span class="token operator">=</span> element<span class="token punctuation">.</span><span class="token method function property-access">all</span><span class="token punctuation">(</span>by<span class="token punctuation">.</span><span class="token method function property-access">repeater</span><span class="token punctuation">(</span><span class="token string">'item in items'</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p><code>ng-repeat</code> 属性に書いた値をそのまま <code>by.repeater()</code> に入れれば良い。</p>
+<h3 id="その他"><a class="header-link" href="#その他"><span class="header-link-mark"></span></a>その他</h3>
+<p>その他使い所がありそうな Locators　を挙げておく。</p>
+<ul>
+  <li><code>by.name()</code> : <code>name</code> 属性値。</li>
+  <li><code>by.options()</code> : <code>select</code> 要素に書く <code>ng-options</code> 属性値。書き方は <code>by.repeater()</code> 同様、<code>ng-options</code> 属性値をそのまま書けば良い。</li>
+  <li><code>by.xpath()</code> : XPath 記法で要素を特定できる。<code>&#x3C;ul>&#x3C;li>&#x3C;a></code> という入れ子の <code>a</code> 要素なら <code>by.xpath('//ul/li/a'))</code> となる。
+    <ul>
+      <li>参考：<a href="http://www.protractortest.org/#/api?view=webdriver.By.xpath">Protractor - end-to-end testing for AngularJS</a></li>
+    </ul>
+  </li>
+</ul>
+<p>今回は割愛するが、<code>by.addLocator()</code> を使うことで独自の Locator を作成することもできる。</p>
+<ul>
+  <li>参考：<a href="http://www.protractortest.org/#/api?view=ProtractorBy.prototype.addLocator">Protractor - end-to-end testing for AngularJS</a></li>
+</ul>
+<hr>
+<h2 id="どのように要素を特定すると良いか"><a class="header-link" href="#どのように要素を特定すると良いか"><span class="header-link-mark"></span></a>どのように要素を特定すると良いか</h2>
+<p>要素の特定方法はさまざまなやり方があることは分かったが、どんなやり方が良いだろうか。HTML の構造別に、優先順位を考えたい。</p>
+<p>ベースとなる考え方は、「<strong>ちょっとした HTML の変更で使えなくなる書き方は避ける</strong>」ということであろう。例えばクラスを少し変えたりすると途端に要素が特定できなくなる指定は避けたい。</p>
+<ol>
+  <li><code>by.id()</code> : id 属性が振られている要素なら迷わずコレ。ページ中で1つしか存在しない要素と断定できるため。</li>
+  <li><code>by.model()</code> : ng-model 属性も id 属性に次いで一意に特定しやすい。</li>
+  <li><code>by.repeater()</code> など : ng-repeat 属性など、その他の AngularJS 組み込みディレクティブに対する Locator も、特徴的かつ HTML の変更の影響が少ないと考えられる。</li>
+  <li><code>by.linkText()</code>・<code>by.buttonText()</code> : 画面遷移を伴うリンクやボタンはそうそうラベル変更しないだろうから、文字列での特定でも問題ないだろう。</li>
+</ol>
+<p>これに当てはまらない要素の場合は、次のような方針でメソッドチェーンを組み立てると良いだろう。</p>
+<ul>
+  <li>当該要素を必ずラップする、一番近い親要素から繋げる。 例えば「<code>li.item</code> は HTML 中のあちこちに登場するものの、メニューバーの中の <code>li.item</code> のみ特定したい」という場合は、「メニューバー」を構成する <code>ul.menu</code> からメソッドチェーンするようにする、といった感じ。 <code>element(by.css('ul.menu')).all(by.css('li.item'))</code> しかし、メニューバー (<code>ul.menu</code>) が「グローバルヘッダ (<code>#header</code>)」内に存在するかどうかはまた変わるかもしれないので、<code>li.item</code> から見て一番近い親要素である <code>ul.menu</code> よりも親の要素を使うことはなるべく避けたい。</li>
+  <li>同時に付与しているクラスを細かく書く。 Bootstrap などを使っている場合であれば、<code>by.css('.panel.panel-success')</code> というように、クラスを複合指定することで特定できる場合が増える。あるフォームの中のこの要素、といった書き方ができればよりズレが少なくなるだろう。</li>
+  <li><code>.first()</code> や <code>.last()</code> で必ず特定できる範囲のみ <code>element.all()</code> を使う。 メソッドチェーンで <code>element.all().element(by.css())</code> といった指定が困難な場合は、仕方なく <code>.get()</code> 系のメソッドを使うことになるが、<code>.get()</code> は順番の変更に弱いのでなるべく避けたい。出来る限り <code>.first()</code> か <code>.last()</code> で特定できる場合に限り使用するようにしたい。</li>
+</ul>
+<p>メソッドチェーンで <code>element.all(by.tagName()).element(by.css())</code> といった書き方にするか、CSS セレクタを使って <code>element(by.css('ELEMENT .CLASS_NAME'))</code> といった書き方にするかは、HTML 構造の複雑さと可読性次第かなと。速度はあまり気にならないと思う。HTML 構造が複雑な場合はある程度メソッドチェーンで崩すと良いと思う。</p>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2017-07-03</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2017-07-03</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

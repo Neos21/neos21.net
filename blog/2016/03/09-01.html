@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>フレームワークの都合に引っ張られて DB の型を全て VARCHAR にしたりしない - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2016/03/09-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2016/index.html">2016年</a></li>
+            <li><a href="/blog/2016/03/index.html">03月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2016-03-09</time></div>
+        <h1 id="page-title">フレームワークの都合に引っ張られて DB の型を全て VARCHAR にしたりしない</h1>
+
+<p>Struts1 系は、画面とのデータのやり取りには基本的に文字列を使用するため、画面上の入力値を受け取る Form Bean のプロパティは String にしておくことが通例。</p>
+<p>例えば、1つのチェックボックスで何かの On/Off を表現するような項目が画面にある場合。</p>
+<p>Struts1 ではチェックボックスの状態を直接 Form Bean に渡すのが色々と面倒なので、チェックされた時に JavaScript で、何か別の hidden 項目の value に "0" か "1" なり、"true" か "false" なり、チェックされたかを区別するための値をセットし、フォーム送信することが多い。</p>
+<p>この hidden 項目は Form Bean に定義してあるプロパティで、上述のような Struts1 の都合に合わせて、String 型で定義してある。そのため、チェック状況はこのプロパティから String 型で、"0" だとか "1" だとかいう文字列で受け取ることになる。</p>
+<p>Struts1 系なんて相当古いフレームワークだし、そんなものを使っていること自体どうかしているのだが、とりあえずそういうフレームワーク上の都合がある状態。</p>
+<p>一方、そのチェックボックスの状態を格納する <em>DB のカラムは Boolean 型が望ましい。チェックされたかされていないか、で True or False に分けられるから</em>だ。</p>
+<p>しかしうちの現場で見ているシステムでは、Form Bean で受け取った値を DB 登録用の DTO に詰め直す際、Boolean 型に変換する作業を横着しようとしたのか、DB のカラム定義が CHAR(1) にされており、"0" か "1" のいずれかが直接文字列として保存されるような作りになっていた。</p>
+<p>というか、なんなら Form Bean には DB 登録用の DTO が直接プロパティとして定義されていて、その DTO の中のチェック状況を管理するプロパティに直接 "0" とか "1" とかセットさせるようになっていた。この DTO を直接、DB 更新時のパラメータとして投げ渡していたのだ。画面用の Form Bean と DB 用の DTO (Entity と表現しても良いか) の分離が全くなされていない酷い設計だ。</p>
+<p>画面入力された値は String 型のプロパティで受け取る必要がある、というフレームワークによる制約をそのままに、DTO に画面入力と DB 更新の両方の責務を持たせたような作りは混乱を招く。True か False のいずれかしか取らないはずの項目が CHAR 型だと、想定外の文字列が入っていないか常にチェックする必要が出てくるし、大変扱いづらい。</p>
+<p>フレームワークの都合に依存するのは、Struts1 の場合 Form Bean (画面入力値) までにし、Action クラスは Form Bean を受け取ったらすぐに型変換用のメソッドを呼んで Model が扱いやすい JavaBeans に直し、実際の処理をする Model に JavaBeans を渡すようにすべきだ。そうすれば、Model は Form Beans に依存しない作りになるし、Boolean であるべきプロパティは既に型変換されていてちゃんも Boolean として扱えるようになってるわけだから、分かりやすくなる。そしてもっと言えば、Model が受け取る JavaBeans と、DB 更新時に使う DTO (Entity) は別々のクラスにすべきだ。基本的には <code>BeanUtils#copyProperties()</code> で詰め替えられるし、特殊な理由で手動での詰め替えの手間が増えようと、そこは分離すべきだ。</p>
+<p>だいたい Action クラスにビジネスロジックをビッシリ書いて直接 DB 更新とかやっちゃってるシステムを見てるので、そういう思想になる以前のド素人が書いたんだろな、とは思ってるけど、本来は、<strong>なるべく外部の制約を受ける範囲を狭めるように設計すべきだ。</strong></p>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2016-03-09</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2016-03-09</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

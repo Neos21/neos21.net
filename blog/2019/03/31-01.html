@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>Kubernetes の Pod 内で使う環境変数を Secret から設定する - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2019/03/31-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2019/index.html">2019年</a></li>
+            <li><a href="/blog/2019/03/index.html">03月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2019-03-31</time></div>
+        <h1 id="page-title">Kubernetes の Pod 内で使う環境変数を Secret から設定する</h1>
+
+<p>Kubernetes 時代の環境変数設定。</p>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#kubernetes-secret-%E3%81%AB%E3%81%A4%E3%81%84%E3%81%A6">Kubernetes Secret について</a></li>
+  <li><a href="#deploymentyaml-%E3%81%AE-env-%E3%83%97%E3%83%AD%E3%83%91%E3%83%86%E3%82%A3"><code>deployment.yaml</code> の <code>env</code> プロパティ</a></li>
+  <li><a href="#--from-literal-%E3%82%AA%E3%83%97%E3%82%B7%E3%83%A7%E3%83%B3%E3%81%A7%E4%B8%80%E3%81%A4%E3%81%9A%E3%81%A4%E7%99%BB%E9%8C%B2"><code>--from-literal</code> オプションで一つずつ登録</a></li>
+  <li><a href="#env%E3%83%BBvaluefrom-%E3%81%A71%E3%81%A4%E3%81%9A%E3%81%A4%E5%8F%82%E7%85%A7%E7%B4%90%E4%BB%98%E3%81%91"><code>env</code>・<code>valueFrom</code> で1つずつ参照紐付け</a></li>
+  <li><a href="#--from-env-file-%E3%82%AA%E3%83%97%E3%82%B7%E3%83%A7%E3%83%B3%E3%81%A7%E4%B8%80%E6%8B%AC%E7%99%BB%E9%8C%B2"><code>--from-env-file</code> オプションで一括登録</a></li>
+  <li><a href="#envfrom-%E3%81%A7%E4%B8%80%E6%8B%AC%E8%AA%AD%E3%81%BF%E8%BE%BC%E3%81%BF"><code>envFrom</code> で一括読み込み</a></li>
+  <li><a href="#%E4%BB%A5%E4%B8%8A">以上</a></li>
+</ul>
+<h2 id="kubernetes-secret-について"><a class="header-link" href="#kubernetes-secret-について"><span class="header-link-mark"></span></a>Kubernetes Secret について</h2>
+<p>Kubernetes クラスタ内で稼動する Pod が、API キーやトークンなどのいわゆる <em>Credentials (クレデンシャル) 情報</em>を扱う時、それをどこで管理するのが良いだろうか。</p>
+<p>アプリ内へのハードコーディングは勿論避けたい。後からの差し替えが難しくなる、「設定ファイルに切り出して Docker コンテナに同梱」といった手法もイマイチ。</p>
+<p>じゃあ環境変数として持たせよう、となると、Dockerfile の <code>ENV</code> 命令が思い付くが、コレも Docker イメージ丸ごとの差し替えが必要になってしまうので、環境変数以外の差分がウッカリ混じってしまう、といった事故 (デグレ) に繋がりかねない。</p>
+<p>Docker は起動時に <code>--env</code> や <code>--env-file</code> といったオプションを指定することで、環境変数を設定できる。しかし Kubernetes クラスタ内では別に <code>docker run</code> コマンドを自分で叩くワケではないので、別の方法を使うことになる。…というのが今回紹介するお話。</p>
+<p>Kubernetes には <strong>Secret</strong> と呼ばれる秘密情報を保持するための領域があるので、コレを利用して、Pod に環境変数をブチ込んでみよう。</p>
+<p>なお、似たようなモノに <em>ConfigSet</em> というモノもあるのだが、コチラは今回紹介しない。Secret との違いは Base64 で難読化されていないぐらいなので、主に外部の API サービスのエンドポイント URL など、直接覗かれてもあまり影響がない定数情報を保持するのに使える。設定方法や参照方法には大きな違いはない。</p>
+<h2 id="deploymentyaml-の-env-プロパティ"><a class="header-link" href="#deploymentyaml-の-env-プロパティ"><span class="header-link-mark"></span></a><code>deployment.yaml</code> の <code>env</code> プロパティ</h2>
+<p>まずは、Secret を使わない簡単なやり方から。<code>deployment.yaml</code> の中に環境変数を記述できる。</p>
+<pre class="language-yaml"><code class="language-yaml"><span class="token key atrule">apiVersion</span><span class="token punctuation">:</span> extensions/v1beta1
+<span class="token key atrule">kind</span><span class="token punctuation">:</span> Deployment
+<span class="token key atrule">metadata</span><span class="token punctuation">:</span>
+  <span class="token key atrule">name</span><span class="token punctuation">:</span> my<span class="token punctuation">-</span>app<span class="token punctuation">-</span>deployment
+<span class="token key atrule">spec</span><span class="token punctuation">:</span>
+  <span class="token key atrule">selector</span><span class="token punctuation">:</span>
+    <span class="token key atrule">matchLabels</span><span class="token punctuation">:</span>
+      <span class="token key atrule">app</span><span class="token punctuation">:</span> my<span class="token punctuation">-</span>app
+  <span class="token key atrule">replicas</span><span class="token punctuation">:</span> <span class="token number">1</span>
+  <span class="token key atrule">template</span><span class="token punctuation">:</span>
+    <span class="token key atrule">metadata</span><span class="token punctuation">:</span>
+      <span class="token key atrule">labels</span><span class="token punctuation">:</span>
+        <span class="token key atrule">app</span><span class="token punctuation">:</span> my<span class="token punctuation">-</span>app
+    <span class="token key atrule">spec</span><span class="token punctuation">:</span>
+      <span class="token key atrule">containers</span><span class="token punctuation">:</span>
+      <span class="token punctuation">-</span> <span class="token key atrule">name</span><span class="token punctuation">:</span> my<span class="token punctuation">-</span>app
+        <span class="token key atrule">image</span><span class="token punctuation">:</span> my<span class="token punctuation">-</span>app
+        <span class="token key atrule">ports</span><span class="token punctuation">:</span>
+        <span class="token punctuation">-</span> <span class="token key atrule">containerPort</span><span class="token punctuation">:</span> <span class="token number">8080</span>
+        <span class="token comment"># 以下のように設定する</span>
+        <span class="token key atrule">env</span><span class="token punctuation">:</span>
+        <span class="token punctuation">-</span> <span class="token key atrule">name</span><span class="token punctuation">:</span> API_KEY
+          <span class="token key atrule">value</span><span class="token punctuation">:</span> <span class="token string">"xxxxx"</span>
+</code></pre>
+<p>仕組み的には、<code>docker run --env</code> オプションを使った時に似ているだろうか。</p>
+<p>コレの難点は、秘密情報がベタ書きである点。この設定ファイルを漏らしてしまったらアウト。また、開発環境と本番環境を切り替えたりする時に、同じ設定ファイルを使い回せないこともやりづらい。</p>
+<p>そこで、環境変数情報を Kubernetes Secret という別領域に逃してしまおう、というワケ。</p>
+<h2 id="--from-literal-オプションで一つずつ登録"><a class="header-link" href="#--from-literal-オプションで一つずつ登録"><span class="header-link-mark"></span></a><code>--from-literal</code> オプションで一つずつ登録</h2>
+<p>まずは Secret の登録方法の中でも簡単なモノから。先程と同様の環境変数を設定してみる。</p>
+<pre class="language-bash"><code class="language-bash">$ kubectl create secret generic 【シークレット名】 --from-literal<span class="token operator">=</span>【Key】<span class="token operator">=</span>【Value】
+
+<span class="token comment"># 先程の例だとこんな感じ</span>
+$ kubectl create secret generic my-api-key-secret --from-literal<span class="token operator">=</span>API_KEY<span class="token operator">=</span>xxxxx
+
+<span class="token comment"># 一つの Secret に複数の Key・Value を保存させたりもできる</span>
+$ kubectl create secret generic my-secrets --from-literal<span class="token operator">=</span>ANOTHER_API_KEY<span class="token operator">=</span>yyyyy --from-literal<span class="token operator">=</span>ANOTHER_TOKEN<span class="token operator">=</span>zzzzz
+</code></pre>
+<p>このように登録できる。「シークレット名」は適当に決めて良い。登録したモノを参照するには、以下のように。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># 「シークレット名」を指定し、YAML 形式や JSON 形式で出力する</span>
+$ kubectl get secret my-secrets -o yaml
+
+apiVersion: v1
+data:
+  ANOTHER_API_KEY: <span class="token assign-left variable">Zzzzzzzzzzz</span><span class="token operator">=</span>
+  ANOTHER_TOKEN: <span class="token assign-left variable">Llllllll</span><span class="token operator">=</span>
+kind: Secret
+<span class="token comment"># 以下略</span>
+</code></pre>
+<p>登録した情報は Base64 エンコードされているので、以下のようにデコードすれば元の値が分かる。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># ANOTHER_API_KEY 環境変数の値をデコードする</span>
+$ <span class="token builtin class-name">echo</span> <span class="token string">'Zzzzzzzzzzz='</span> <span class="token operator">|</span> base64 --decode
+
+yyyyy
+<span class="token comment"># デコードできた</span>
+</code></pre>
+<h2 id="env・valuefrom-で1つずつ参照紐付け"><a class="header-link" href="#env・valuefrom-で1つずつ参照紐付け"><span class="header-link-mark"></span></a><code>env</code>・<code>valueFrom</code> で1つずつ参照紐付け</h2>
+<p>さて、ココまでだと、Kubernetes Secret に秘密情報が登録されただけで、その情報を Pod で環境変数として参照できるような紐付けがされていない。<code>deployment.yaml</code> を以下のように変更し、この Secret を環境変数として読み込ませるようにしてみる。</p>
+<pre class="language-yaml"><code class="language-yaml"><span class="token key atrule">spec</span><span class="token punctuation">:</span>
+  <span class="token comment"># 中略</span>
+  <span class="token key atrule">template</span><span class="token punctuation">:</span>
+    <span class="token key atrule">spec</span><span class="token punctuation">:</span>
+      <span class="token key atrule">containers</span><span class="token punctuation">:</span>
+      <span class="token punctuation">-</span> <span class="token key atrule">name</span><span class="token punctuation">:</span> my<span class="token punctuation">-</span>app
+        <span class="token comment"># 以下のように設定する</span>
+        <span class="token key atrule">env</span><span class="token punctuation">:</span>
+        <span class="token punctuation">-</span> <span class="token key atrule">name</span><span class="token punctuation">:</span> API_KEY  <span class="token comment"># Pod 内でこの環境変数名で参照できるようにする</span>
+          <span class="token key atrule">valueFrom</span><span class="token punctuation">:</span>
+            <span class="token key atrule">secretKeyRef</span><span class="token punctuation">:</span>
+              <span class="token key atrule">name</span><span class="token punctuation">:</span> my<span class="token punctuation">-</span>api<span class="token punctuation">-</span>key<span class="token punctuation">-</span>secret  <span class="token comment"># シークレット名</span>
+              <span class="token key atrule">key</span><span class="token punctuation">:</span> API_KEY             <span class="token comment"># その Secret 内の Key 名</span>
+        <span class="token punctuation">-</span> <span class="token key atrule">name</span><span class="token punctuation">:</span> NEW_API_KEY  <span class="token comment"># Secret に登録した Key 名とは違う名前で環境変数を設定したりもできる</span>
+          <span class="token key atrule">valueFrom</span><span class="token punctuation">:</span>
+            <span class="token key atrule">secretKeyRef</span><span class="token punctuation">:</span>
+              <span class="token key atrule">name</span><span class="token punctuation">:</span> my<span class="token punctuation">-</span>secrets      <span class="token comment"># シークレット名</span>
+              <span class="token key atrule">key</span><span class="token punctuation">:</span> ANOTHER_API_KEY  <span class="token comment"># シークレットに登録した Key 名</span>
+</code></pre>
+<p>こんな感じ。シークレットに登録した Key と違う環境変数名を定義できるのは面白い。混乱するので揃えた方が良いけど。</p>
+<p>このように設定し、Pod を再生成させれば変更が反映される (既存の Pod は環境変数をキャッシュしているので、<code>deployment.yaml</code> を Apply しても反映されない)。再生成した Pod のシェルにログインして <code>env</code> コマンドを叩けば、設定した環境変数が見えるはずだ。勿論、値は難読化されていない生の値になっている。</p>
+<h2 id="--from-env-file-オプションで一括登録"><a class="header-link" href="#--from-env-file-オプションで一括登録"><span class="header-link-mark"></span></a><code>--from-env-file</code> オプションで一括登録</h2>
+<p>このようなやり方でも環境変数を設定できなくはないが、登録する変数の個数が増えてくると、Secret の登録と <code>deployment.yaml</code> への記述を揃えるのが大変になってくる。</p>
+<p>そこで、Docker における <code>--env-file</code> オプションのように、<code>Key=Value</code> を羅列した環境変数ファイルを一括登録し、それを一括読み込みしてみよう。</p>
+<p>いわゆる <code>.env</code> ファイルの要領で、以下のように環境変数を用意する。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token assign-left variable">API_KEY</span><span class="token operator">=</span>xxxxx
+
+<span class="token comment"># 空行や、シャープ「#」で始まる行は無視されるので、コメントも書ける</span>
+<span class="token assign-left variable">ANOTHER_API_KEY</span><span class="token operator">=</span>yyyyy
+<span class="token assign-left variable">ANOTHER_TOKEN</span><span class="token operator">=</span>zzzzz
+</code></pre>
+<p>Docker の <code>--env-file</code> もそうだが、コレって結局、シェルに <code>source</code> しているのとほとんど同じで、空行は無視されるし、シャープ <code>#</code> で始まる行はコメント行として無視される。</p>
+<blockquote>
+  <p>Lines beginning with <code>#</code> (i.e. comments) are ignored. Blank lines are ignored.</p>
+  <ul>
+    <li>参考：<a href="https://kubernetes.io/docs/tasks/configure-pod-container/configure-pod-configmap/#create-configmaps-from-files">Configure a Pod to Use a ConfigMap - Kubernetes</a></li>
+  </ul>
+</blockquote>
+<p>Secret への登録は次のように行う。</p>
+<pre class="language-bash"><code class="language-bash">$ kubectl create secret generic my-env-file-secret --from-env-file<span class="token operator">=</span>./.env
+</code></pre>
+<h2 id="envfrom-で一括読み込み"><a class="header-link" href="#envfrom-で一括読み込み"><span class="header-link-mark"></span></a><code>envFrom</code> で一括読み込み</h2>
+<p>ファイルごと登録した Secret を環境変数として読み込むには、<code>deployment.yaml</code> を以下のように記述する。</p>
+<pre class="language-yaml"><code class="language-yaml"><span class="token key atrule">spec</span><span class="token punctuation">:</span>
+  <span class="token key atrule">template</span><span class="token punctuation">:</span>
+    <span class="token key atrule">spec</span><span class="token punctuation">:</span>
+      <span class="token key atrule">containers</span><span class="token punctuation">:</span>
+      <span class="token punctuation">-</span> <span class="token key atrule">name</span><span class="token punctuation">:</span> my<span class="token punctuation">-</span>app
+        <span class="token comment"># 以下のように指定する</span>
+        <span class="token key atrule">envFrom</span><span class="token punctuation">:</span>
+        <span class="token punctuation">-</span> <span class="token key atrule">secretRef</span><span class="token punctuation">:</span>
+          <span class="token key atrule">name</span><span class="token punctuation">:</span> my<span class="token punctuation">-</span>env<span class="token punctuation">-</span>file<span class="token punctuation">-</span>secret
+</code></pre>
+<p>このような <code>deployment.yaml</code> を設定し、Pod を再生成すれば OK。<code>.env</code> ファイルに定義していた複数の環境変数が一括で読み込まれる。</p>
+<h2 id="以上"><a class="header-link" href="#以上"><span class="header-link-mark"></span></a>以上</h2>
+<p><code>--from-env-file</code> で Secret を登録し、<code>envFrom.secretRef</code> で読み込む。コレがシンプルで良いかも。</p>
+<ul>
+  <li>参考：<a href="https://tellme.tokyo/post/2018/08/07/kubernetes-configmaps-secrets/">Kubernetes 上で Credentials を扱う | tellme.tokyo</a></li>
+  <li>参考：<a href="https://qiita.com/toshihirock/items/40b61c5632fa062f25af">Kubernetes の 環境変数設定方法を調べる - Qiita</a></li>
+  <li>参考：<a href="https://cstoku.io/posts/2018/k8sdojo-11/">Kubernetes道場 11日目 - ConfigMap / Secretについて - Toku's Blog</a></li>
+  <li>参考：<a href="https://qiita.com/tkusumi/items/cf7b096972bfa2810800">Kubernetes: ConfigMap / Secret の内容を一度に環境変数として読み込む (envFrom) - Qiita</a></li>
+</ul>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2019-03-31</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2019-03-31</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

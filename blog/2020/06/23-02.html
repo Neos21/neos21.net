@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>VSCode + SSH 開発。Remote SSH 拡張機能を使ってみた - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2020/06/23-02.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2020/index.html">2020年</a></li>
+            <li><a href="/blog/2020/06/index.html">06月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2020-06-23</time></div>
+        <h1 id="page-title">VSCode + SSH 開発。Remote SSH 拡張機能を使ってみた</h1>
+
+<p><strong>VSCode Remote Development</strong> Extension Pack 概説第3弾。</p>
+<ul>
+  <li>開発用の Docker コンテナを立ち上げる <em>Remote Containers</em>
+    <ul>
+      <li><a href="./21-01.html">VSCode + Docker 開発。Remote Containers 拡張機能を使ってみた</a></li>
+    </ul>
+  </li>
+  <li>WSL 環境を VSCode で開く <em>Remote WSL</em>
+    <ul>
+      <li><a href="./22-01.html">VSCode + WSL 開発。Remote WSL 拡張機能を使ってみた</a></li>
+    </ul>
+  </li>
+</ul>
+<p>そして今回は、<strong>SSH 接続先サーバのディレクトリをホスト側の VSCode で開ける</strong>という前代未聞の拡張機能、<strong>Remote SSH</strong> を紹介する。</p>
+<ul>
+  <li><a href="https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-ssh">Remote - SSH - Visual Studio Marketplace</a></li>
+</ul>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#remote-ssh-%E3%82%92%E4%BD%BF%E3%81%86%E3%81%A8%E4%BD%95%E3%81%8C%E8%89%AF%E3%81%84%E3%81%AE%E3%81%8B">Remote SSH を使うと何が良いのか</a></li>
+  <li><a href="#windows-%E3%81%A7%E4%BD%BF%E3%81%8A%E3%81%86%E3%81%A8%E3%81%97%E3%81%9F%E3%82%89%E3%82%A8%E3%83%A9%E3%83%BC%E7%99%BA%E7%94%9F%E3%80%82%E3%82%A2%E3%82%AF%E3%82%BB%E3%82%B9%E6%A8%A9%E3%82%92%E7%B7%A8%E9%9B%86%E3%81%99%E3%82%8B">Windows で使おうとしたらエラー発生。アクセス権を編集する</a></li>
+  <li><a href="#%E5%86%8D%E6%8E%A5%E7%B6%9A">再接続</a></li>
+  <li><a href="#%E4%BB%A5%E4%B8%8A">以上</a></li>
+</ul>
+<h2 id="remote-ssh-を使うと何が良いのか"><a class="header-link" href="#remote-ssh-を使うと何が良いのか"><span class="header-link-mark"></span></a>Remote SSH を使うと何が良いのか</h2>
+<p>Remote SSH 拡張機能は、SSH で接続したサーバの、任意のディレクトリを、ホスト側の VSCode で開けるというモノ。</p>
+<p>SSH 接続先サーバが GUI を持たず、VSCode をインストールしていない状況でも、ホスト側の慣れ親しんだ VSCode 環境を使って、SSH 接続先を直接編集できるというワケだ。</p>
+<p>この拡張機能により、AWS EC2 上で直接開発をしてみたり、本番稼動しているソースコードを読みやすい環境で読んだりすることができる。ホストマシンにアレコレインストールする必要がなくなるという意味でも便利だ。</p>
+<h2 id="windows-で使おうとしたらエラー発生。アクセス権を編集する"><a class="header-link" href="#windows-で使おうとしたらエラー発生。アクセス権を編集する"><span class="header-link-mark"></span></a>Windows で使おうとしたらエラー発生。アクセス権を編集する</h2>
+<p>早速使ってみるが、SSH 接続しようとしたところでエラーが発生した。事象の再現手順と解消方法を紹介していく。</p>
+<p>
+  <img src="23-02-01.png" alt="SSH 接続する">
+</p>
+<p>まず VSCode のウィンドウ左下の青いアイコンを押下し、</p>
+<ul>
+  <li><code>Remote-SSH: Connect to Host...</code></li>
+</ul>
+<p>を選択する。</p>
+<p>
+  <img src="23-02-02.png" alt="ホスト名選択">
+</p>
+<p><code>~/.ssh/config</code> に定義した接続先のホスト名がリスト表示されるので、接続したいサーバを選択する。</p>
+<p>
+  <img src="23-02-03.png" alt="対象サーバは Linux">
+</p>
+<p>ウィンドウが開き直され、「Select the platform of the remote host」という問が出てくる。接続先サーバは Linux マシンなので、「Linux」を選択する。</p>
+<p>
+  <img src="23-02-04.png" alt="エラーだ">
+</p>
+<p>すると上のようなエラーが出た。</p>
+<ul>
+  <li><code>Bad owner or permissions on C:\\Users\\Neo/.ssh/config</code></li>
+  <li><code>プロセスが、存在しないパイプに書き込もうとしました。</code></li>
+</ul>
+<p>こんな感じのエラーメッセージが出てしまった。ひとまず「Close Remote」ボタンを押して中止する。</p>
+<p>対処法を色々調べたところ、次の記事で紹介されていた権限設定で直せた。</p>
+<ul>
+  <li>参考：<a href="https://qiita.com/yumetodo/items/123cd1d91f913bf0e748">Windows10でvscodeからSSHできるようになるまで - Qiita</a></li>
+</ul>
+<p>まずはエクスプローラで次の SSH フォルダのプロパティを開く。</p>
+<ul>
+  <li><code>C:\Users\【ユーザ名】\.ssh</code></li>
+</ul>
+<p>
+  <img src="23-02-05.png" alt=".ssh フォルダのプロパティ">
+</p>
+<p>「<code>.ssh</code> フォルダのプロパティ」で「セキュリティ」タブを選択し、「詳細設定」ボタンを押す。</p>
+<p>
+  <img src="23-02-06.png" alt="アクセス許可をしていく">
+</p>
+<p>そしたら上のスクショのようになるよう、アクセス許可を設定していく。</p>
+<ol>
+  <li>まずは下部の<strong>「継承の無効化」</strong>ボタンを押下する。確認ダイアログが表示されるので、「継承されたアクセス許可をこのオブジェクトの明示的なアクセス許可に変換します。」を選ぶ</li>
+  <li>「Users」や「Authenticated Users」が存在したら「削除」し、一旦「Administrators」と「System」だけにしておく。これらは「アクセス：フルコントロール」「継承元：なし」となっていること</li>
+  <li>「追加」ボタンを押下し、「プリンシパルの選択」を選ぶ</li>
+  <li>自分の Windows ユーザ名を入力し、「名前の確認」ボタンを押下し、OK ボタンを押す</li>
+  <li>「アクセス許可エントリ」は「フルコントロール」を選択し全てにチェックが入る状態にする</li>
+</ol>
+<p>ということで、上のスクショのような状態にする。</p>
+<p>続いて、SSH Config ファイルのアクセス権を調整する。</p>
+<ul>
+  <li><code>C:\Users\【ユーザ名】\.ssh\config</code></li>
+</ul>
+<p>
+  <img src="23-02-07.png" alt="config ファイルも設定する">
+</p>
+<p>コチラも、上のスクショのように設定を変更していく。<code>~/.ssh/</code> ディレクトリに設定した権限と一箇所だけ異なり、Windows ユーザに与えた権限は「フルコントロール」ではなく<em>「変更」</em>とすること。</p>
+<ol>
+  <li><strong>「継承の無効化」</strong>ボタンを押下。確認ダイアログは「継承されたアクセス許可をこのオブジェクトの明示的なアクセス許可に変換します。」を選ぶ</li>
+  <li>「Users」や「Authenticated Users」が存在したら「削除」し、一旦「Administrators」と「System」だけにしておく。これらは「アクセス：フルコントロール」「継承元：なし」となっていること</li>
+  <li>「追加」ボタンを押下し、「プリンシパルの選択」を選ぶ</li>
+  <li>自分の Windows ユーザ名を入力し、「名前の確認」ボタンを押下し、OK ボタンを押す</li>
+  <li>「アクセス許可エントリ」で、一旦「フルコントロール」を選択し全てにチェックを入れたら、「フルコントロール」のチェックだけ再度外すことで、アクセス許可が<em>「変更」</em>になるようにする</li>
+</ol>
+<p>コレで上のスクショのようになるはず。</p>
+<p>ココまでアクセス権を変更したら、今度は正しく SSH 接続できるようになっているはず。</p>
+<h2 id="再接続"><a class="header-link" href="#再接続"><span class="header-link-mark"></span></a>再接続</h2>
+<p>前述のとおり、VSCode のコマンドパレットより</p>
+<ul>
+  <li><code>Remote-SSH: Connect to Host...</code></li>
+</ul>
+<p>を選択し、<code>~/.ssh/config</code> に記載されているホストから接続したいホストを選択する。</p>
+<p>無事 SSH 接続ができると、次のスクショのようにウィンドウ左下が「SSH: 【ホスト名】」といった表示に切り替わっている。</p>
+<p>
+  <img src="23-02-08.png" alt="SSH 接続できている">
+</p>
+<p>VSCode ターミナルを開くと SSH 接続先サーバのプロンプトが開いていることが分かるだろう。</p>
+<p>フォルダツリーから「フォルダーを開く」を選択すると、以下のように SSH 接続先のディレクトリが選べるようになる。</p>
+<p>
+  <img src="23-02-09.png" alt="SSH 接続先のディレクトリが選べる">
+</p>
+<p>ディレクトリを選択するとそのディレクトリが VSCode で開かれる。</p>
+<p>
+  <img src="23-02-10.png" alt="左のファイルツリーは SSH 接続先のディレクトリ配下">
+</p>
+<p>Remote Containers や Remote WSL 拡張機能と同様に、SSH 接続先サーバと同期した状態になっているので、VSCode 上で「新しいファイル」を作って保存してやると、SSH 接続先サーバにそのファイルが置かれているというワケ。裏で scp みたいなことしてるのかな。すごいな。</p>
+<h2 id="以上"><a class="header-link" href="#以上"><span class="header-link-mark"></span></a>以上</h2>
+<p>ホストマシンの VSCode 環境から、任意のリモートサーバを開発環境・実行環境として利用できる Remote SSH。</p>
+<p>前回、前々回に紹介した Remote Containers、Remote WSL とともに、リモート開発を促進していける拡張機能なので、今後もキャッチアップしていきたい。</p>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2020-06-23</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2021-05-17</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

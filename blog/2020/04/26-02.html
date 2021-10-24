@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>JD-GUI で JAR ファイルをデコンパイルする - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2020/04/26-02.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2020/index.html">2020年</a></li>
+            <li><a href="/blog/2020/04/index.html">04月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2020-04-26</time></div>
+        <h1 id="page-title">JD-GUI で JAR ファイルをデコンパイルする</h1>
+
+<p>久々に Java の話。別に新しい話ではないのだが、紹介したことがなかったので。</p>
+<p>ソースファイルである <code>.java</code> ファイルがなく、コンパイル後の <code>.class</code> や <code>.jar</code> ファイルしか見当たらないことがあったりする。原則的に、一度コンパイルされたクラスファイルから、元通りのソースコードを復元することはできない。しかし、<strong>JD-GUI</strong> というアプリを使えば、どんなメソッドやフィールドがあり、おおよそどんな処理をやっているかが復元できる。今回はこのソフトを試してみる。</p>
+<p>なお、似たようなことができるアプリに <em>Jad</em> というモノもあるが、個人的に JD-GUI の方が見やすかったのでコチラを紹介する。</p>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#%E3%81%9D%E3%81%AE%E5%89%8D%E3%81%AB-jar-%E3%82%B3%E3%83%9E%E3%83%B3%E3%83%89">その前に <code>jar</code> コマンド</a></li>
+  <li><a href="#jd-gui-%E3%82%92%E4%BD%BF%E3%81%86">JD-GUI を使う</a></li>
+</ul>
+<h2 id="その前に-jar-コマンド"><a class="header-link" href="#その前に-jar-コマンド"><span class="header-link-mark"></span></a>その前に <code>jar</code> コマンド</h2>
+<p>JD-GUI の前に、JDK 付属の <strong><code>jar</code> コマンド</strong>も紹介しておく。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># JAR ファイルの中にあるファイルを一覧表示する</span>
+$ jar tf 【JAR ファイル名】
+
+<span class="token comment"># JAR ファイルを解凍しファイルを抽出する</span>
+$ jar -xvf 【JAR ファイル名】
+</code></pre>
+<p><code>jar -xvf</code> は単純に <code>unzip</code> コマンドで解凍しても良い。</p>
+<ul>
+  <li>参考：<a href="https://qiita.com/rita_cano_bika/items/f810c27e66946367444d">jarファイルの中身を見る・一部分抽出・一部分書き込み－覚書 - Qiita</a></li>
+</ul>
+<p><code>.class</code> ファイルを直接デコンパイルするには、<strong><code>javap</code></strong> というコマンドがあったりする。</p>
+<pre class="language-bash"><code class="language-bash">$ javap HOGE.class
+</code></pre>
+<p>ただ、逆アセンブルされた結果は通常の Java ソースコードとは違い、見づらくて使い物にならない。</p>
+<ul>
+  <li>参考：<a href="https://meuniere.hatenablog.jp/entry/2018/11/06/134010">.jarファイルをdecompileして中身を見る - むにえる牧場</a></li>
+</ul>
+<h2 id="jd-gui-を使う"><a class="header-link" href="#jd-gui-を使う"><span class="header-link-mark"></span></a>JD-GUI を使う</h2>
+<p>いよいよ JD-GUI を使う。</p>
+<p>JD-GUI は Windows・MacOS・Linux 向けにバイナリが存在するので、大抵の OS ですんなり使える。以下の公式サイトからダウンロードできる。</p>
+<ul>
+  <li><a href="http://java-decompiler.github.io/">Java Decompiler</a></li>
+</ul>
+<p>JD-GUI を起動したら、JD-GUI のウィンドウに <code>.jar</code> ファイルをドラッグ &#x26; ドロップしてみる。するとファイルツリーとともに、デコンパイルされたソースコードが確認できる。</p>
+<p>Jad と比べて、より自然なソースコードに見えるので、読み解きやすいと思う。</p>
+<ul>
+  <li>参考：<a href="https://gabekore.org/java-jad-jdgui-bytecode">Java JadとJD-GUIのデコンパイルでJVMの気持ちを知ろう！ | Gabekore Garage</a></li>
+</ul>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2020-04-26</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2020-04-26</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

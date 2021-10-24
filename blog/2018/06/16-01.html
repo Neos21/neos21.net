@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>PL/SQL の基本的な書き方をまとめてみる - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2018/06/16-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2018/index.html">2018年</a></li>
+            <li><a href="/blog/2018/06/index.html">06月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2018-06-16</time></div>
+        <h1 id="page-title">PL/SQL の基本的な書き方をまとめてみる</h1>
+
+<p>PL/SQL でよくある「SELECT した結果を1行ずつ操作する」という処理を雛形的に書いてみた。その他、よくあるイディオムをまとめてみた。</p>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#%E5%9F%BA%E6%9C%AC%E5%BD%A2">基本形</a></li>
+  <li><a href="#%E3%83%AD%E3%82%B0%E3%82%92%E5%87%BA%E5%8A%9B%E3%81%99%E3%82%8B">ログを出力する</a></li>
+  <li><a href="#update-%E6%99%82%E3%81%AE%E6%9B%B4%E6%96%B0%E8%A1%8C%E6%95%B0%E3%82%92%E7%9F%A5%E3%82%8B">UPDATE 時の更新行数を知る</a></li>
+  <li><a href="#%E6%9A%97%E9%BB%99%E7%9A%84%E3%82%AB%E3%83%BC%E3%82%BD%E3%83%AB%E5%87%A6%E7%90%86">暗黙的カーソル処理</a></li>
+</ul>
+<h2 id="基本形"><a class="header-link" href="#基本形"><span class="header-link-mark"></span></a>基本形</h2>
+<pre class="language-sql"><code class="language-sql"><span class="token keyword">Declare</span>
+  <span class="token keyword">Cursor</span> csr <span class="token operator">Is</span>
+    <span class="token keyword">SELECT</span> hoge <span class="token keyword">FROM</span> my_table<span class="token punctuation">;</span>
+  counter Number<span class="token punctuation">;</span>
+  csr_row csr<span class="token operator">%</span>ROWTYPE<span class="token punctuation">;</span>
+<span class="token keyword">Begin</span>
+  counter :<span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span>
+  
+  <span class="token keyword">Open</span> csr<span class="token punctuation">;</span>
+  <span class="token keyword">Fetch</span> csr <span class="token keyword">Into</span> csr_row<span class="token punctuation">;</span>
+  
+  <span class="token keyword">If</span> csr_acc<span class="token operator">%</span>NOTFOUND <span class="token keyword">Then</span>
+    <span class="token keyword">Close</span> csr_acc<span class="token punctuation">;</span>
+    Raise NO_DATA_FOUND<span class="token punctuation">;</span>
+  <span class="token keyword">End</span> <span class="token keyword">If</span><span class="token punctuation">;</span>
+  
+  <span class="token keyword">Loop</span>
+    <span class="token keyword">Begin</span>
+      counter :<span class="token operator">=</span> counter <span class="token operator">+</span> <span class="token number">1</span><span class="token punctuation">;</span>
+      <span class="token keyword">Fetch</span> csr <span class="token keyword">Into</span> csr_row<span class="token punctuation">;</span>
+      <span class="token keyword">Exit</span> <span class="token keyword">When</span> csr<span class="token operator">%</span>NOTFOUND<span class="token punctuation">;</span>
+    <span class="token keyword">End</span><span class="token punctuation">;</span>
+  <span class="token keyword">End</span> <span class="token keyword">Loop</span><span class="token punctuation">;</span>
+  
+  <span class="token keyword">Close</span> csr<span class="token punctuation">;</span>
+Exception
+  <span class="token keyword">When</span> NO_DATA_FOUND <span class="token keyword">Then</span>
+    Dbms_Output<span class="token punctuation">.</span>Put_Line<span class="token punctuation">(</span><span class="token string">'カーソル0件のため処理中断・ロールバック'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">Rollback</span><span class="token punctuation">;</span>
+  <span class="token keyword">When</span> DUP_VAL_ON_INDEX <span class="token keyword">Then</span>
+    Dbms_Output<span class="token punctuation">.</span>Put_Line<span class="token punctuation">(</span><span class="token string">'一意制約違反・ロールバック'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">Rollback</span><span class="token punctuation">;</span>
+  <span class="token keyword">When</span> Others <span class="token keyword">Then</span>
+    Dbms_Output<span class="token punctuation">.</span>Put_Line<span class="token punctuation">(</span><span class="token string">'その他エラー・ロールバック'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">If</span> csr<span class="token operator">%</span>ISOPEN <span class="token keyword">Then</span>
+      <span class="token keyword">Close</span> csr<span class="token punctuation">;</span>
+    <span class="token keyword">End</span> <span class="token keyword">If</span><span class="token punctuation">;</span>
+    <span class="token keyword">Rollback</span><span class="token punctuation">;</span>
+<span class="token keyword">End</span><span class="token punctuation">;</span>
+<span class="token operator">/</span>
+</code></pre>
+<ul>
+  <li><code>Declare</code> 以降で変数定義。
+    <ul>
+      <li><code>Cursor カーソル名 Is SELECT 文;</code></li>
+      <li><code>変数名 Number</code></li>
+      <li><code>レコード変数 カーソル名%ROWTYPE</code></li>
+    </ul>
+  </li>
+  <li><code>Begin</code> 以下に処理。
+    <ul>
+      <li><code>変数名 := 値</code> で代入。</li>
+      <li>カーソル操作は <code>Open</code>・<code>Close</code>。次の行の読込は <code>Fetch カーソル Into レコード変数</code>。</li>
+      <li><code>カーソル%NOTFOUND</code> で最終行に到達したか、結果が0件だった時。</li>
+      <li><code>カーソル%ISOPEN</code> で開いているか確認。</li>
+      <li><code>If 条件 Then 処理 End If;</code></li>
+      <li><code>Raise 例外名</code> で <code>Exception</code> 句に飛ばす。</li>
+      <li><code>Loop Begin 処理 End; End Loop;</code></li>
+      <li><code>Exit When 条件;</code> でループを抜ける。</li>
+      <li><code>Commit;</code>・<code>Rollback;</code></li>
+    </ul>
+  </li>
+  <li><code>Exception</code> 以下に例外処理。</li>
+  <li><code>End; /</code> で即時実行。</li>
+</ul>
+<h2 id="ログを出力する"><a class="header-link" href="#ログを出力する"><span class="header-link-mark"></span></a>ログを出力する</h2>
+<pre class="language-sql"><code class="language-sql"><span class="token keyword">Set</span> serverout <span class="token keyword">on</span>
+Dbms_Output<span class="token punctuation">.</span>Put_Line<span class="token punctuation">(</span><span class="token string">'ログ'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>Echo 的な。ログとして出力するには <code>Set serverout on</code> が必要。</p>
+<h2 id="update-時の更新行数を知る"><a class="header-link" href="#update-時の更新行数を知る"><span class="header-link-mark"></span></a>UPDATE 時の更新行数を知る</h2>
+<pre class="language-sql"><code class="language-sql"><span class="token keyword">UPDATE</span> my_table <span class="token keyword">SET</span> <span class="token keyword">column</span> <span class="token operator">=</span> csr_row<span class="token punctuation">.</span><span class="token keyword">column</span> <span class="token keyword">WHERE</span> <span class="token keyword">column</span> <span class="token operator">=</span> hoge<span class="token punctuation">;</span>
+update_counter :<span class="token operator">=</span> <span class="token keyword">SQL</span><span class="token operator">%</span><span class="token keyword">ROWCOUNT</span><span class="token punctuation">;</span>
+</code></pre>
+<p><code>UPDATE</code> 文の直後に <code>SQL%ROWCOUNT</code> を参照すると、そのクエリの更新行数が分かる。</p>
+<h2 id="暗黙的カーソル処理"><a class="header-link" href="#暗黙的カーソル処理"><span class="header-link-mark"></span></a>暗黙的カーソル処理</h2>
+<pre class="language-sql"><code class="language-sql"><span class="token keyword">For</span> csr_row <span class="token operator">In</span> csr <span class="token keyword">Loop</span>
+  <span class="token keyword">Begin</span>
+    処理
+  <span class="token keyword">End</span><span class="token punctuation">;</span>
+<span class="token keyword">End</span> <span class="token keyword">Loop</span><span class="token punctuation">;</span>
+</code></pre>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2018-06-16</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2018-06-16</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>TypeORM のトランザクション処理を利用する - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2020/07/10-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2020/index.html">2020年</a></li>
+            <li><a href="/blog/2020/07/index.html">07月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2020-07-10</time></div>
+        <h1 id="page-title">TypeORM のトランザクション処理を利用する</h1>
+
+<p>TypeScript ベースの O/R マッパー、<strong>TypeORM</strong> で実現できる、トランザクション処理を試してみる。</p>
+<p>前提とする環境は、前回の記事で紹介した TypeORM + PostgreSQL 環境。</p>
+<pre class="language-typescript"><code class="language-typescript"><span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> createConnection<span class="token punctuation">,</span> getManager<span class="token punctuation">,</span> getRepository <span class="token punctuation">}</span></span> <span class="token keyword">from</span> <span class="token string">'typeorm'</span><span class="token punctuation">;</span>
+
+<span class="token keyword">import</span> <span class="token imports">dbConfig</span> <span class="token keyword">from</span> <span class="token string">'./db-config'</span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token imports"><span class="token maybe-class-name">Customer</span></span> <span class="token keyword">from</span> <span class="token string">'./entities/customer'</span><span class="token punctuation">;</span>
+
+<span class="token keyword">try</span> <span class="token punctuation">{</span>
+  <span class="token comment">// DB に接続する</span>
+  <span class="token keyword">const</span> connection <span class="token operator">=</span> <span class="token keyword">await</span> <span class="token function">createConnection</span><span class="token punctuation">(</span>dbConfig<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  
+  <span class="token comment">// トランザクションを開始する</span>
+  <span class="token keyword">await</span> <span class="token function">getManager</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">transaction</span><span class="token punctuation">(</span><span class="token keyword">async</span> <span class="token punctuation">(</span>transactionalEntityManager<span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+    <span class="token comment">// この async 関数内で例外が発生すると、実行していた SQL がロールバックされる</span>
+    
+    <span class="token comment">// 思い思いに複数の SQL を実行してみたり…</span>
+    <span class="token keyword">const</span> newCustomer <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name"><span class="token maybe-class-name">Customer</span></span><span class="token punctuation">(</span><span class="token string">'Neo'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">const</span> savedCustomer <span class="token operator">=</span> <span class="token keyword">await</span> transactionalEntityManager<span class="token punctuation">.</span><span class="token method function property-access">save</span><span class="token punctuation">(</span>newCustomer<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    
+    <span class="token keyword">const</span> anotherCustomer <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name"><span class="token maybe-class-name">Customer</span></span><span class="token punctuation">(</span><span class="token string">'Another'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">const</span> insertedCustomer <span class="token operator">=</span> <span class="token keyword">await</span> transactionalEntityManager<span class="token punctuation">.</span><span class="token method function property-access">save</span><span class="token punctuation">(</span><span class="token maybe-class-name">Customer</span><span class="token punctuation">,</span> anotherCustomer<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    
+    <span class="token comment">// 最後まで正常に終了すればコミットされる</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+<span class="token keyword">catch</span><span class="token punctuation">(</span>error<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">error</span><span class="token punctuation">(</span><span class="token string">'Failed To Exec Transaction : '</span><span class="token punctuation">,</span> error<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>こんな感じ。</p>
+<p><code>getManager().transaction()</code> 内の <code>async</code> 関数内がトランザクションになる。</p>
+<p>この中で何らかの例外が発生すると、途中まで実行していた <code>save()</code> や <code>insert()</code> 等の SQL はロールバックされる。</p>
+<p>SQL 実行に限らず、どんな例外であってもロールバックできるので、例えば複数のテーブルの更新が成功しないとダメな場合だとか、DB 更新と同時にファイルを書き出したいとかいう場合にも使える。</p>
+<p>当然ながら、TypeORM が自動的にロールバックしてくれるのは SQL のみなので、DB 操作以外のロールバック処理は自前で <code>catch</code> 句内で行う必要がある。</p>
+<p>EntityRepository ではなく TransactionalEntityManager を利用して SQL 実行するところが若干違うので、実装時はちょっとトライアル &#x26; エラーが必要かも〜。</p>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2020-07-10</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2020-07-10</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

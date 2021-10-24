@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>Vagrant と VirtualBox で CentOS 環境をサクッと作る - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2017/04/17-03.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2017/index.html">2017年</a></li>
+            <li><a href="/blog/2017/04/index.html">04月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2017-04-17</time></div>
+        <h1 id="page-title">Vagrant と VirtualBox で CentOS 環境をサクッと作る</h1>
+
+<p>以前、Windows に VirtualBox をインストールして、Fedora 環境を作ったことがあった。</p>
+<ul>
+  <li><a href="/blog/2016/07/24-01.html">Windows 上から VirtualBox でLinux 入門！Fedora 24 Workstation を動かしてみる</a></li>
+</ul>
+<p>今回は <em>VirtualBox</em> を簡単に扱えるようにしてくれる <strong>Vagrant (ベイグラント)</strong> というツールを使って、より簡単に Windows 上に Linux 環境を構築してみようと思う (Vagrant は VirtualBox 専用ではないが、VirtualBox を組み合わせて使用するのがデフォルトになっている)。</p>
+<p>環境は Windows10 64bit。導入する Linux ディストリビューションは、Red Hat Enterprise Linux のオープンソース版として広く使われている CentOS を導入してみようと思う。</p>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#virtualbox-%E3%81%AE%E3%82%A4%E3%83%B3%E3%82%B9%E3%83%88%E3%83%BC%E3%83%AB">VirtualBox のインストール</a></li>
+  <li><a href="#vagrant-%E3%81%AE%E3%82%A4%E3%83%B3%E3%82%B9%E3%83%88%E3%83%BC%E3%83%AB">Vagrant のインストール</a></li>
+  <li><a href="#vagrant-init-%E3%81%A7-vagrant-%E3%82%92%E5%88%9D%E6%9C%9F%E5%8C%96%E3%81%99%E3%82%8B">Vagrant Init で Vagrant を初期化する</a></li>
+  <li><a href="#vagrantfile-%E3%82%92%E6%9B%B8%E3%81%8D%E6%8F%9B%E3%81%88%E3%82%8B"><code>Vagrantfile</code> を書き換える</a></li>
+  <li><a href="#vagrant-up-%E3%81%A7-vagrant-%E4%BB%AE%E6%83%B3%E7%92%B0%E5%A2%83%E3%82%92%E7%AB%8B%E3%81%A1%E4%B8%8A%E3%81%92%E3%82%8B">Vagrant Up で Vagrant 仮想環境を立ち上げる</a></li>
+  <li><a href="#centos-%E7%92%B0%E5%A2%83%E3%81%AB%E3%83%AD%E3%82%B0%E3%82%A4%E3%83%B3%E3%81%97%E3%81%A6%E3%81%BF%E3%82%8B">CentOS 環境にログインしてみる</a></li>
+  <li><a href="#linux-%E7%92%B0%E5%A2%83%E6%A7%8B%E7%AF%89">Linux 環境構築</a>
+    <ul>
+      <li><a href="#%E5%88%9D%E3%82%81%E3%81%AB%E3%83%91%E3%83%83%E3%82%B1%E3%83%BC%E3%82%B8%E3%82%92%E6%9B%B4%E6%96%B0%E3%81%97%E3%81%A6%E3%81%8A%E3%81%8F">初めにパッケージを更新しておく</a></li>
+      <li><a href="#%E6%97%A5%E6%9C%AC%E8%AA%9E%E7%92%B0%E5%A2%83%E3%82%92%E6%95%B4%E3%81%88%E3%82%8B">日本語環境を整える</a></li>
+      <li><a href="#%E3%82%BF%E3%82%A4%E3%83%A0%E3%82%BE%E3%83%BC%E3%83%B3%E3%82%92%E7%9B%B4%E3%81%99">タイムゾーンを直す</a></li>
+      <li><a href="#man-pages-%E3%82%92%E6%97%A5%E6%9C%AC%E8%AA%9E%E5%8C%96%E3%81%99%E3%82%8B">Man Pages を日本語化する</a></li>
+      <li><a href="#vim-%E3%82%92%E5%85%A5%E3%82%8C%E3%82%8B">Vim を入れる</a></li>
+    </ul>
+  </li>
+  <li><a href="#%E3%81%9D%E3%81%AE%E4%BB%96%E3%82%B3%E3%83%9E%E3%83%B3%E3%83%89">その他コマンド</a></li>
+  <li><a href="#%E4%BB%A5%E4%B8%8A">以上</a></li>
+</ul>
+<h2 id="virtualbox-のインストール"><a class="header-link" href="#virtualbox-のインストール"><span class="header-link-mark"></span></a>VirtualBox のインストール</h2>
+<ul>
+  <li><a href="https://www.virtualbox.org/wiki/Downloads">Downloads – Oracle VM VirtualBox</a></li>
+</ul>
+<p>上のサイトから「VirtualBox binaries」の「Windows hosts」をダウンロードし、インストールする。執筆時のバージョンは VirtualBox 5.1.18。</p>
+<p>オプションは特に変更せず次へ次へで進めていく。</p>
+<h2 id="vagrant-のインストール"><a class="header-link" href="#vagrant-のインストール"><span class="header-link-mark"></span></a>Vagrant のインストール</h2>
+<ul>
+  <li><a href="https://www.vagrantup.com/downloads.html">Download - Vagrant by HashiCorp</a></li>
+</ul>
+<p>上のサイトから「Windows Universal (32 and 64-bit)」をダウンロードし、インストールする。執筆時のバージョンは Vagrant 1.9.3。</p>
+<p>こちらもオプションは特に変更せず次へ次へで進めていく。</p>
+<h2 id="vagrant-init-で-vagrant-を初期化する"><a class="header-link" href="#vagrant-init-で-vagrant-を初期化する"><span class="header-link-mark"></span></a>Vagrant Init で Vagrant を初期化する</h2>
+<p>ここからは GitBash For Windows のコンソールで作業する。コマンドプロンプトでも良いと思うが、GitBash を使うと色々楽なので…。</p>
+<p>まず適当な場所に Vagrant 用のディレクトリを作る。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">mkdir</span> MyCentOS
+$ <span class="token builtin class-name">cd</span> <span class="token operator">!</span>$
+</code></pre>
+<p><code>!$</code> は直前に実行したコマンドの引数を使えるというもの。</p>
+<ul>
+  <li>参考：<a href="http://qiita.com/ymko/items/d7c5c4d0cc6174d5fc86">bashで言うところの!$はfishではどうすればよいか - Qiita</a></li>
+</ul>
+<p>そしたら、以下のコマンドで Vagrant の初期化を行う。</p>
+<pre class="language-bash"><code class="language-bash">$ vagrant init bento/centos-7.2
+</code></pre>
+<p><code>vagrant init</code> の後ろの <code>bento/centos-7.2</code> 部分は、使用する Vagrant Box の名前。これは、Vagrant を提供する HashiCorp 社が同じく提供する、Atlas というサービスに登録されている Vagrant Box の名前を指定する。</p>
+<ul>
+  <li><a href="https://atlas.hashicorp.com/boxes/search">https://atlas.hashicorp.com/boxes/search</a></li>
+</ul>
+<p><code>ユーザ名/Vagrant Box 名</code> という規則になっており、<code>bento</code> は Chef 社がメンテナンスするオーガナイゼーション (ユーザ名)。Chef 社は「Chef」という構成管理ツールを展開している、信頼できる配布元といえる。</p>
+<p>そのユーザが提供している、<code>centos-7.2</code> という Vagrant Box を指定して、コレを使いますよと宣言しているワケである。</p>
+<p>先ほどのリンク先が、Atlas の Vagrant Box を検索できるサイト。Bento が配布する CentOS だけでなく、別のユーザがカスタマイズした CentOS だったり、Ubuntu など他のディストリビューションも選べる。ある程度の雛形が最初から出来上がっていて、それを選んで使えるというワケだ。</p>
+<p>今回選択した <code>bento/centos-7.2</code> は、以下の URL で詳細が確認できる。インストールコマンドがまさに上述のとおりであることが分かるだろう。</p>
+<ul>
+  <li><a href="https://atlas.hashicorp.com/bento/boxes/centos-7.2">https://atlas.hashicorp.com/bento/boxes/centos-7.2</a></li>
+</ul>
+<h2 id="vagrantfile-を書き換える"><a class="header-link" href="#vagrantfile-を書き換える"><span class="header-link-mark"></span></a><code>Vagrantfile</code> を書き換える</h2>
+<p><code>vagrant init</code> すると、<code>MyCentOS</code> フォルダ内に <code>Vagrantfile</code> というファイルができている。これが Vagrant の設定ファイルになるのだが、いくつか書き換えておく。</p>
+<pre class="language-ruby"><code class="language-ruby">  <span class="token comment"># Create a private network, which allows host-only access to the machine</span>
+  <span class="token comment"># using a specific IP.</span>
+  <span class="token comment"># config.vm.network "private_network", ip: "192.168.33.10"</span>
+</code></pre>
+<p>上の行の「<code>config.vm.network</code>」の行のコメントアウトを外しておく。</p>
+<pre class="language-ruby"><code class="language-ruby">  <span class="token comment"># Create a private network, which allows host-only access to the machine</span>
+  <span class="token comment"># using a specific IP.</span>
+  config<span class="token punctuation">.</span>vm<span class="token punctuation">.</span>network <span class="token string">"private_network"</span><span class="token punctuation">,</span> ip<span class="token punctuation">:</span> <span class="token string">"192.168.33.10"</span>
+</code></pre>
+<p>次に、以下を直しておくと、Vagrant 環境とホスト環境 (Windows 側) とでファイルを共有できるようになる。</p>
+<pre class="language-ruby"><code class="language-ruby">  <span class="token comment"># Share an additional folder to the guest VM. The first argument is</span>
+  <span class="token comment"># the path on the host to the actual folder. The second argument is</span>
+  <span class="token comment"># the path on the guest to mount the folder. And the optional third</span>
+  <span class="token comment"># argument is a set of non-required options.</span>
+  <span class="token comment"># config.vm.synced_folder "../data", "/vagrant_data"</span>
+</code></pre>
+<p>この部分の最終行のコメントアウトを外し、以下のように直してやる。</p>
+<pre class="language-ruby"><code class="language-ruby">  <span class="token comment"># Share an additional folder to the guest VM. The first argument is</span>
+  <span class="token comment"># the path on the host to the actual folder. The second argument is</span>
+  <span class="token comment"># the path on the guest to mount the folder. And the optional third</span>
+  <span class="token comment"># argument is a set of non-required options.</span>
+  config<span class="token punctuation">.</span>vm<span class="token punctuation">.</span>synced_folder <span class="token string">"./vagrant"</span><span class="token punctuation">,</span> <span class="token string">"/vagrant"</span>
+</code></pre>
+<p>そして、<em><code>Vagrantfile</code> があるディレクトリに <code>vagrant</code> フォルダを作っておく。</em></p>
+<p>これで、<code>vagrant</code> フォルダ内が、Vagrant 環境では <code>/vagrant/</code> でアクセスできるようになる。手軽に Windows 側と CentOS 側とでファイルが共有できるようになるわけだ。この設定は任意でディレクトリごとに複数指定したりもできる。</p>
+<ul>
+  <li>参考：<a href="http://qiita.com/pugiemonn/items/bcd95a35c3ec7624cd61">VagrantコマンドとVagrantfileの設定メモ - Qiita</a></li>
+</ul>
+<h2 id="vagrant-up-で-vagrant-仮想環境を立ち上げる"><a class="header-link" href="#vagrant-up-で-vagrant-仮想環境を立ち上げる"><span class="header-link-mark"></span></a>Vagrant Up で Vagrant 仮想環境を立ち上げる</h2>
+<p><code>Vagrantfile</code> を書き換えたら、ターミナルで以下のコマンドを叩き、Vagrant Box を起動する。</p>
+<pre class="language-bash"><code class="language-bash">$ vagrant up
+</code></pre>
+<p>最初に以下のようなエラーが出るかもしれないが、もう一度 <code>vagrant up</code> すると解消した。</p>
+<pre class="language-bash"><code class="language-bash">$ vagrant up
+Bringing machine <span class="token string">'default'</span> up with <span class="token string">'virtualbox'</span> provider<span class="token punctuation">..</span>.
+<span class="token operator">==</span><span class="token operator">></span> default: Box <span class="token string">'bento/centos-7.2'</span> could not be found. Attempting to <span class="token function">find</span> and install<span class="token punctuation">..</span>.
+    default: Box Provider: virtualbox
+    default: Box Version: <span class="token operator">></span><span class="token operator">=</span> <span class="token number">0</span>
+<span class="token operator">==</span><span class="token operator">></span> default: Loading metadata <span class="token keyword">for</span> box <span class="token string">'bento/centos-7.2'</span>
+    default: URL: https://atlas.hashicorp.com/bento/centos-7.2
+<span class="token operator">==</span><span class="token operator">></span> default: Adding box <span class="token string">'bento/centos-7.2'</span> <span class="token punctuation">(</span>v2.3.1<span class="token punctuation">)</span> <span class="token keyword">for</span> provider: virtualbox
+    default: Downloading: https://atlas.hashicorp.com/bento/boxes/centos-7.2/versions/2.3.1/providers/virtualbox.box
+    default: Progress: <span class="token number">100</span>% <span class="token punctuation">(</span>Rate: 4129k/s, Estimated <span class="token function">time</span> remaining: --:--:--<span class="token punctuation">)</span>
+<span class="token operator">==</span><span class="token operator">></span> default: Successfully added box <span class="token string">'bento/centos-7.2'</span> <span class="token punctuation">(</span>v2.3.1<span class="token punctuation">)</span> <span class="token keyword">for</span> <span class="token string">'virtualbox'</span><span class="token operator">!</span>
+<span class="token operator">==</span><span class="token operator">></span> default: Importing base box <span class="token string">'bento/centos-7.2'</span><span class="token punctuation">..</span>.
+<span class="token operator">==</span><span class="token operator">></span> default: Matching MAC address <span class="token keyword">for</span> NAT networking<span class="token punctuation">..</span>.
+<span class="token operator">==</span><span class="token operator">></span> default: Checking <span class="token keyword">if</span> box <span class="token string">'bento/centos-7.2'</span> is up to date<span class="token punctuation">..</span>.
+<span class="token operator">==</span><span class="token operator">></span> default: Setting the name of the VM: MyCentOS_default_1492313509410_19491
+<span class="token operator">==</span><span class="token operator">></span> default: Clearing any previously <span class="token builtin class-name">set</span> network interfaces<span class="token punctuation">..</span>.
+<span class="token operator">==</span><span class="token operator">></span> default: Preparing network interfaces based on configuration<span class="token punctuation">..</span>.
+    default: Adapter <span class="token number">1</span>: nat
+    default: Adapter <span class="token number">2</span>: hostonly
+<span class="token operator">==</span><span class="token operator">></span> default: Forwarding ports<span class="token punctuation">..</span>.
+    default: <span class="token number">22</span> <span class="token punctuation">(</span>guest<span class="token punctuation">)</span> <span class="token operator">=</span><span class="token operator">></span> <span class="token number">2222</span> <span class="token punctuation">(</span>host<span class="token punctuation">)</span> <span class="token punctuation">(</span>adapter <span class="token number">1</span><span class="token punctuation">)</span>
+<span class="token operator">==</span><span class="token operator">></span> default: Booting VM<span class="token punctuation">..</span>.
+<span class="token operator">==</span><span class="token operator">></span> default: Waiting <span class="token keyword">for</span> machine to boot. This may take a few minutes<span class="token punctuation">..</span>.
+    default: SSH address: <span class="token number">127.0</span>.0.1:2222
+    default: SSH username: vagrant
+    default: SSH auth method: private key
+    default: Warning: Remote connection disconnect. Retrying<span class="token punctuation">..</span>.
+    default: Warning: Remote connection disconnect. Retrying<span class="token punctuation">..</span>.
+The guest machine entered an invalid state <span class="token keyword">while</span> waiting <span class="token keyword">for</span> it
+to boot. Valid states are <span class="token string">'starting, running'</span><span class="token builtin class-name">.</span> The machine is <span class="token keyword">in</span> the
+<span class="token string">'unknown'</span> state. Please verify everything is configured
+properly and try again.
+
+If the provider you<span class="token string">'re using has a GUI that comes with it,
+it is often helpful to open that and watch the machine, since the
+GUI often has more helpful error messages than Vagrant can retrieve.
+For example, if you'</span>re using VirtualBox, run <span class="token variable"><span class="token variable">`</span>vagrant up<span class="token variable">`</span></span> <span class="token keyword">while</span> the
+VirtualBox GUI is open.
+
+The primary issue <span class="token keyword">for</span> this error is that the provider you<span class="token string">'re using
+is not properly configured. This is very rarely a Vagrant issue.
+
+# もう一回叩くとうまく起動した
+$ vagrant up
+Bringing machine '</span>default<span class="token string">' up with '</span>virtualbox<span class="token string">' provider...
+==> default: Checking if box '</span>bento/centos-7.2' is up to date<span class="token punctuation">..</span>.
+</code></pre>
+<p>Vagrant の起動でコケるのは色々と理由があって、根本の問題としては BIOS の設定で「仮想環境支援機能」を有効にしていない場合がある。これは有効にしておかないといけないものなので、BIOS 設定を変更しておく。</p>
+<ul>
+  <li>参考：<a href="http://futurismo.biz/archives/1647">仮想化支援機構(VT-x/AMD-V)を有効化できません | Futurismo</a></li>
+  <li>参考：<a href="http://qiita.com/hiroyasu55/items/11a4c996b0c62450940f">Windows上でVirtualBox+Vagrant+CentOSによる仮想環境構築 - Qiita</a></li>
+</ul>
+<p>その他、バージョンごとにバグがあったりなんだりするので、VirtualBox・Vagrant を再インストールしたり再起動したりして試行錯誤が必要かもしれない。</p>
+<ul>
+  <li>参考：<a href="http://qiita.com/nagomu/items/37f5b6fb63168ab13ace">Vagrant から VirtualBox が起動できなくなった時のメモ - Qiita</a></li>
+</ul>
+<p>自分の場合は、「初回の <code>vagrant up</code> はエラーが出る」だけで、以降の <code>vagrant up</code> ではスムーズに起動している。</p>
+<p>Vagrant Box が正しく起動しているか確認するには、<code>vagrant status</code> を使う。</p>
+<pre class="language-bash"><code class="language-bash">$ vagrant status
+Current machine states:
+
+default                   running <span class="token punctuation">(</span>virtualbox<span class="token punctuation">)</span>
+
+The VM is running. To stop this VM, you can run <span class="token variable"><span class="token variable">`</span>vagrant <span class="token function">halt</span><span class="token variable">`</span></span> to
+shut it down forcefully, or you can run <span class="token variable"><span class="token variable">`</span>vagrant <span class="token function">suspend</span><span class="token variable">`</span></span> to simply
+<span class="token function">suspend</span> the virtual machine. In either case, to restart it again,
+simply run <span class="token variable"><span class="token variable">`</span>vagrant up<span class="token variable">`</span></span><span class="token builtin class-name">.</span>
+</code></pre>
+<p><code>running</code> になっているので正常に起動している。</p>
+<h2 id="centos-環境にログインしてみる"><a class="header-link" href="#centos-環境にログインしてみる"><span class="header-link-mark"></span></a>CentOS 環境にログインしてみる</h2>
+<p><code>vagrant up</code> が上手く行ったら、既に仮想環境は起動しているので、CentOS 環境にログイン (SSH 接続) してみる。</p>
+<p>ターミナルで <code>vagrant ssh</code> と打つと、サクッと CentOS 環境にログインできる。デフォルトのユーザは <code>vagrant</code> で、パスワードも <code>vagrant</code>。<code>sudo</code> とかもそのままできる。</p>
+<pre class="language-bash"><code class="language-bash">$ vagrant <span class="token function">ssh</span>
+<span class="token punctuation">[</span>vagrant@localhost ~<span class="token punctuation">]</span>$
+
+<span class="token comment"># コンソールが上のようになったら OK</span>
+</code></pre>
+<p>これで Linux 環境が出来上がった。</p>
+<h2 id="linux-環境構築"><a class="header-link" href="#linux-環境構築"><span class="header-link-mark"></span></a>Linux 環境構築</h2>
+<h3 id="初めにパッケージを更新しておく"><a class="header-link" href="#初めにパッケージを更新しておく"><span class="header-link-mark"></span></a>初めにパッケージを更新しておく</h3>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># アップデートできるパッケージの確認</span>
+$ <span class="token function">sudo</span> yum check-update
+<span class="token comment"># システム全体のアップグレード</span>
+$ <span class="token function">sudo</span> yum upgrade
+</code></pre>
+<h3 id="日本語環境を整える"><a class="header-link" href="#日本語環境を整える"><span class="header-link-mark"></span></a>日本語環境を整える</h3>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># 日本語関連パッケージを入れる</span>
+$ <span class="token function">sudo</span> yum -y <span class="token function">install</span> ibus-kkc vlgothic-*
+
+<span class="token comment"># システムの文字セットを変更する</span>
+$ localectl set-locale <span class="token assign-left variable"><span class="token environment constant">LANG</span></span><span class="token operator">=</span>ja_JP.UTF-8
+<span class="token comment"># パスワードを聞かれたら vagrant と入れる</span>
+$ <span class="token builtin class-name">source</span> /etc/locale.conf
+</code></pre>
+<p>これで、システムが使う言語が日本語になる。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># 反映されていることを確認</span>
+<span class="token punctuation">[</span>vagrant@localhost vagrant<span class="token punctuation">]</span>$ <span class="token builtin class-name">echo</span> <span class="token environment constant">$LANG</span>
+ja_JP.UTF-8
+
+<span class="token comment"># 日本語で表示される</span>
+<span class="token punctuation">[</span>vagrant@localhost vagrant<span class="token punctuation">]</span>$ sl
+-bash: sl: コマンドが見つかりません
+</code></pre>
+<ul>
+  <li>参考：<a href="https://www.server-world.info/query?os=CentOS_7&#x26;p=japanese">CentOS 7 : 日本語環境にする : Server World</a></li>
+</ul>
+<h3 id="タイムゾーンを直す"><a class="header-link" href="#タイムゾーンを直す"><span class="header-link-mark"></span></a>タイムゾーンを直す</h3>
+<p>このままだとタイムゾーンがズレているので直す。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># タイムゾーンがズレている</span>
+<span class="token punctuation">[</span>vagrant@localhost vagrant<span class="token punctuation">]</span>$ <span class="token function">date</span>
+<span class="token number">2017</span>年  <span class="token number">4</span>月 <span class="token number">16</span>日 日曜日 04:34:18 UTC
+
+<span class="token comment"># 以下で直る</span>
+$ <span class="token function">sudo</span> <span class="token function">cp</span> /usr/share/zoneinfo/Japan /etc/localtime
+
+<span class="token comment"># 直った</span>
+<span class="token punctuation">[</span>vagrant@localhost vagrant<span class="token punctuation">]</span>$ <span class="token function">date</span>
+<span class="token number">2017</span>年  <span class="token number">4</span>月 <span class="token number">16</span>日 日曜日 <span class="token number">13</span>:35:17 JST
+</code></pre>
+<ul>
+  <li>参考：<a href="http://d.hatena.ne.jp/yk5656/20140527/1402758009">VagrantのCentOSを日本語化してみる - yk5656 diary</a></li>
+</ul>
+<h3 id="man-pages-を日本語化する"><a class="header-link" href="#man-pages-を日本語化する"><span class="header-link-mark"></span></a>Man Pages を日本語化する</h3>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># man の日本語化。全部が日本語になるわけじゃなさそう</span>
+$ <span class="token function">sudo</span> yum <span class="token function">install</span> -y man-pages-ja
+</code></pre>
+<h3 id="vim-を入れる"><a class="header-link" href="#vim-を入れる"><span class="header-link-mark"></span></a>Vim を入れる</h3>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># 最初は Vim がないので入れる。Vimtutor もこれで入る</span>
+$ <span class="token function">sudo</span> yum <span class="token function">install</span> -y vim-enhanced
+</code></pre>
+<h2 id="その他コマンド"><a class="header-link" href="#その他コマンド"><span class="header-link-mark"></span></a>その他コマンド</h2>
+<ul>
+  <li><code>vagrant ssh</code> で入った CentOS 環境から抜けるには <code>exit</code> で OK。</li>
+  <li><code>vagrant up</code> で立ち上げた Vagrant Box は <code>vagrant halt</code> で終了する。</li>
+</ul>
+<h2 id="以上"><a class="header-link" href="#以上"><span class="header-link-mark"></span></a>以上</h2>
+<p>これでひとまずは遊んで使える CentOS 環境が作れただろう。</p>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2017-04-17</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2017-04-17</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

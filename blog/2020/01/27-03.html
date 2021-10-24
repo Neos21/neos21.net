@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>yum や apt コマンドをラップする「pmw」コマンドを作った - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2020/01/27-03.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2020/index.html">2020年</a></li>
+            <li><a href="/blog/2020/01/index.html">01月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2020-01-27</time></div>
+        <h1 id="page-title">yum や apt コマンドをラップする「pmw」コマンドを作った</h1>
+
+<p>僕は CentOS 歴が長いので、Ubuntu の <code>apt</code> コマンドに慣れず、ついつい <code>yum</code> コマンドの要領でコマンドを叩いてしまう。また、Windows の Git SDK に同梱される <code>pacman</code> は全くオプションが覚えられないでいる。</p>
+<p>こうしたパッケージ管理ツールのラッパーコマンドを作ってみたら楽になるんじゃないか、と思い、作ってみた。その名も <strong>pmw : Package Manager Wrapper</strong>。</p>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#%E3%83%84%E3%83%BC%E3%83%AB%E3%81%AE%E5%9C%A8%E3%82%8A%E5%87%A6">ツールの在り処</a></li>
+  <li><a href="#%E7%89%B9%E5%BE%B4">特徴</a></li>
+  <li><a href="#%E3%82%A4%E3%83%B3%E3%82%B9%E3%83%88%E3%83%BC%E3%83%AB%E6%96%B9%E6%B3%95%E3%81%A8%E4%BD%BF%E3%81%84%E6%96%B9">インストール方法と使い方</a></li>
+  <li><a href="#%E4%BB%A5%E4%B8%8B%E8%A3%BD%E4%BD%9C%E3%81%AB%E9%9A%9B%E3%81%97%E3%81%A6%E3%81%AE%E7%B4%B0%E3%80%85">以下製作に際しての細々</a></li>
+</ul>
+<h2 id="ツールの在り処"><a class="header-link" href="#ツールの在り処"><span class="header-link-mark"></span></a>ツールの在り処</h2>
+<p>pmw は以下よりダウンロードできる。</p>
+<ul>
+  <li><a href="https://github.com/Neos21/pmw">Neos21/pmw</a></li>
+</ul>
+<h2 id="特徴"><a class="header-link" href="#特徴"><span class="header-link-mark"></span></a>特徴</h2>
+<p>pmw は、対応しているパッケージ管理ツールのサブコマンドを特定し、適切なコマンドを構築・実行できる。</p>
+<p>対応しているパッケージ管理ツールは以下のとおり。</p>
+<ul>
+  <li><code>dnf</code></li>
+  <li><code>yum</code></li>
+  <li><code>apt</code></li>
+  <li><code>apt-get</code></li>
+  <li><code>brew</code> (Homebrew)</li>
+  <li><code>pacman</code></li>
+</ul>
+<p>サブコマンドは以下を用意している。カッコ内はエイリアスだ。</p>
+<ul>
+  <li><code>install</code> (<code>i</code>・<code>in</code>)</li>
+  <li><code>remove</code> (<code>r</code>・<code>rm</code>・<code>un</code>・<code>uninstall</code>)</li>
+  <li><code>update</code> (<code>upd</code>)</li>
+  <li><code>upgrade</code> (<code>up</code>・<code>upg</code>)</li>
+  <li><code>search</code> (<code>find</code>)</li>
+  <li><code>list installed</code> (<code>ls installed</code>・<code>l</code>・<code>ls</code>・<code>list-installed</code>・<code>ls-installed</code>)</li>
+  <li><code>list available</code> (<code>ls available</code>・<code>L</code>・<code>la</code>・<code>list-available</code>・<code>ls-available</code>・<code>list --upgradable</code>・<code>ls --upgradable</code>・<code>list upgradable</code>・<code>ls upgradable</code>・<code>list-upgradable</code>・<code>ls-upgradable</code>)</li>
+  <li><code>info</code> (<code>show</code>)</li>
+</ul>
+<p>実際に使ってみせよう。</p>
+<h2 id="インストール方法と使い方"><a class="header-link" href="#インストール方法と使い方"><span class="header-link-mark"></span></a>インストール方法と使い方</h2>
+<p>pmw は単一のシェルスクリプトで実装している。上の GitHub リポジトリから <code>pmw</code> ファイルをダウンロードし、PATH の通っているところに置けば良い。</p>
+<p>内部的には <code>type</code> コマンドを使ってパッケージ管理ツールの存在をチェックし、見つけたコマンドに対応するサブコマンドを拾っている。よって、環境に応じて次のような要領で使用できる。</p>
+<ul>
+  <li>CentOS (<code>yum</code> が使える環境)</li>
+</ul>
+<pre class="language-bash"><code class="language-bash">$ pmw <span class="token function">install</span> <span class="token function">vim</span>
+<span class="token comment"># -> yum install vim</span>
+
+$ pmw up <span class="token function">vim</span>
+<span class="token comment"># -> yum update vim</span>
+</code></pre>
+<ul>
+  <li>Ubuntu (<code>apt</code> が使える環境)</li>
+</ul>
+<pre class="language-bash"><code class="language-bash">$ pmw <span class="token keyword">in</span> -y <span class="token function">vim</span>
+<span class="token comment"># -> apt install -y vim</span>
+
+$ pmw <span class="token function">ls</span>
+<span class="token comment"># -> apt list installed</span>
+</code></pre>
+<ul>
+  <li>MacOS (<code>brew</code> が使える環境)</li>
+</ul>
+<pre class="language-bash"><code class="language-bash">$ pmw <span class="token keyword">in</span> <span class="token function">vim</span>
+<span class="token comment"># -> brew install vim</span>
+</code></pre>
+<ul>
+  <li>Windows の Git SDK (<code>pacman</code> が使える環境)</li>
+</ul>
+<pre class="language-bash"><code class="language-bash">$ pmw <span class="token keyword">in</span> <span class="token function">vim</span>
+<span class="token comment"># -> pacman -S vim</span>
+</code></pre>
+<p>…とこんな感じ。自分はほとんど <code>install</code> と <code>update</code>・<code>upgrade</code> くらいしか使わないので、コレだけちゃんと動けばいいかなー、というノリで作った。</p>
+<h2 id="以下製作に際しての細々"><a class="header-link" href="#以下製作に際しての細々"><span class="header-link-mark"></span></a>以下製作に際しての細々</h2>
+<p>パッケージ管理ツールのコマンド対応表は以下などを参考にした。</p>
+<ul>
+  <li><a href="https://wiki.archlinux.jp/index.php/Pacman_%E6%AF%94%E8%BC%83%E8%A1%A8">Pacman 比較表 - ArchWiki</a></li>
+  <li><a href="http://sig9.hatenablog.com/entry/2015/06/21/081407">Linux パッケージ管理コマンド比較（yum / dnf / apt 等） - らくがきちょう</a></li>
+</ul>
+<p>最初、<code>install</code> や <code>remove</code> などの単位でサブコマンドを解釈して実行できるようにしようかと考えて、以下あたりを見た。</p>
+<ul>
+  <li><a href="http://sig9.hatenablog.com/entry/2015/06/21/081407">Linux パッケージ管理コマンド比較（yum / dnf / apt 等） - らくがきちょう</a></li>
+</ul>
+<p><code>yum</code> は <code>list available</code> と書けて、<code>apt</code> は同等のことが <code>list --upgradable</code> で…みたいな、コマンドの種類と対応付けを、連想配列みたいに持ちたいなーと思っていた。JSON で書くなら以下のようなイメージ。</p>
+<pre class="language-json"><code class="language-json"><span class="token punctuation">{</span>
+  <span class="token property">"yum"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+    <span class="token property">"install"</span><span class="token operator">:</span> <span class="token string">"install"</span><span class="token punctuation">,</span>
+    <span class="token property">"list-available"</span><span class="token operator">:</span> <span class="token string">"list available"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token property">"apt-get"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+    <span class="token property">"install"</span><span class="token operator">:</span> <span class="token string">"install"</span><span class="token punctuation">,</span>
+    <span class="token property">"list-available"</span><span class="token operator">:</span> <span class="token string">"list --upgradable"</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>JSON ファイルを外に持ったり、<code>jq</code> を使ったりするのは何となく嫌だったので、Bash で連想配列が書けないか調べた。書けなくはないが、<code>declare -A</code> が Bash 4.3 以降でしか使えず、環境を選ぶので却下。</p>
+<ul>
+  <li><a href="https://qiita.com/ques0942/items/a5c0e1d873dd71116e6b">Bashで連想配列を使用する - Qiita</a></li>
+  <li><a href="https://qiita.com/pu_ri/items/f1a2e098fb8ae8e978d4">bash で配列、連想配列をシェル関数の引数として渡す - Qiita</a></li>
+  <li><a href="https://takuya-1st.hatenablog.jp/entry/2016/12/23/010205">bashで連想配列(assoc array / hash ) を使う。 - それマグで！</a></li>
+</ul>
+<p>じゃあもっと単純に、配列で Find するかー、と思い、Bash の配列 (Array) も避けて、カンマ区切りの文字列を <code>cut</code> でちぎって参照することにした。</p>
+<ul>
+  <li><a href="https://qiita.com/Takeru/items/c3fd4f49f8c3a2449a7f">POSIXで配列を扱う - Qiita</a></li>
+</ul>
+<p>全体的な実装は、<code>function</code> に切り出して、結果を <code>echo</code> する、不正な値は空文字を <code>echo</code> し、呼び出し元でそれを判断して <code>exit 1</code> する、という感じ。結果的に事足りたが、なんかシェルスクリプトらしくないというか…。</p>
+<p>あと、まだまだ使われる <code>apt-get</code> は、<code>list-installed</code> に <code>dpkg-l</code>、<code>list-available</code> に <code>apt-cache dumpavail</code> を使うなど、<code>apt-get</code> 以外のコマンドも登場することがあり、今回の作りでは対応しきれなかったので諦めた。なんか全体的に判定ロジックを考え直した方が良いんだろうなぁ…。</p>
+<p>連想配列でマスタデータを管理したり、それをサクッと <code>find</code> したりするのは、どうも JavaScript に慣れきってしまって、シェルスクリプトでやるのがツラい。でもまぁいいや、<code>apt-get</code> への対応は不十分でもきっと <code>apt</code> が入ってるだろ。</p>
+<p>とゆーワケで以上。</p>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2020-01-27</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2020-01-27</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

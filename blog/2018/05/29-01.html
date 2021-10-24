@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>Git のクライアントサイドフックを使ってコミット時に自動フォーマットなどを行う - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2018/05/29-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2018/index.html">2018年</a></li>
+            <li><a href="/blog/2018/05/index.html">05月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2018-05-29</time></div>
+        <h1 id="page-title">Git のクライアントサイドフックを使ってコミット時に自動フォーマットなどを行う</h1>
+
+<p>Git には Hooks という仕組みがあり、<code>git commit</code> コマンドを実行した時とかに自動実行するスクリプトを設定できる。</p>
+<ul>
+  <li>参考：<a href="https://qiita.com/mima_ita/items/dcaa3789022d2a9ab929">Gitのフックの説明と挙動の検証 - Qiita</a> … フックの種類</li>
+</ul>
+<p>今回はこの仕組を使って、<code>pre-commit</code> のタイミング、つまり <code>git commit</code> コマンド実行時に自動フォーマットをかけたりしてみる。</p>
+<h2 id="フックスクリプトはどこにある？"><a class="header-link" href="#フックスクリプトはどこにある？"><span class="header-link-mark"></span></a>フックスクリプトはどこにある？</h2>
+<p>フックを設定するためのスクリプトがどこにあるかというと、Git プロジェクト配下の <code>./.git/hooks/</code> 配下にある。</p>
+<p>デフォルトではココに <code>pre-commit.sample</code> といったファイルが置いてあるかと思う。実際にフックを有効にするには <code>pre-commit</code> というファイル名にリネームすることで使えるようになる。</p>
+<p>今回は <code>pre-commit.sample</code> はそのままに、空の <code>pre-commit</code> ファイルを置いてみる。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token builtin class-name">cd</span> ./.git/hooks/
+$ <span class="token function">touch</span> pre-commit
+</code></pre>
+<p><code>pre-commit</code> フックに限らず、クライアントサイドフックのスクリプトは通常 Git 管理の対象外 (<code>.git/</code> ディレクトリ配下だし…) なので、チーム開発で使う場合は何らかの方法でフックスクリプトの導入を徹底させる必要がある。</p>
+<ul>
+  <li>参考：<a href="http://labs.gree.jp/blog/2011/03/2885/">多人数開発で Git を使う場合の環境構築 | GREE Engineers' Blog</a> … 各自の開発環境の、特定のディレクトリに置いたファイルを設置し、それを参照するイメージ。</li>
+  <li>npm-scripts の <code>post install</code> とかでそういうシェルスクリプトを実行するとかで対応しても良いかと思う。</li>
+</ul>
+<p>このファイルを色々と書き換えてフックスクリプトを用意し、後で実際に <code>git commit</code> コマンドを叩いて検証してみる。</p>
+<h2 id="コミット時に-textlint-の自動修正を行う"><a class="header-link" href="#コミット時に-textlint-の自動修正を行う"><span class="header-link-mark"></span></a>コミット時に TextLint の自動修正を行う</h2>
+<p>まずは簡単な例。コミット時に TextLint の自動修正を行い、文章を修正してみようと思う。</p>
+<p>対象のプロジェクトには <code>textlint</code> および Auto-Fix 可能なルールプラグインを入れておき、<code>npm run textlint</code> で <code>textlint</code> コマンドが使えるようにしておこう。</p>
+<p>次に、<code>pre-commit</code> ファイルに以下のように書き込む。中身は Bash スクリプトだ。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token shebang important">#!/bin/bash</span>
+
+<span class="token keyword">for</span> <span class="token for-or-select variable">FILE</span> <span class="token keyword">in</span> <span class="token variable"><span class="token variable">`</span><span class="token function">git</span> <span class="token function">diff</span> --cached --name-only <span class="token operator">|</span> <span class="token function">grep</span> .md<span class="token variable">`</span></span><span class="token punctuation">;</span> <span class="token keyword">do</span>
+  <span class="token function">npm</span> run textlint -- --fix <span class="token variable">$FILE</span>
+  <span class="token function">git</span> <span class="token function">add</span> <span class="token variable">$FILE</span>
+<span class="token keyword">done</span>
+</code></pre>
+<p>ヒアドキュメントを使ってコマンドラインから書いても良いかも。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">cat</span> <span class="token operator">&#x3C;&#x3C;</span> <span class="token string">EOL<span class="token bash punctuation"> <span class="token operator">></span> ./.git/hooks/pre-commit</span>
+#!/bin/bash
+
+for FILE in <span class="token variable"><span class="token variable">`</span><span class="token function">git</span> <span class="token function">diff</span> --cached --name-only <span class="token operator">|</span> <span class="token function">grep</span> .md<span class="token variable">`</span></span>; do
+  npm run textlint -- --fix <span class="token variable">$FILE</span>
+  git add <span class="token variable">$FILE</span>
+done
+EOL</span>
+</code></pre>
+<p>この書き方知ってるとスゴイ人っぽい。w</p>
+<ul>
+  <li>参考：<a href="http://d.hatena.ne.jp/kakurasan/20091124/p1">任意の複数行テキストをコマンドでファイルに書き出す - 試験運用中なLinux備忘録</a></li>
+</ul>
+<p>さて、このファイルで何をやっているかというと、<code>git diff --cached --name-only</code> (<code>--cached</code> は <code>--staged</code> と同じ) で差分のあるファイルの名前を抽出し、<code>.md</code> (Markdown) ファイルのみを抽出する。そしてそれらに対して順に textlint を実行し、再度 <code>git add</code> している。</p>
+<p><code>--cached</code> と書いておけば新規作成したファイルも対象になる。変更後は再度 <code>git add</code> しないことには変更がコミットされないのでこうなっている。</p>
+<p><code>textlint</code> コマンドについては、<code>textlint --fix [File]</code> という書式がデフォだが、<code>npm run</code> でオプション引数を渡すために間に <code>--</code> が入っている。</p>
+<ul>
+  <li>参考：<a href="https://yoshinorin.net/2018/01/07/git-pre-commit-code-format/">gitでコミット時にコードをフォーマットしてそのままコミットする - YoshinoriN's Memento</a></li>
+</ul>
+<p>とてもシンプルなスクリプトだが、ファイル名にスペースが含まれているとうまく展開できなくておかしくなるので、この次のサンプルで直すとする。</p>
+<p>また、「Auto-Fix できない Lint エラーがあるならコミットしたくない」という場合にも対応できるよう、もう少し直してみる。</p>
+<h2 id="textlint-チェックエラーがある場合はコミットさせない"><a class="header-link" href="#textlint-チェックエラーがある場合はコミットさせない"><span class="header-link-mark"></span></a>TextLint チェックエラーがある場合はコミットさせない</h2>
+<p>TextLint チェックエラーがある場合はコミットさせないよう、終了コードを設定してみよう。<code>pre-commit</code> コミットフックは終了コードに <code>0</code> 以外を渡すと、コミットメッセージを入力する画面に移動せず、処理を中断してくれる。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token shebang important">#!/bin/bash</span>
+
+<span class="token comment"># 終了コード</span>
+<span class="token assign-left variable">IS_ERROR</span><span class="token operator">=</span><span class="token number">0</span>
+
+<span class="token comment"># $FILE でスペース区切りのファイルを受け取れるよう、区切り文字を改行のみにする</span>
+<span class="token assign-left variable"><span class="token environment constant">IFS</span></span><span class="token operator">=</span>$<span class="token string">'<span class="token entity" title="\n">\n</span>'</span>
+
+<span class="token keyword">for</span> <span class="token for-or-select variable">FILE</span> <span class="token keyword">in</span> <span class="token variable"><span class="token variable">`</span><span class="token function">git</span> <span class="token function">diff</span> --cached --name-only <span class="token operator">|</span> <span class="token function">grep</span> .md<span class="token variable">`</span></span><span class="token punctuation">;</span> <span class="token keyword">do</span>
+  <span class="token comment"># Auto-Fix できそうなモノを先に直す</span>
+  <span class="token function">npm</span> run textlint -- --fix <span class="token string">"<span class="token variable">$FILE</span>"</span>
+  
+  <span class="token comment"># それでもエラーがあれば終了コードを 1 に設定する</span>
+  <span class="token keyword">if</span> <span class="token operator">!</span> <span class="token function">npm</span> run textlint <span class="token string">"<span class="token variable">$FILE</span>"</span><span class="token punctuation">;</span> <span class="token keyword">then</span>
+    <span class="token assign-left variable">IS_ERROR</span><span class="token operator">=</span><span class="token number">1</span>
+  <span class="token keyword">fi</span>
+  
+  <span class="token function">git</span> <span class="token function">add</span> <span class="token string">"<span class="token variable">$FILE</span>"</span>
+<span class="token keyword">done</span>
+
+<span class="token keyword">if</span> <span class="token punctuation">[</span> <span class="token variable">$IS_ERROR</span> -eq <span class="token number">1</span> <span class="token punctuation">]</span> <span class="token punctuation">;</span> <span class="token keyword">then</span>
+  <span class="token builtin class-name">echo</span> エラーがあります。修正してからコミットしてください。
+<span class="token keyword">fi</span>
+
+<span class="token builtin class-name">exit</span> <span class="token variable">$IS_ERROR</span>
+</code></pre>
+<p>途中に <em><code>IFS=$'\n'</code></em> という行があるが、この設定によって、スペース区切りのファイルも <code>for ... in</code> で扱えるようになっている。IFS は Internal Field Separator の略らしい。</p>
+<ul>
+  <li>参考：<a href="http://linux.just4fun.biz/?%E9%80%86%E5%BC%95%E3%81%8D%E3%82%B7%E3%82%A7%E3%83%AB%E3%82%B9%E3%82%AF%E3%83%AA%E3%83%97%E3%83%88/%E3%82%B9%E3%83%9A%E3%83%BC%E3%82%B9%E3%81%8C%E5%90%AB%E3%81%BE%E3%82%8C%E3%82%8B%E6%96%87%E5%AD%97%E5%88%97%E3%82%921%E8%A1%8C%E3%81%A8%E3%81%97%E3%81%A6%E6%89%B1%E3%81%86%E6%96%B9%E6%B3%95">逆引きシェルスクリプト/スペースが含まれる文字列を1行として扱う方法 - Linuxと過ごす</a></li>
+</ul>
+<p>TextLint の場合、先に <code>--fix</code> オプションで Auto-Fix してから、純粋なエラーチェックだけを再実施している。<code>if ! 【コマンド】</code> で、コマンドの実行結果がエラーの場合に終了コード用変数を書き換えるようにした。</p>
+<ul>
+  <li>参考：<a href="http://blog.manaten.net/entry/645">gitのpre-commit hookを使って、綺麗なPHPファイルしかコミットできないようにする - MANA-DOT</a> … 終了コードの変え方を参考にした</li>
+  <li>参考：<a href="http://hamuhamu.hatenablog.jp/entry/2015/09/28/051803">git hookを使ってデバッグコードをコミットできないようにする - はむはむエンジニアぶろぐ</a></li>
+</ul>
+<p>だんだんシェルスクリプトを書くのがつらくなってきた…。無理せず、ちょっとずつ必要なフックを入れていこう。</p>
+<ul>
+  <li>参考：<a href="https://qiita.com/quattro_4/items/f9e0884f2efe7e8c033a">gitコミット時にデバッグコードが含まれていないかをチェックする - Qiita</a> … フックスクリプトは Ruby などで書いても良い。その方が楽になりそう。</li>
+  <li>参考：<a href="https://github.com/observing/pre-commit">GitHub - observing/pre-commit: Automatically installs a git pre-commit script in your git repository which runs your `npm test` on pre-commit</a> … <code>pre-commit</code> を実現する npm パッケージ。</li>
+  <li>参考：<a href="https://qiita.com/sifue/items/1adf45e47b47898d3b73">Gitのコミットフックでprettierの強制フォーマットがかかるようにする - Qiita</a> … <strong>lint-staged</strong> という npm パッケージでファイルの種類別に Lint チェックを行える。</li>
+  <li>参考：<a href="https://qiita.com/kompiro/items/6d3b3f2a3836472e1eb8">Git Hooks管理を簡単に - overcommitを使おう - Qiita</a> … <em>overcommit</em>。フックの管理に使える Ruby 製のツール。</li>
+</ul>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2018-05-29</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2018-05-29</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

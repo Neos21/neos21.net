@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>AngularJS + Cordova なアプリに Protractor + Appium を使って iOS 実機で E2E テストを実施する方法 - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2017/07/31-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2017/index.html">2017年</a></li>
+            <li><a href="/blog/2017/07/index.html">07月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2017-07-31</time></div>
+        <h1 id="page-title">AngularJS + Cordova なアプリに Protractor + Appium を使って iOS 実機で E2E テストを実施する方法</h1>
+
+<p>以前、AngularJS + Cordova なアプリに Protractor + Appium を使って iOS シミュレータで E2E テストを行う方法を紹介した。</p>
+<ul>
+  <li><a href="/blog/2017/07/29-01.html">AngularJS + Cordova なプロジェクトに Protractor + Appium を導入して iOS シミュレータで E2E テストを動かす</a></li>
+</ul>
+<p>今回はその続きで、今度は iOS 実機で E2E テストを行う方法を紹介する。</p>
+<p>前回紹介した環境設定をしてあるのが前提になる。</p>
+<h2 id="実際のコードはコチラ"><a class="header-link" href="#実際のコードはコチラ"><span class="header-link-mark"></span></a>実際のコードはコチラ</h2>
+<p>今回紹介したパッケージとサンプルコードを利用し、AngularJS + Cordova なアプリで Appium を使った E2E テストを行うサンプルプロジェクトを作成した。以下を参考にしてほしい。</p>
+<ul>
+  <li><a href="https://github.com/Neos21/example-angular-js-cordova-appium">GitHub - Neos21/AngularJSCordovaAppium: AngularJS + Cordova + Appium な環境で iOS アプリの E2E テストを行うサンプル</a></li>
+</ul>
+<p>今回の例では、Appium と Protractor の起動は、Gulp タスクとして定義している。<strong><code>gulpfile.js</code> はコチラ。</strong></p>
+<ul>
+  <li><a href="https://github.com/Neos21/example-angular-js-cordova-appium/blob/master/gulpfile.js">AngularJSCordovaAppium/gulpfile.js at master · Neos21/AngularJSCordovaAppium · GitHub</a></li>
+</ul>
+<h2 id="webdriver-agent-の設定"><a class="header-link" href="#webdriver-agent-の設定"><span class="header-link-mark"></span></a>WebDriver Agent の設定</h2>
+<p>プロジェクトにローカルインストールした Appium の配下にある appium-xcuitest-deriver が WebDriverAgent を抱えているので、コレの設定をする。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token builtin class-name">cd</span> ./node_modules/appium/node_modules/appium-xcuitest-driver/WebDriverAgent/
+
+$ <span class="token function">sh</span> ./Scripts/bootstrap.sh -d
+-e Fetching dependencies
+
+<span class="token comment"># XCode プロジェクトを開く</span>
+$ <span class="token function">open</span> ./WebDriverAgent.xcodeproj
+</code></pre>
+<p>XCode 上で以下のように設定を変更した。</p>
+<ul>
+  <li>Identity
+    <ul>
+      <li>Bundle Identifier
+        <ul>
+          <li>com.facebook.WebDriverAgentLib → 個人で適当なアプリ識別子に変更する</li>
+        </ul>
+      </li>
+    </ul>
+  </li>
+  <li>Signing
+    <ul>
+      <li>Team
+        <ul>
+          <li>None → 自分のチームを指定する</li>
+        </ul>
+      </li>
+    </ul>
+  </li>
+  <li>Status
+    <ul>
+      <li>エラーが出ている場合は少し上にある「Automatically manage signing」にチェックを付ける</li>
+    </ul>
+  </li>
+</ul>
+<p>このまま XCodeBuild をしても以下のようなメッセージが出る。</p>
+<pre class="language-bash"><code class="language-bash">Testing failed:
+Signing <span class="token keyword">for</span> <span class="token string">"WebDriverAgentRunner"</span> requires a development team. Select a development team <span class="token keyword">in</span> the project editor.
+Code signing is required <span class="token keyword">for</span> product <span class="token builtin class-name">type</span> <span class="token string">'UI Testing Bundle'</span> <span class="token keyword">in</span> SDK <span class="token string">'iOS 10.3'</span>
+</code></pre>
+<p>引き続き <code>WebDriverAgent.xcodeproj</code> を XCode で開き、左ペインの「TARGETS」から「WebDriverAgentRunner」を選択する。</p>
+<ul>
+  <li>General タブ
+    <ul>
+      <li>Signing
+        <ul>
+          <li>Team：None → 自分のチームを指定する</li>
+        </ul>
+      </li>
+      <li>Status
+        <ul>
+          <li><code>The app ID "com.facebook.WebDriverAgentRunner" cannot be registered to your development team.</code> と出ているはず。</li>
+        </ul>
+      </li>
+    </ul>
+  </li>
+  <li>Build Settings タブ
+    <ul>
+      <li>Product Bundle Identifier (右上の検索窓から検索すると楽)
+        <ul>
+          <li>com.facebook.WebDriverAgentRunner → 個人で適当なアプリ識別子に変更する</li>
+        </ul>
+      </li>
+    </ul>
+  </li>
+</ul>
+<p>これで Status のエラーが消える。</p>
+<p>iOS 実機を繋いでおき、以下のコマンドでビルドする。</p>
+<pre class="language-bash"><code class="language-bash">$ xcodebuild -project WebDriverAgent.xcodeproj -scheme WebDriverAgentRunner -destination <span class="token string">'id=【UDID】'</span> <span class="token builtin class-name">test</span>
+</code></pre>
+<p>これで実機上に WebDriver がインストールされた。コンソールは「<code>XCTRunner[893:177871] ServerURLHere->http://192.168.2.3:8100&#x3C;-ServerURLHere</code>」という表示になったらそのまま監視状態になるので <code>Ctrl + C</code> で終了させる。</p>
+<h2 id="udid-の調べ方"><a class="header-link" href="#udid-の調べ方"><span class="header-link-mark"></span></a>UDID の調べ方</h2>
+<ol>
+  <li>iOS 実機を Mac に USB 接続する。</li>
+  <li>iTunes を開き、「概要」画面にある「シリアル番号」部分をクリックすると「UDID」に表示が切り替わるので、右クリック → コピー でコピーする。</li>
+  <li>もしくは先程インストールした「libimobiledevice」から以下のコマンドを叩くと UDID が取得できる。</li>
+</ol>
+<pre class="language-bash"><code class="language-bash">$ idevice_id --list
+</code></pre>
+<h2 id="e2e-テストを開始する"><a class="header-link" href="#e2e-テストを開始する"><span class="header-link-mark"></span></a>E2E テストを開始する</h2>
+<p>以下の手順でテストを開始する。事前に iOS 実機を USB に繋いでおくこと。</p>
+<ol>
+  <li>iOS 実機にアプリをインストールする</li>
+  <li>iOS 実機に WebDriver をインストールする</li>
+  <li>Appium サーバを起動する</li>
+  <li>ios-webkit-debug-proxy を起動する</li>
+  <li>Protractor を実行する</li>
+</ol>
+<h3 id="1-ios-実機にアプリをインストールする"><a class="header-link" href="#1-ios-実機にアプリをインストールする"><span class="header-link-mark"></span></a>1. iOS 実機にアプリをインストールする</h3>
+<p>事前に iOS 実機にアプリをインストールしておく。既にインストールできている場合は飛ばして良い。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># iOS 実機向けにビルド・インストールする</span>
+$ cordova run ios
+</code></pre>
+<h3 id="2-ios-実機に-webdriver-をインストールする"><a class="header-link" href="#2-ios-実機に-webdriver-をインストールする"><span class="header-link-mark"></span></a>2. iOS 実機に WebDriver をインストールする</h3>
+<p>これも既にインストールできている場合は飛ばして良い。「<code>XCTRunner[893:177871] ServerURLHere->http://192.168.2.3:8100&#x3C;-ServerURLHere</code>」のコンソール出力で止まるので <code>Ctrl + C</code> で抜ける。</p>
+<pre class="language-bash"><code class="language-bash">$ xcodebuild -project ./node_modules/appium/node_modules/appium-xcuitest-driver/WebDriverAgent/WebDriverAgent.xcodeproj -scheme WebDriverAgentRunner -destination <span class="token string">'id=【UDID】'</span> <span class="token builtin class-name">test</span>
+</code></pre>
+<h3 id="3-appium-サーバを起動する"><a class="header-link" href="#3-appium-サーバを起動する"><span class="header-link-mark"></span></a>3. Appium サーバを起動する</h3>
+<p>Appium サーバを起動しておく。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># Gulp タスクからローカルインストールした Appium を起動する</span>
+$ <span class="token function">npm</span> run gulp appium
+</code></pre>
+<p>Appium をグローバルインストールしておき、<code>$ appium</code> で起動した場合は途中で WebDriver Agent のビルドが失敗して上手くいかなかった。Appium 自身の配下にある WebDriver Agent を使用しようとして、未設定のためにビルドが失敗するものと思われる。</p>
+<p>コンフィグ設定は以下のように記述して動作したが、デフォルト設定とほとんど同じため、コンフィグ設定を指定せずとも動作するものと思われる。</p>
+<pre class="language-json"><code class="language-json"><span class="token comment">/* nodeConfig.json */</span>
+
+<span class="token punctuation">{</span>
+  <span class="token property">"configuration"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+    <span class="token property">"cleanUpCycle"</span><span class="token operator">:</span> <span class="token number">2000</span><span class="token punctuation">,</span>
+    <span class="token property">"timeout"</span><span class="token operator">:</span> <span class="token number">30000</span><span class="token punctuation">,</span>
+    <span class="token property">"proxy"</span><span class="token operator">:</span> <span class="token string">"org.openqa.grid.selenium.proxy.DefaultRemoteProxy"</span><span class="token punctuation">,</span>
+    <span class="token property">"url"</span><span class="token operator">:</span> <span class="token string">"http://127.0.0.1:4723/wd/hub"</span><span class="token punctuation">,</span>
+    <span class="token property">"host"</span><span class="token operator">:</span> <span class="token string">"127.0.0.1"</span><span class="token punctuation">,</span>
+    <span class="token property">"port"</span><span class="token operator">:</span> <span class="token number">4723</span><span class="token punctuation">,</span>
+    <span class="token property">"maxSession"</span><span class="token operator">:</span> <span class="token number">1</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<h3 id="4-ios-webkit-debug-proxy-を起動する"><a class="header-link" href="#4-ios-webkit-debug-proxy-を起動する"><span class="header-link-mark"></span></a>4. ios-webkit-debug-proxy を起動する</h3>
+<p>Appium サーバより後に起動する。コンソールには何やらバイナリが出力される。</p>
+<pre class="language-bash"><code class="language-bash">$ ios_webkit_debug_proxy -c 【UDID】:27753 -d
+</code></pre>
+<h3 id="5-protractor-を実行する"><a class="header-link" href="#5-protractor-を実行する"><span class="header-link-mark"></span></a>5. Protractor を実行する</h3>
+<p>iOS 実機のロックは解除しておくこと。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">npm</span> run gulp e2e
+</code></pre>
+<p><code>protractor.conf.js</code> の設定内容を検証した結果は以下のとおり。</p>
+<h4 id="消したらダメだった設定項目"><a class="header-link" href="#消したらダメだった設定項目"><span class="header-link-mark"></span></a>消したらダメだった設定項目</h4>
+<ul>
+  <li><code>seleniumAddress: 'http://127.0.0.1:4723/wd/hub'</code>
+    <ul>
+      <li>Appium サーバを認識するために必要。</li>
+    </ul>
+  </li>
+  <li><code>browserName: ''</code>
+    <ul>
+      <li>必須。<code>'Safari'</code> などにすると Safari ブラウザが開いてしまうので、空値 <code>''</code> にしておくのが慣例。</li>
+    </ul>
+  </li>
+  <li><code>app: './platforms/ios/build/device/【アプリ名】.app'</code></li>
+  <li><code>bundleId: 【アプリ識別子】</code>
+    <ul>
+      <li><code>app</code> と <code>bundleId</code> はセットで必須かつ正しく設定すること。<code>app</code> に記載のパスで辿れる <code>.app</code> と同じものが実機にインストールされていて、識別子が <code>bundleId</code> と一致しないと正しく動作しない。</li>
+      <li>一度誤った設定で Protractor から Appium を通ると、Appium の動作がおかしくなり、再テストができなくなる。その場合は一度 Appium サーバを完全にシャットダウンし、WebDriver の再インストールからやり直すと綺麗に戻る (<code>$ ps -A | grep appium</code> でプロセス ID を取得し <code>$ kill 【プロセス ID】</code> で確実に終了できる)。</li>
+      <li>ビルドのされ方によっては、<code>app</code> に記載のパスではなく <code>'./platforms/ios/build/emulator/</code> ディレクトリにビルドされてしまうことがある。その場合は実機を USB 接続した状態で <code>$ cordova run ios</code> より改めて実機向けにビルドすると <code>device/</code> ディレクトリにビルドされる。</li>
+    </ul>
+  </li>
+  <li><code>deviceName: 【iOS 実機名？】</code>
+    <ul>
+      <li>必須だが、実際の端末名と一致していなくても動作した。</li>
+      <li>シミュレータを使用している場合はココで <code>'iPhone 7'</code> などとプラットフォーム名を指定していた。</li>
+    </ul>
+  </li>
+  <li><code>udid: '【UDID】'</code></li>
+  <li><code>platformName: 'iOS'</code></li>
+  <li><code>platformVersion: '10.3'</code>
+    <ul>
+      <li><code>udid</code>・<code>platformName</code>・<code>platformVersion</code> はセットで必要かつ正しく設定すること。バージョンは <code>10.3.1</code> などメンテナンスバージョンを指定しても良い (書いていても無視されるので存在しない誤ったメンテナンスバージョンを記載しても問題なし)。</li>
+      <li><code>udid</code> は使用する検証機の UDID にする。WebDriver のビルド時に設定した UDID と一致していないといけない。</li>
+    </ul>
+  </li>
+  <li><code>autoWebview: true</code>
+    <ul>
+      <li><code>true</code> にしないとアプリが起動したところで E2E テストがエラーになった。アプリの環境によるのかもしれない。</li>
+    </ul>
+  </li>
+</ul>
+<h4 id="消して良い設定項目"><a class="header-link" href="#消して良い設定項目"><span class="header-link-mark"></span></a>消して良い設定項目</h4>
+<ul>
+  <li><code>baseUrl: ''</code>
+    <ul>
+      <li>テスト中に <code>browser.baseUrl</code> で取得できるものになるベース URL の設定だが、iOS 向けに <code>onPrepare()</code> 内で <code>browser.baseUrl</code> を書き換えているため不要。</li>
+    </ul>
+  </li>
+</ul>
+<h4 id="書かなくても影響ないが、入れておくと良いと思われる設定項目"><a class="header-link" href="#書かなくても影響ないが、入れておくと良いと思われる設定項目"><span class="header-link-mark"></span></a>書かなくても影響ないが、入れておくと良いと思われる設定項目</h4>
+<ul>
+  <li><code>fullReset: false</code>
+    <ul>
+      <li><code>true</code> にすると、シミュレータの場合に、アプリディレクトリを削除してアプリを初期化するというもの。実機でのテスト時は本設定は影響しない様子。</li>
+      <li>参考：<a href="http://www.rightqa.com/appium-desired-capabilities/">http://www.rightqa.com/appium-desired-capabilities/</a></li>
+    </ul>
+  </li>
+  <li><code>autoWebviewTimeout: 20000</code>
+    <ul>
+      <li>WebView のタイムアウト。</li>
+    </ul>
+  </li>
+  <li><code>autoAcceptAlerts: true</code>
+    <ul>
+      <li>自己証明書を受け入れるアラートが出る時に自動で受け入れる。</li>
+      <li>参考：<a href="http://kernhack.hatenablog.com/entry/2015/04/30/233554">Appiumでsslの自己証明書の許可をする - <code>φ(・・*)ゞ</code> ｳｰﾝ カーネルとか弄ったりのメモ</a></li>
+    </ul>
+  </li>
+</ul>
+<p>というわけで、以下の設定が最小限の設定内容となった。</p>
+<pre class="language-javascript"><code class="language-javascript">exports<span class="token punctuation">.</span><span class="token property-access">config</span> <span class="token operator">=</span> <span class="token punctuation">{</span>
+  <span class="token comment">// Appium サーバの URL を指定する</span>
+  seleniumAddress<span class="token operator">:</span> <span class="token string">'http://127.0.0.1:4723/wd/hub'</span><span class="token punctuation">,</span>
+  
+  <span class="token comment">// Capabilities to be passed to the webdriver instance.</span>
+  capabilities<span class="token operator">:</span> <span class="token punctuation">{</span>
+    <span class="token comment">// 必須設定</span>
+    browserName<span class="token operator">:</span> <span class="token string">''</span><span class="token punctuation">,</span>
+    autoWebview<span class="token operator">:</span> <span class="token boolean">true</span><span class="token punctuation">,</span>
+    
+    <span class="token comment">// テスト対象のアプリ情報</span>
+    app <span class="token operator">:</span> <span class="token string">'./platforms/ios/build/device/【アプリ名】.app'</span><span class="token punctuation">,</span>
+    bundleId<span class="token operator">:</span> <span class="token string">'【アプリ識別子】'</span><span class="token punctuation">,</span>
+    
+    <span class="token comment">// テストを実施する iOS 実機情報</span>
+    deviceName <span class="token operator">:</span> <span class="token string">'【iOS 実機名】'</span><span class="token punctuation">,</span>
+    udid <span class="token operator">:</span> <span class="token string">'【UDID】'</span><span class="token punctuation">,</span>
+    platformName <span class="token operator">:</span> <span class="token string">'iOS'</span><span class="token punctuation">,</span>
+    platformVersion<span class="token operator">:</span> <span class="token string">'10.3'</span><span class="token punctuation">,</span>
+    
+    <span class="token comment">// その他設定</span>
+    <span class="token comment">// iOS シミュレータの場合にアプリのディレクトリを削除してアプリを初期化する場合は true</span>
+    fullReset <span class="token operator">:</span> <span class="token boolean">false</span><span class="token punctuation">,</span>
+    <span class="token comment">// WebView のタイムアウト</span>
+    autoWebviewTimeout<span class="token operator">:</span> <span class="token number">20000</span><span class="token punctuation">,</span>
+    <span class="token comment">// 自己証明書の確認アラートが表示されるとき自動で許可する場合は true</span>
+    autoAcceptAlerts <span class="token operator">:</span> <span class="token boolean">true</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+
+<span class="token comment">// 以下略</span>
+</code></pre>
+<h3 id="というワケで手順まとめ"><a class="header-link" href="#というワケで手順まとめ"><span class="header-link-mark"></span></a>というワケで手順まとめ</h3>
+<ol>
+  <li>iOS 実機を USB 接続する。</li>
+  <li>iOS 実機にテスト対象アプリが入っていなければインストールする。
+    <ul>
+      <li><code>$ npm run run:ios</code></li>
+      <li><code>./platforms/ios/build/device/【アプリ名】.app</code> が生成されていることを確認しておくと良い。</li>
+    </ul>
+  </li>
+  <li>WebDriverAgent とその配下にある WebDriverAgentRunner の識別子 (Bundle Identifier) を端末ごとにユニークなモノに変更する。
+    <ul>
+      <li><code>$ open ./node_modules/appium/node_modules/appium-xcuitest-driver/WebDriverAgent/WebDriverAgent.xcodeproj</code></li>
+      <li>左ペイン TARGETS : WebDriverAgentLib → General タブ → Bundle Identifier</li>
+      <li>左ペイン TARGETS : WebDriverAgentRunner → Build Settings タブ → Product Bundle Identifier</li>
+      <li>Appium が起動する際に再ビルドするようなので、以下の手順 4. を飛ばす場合もやっておいた方が良い。</li>
+    </ul>
+  </li>
+  <li>iOS 実機に WebDriver が入っていなければインストールする。
+    <ul>
+      <li><code>$ xcodebuild -project ./node_modules/appium/node_modules/appium-xcuitest-driver/WebDriverAgent/WebDriverAgent.xcodeproj -scheme WebDriverAgentRunner -destination 'id=【UDID】' test</code></li>
+      <li><code>ServerURLHere</code> とコンソールに出力されたら <code>Ctrl + C</code> で終了する。</li>
+    </ul>
+  </li>
+  <li>1つ目のターミナルで Appium サーバを起動する。
+    <ul>
+      <li><code>$ npm run gulp appium</code></li>
+    </ul>
+  </li>
+  <li>2つ目のターミナルで ios-webkit-debug-proxy を起動する。
+    <ul>
+      <li><code>$ ios_webkit_debug_proxy -c 【UDID】 -d</code></li>
+    </ul>
+  </li>
+  <li><code>protractor.conf.js</code> に実機の UDID を記載する。
+    <ul>
+      <li><code>app</code>・<code>bundleId</code> もついでに確認しておく (iOS シミュレータの場合と設定が異なる部分なので)。</li>
+    </ul>
+  </li>
+  <li>3つ目のターミナルで Protractor を実行する。
+    <ul>
+      <li><code>$ npm run gulp e2e</code></li>
+    </ul>
+  </li>
+</ol>
+<h2 id="テスト中について"><a class="header-link" href="#テスト中について"><span class="header-link-mark"></span></a>テスト中について</h2>
+<p>テスト中は Safari インスペクタでの参照は不可。</p>
+<h2 id="テストを終了する"><a class="header-link" href="#テストを終了する"><span class="header-link-mark"></span></a>テストを終了する</h2>
+<p>テストを終了する際は以下の順に終了処理を行う。</p>
+<ol>
+  <li><code>npm run gulp e2e</code> でのテストが完了するまで待つか、<code>Ctrl + C</code> で終了させる。</li>
+  <li><code>ios-webkit-debug-proxy</code> を起動しているターミナルを <code>Ctrl + C</code> で終了させる。</li>
+  <li><code>npm run gulp appium</code> を起動しているターミナルを <code>Ctrl + C</code> で終了させる。</li>
+</ol>
+<p>以上。</p>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2017-07-31</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2017-07-31</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>grep -l で取得したファイル名リストを for in で回す - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2019/07/05-03.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2019/index.html">2019年</a></li>
+            <li><a href="/blog/2019/07/index.html">07月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2019-07-05</time></div>
+        <h1 id="page-title">grep -l で取得したファイル名リストを for in で回す</h1>
+
+<p>Bash の話。</p>
+<p><code>grep -l</code> コマンドで、検索文字列を含むファイル名のみを出力できる。こんな感じだ。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># -r オプションは指定ディレクトリ配下を再帰的に検索する</span>
+$ <span class="token function">grep</span> -lr <span class="token string">'検索文字列'</span> <span class="token string">'./テスト ディレクトリ/Texts'</span>
+./テスト ディレクトリ/Texts/Test1.md
+./テスト ディレクトリ/Texts/Test2.md
+./テスト ディレクトリ/Texts/Test3.md
+</code></pre>
+<p>で、この結果を配列として解釈させ、<code>for in</code> で回そうとしていた。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token assign-left variable">file_names</span><span class="token operator">=</span><span class="token punctuation">(</span> <span class="token variable"><span class="token variable">$(</span> <span class="token builtin class-name">eval</span> <span class="token function">grep</span> -lr <span class="token string">'検索文字列'</span> <span class="token string">'./テスト ディレクトリ/Texts'</span> <span class="token variable">)</span></span> <span class="token punctuation">)</span>
+
+<span class="token keyword">for</span> <span class="token for-or-select variable">file_name</span> <span class="token keyword">in</span> <span class="token string">"<span class="token variable">${file_names<span class="token punctuation">[</span>@<span class="token punctuation">]</span>}</span>"</span><span class="token punctuation">;</span> <span class="token keyword">do</span>
+  <span class="token builtin class-name">echo</span> <span class="token string">"<span class="token variable">${file_name}</span>"</span>
+<span class="token keyword">done</span>
+</code></pre>
+<p>普通のパスであれば特に問題にならないのだが、「<code>テスト ディレクトリ</code>」のように、半角スペースを含むパスを含んでいると、この部分で区切られてしまうのだ。ファイルが3つヒットしていた場合だと、要素数が 3 ではなくて 6 と解釈されてしまうワケだ。</p>
+<p>じゃあ、ファイルごとのパスをダブルクォートかなんかで囲んでやろうと思い、</p>
+<pre class="language-bash"><code class="language-bash"><span class="token assign-left variable">file_names</span><span class="token operator">=</span><span class="token punctuation">(</span> <span class="token variable"><span class="token variable">$(</span> <span class="token builtin class-name">eval</span> <span class="token function">grep</span> -lr <span class="token string">'検索文字列'</span> <span class="token string">'./テスト ディレクトリ/Texts'</span> <span class="token operator">|</span> <span class="token function">awk</span> <span class="token string">'{ print "<span class="token entity" title="\&#x22;">\"</span>" <span class="token variable">$0</span> "<span class="token entity" title="\&#x22;">\"</span>" }'</span> <span class="token variable">)</span></span> <span class="token punctuation">)</span>
+</code></pre>
+<p>こんな風にして、</p>
+<pre><code>"./テスト ディレクトリ/Texts/Test1.md"
+"./テスト ディレクトリ/Texts/Test2.md"
+"./テスト ディレクトリ/Texts/Test3.md"
+</code></pre>
+<p>といった結果が得られるようにしたのだが、なぜかコレでもスペース部分で区切られてしまった。</p>
+<ul>
+  <li>参考：<a href="https://twitter.com/ma_angie/status/1127877380314296321">まアンジー on Twitter: "一度ダブルクォーテーションでくくって、 eval で戻してみました。"</a> … 自分は <code>sed</code> でダブルクォートを付与しようとしていたが、<code>awk</code> という手もあった。</li>
+</ul>
+<pre class="language-bash"><code class="language-bash"><span class="token keyword">for</span> <span class="token for-or-select variable">x</span> <span class="token keyword">in</span> <span class="token variable"><span class="token variable">`</span><span class="token function">grep</span> -l foobar * <span class="token operator">|</span> <span class="token function">awk</span> <span class="token string">'{print "<span class="token entity" title="\&#x22;">\"</span>" <span class="token variable">$0</span> "<span class="token entity" title="\&#x22;">\"</span>"}'</span><span class="token variable">`</span></span>
+<span class="token keyword">do</span>
+  <span class="token builtin class-name">eval</span> <span class="token builtin class-name">echo</span> <span class="token variable">$x</span>
+<span class="token keyword">done</span>
+</code></pre>
+<p>色々試行錯誤した結果、<strong><code>$IFS</code> を一時的に変更</strong>することで上手くいった。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># 元の $IFS を退避する</span>
+<span class="token assign-left variable">ORIGINAL_IFS</span><span class="token operator">=</span><span class="token environment constant">$IFS</span>
+<span class="token comment"># 改行コードを指定する</span>
+<span class="token assign-left variable"><span class="token environment constant">IFS</span></span><span class="token operator">=</span>$<span class="token string">'<span class="token entity" title="\n">\n</span>'</span>
+
+<span class="token comment"># 検索処理を配列に控える</span>
+<span class="token assign-left variable">file_names</span><span class="token operator">=</span><span class="token punctuation">(</span> <span class="token variable"><span class="token variable">$(</span> <span class="token builtin class-name">eval</span> <span class="token function">grep</span> -lr <span class="token string">'検索文字列'</span> <span class="token string">'./テスト ディレクトリ/Texts'</span> <span class="token variable">)</span></span> <span class="token punctuation">)</span>
+
+<span class="token comment"># $IFS を元に戻す</span>
+<span class="token assign-left variable"><span class="token environment constant">IFS</span></span><span class="token operator">=</span><span class="token variable">$ORIGINAL_IFS</span>
+
+<span class="token comment"># コレで、パスにスペースを含んでいても上手く読み取ってくれる</span>
+<span class="token keyword">for</span> <span class="token for-or-select variable">file_name</span> <span class="token keyword">in</span> <span class="token string">"<span class="token variable">${file_names<span class="token punctuation">[</span>@<span class="token punctuation">]</span>}</span>"</span><span class="token punctuation">;</span> <span class="token keyword">do</span>
+  <span class="token builtin class-name">echo</span> <span class="token string">"<span class="token variable">${file_name}</span>"</span>
+<span class="token keyword">done</span>
+</code></pre>
+<p>コレで OK。<code>grep -l</code> コマンドの結果は <code>\n</code> で改行されているように見えて、実際は <code>\n</code> とは違うようだ。<code>$IFS</code> 周りは全然分からない。</p>
+<ul>
+  <li>参考：<a href="https://unix.stackexchange.com/questions/9496/looping-through-files-with-spaces-in-the-names/9499#9499">bash - Looping through files with spaces in the names? - Unix &#x26; Linux Stack Exchange</a></li>
+  <li>参考：<a href="https://stackoverflow.com/questions/24628076/bash-convert-n-delimited-strings-into-array">bash: convert '\n' delimited strings into array - Stack Overflow</a></li>
+  <li>参考：<a href="https://stackoverflow.com/questions/6163717/do-not-merge-the-context-of-contiguous-matches-with-grep">matching - Do not merge the context of contiguous matches with grep - Stack Overflow</a></li>
+</ul>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2019-07-05</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2019-07-05</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

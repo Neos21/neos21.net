@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>Kubernetes に一時的な Pod を配備する・配備する Node を指定する - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2021/01/25-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2021/index.html">2021年</a></li>
+            <li><a href="/blog/2021/01/index.html">01月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2021-01-25</time></div>
+        <h1 id="page-title">Kubernetes に一時的な Pod を配備する・配備する Node を指定する</h1>
+
+<p>Kubernetes クラスタのトラブルシュートのため、「各 Node から外部 DB へのネットワーク疎通が取れているか」を調べたかった。</p>
+<p>「外部 DB に接続する」という<em>一時的な目的の Pod を簡単に作る</em>には、<strong><code>kubectl run</code> コマンド</strong>が使える。</p>
+<p>また、Pod を指定の Node に配備するためには、<code>nodeSelector</code> という機能を使ってラベルを指定してやれば良い。<code>kubectl run</code> コマンドにて <code>nodeSelector</code> を指定するには少々クセがあったので、そこを説明する。</p><div class="ad-rakuten">
+  <div class="ad-rakuten-image">
+    <a href="https://hb.afl.rakuten.co.jp/hgc/g00q0722.waxyc9ff.g00q0722.waxyd017/?pc=https%3A%2F%2Fitem.rakuten.co.jp%2Fbook%2F16394303%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Fbook%2Fi%2F20074557%2F">
+      <img src="https://thumbnail.image.rakuten.co.jp/@0_mall/book/cabinet/9795/9784295009795.jpg?_ex=128x128">
+    </a>
+  </div>
+  <div class="ad-rakuten-info">
+    <div class="ad-rakuten-title">
+      <a href="https://hb.afl.rakuten.co.jp/hgc/g00q0722.waxyc9ff.g00q0722.waxyd017/?pc=https%3A%2F%2Fitem.rakuten.co.jp%2Fbook%2F16394303%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Fbook%2Fi%2F20074557%2F">Kubernetes完全ガイド 第2版 （top gear） [ 青山真也 ]</a>
+    </div>
+    <div class="ad-rakuten-shop">
+      <a href="https://hb.afl.rakuten.co.jp/hgc/g00q0722.waxyc9ff.g00q0722.waxyd017/?pc=https%3A%2F%2Fwww.rakuten.co.jp%2Fbook%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Fbook%2F">楽天ブックス</a>
+    </div>
+    <div class="ad-rakuten-price">価格 : 4400円</div>
+  </div>
+</div>
+<h2 id="node-のラベルを確認する"><a class="header-link" href="#node-のラベルを確認する"><span class="header-link-mark"></span></a>Node のラベルを確認する</h2>
+<p>まずは Kubernetes Node のラベルを確認する。</p>
+<pre class="language-bash"><code class="language-bash">$ kubectl get node -o wide --show-labels
+</code></pre>
+<p>「LABELS」欄を見ると、Node ごとに次のようなラベルが存在するはずだ。</p>
+<pre class="language-properties"><code class="language-properties"><span class="token attr-name">kubernetes.io/hostname</span><span class="token punctuation">=</span><span class="token attr-value">workder1</span>
+<span class="token attr-name">kubernetes.io/hostname</span><span class="token punctuation">=</span><span class="token attr-value">workder2</span>
+</code></pre>
+<p><code>worker1</code>・<code>worker2</code> 部分は、マネージド K8s サービスを使っていれば、そのクラウドベンダがよしなに決めてくれていたりすると思う。</p>
+<h2 id="一時的な-pod-を作成する"><a class="header-link" href="#一時的な-pod-を作成する"><span class="header-link-mark"></span></a>一時的な Pod を作成する</h2>
+<p>続いて、とりあえず一時的な Pod を作る簡単なコマンド例を記す。</p>
+<pre class="language-bash"><code class="language-bash">$ kubectl run temp-pod <span class="token punctuation">\</span>
+  --image<span class="token operator">=</span>postgres:13-alpine <span class="token punctuation">\</span>
+  --restart<span class="token operator">=</span>Never <span class="token punctuation">\</span>
+  --rm <span class="token punctuation">\</span>
+  -it <span class="token punctuation">\</span>
+  --command -- psql <span class="token string">'host=【ホスト名】 user=postgres port=5432 dbname=【スキーマ名】'</span>
+</code></pre>
+<p><code>postgres:13-alpine</code> という Docker イメージを利用して PostgreSQL を扱う Pod を作り、<code>psql</code> コマンドを実行している。この辺は用途に合わせて自分で作ると良い。</p>
+<p><code>--restart=Never</code> オプションを付与することで、Pod リソースのみを作成できる。ココのオプションを変えることで Deployment や Service を作ったりもできる。</p>
+<p><code>--rm</code> を指定していることで、<code>--command</code> で指定したコマンドが終了した時に、Pod が自動的に破棄される。<code>kubectl delete pod</code> の必要がなくなって楽だ。<code>-it</code> は <code>docker exec</code> と同じ。</p>
+<p>このような指定で、とりあえず一時的な Pod を配備できる。Pod を起動している時に、別のターミナルタブで</p>
+<pre class="language-bash"><code class="language-bash">$ kubectl get pod -o wide
+</code></pre>
+<p>コマンドを実行して、<code>temp-pod</code> という名前の Pod が配備されていることが確認できるだろう。</p>
+<h2 id="node-を指定して一時的な-pod-を作成する"><a class="header-link" href="#node-を指定して一時的な-pod-を作成する"><span class="header-link-mark"></span></a>Node を指定して一時的な Pod を作成する</h2>
+<p>続いて本題。Pod を指定の Node に配備するため、オプションを付け足す。</p>
+<pre class="language-bash"><code class="language-bash">$ kubectl run temp-pod <span class="token punctuation">\</span>
+  --image<span class="token operator">=</span>postgres:13-alpine <span class="token punctuation">\</span>
+  --restart<span class="token operator">=</span>Never <span class="token punctuation">\</span>
+  --overrides<span class="token operator">=</span><span class="token string">'{ "apiVersion": "v1", "spec": { "nodeSelector": { "kubernetes.io/hostname": "worker1" } } }'</span> <span class="token punctuation">\</span>
+  --rm <span class="token punctuation">\</span>
+  -it <span class="token punctuation">\</span>
+  --command -- psql <span class="token string">'host=【ホスト名】 user=postgres port=5432 dbname=【スキーマ名】'</span>
+</code></pre>
+<p><em><code>--overrides</code></em> オプションを追加した。ココで指定しているのは <code>$ kubectl get pod 【Pod 名】 -o json</code> コマンドで確認できるような、Pod リソースの JSON 定義だ。</p>
+<p><code>nodeSelector</code> を利用して、Worker Node のホスト名のラベルを指定している。<code>worker1</code> 部分を任意の Node のラベルに変えれば、その Node にこの Pod を配備するように指定できる。</p>
+<p>このように <code>--overrides</code> オプションで指定したリソース定義に、<code>--image</code> や <code>--command</code> オプションの内容がマージされて、内部的に <code>pod.yaml</code> みたいなファイルが生成されているとイメージすると、分かりやすいだろう。</p>
+<p>あとはよしなに、<code>--namespace</code> オプションで名前空間を指定しても良いし、<code>--env</code> オプションで次のように PostgreSQL の接続パスワードを指定したりしておけば、コマンドを叩くだけで PostgreSQL に接続したりもできる。</p>
+<pre class="language-bash"><code class="language-bash">--env<span class="token operator">=</span>PGPASSWORD<span class="token operator">=</span>【PostgreSQL の接続パスワード】
+</code></pre>
+<p>PostgreSQL の場合、接続時に <code>If you don't see a command prompt, try pressing enter.</code> というプロンプトが出たことがあった。コレはただ Enter キーを押すだけで、いつもの psql のプロンプトに移行できる。</p><div class="ad-amazon">
+  <div class="ad-amazon-image">
+    <a href="https://www.amazon.co.jp/dp/B08FZX8PYW?tag=neos21-22&amp;linkCode=osi&amp;th=1&amp;psc=1">
+      <img src="https://m.media-amazon.com/images/I/51C+pft8SJL._SL160_.jpg" width="125" height="160">
+    </a>
+  </div>
+  <div class="ad-amazon-info">
+    <div class="ad-amazon-title">
+      <a href="https://www.amazon.co.jp/dp/B08FZX8PYW?tag=neos21-22&amp;linkCode=osi&amp;th=1&amp;psc=1">Kubernetes完全ガイド 第2版 impress top gearシリーズ</a>
+    </div>
+  </div>
+</div>
+<p>というワケで、若干トリッキーな書き方ではあるが、このように Node を指定しての一時的な Pod が配備できた。</p>
+<ul>
+  <li><a href="https://qiita.com/sourjp/items/f0c8c8b4a2a494a80908">kubectl run/create/expose のススメ - Qiita</a></li>
+  <li><a href="https://www.sambaiz.net/article/9/">Kubernetesのチュートリアルをたどる - sambaiz-net</a></li>
+  <li><a href="https://stackoverflow.com/questions/51161647/kubectl-run-set-nodeselector/51172330">kubernetes - Kubectl run set nodeSelector - Stack Overflow</a></li>
+</ul>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2021-01-25</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2021-01-25</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

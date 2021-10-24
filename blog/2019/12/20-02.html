@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>PHP で GET・POST リクエストを判別・処理する - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2019/12/20-02.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2019/index.html">2019年</a></li>
+            <li><a href="/blog/2019/12/index.html">12月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2019-12-20</time></div>
+        <h1 id="page-title">PHP で GET・POST リクエストを判別・処理する</h1>
+
+<p>Apache サーバ上に PHP ファイルを置いて、CGI みたく動かしてみたい。</p>
+<ul>
+  <li>通常の GET リクエスト時はページを表示し、URL パラメータによってちょっとした表示切り分けをしたりしたい</li>
+  <li>表示したページに、自ファイルに向けて POST 送信するフォームを用意してある</li>
+  <li>同 PHP ファイルに POST リクエストされた時は、フォーム送信されたパラメータを使って別の処理をして、最終的には元のページを開き直す</li>
+</ul>
+<p>こんな仕様の PHP ファイルを作ろうと思う。</p>
+<p>そこで使うことになるのが、<strong><code>$_SERVER</code>・<code>$_GET</code>・<code>$_POST</code></strong> といった定義済変数・<em>スーパーグローバル変数</em>たちだ。</p>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#_server--%E3%82%B5%E3%83%BC%E3%83%90%E5%A4%89%E6%95%B0"><code>$_SERVER</code> : サーバ変数</a></li>
+  <li><a href="#_get--get-%E3%83%AA%E3%82%AF%E3%82%A8%E3%82%B9%E3%83%88%E3%83%91%E3%83%A9%E3%83%A1%E3%83%BC%E3%82%BF%E3%82%92%E5%8F%96%E5%BE%97%E3%81%99%E3%82%8B"><code>$_GET</code> : GET リクエストパラメータを取得する</a></li>
+  <li><a href="#_post--post-%E3%83%91%E3%83%A9%E3%83%A1%E3%83%BC%E3%82%BF%E3%82%92%E5%8F%96%E5%BE%97%E3%81%99%E3%82%8B"><code>$_POST</code> : POST パラメータを取得する</a></li>
+  <li><a href="#_request--%E9%9D%9E%E6%8E%A8%E5%A5%A8"><code>$_REQUEST</code> : 非推奨</a></li>
+  <li><a href="#post-%E5%BE%8C%E3%81%AB%E5%85%83%E3%81%AE%E3%83%9A%E3%83%BC%E3%82%B8%E3%82%92%E5%86%8D%E8%A1%A8%E7%A4%BA%E3%81%99%E3%82%8B%E3%81%AB%E3%81%AF">POST 後に元のページを再表示するには</a></li>
+  <li><a href="#%E4%BB%A5%E4%B8%8A">以上</a></li>
+</ul>
+<h2 id="_server--サーバ変数"><a class="header-link" href="#_server--サーバ変数"><span class="header-link-mark"></span></a><code>$_SERVER</code> : サーバ変数</h2>
+<p><strong><code>$_SERVER</code></strong> 変数には、サーバのホスト名や URL、HTTP リクエストの情報などが含まれている。連想配列の形で各種情報が格納されているので、</p>
+<ul>
+  <li><code>$_SERVER['SCRIPT_FILENAME']</code> (実行されているスクリプトの絶対パス)</li>
+  <li><code>$_SERVER['HTTP_HOST']</code> (ホスト)</li>
+</ul>
+<p>といったように指定する。</p>
+<p>その中でも、<strong><code>$_SERVER['REQUEST_METHOD']</code></strong> を確認すれば、そのリクエストが GET だったか POST だったか、といった情報が確認できる。</p>
+<pre class="language-php"><code class="language-php"><span class="token keyword">if</span><span class="token punctuation">(</span><span class="token global">$_SERVER</span><span class="token punctuation">[</span><span class="token single-quoted-string string">'REQUEST_METHOD'</span><span class="token punctuation">]</span> <span class="token operator">===</span> <span class="token single-quoted-string string">'GET'</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token comment">// GET リクエストの場合の処理</span>
+<span class="token punctuation">}</span>
+<span class="token keyword">else</span> <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token global">$_SERVER</span><span class="token punctuation">[</span><span class="token single-quoted-string string">'REQUEST_METHOD'</span><span class="token punctuation">]</span> <span class="token operator">===</span> <span class="token single-quoted-string string">'POST'</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token comment">// POST リクエストの場合の処理</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>こんな感じ。ちなみに、PHP では <code>else if</code> は <code>elseif</code> と1語にしても同じように使える。</p>
+<ul>
+  <li>参考：<a href="http://piyopiyocs.blog115.fc2.com/blog-entry-937.html">PHP、「else if」と「elseif」の違い｜マコトのおもちゃ箱 ～ぼへぼへ自営業者の技術メモ～</a></li>
+</ul>
+<p>比較演算子についても、型までチェックする <code>===</code> と、もう少し曖昧な <code>==</code> とがあって、この辺は JavaScript っぽい。</p>
+<ul>
+  <li>参考：<a href="https://wepicks.net/phpref-server/">PHP $_SERVER（サーバー変数）のすべて！【初心者向け基本】 | WEPICKS!</a></li>
+  <li>参考：<a href="https://www.flatflag.nir87.com/server-358">PHP($_SERVER)サーバー変数一覧と実用例</a></li>
+</ul>
+<h2 id="_get--get-リクエストパラメータを取得する"><a class="header-link" href="#_get--get-リクエストパラメータを取得する"><span class="header-link-mark"></span></a><code>$_GET</code> : GET リクエストパラメータを取得する</h2>
+<p>続いて、URL パラメータとして付与された情報を取得するための <em><code>$_GET</code></em> 変数を紹介する。</p>
+<p>例えば</p>
+<ul>
+  <li><code>https://example.com/test.php?hoge=fuga&#x26;foo=bar</code></li>
+</ul>
+<p>という URL パラメータが与えられた時は、以下のように取得できる。</p>
+<pre class="language-php"><code class="language-php"><span class="token keyword">echo</span> <span class="token global">$_GET</span><span class="token punctuation">[</span><span class="token single-quoted-string string">'hoge'</span><span class="token punctuation">]</span><span class="token punctuation">;</span>
+<span class="token comment">// 「fuga」</span>
+
+<span class="token keyword">echo</span> <span class="token global">$_GET</span><span class="token punctuation">[</span><span class="token single-quoted-string string">'foo'</span><span class="token punctuation">]</span><span class="token punctuation">;</span>
+<span class="token comment">// 「bar」</span>
+</code></pre>
+<p>この時、未定義の存在しないパラメータをいきなり取得しようするとエラーになるため、<strong><code>isset()</code></strong> 関数を使って変数が定義されているかチェックする。</p>
+<pre class="language-php"><code class="language-php"><span class="token keyword">if</span><span class="token punctuation">(</span><span class="token operator">!</span><span class="token keyword">isset</span><span class="token punctuation">(</span><span class="token global">$_GET</span><span class="token punctuation">[</span><span class="token single-quoted-string string">'something'</span><span class="token punctuation">]</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token keyword">echo</span> <span class="token single-quoted-string string">'something パラメータは定義されていません'</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+<span class="token keyword">else</span> <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token keyword">empty</span><span class="token punctuation">(</span><span class="token global">$_GET</span><span class="token punctuation">[</span><span class="token single-quoted-string string">'something'</span><span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token keyword">echo</span> <span class="token single-quoted-string string">'something パラメータに値がありません'</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+<span class="token keyword">else</span> <span class="token punctuation">{</span>
+  <span class="token keyword">echo</span> <span class="token single-quoted-string string">'something パラメータの内容は ['</span> <span class="token punctuation">.</span> <span class="token global">$_GET</span><span class="token punctuation">[</span><span class="token single-quoted-string string">'something'</span><span class="token punctuation">]</span> <span class="token punctuation">.</span> <span class="token single-quoted-string string">'] です'</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p><em><code>isset()</code></em> 関数は、変数が存在し、Null でなければ <code>true</code> となる。変数定義がされていても Null が設定されている変数は、<code>true</code> とはならず <code>false</code> 扱いなので注意。</p>
+<ul>
+  <li>参考：<a href="https://www.php.net/manual/ja/function.isset.php">https://www.php.net/manual/ja/function.isset.php</a></li>
+</ul>
+<p><em><code>empty()</code></em> 関数は、変数が存在し、かつ、Null、False、空文字、<code>0</code>、空配列の場合に <code>true</code> となる。JavaScript における <em>Falsy</em> な値のチェックに近い。</p>
+<ul>
+  <li>参考：<a href="https://www.php.net/manual/ja/function.empty.php">https://www.php.net/manual/ja/function.empty.php</a></li>
+</ul>
+<p>なお、URL 上で <em><code>%</code> エンコーディング</em>されている場合も、デコードされた通常の文字列が取得できるので、変換の必要はない。</p>
+<ul>
+  <li>参考：<a href="https://wepicks.net/phpref-get/">PHP $_GET（ゲット変数）のすべて！【初心者向け基本】 | WEPICKS!</a></li>
+</ul>
+<h2 id="_post--post-パラメータを取得する"><a class="header-link" href="#_post--post-パラメータを取得する"><span class="header-link-mark"></span></a><code>$_POST</code> : POST パラメータを取得する</h2>
+<p><code>GET</code>・<code>POST</code> の判別ができるようになったので、<code>GET</code> リクエスト時はフォームを表示して、<code>POST</code> 送信してもらえるようにする。</p>
+<pre class="language-php"><code class="language-php"><span class="token php language-php"><span class="token delimiter important">&#x3C;?php</span>
+<span class="token keyword">if</span><span class="token punctuation">(</span><span class="token global">$_SERVER</span><span class="token punctuation">[</span><span class="token single-quoted-string string">'REQUEST_METHOD'</span><span class="token punctuation">]</span> <span class="token operator">===</span> <span class="token single-quoted-string string">'GET'</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token comment">// GET リクエストの場合 Start</span>
+<span class="token delimiter important">?></span></span>
+
+<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>form</span> <span class="token attr-name">action</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span><span class="token php language-php"><span class="token delimiter important">&#x3C;?php</span> <span class="token keyword">echo</span> <span class="token global">$_SERVER</span><span class="token punctuation">[</span><span class="token single-quoted-string string">'PHP_SELF'</span><span class="token punctuation">]</span><span class="token punctuation">;</span> <span class="token delimiter important">?></span></span><span class="token punctuation">"</span></span> <span class="token attr-name">method</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>POST<span class="token punctuation">"</span></span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>input</span> <span class="token attr-name">type</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>text<span class="token punctuation">"</span></span> <span class="token attr-name">name</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>user_id<span class="token punctuation">"</span></span> <span class="token attr-name">value</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span><span class="token punctuation">"</span></span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>input</span> <span class="token attr-name">type</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>submit<span class="token punctuation">"</span></span> <span class="token attr-name">value</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>送信する<span class="token punctuation">"</span></span><span class="token punctuation">></span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>form</span><span class="token punctuation">></span></span>
+
+<span class="token php language-php"><span class="token delimiter important">&#x3C;?php</span>
+  <span class="token comment">// GET リクエストの場合 End</span>
+<span class="token punctuation">}</span>
+<span class="token keyword">else</span> <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token global">$_SERVER</span><span class="token punctuation">[</span><span class="token single-quoted-string string">'REQUEST_METHOD'</span><span class="token punctuation">]</span> <span class="token operator">===</span> <span class="token single-quoted-string string">'POST'</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token comment">// POST リクエストの場合の処理</span>
+<span class="token punctuation">}</span>
+</span></code></pre>
+<p>PHP と HTML を混在させてみた。<code>$_SERVER['PHP_SELF']</code> で、ルート相対パスが取得できるので、自分自身に POST 送信するフォームを書いておく。</p>
+<p><code>name="user_id"</code> なテキストボックスに文字列を入力して送信ボタンを押下すれば、今度は <code>// POST リクエストの場合の処理</code> の部分のコードが動くことになる。</p>
+<p>ココで、POST 送信されているテキストボックスの内容を知るには、<strong><code>$_POST</code></strong> 変数を使用する。</p>
+<pre class="language-php"><code class="language-php"><span class="token keyword">echo</span> <span class="token global">$_POST</span><span class="token punctuation">[</span><span class="token single-quoted-string string">'user_id'</span><span class="token punctuation">]</span><span class="token punctuation">;</span>
+</code></pre>
+<p>コチラも、<code>$_GET</code> と同じく、事前に <code>isset()</code> で存在チェックを行っておくと安全だ。</p>
+<ul>
+  <li>参考：<a href="https://wepicks.net/phpref-post/">PHP $_POST(ポスト変数 )のすべて！【初心者向け基本】 | WEPICKS!</a></li>
+</ul>
+<h2 id="_request--非推奨"><a class="header-link" href="#_request--非推奨"><span class="header-link-mark"></span></a><code>$_REQUEST</code> : 非推奨</h2>
+<p><code>$_GET</code> と <code>$_POST</code> とで取れる値をまとめて取得できる、<em><code>$_REQUEST</code></em> という変数もある。他に <code>$_ENV</code>、<code>$_COOKIE</code>、<code>$_SERVER</code> の値も組み込まれており、デフォルトでは</p>
+<ol>
+  <li><code>$_ENV</code></li>
+  <li><code>$_GET</code></li>
+  <li><code>$_POST</code></li>
+  <li><code>$_COOKIE</code></li>
+  <li><code>$_SERVER</code></li>
+</ol>
+<p>の順に値が参照されて <code>$_REQUEST</code> の中に組み込まれていく。</p>
+<p>別々の変数で同名のパラメータが存在する場合は、後から読み込まれた値の方が上書きされる。だからもし、<code>$_GET['hoge']</code> と <code>$_COOKIE['hoge']</code> が存在する場合は、後から読み込まれる <code>$_COOKIE['hoge']</code> の値が残ることになる。</p>
+<p>あまり利用が推奨されない変数なので、素直に <code>$_GET</code>・<code>$_POST</code> を使った方が良い。</p>
+<ul>
+  <li>参考：<a href="https://wepicks.net/phpref-request/">PHP $_REQUEST（リクエスト変数）のすべて！【初心者向け 基本～】 | WEPICKS!</a></li>
+</ul>
+<h2 id="post-後に元のページを再表示するには"><a class="header-link" href="#post-後に元のページを再表示するには"><span class="header-link-mark"></span></a>POST 後に元のページを再表示するには</h2>
+<p>さて、POST リクエストを受け取った後、最後に元のページを再表示したい場合は、以下のように書けば良い。</p>
+<pre class="language-php"><code class="language-php"><span class="token php language-php"><span class="token delimiter important">&#x3C;?php</span>
+<span class="token keyword">if</span><span class="token punctuation">(</span><span class="token global">$_SERVER</span><span class="token punctuation">[</span><span class="token single-quoted-string string">'REQUEST_METHOD'</span><span class="token punctuation">]</span> <span class="token operator">===</span> <span class="token single-quoted-string string">'GET'</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token comment">// GET リクエストの場合… (省略)</span>
+<span class="token punctuation">}</span>
+<span class="token keyword">else</span> <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token global">$_SERVER</span><span class="token punctuation">[</span><span class="token single-quoted-string string">'REQUEST_METHOD'</span><span class="token punctuation">]</span> <span class="token operator">===</span> <span class="token single-quoted-string string">'POST'</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token comment">// POST リクエストの場合の処理</span>
+  
+  <span class="token comment">// 処理は省略</span>
+  
+  <span class="token comment">// 遷移元 URL を取得する</span>
+  <span class="token variable">$url</span> <span class="token operator">=</span> <span class="token global">$_SERVER</span><span class="token punctuation">[</span><span class="token single-quoted-string string">'HTTP_REFERER'</span><span class="token punctuation">]</span><span class="token punctuation">;</span>
+  <span class="token comment">// 遷移元 URL を開き直す</span>
+  <span class="token function">header</span><span class="token punctuation">(</span><span class="token single-quoted-string string">'Location: '</span> <span class="token punctuation">.</span> <span class="token variable">$url</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</span></code></pre>
+<p>このように、<code>$_SERVER['HTTP_REFERER']</code> を参照して <code>header()</code> 関数で指定してやれば良い。</p>
+<ul>
+  <li>参考：<a href="https://lp.olivesystem.jp/1145.html">PHP POST後、POST元に戻る方法</a></li>
+</ul>
+<h2 id="以上"><a class="header-link" href="#以上"><span class="header-link-mark"></span></a>以上</h2>
+<p>リクエストの判別、処理のやり方がひととおり分かったので、単一 PHP ファイルでの CGI スクリプトが書けそうだ。</p>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2019-12-20</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2019-12-20</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

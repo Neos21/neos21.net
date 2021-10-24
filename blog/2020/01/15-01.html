@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>WLST を書いて WebLogic Server が使う JDBC コネクションプールのモニタリングをしてみた - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2020/01/15-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2020/index.html">2020年</a></li>
+            <li><a href="/blog/2020/01/index.html">01月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2020-01-15</time></div>
+        <h1 id="page-title">WLST を書いて WebLogic Server が使う JDBC コネクションプールのモニタリングをしてみた</h1>
+
+<p>久々に WLS (WebLogic Server) ネタ。</p>
+<p>WLS では、DB との接続情報を「データソース」として定義・設定する。サービス → データ・ソース → 「モニタリング」タブと進むと、JDBC コネクションプールの現在の状態が分かる。例えば現在の接続数だとか、コネクションプールからあぶれて待機している人の数だとかが確認できる。</p>
+<p>今回はこの「モニタリング」画面と同等の内容を、<strong>WLST (WebLogic Scripting Tool)</strong> で取得してみようと思う。</p>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#wlst-%E5%AF%BE%E8%A9%B1%E3%82%B3%E3%83%B3%E3%82%BD%E3%83%BC%E3%83%AB%E3%81%AB%E7%B9%8B%E3%81%84%E3%81%A7%E3%81%BF%E3%82%8B">WLST 対話コンソールに繋いでみる</a></li>
+  <li><a href="#wlst-%E3%81%AE%E5%9F%BA%E6%9C%AC%E6%93%8D%E4%BD%9C">WLST の基本操作</a></li>
+  <li><a href="#%E3%82%B9%E3%82%AF%E3%83%AA%E3%83%97%E3%83%88%E3%82%92%E6%9B%B8%E3%81%84%E3%81%A6%E3%81%BF%E3%82%8B">スクリプトを書いてみる</a></li>
+  <li><a href="#%E4%BB%A5%E4%B8%8A">以上</a></li>
+</ul>
+<h2 id="wlst-対話コンソールに繋いでみる"><a class="header-link" href="#wlst-対話コンソールに繋いでみる"><span class="header-link-mark"></span></a>WLST 対話コンソールに繋いでみる</h2>
+<p>まずは WLST の対話コンソールに接続して、スクリプトの骨格を作っていく。</p>
+<p>以前、Windows 環境で WLST を開始する手順は紹介したのだが、今回はコレの Linux 版。</p>
+<ul>
+  <li><a href="/blog/2016/09/26-01.html">WebLogic Scripting Tool (WLST) を使って WebLogic Server をコンソールから操作する</a></li>
+</ul>
+<p>環境変数 <code>WL_HOME</code> で、WLS がインストールされているディレクトリまで移動できるテイにする。適宜読み替えること。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># 環境変数を設定する</span>
+$ <span class="token builtin class-name">source</span> <span class="token string">"<span class="token variable">${WL_HOME}</span>/server/bin/setWLSEnv.sh"</span>
+
+<span class="token comment"># WLST を起動する</span>
+$ java weblogic.WLST
+
+<span class="token comment"># プロンプトが変わったら WLS 管理コンソールにログインする時と同じ情報でログインする</span>
+wls:/offline<span class="token operator">></span> connect<span class="token punctuation">(</span><span class="token string">'ユーザ名'</span>, <span class="token string">'パスワード'</span>, <span class="token string">'t3://127.0.0.1:7001'</span><span class="token punctuation">)</span>
+</code></pre>
+<p>接続先 URL は <code>localhost:7001</code> や <code>127.0.0.1</code> で良いと思うが、設定によっては管理サーバ自身の Private IP を入力しないといけないかもしれない。その時は <code>ifconfig</code> で自身の Private IP を調べて、<code>10.0.0.1:7001</code> のように設定すれば OK。</p>
+<ul>
+  <li>参考：<a href="http://otndnld.oracle.co.jp/document/products/wls/docs90/config_scripting/using_WLST.html">WebLogic Scripting Tool の使用</a></li>
+</ul>
+<h2 id="wlst-の基本操作"><a class="header-link" href="#wlst-の基本操作"><span class="header-link-mark"></span></a>WLST の基本操作</h2>
+<p>WLST の基本操作は、Linux のディレクトリを移動し、ファイルを開くかのように行っていく。次のようなコマンドを叩いてみよう。</p>
+<ul>
+  <li><code>pwd()</code> : 現在の位置が確認できる
+    <ul>
+      <li>Python (JPython？) の関数として実行するので、コマンドとは違ってカッコ <code>()</code> が必要</li>
+    </ul>
+  </li>
+  <li><code>cd('パス')</code> : 指定のパスに移動する。カッコの中は、文字列を引数で渡す形になるので、クォートが必要
+    <ul>
+      <li><code>cd('/')</code> でルートに移動、<code>cd('../')</code> で1階層上がる、といった感じ</li>
+    </ul>
+  </li>
+  <li><code>ls()</code> : 当該パス配下のディレクトリやオブジェクトが確認できる</li>
+</ul>
+<p>カレントディレクトリ配下のオブジェクトは、オブジェクト名のみを入力するか、<code>print オブジェクト名</code> とすると、その内容が出力できる。</p>
+<ul>
+  <li>参考：<a href="https://www.oracle.com/technetwork/jp/ondemand/database/db-technique/20120712-wlstudy-wlst-1732395-ja.pdf">https://www.oracle.com/technetwork/jp/ondemand/database/db-technique/20120712-wlstudy-wlst-1732395-ja.pdf</a></li>
+</ul>
+<p>今回は JDBC データソースを確認したい。なんとなくそれらしいモノを漁ってみる。</p>
+<pre class="language-bash"><code class="language-bash">wls<span class="token operator">></span> cd<span class="token punctuation">(</span><span class="token string">'/JDBCSystemResources/'</span><span class="token punctuation">)</span>
+wls<span class="token operator">></span> ls<span class="token punctuation">(</span><span class="token punctuation">)</span>
+</code></pre>
+<p>…などなど。</p>
+<ul>
+  <li>参考：<a href="https://docs.oracle.com/cd/E29542_01/web.1111/e13715/monitoring.htm">Getting Runtime Information</a></li>
+  <li>参考：<a href="https://wlstbyexamples.blogspot.com/2010/01/wlst-errors-and-exceptions.html">WLST by Examples: WLST Errors and Exceptions</a></li>
+</ul>
+<h2 id="スクリプトを書いてみる"><a class="header-link" href="#スクリプトを書いてみる"><span class="header-link-mark"></span></a>スクリプトを書いてみる</h2>
+<p>WLST は Python スクリプトを実装しておき、それを実行させるオプションもある。そこで、対話コンソールで調べた内容をスクリプトファイルに書き起こしていく。</p>
+<p>今回、JDBC データソースのモニタリングがしたいので、次のように実装してみた。</p>
+<ul>
+  <li><code>monitor-jdbc.py</code></li>
+</ul>
+<pre class="language-python"><code class="language-python"><span class="token comment"># 接続情報を記す</span>
+connect<span class="token punctuation">(</span><span class="token string">'ユーザ名'</span><span class="token punctuation">,</span> <span class="token string">'パスワード'</span><span class="token punctuation">,</span> <span class="token string">'t3://127.0.0.1:7001'</span><span class="token punctuation">)</span>
+
+<span class="token comment"># ヘッダ代わりに print しておく</span>
+<span class="token keyword">print</span> <span class="token string">'サーバー名 , 状態 , アクティブな接続の平均数 , 現在アクティブな接続の数 , アクティブな接続の最大数 , 接続待機の現在数 , 接続待機の最大数 , 現在の容量'</span>
+
+<span class="token comment"># 全サーバを走査する</span>
+<span class="token keyword">for</span> server <span class="token keyword">in</span> domainRuntimeService<span class="token punctuation">.</span>getServerRuntimes<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">:</span>
+  runtime <span class="token operator">=</span> server<span class="token punctuation">.</span>getJDBCServiceRuntime<span class="token punctuation">(</span><span class="token punctuation">)</span>
+  <span class="token comment"># サーバ1台に紐付く JDBC データソースを走査する</span>
+  <span class="token keyword">for</span> datasource <span class="token keyword">in</span> runtime<span class="token punctuation">.</span>getJDBCDataSourceRuntimeMBeans<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">:</span>
+    <span class="token comment"># 参照したいデータソース名で絞り込む</span>
+    <span class="token keyword">if</span><span class="token punctuation">(</span>datasource<span class="token punctuation">.</span>getName<span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">==</span> <span class="token string">'My Connection Pool'</span><span class="token punctuation">)</span><span class="token punctuation">:</span>
+      <span class="token comment"># 雑に print する…</span>
+      <span class="token keyword">print</span> runtime<span class="token punctuation">.</span>getName<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token string">','</span><span class="token punctuation">,</span> datasource<span class="token punctuation">.</span>getState<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token string">','</span><span class="token punctuation">,</span> datasource<span class="token punctuation">.</span>getActiveConnectionsAverageCount<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token string">','</span><span class="token punctuation">,</span> datasource<span class="token punctuation">.</span>getActiveConnectionsCurrentCount<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token string">','</span><span class="token punctuation">,</span> datasource<span class="token punctuation">.</span>getActiveConnectionsHighCount<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token string">','</span><span class="token punctuation">,</span> datasource<span class="token punctuation">.</span>getWaitingForConnectionCurrentCount<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token string">','</span><span class="token punctuation">,</span> datasource<span class="token punctuation">.</span>getWaitingForConnectionHighCount<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token string">','</span><span class="token punctuation">,</span> datasource<span class="token punctuation">.</span>getCurrCapacity<span class="token punctuation">(</span><span class="token punctuation">)</span>
+
+<span class="token comment"># 切断・終了</span>
+disconnect<span class="token punctuation">(</span><span class="token punctuation">)</span>
+exit<span class="token punctuation">(</span><span class="token punctuation">)</span>
+</code></pre>
+<p>スクリプト中の <code>'My Connection Pool'</code> 部分で、参照したいデータソース名で絞り込んでいる。自分が作ったアプリとデータソースに合わせて書き換える。</p>
+<p>このような Python スクリプトを書いたら、以下のように実行する。すると、JDBC の「モニタリング」画面と同じデータが取得できる。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># 環境変数の設定は必要</span>
+$ <span class="token builtin class-name">source</span> <span class="token string">"<span class="token variable">${WL_HOME}</span>/server/bin/setWLSEnv.sh"</span>
+
+<span class="token comment"># WLST でスクリプトファイルを実行する</span>
+$ java weblogic.WLST -i monitor-jdbc.py
+</code></pre>
+<p>スクリプトの前後に余計な文言が出力されてしまうのが残念ポイント。強引なやり方で余計な出力を削れるようだが、つらい…。</p>
+<ul>
+  <li>参考：<a href="https://stackoverflow.com/questions/21831434/running-the-wlst-interpreter-silently">weblogic - Running the WLST interpreter silently - Stack Overflow</a></li>
+</ul>
+<p><code>datasource.getHoge()</code> と書き連ねている部分について、どんな項目が取得できるのかは以下が参考になる。お好みでドウゾ。</p>
+<ul>
+  <li>参考：<a href="http://middlewaremagic.com/weblogic/?p=4917">WebLogic DataSource Monitoring Using WLST « WebLogic</a></li>
+  <li>参考：<a href="http://otndnld.oracle.co.jp/document/products/wls/docs92/ConsoleHelp/pagehelp/JDBCjdbcdatasourcesjdbcdatasourcemonitorstatisticstitle.html">JDBC データ ソース : モニタ : 統計</a></li>
+</ul>
+<p>WLST を叩く前にいちいち <code>source setWLSEnv.sh</code> しないといけないのが面倒だが、次のような実行ファイルを作っておけば少しは楽になるだろうか。</p>
+<ul>
+  <li><code>monitor-jdbc.sh</code></li>
+</ul>
+<pre class="language-bash"><code class="language-bash"><span class="token shebang important">#!/bin/bash</span>
+
+<span class="token assign-left variable">exec_script</span><span class="token operator">=</span><span class="token string">'/PATH/TO/monitor-jdbc.py'</span>
+
+<span class="token builtin class-name">source</span> <span class="token string">"<span class="token variable">${WL_HOME}</span>/server/bin/setWLSEnv.sh"</span> <span class="token operator">&#x26;&#x26;</span> java weblogic.WLST -i <span class="token variable">${exec_script}</span>"
+</code></pre>
+<h2 id="以上"><a class="header-link" href="#以上"><span class="header-link-mark"></span></a>以上</h2>
+<p>とりあえずこんな感じで、WLST を使ったモニタリングができるようになった。</p>
+<p>WLS 管理コンソールをブラウザで開くよりも手っ取り早く、テキストベースなので diff を取ったりしやすくなって、作業効率化に繋がる…ことを期待。</p>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2020-01-15</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2020-01-15</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

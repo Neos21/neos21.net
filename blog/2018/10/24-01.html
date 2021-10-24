@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>【Angular Utilities】NFD 文字を NFC に変換する Normalize To NFC を作った - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2018/10/24-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2018/index.html">2018年</a></li>
+            <li><a href="/blog/2018/10/index.html">10月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2018-10-24</time></div>
+        <h1 id="page-title">【Angular Utilities】NFD 文字を NFC に変換する Normalize To NFC を作った</h1>
+
+<p>主に MacOS の Finder なんかで問題になる、NFD 文字。濁点と半濁点が別の文字に別れており、Finder からファイル名をコピペしたりすると、「バイブス」という文字列が<em>「ハ゛イフ゛ス」</em>のようになってしまう、というものだ (この例は全角の濁点文字で再現)。こうなると、この文字列は「バイブス」と検索してもヒットしなくなってしまう。</p>
+<p>ついでに、Windows などで通常どおり濁点・半濁点付きの文字になるのは <em>NFC</em> と呼ばれる。</p>
+<p>ちょこちょこ MacOS でファイル名などをコピペすることがあるので、この NFD 濁点・NFD 半濁点を検知して、通常の濁点・半濁点付きの文字に置換するツールを作った。</p>
+<ul>
+  <li><a href="https://neos21.github.io/angular-utilities/text-converter/normalize-to-nfc">https://neos21.github.io/angular-utilities/text-converter/normalize-to-nfc</a></li>
+</ul>
+<p>問題になるのは、日本語においては濁点と半濁点が付く文字のみ。「ガバザダバパ」行と、「ヴ」だけである。そこで、ひらがなとカタカナでこれらの文字を表す文字コードを配列で持っておき、辞書的に利用することにした。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token doc-comment comment">/** 清音文字の辞書 : 濁音文字の配置と揃えることで、同じ index 値で参照できるようにしておく */</span>
+<span class="token keyword">const</span> uncombinedKanaDict <span class="token operator">=</span> <span class="token punctuation">[</span>
+  <span class="token number">0x304B</span><span class="token punctuation">,</span> <span class="token number">0x304D</span><span class="token punctuation">,</span> <span class="token number">0x304F</span><span class="token punctuation">,</span> <span class="token number">0x3051</span><span class="token punctuation">,</span> <span class="token number">0x3053</span><span class="token punctuation">,</span>  <span class="token comment">// かきくけこ</span>
+  <span class="token number">0x3055</span><span class="token punctuation">,</span> <span class="token number">0x3057</span><span class="token punctuation">,</span> <span class="token number">0x3059</span><span class="token punctuation">,</span> <span class="token number">0x305B</span><span class="token punctuation">,</span> <span class="token number">0x305D</span><span class="token punctuation">,</span>  <span class="token comment">// さしすせそ</span>
+  <span class="token number">0x305F</span><span class="token punctuation">,</span> <span class="token number">0x3061</span><span class="token punctuation">,</span> <span class="token number">0x3064</span><span class="token punctuation">,</span> <span class="token number">0x3066</span><span class="token punctuation">,</span> <span class="token number">0x3068</span><span class="token punctuation">,</span>  <span class="token comment">// たちつてと</span>
+  <span class="token number">0x306F</span><span class="token punctuation">,</span> <span class="token number">0x3072</span><span class="token punctuation">,</span> <span class="token number">0x3075</span><span class="token punctuation">,</span> <span class="token number">0x3078</span><span class="token punctuation">,</span> <span class="token number">0x307B</span><span class="token punctuation">,</span>  <span class="token comment">// はひふへほ (ば行用)</span>
+  <span class="token number">0x306F</span><span class="token punctuation">,</span> <span class="token number">0x3072</span><span class="token punctuation">,</span> <span class="token number">0x3075</span><span class="token punctuation">,</span> <span class="token number">0x3078</span><span class="token punctuation">,</span> <span class="token number">0x307B</span><span class="token punctuation">,</span>  <span class="token comment">// はひふへほ (ぱ行用)</span>
+  <span class="token number">0x3046</span><span class="token punctuation">,</span>                                  <span class="token comment">// う</span>
+  <span class="token number">0x30AB</span><span class="token punctuation">,</span> <span class="token number">0x30AD</span><span class="token punctuation">,</span> <span class="token number">0x30AF</span><span class="token punctuation">,</span> <span class="token number">0x30B1</span><span class="token punctuation">,</span> <span class="token number">0x30B3</span><span class="token punctuation">,</span>  <span class="token comment">// カキクケコ</span>
+  <span class="token number">0x30B5</span><span class="token punctuation">,</span> <span class="token number">0x30B7</span><span class="token punctuation">,</span> <span class="token number">0x30B9</span><span class="token punctuation">,</span> <span class="token number">0x30BB</span><span class="token punctuation">,</span> <span class="token number">0x30BD</span><span class="token punctuation">,</span>  <span class="token comment">// サシスセソ</span>
+  <span class="token number">0x30BF</span><span class="token punctuation">,</span> <span class="token number">0x30C1</span><span class="token punctuation">,</span> <span class="token number">0x30C4</span><span class="token punctuation">,</span> <span class="token number">0x30C6</span><span class="token punctuation">,</span> <span class="token number">0x30C8</span><span class="token punctuation">,</span>  <span class="token comment">// タチツテト</span>
+  <span class="token number">0x30CF</span><span class="token punctuation">,</span> <span class="token number">0x30D2</span><span class="token punctuation">,</span> <span class="token number">0x30D5</span><span class="token punctuation">,</span> <span class="token number">0x30D8</span><span class="token punctuation">,</span> <span class="token number">0x30DB</span><span class="token punctuation">,</span>  <span class="token comment">// ハヒフヘホ (バ行用)</span>
+  <span class="token number">0x30CF</span><span class="token punctuation">,</span> <span class="token number">0x30D2</span><span class="token punctuation">,</span> <span class="token number">0x30D5</span><span class="token punctuation">,</span> <span class="token number">0x30D8</span><span class="token punctuation">,</span> <span class="token number">0x30DB</span><span class="token punctuation">,</span>  <span class="token comment">// ハヒフヘホ (パ行用)</span>
+  <span class="token number">0x30A6</span>                                   <span class="token comment">// ウ</span>
+<span class="token punctuation">]</span><span class="token punctuation">;</span>
+<span class="token doc-comment comment">/** 濁音文字の辞書 : 清音文字の配置と揃えることで、同じ index 値で参照できるようにしておく */</span>
+<span class="token keyword">const</span> combinedKanaDict <span class="token operator">=</span> <span class="token punctuation">[</span>
+  <span class="token number">0x304C</span><span class="token punctuation">,</span> <span class="token number">0x304E</span><span class="token punctuation">,</span> <span class="token number">0x3050</span><span class="token punctuation">,</span> <span class="token number">0x3052</span><span class="token punctuation">,</span> <span class="token number">0x3054</span><span class="token punctuation">,</span>  <span class="token comment">// がぎぐげご</span>
+  <span class="token number">0x3056</span><span class="token punctuation">,</span> <span class="token number">0x3058</span><span class="token punctuation">,</span> <span class="token number">0x305A</span><span class="token punctuation">,</span> <span class="token number">0x305C</span><span class="token punctuation">,</span> <span class="token number">0x305E</span><span class="token punctuation">,</span>  <span class="token comment">// ざじずぜぞ</span>
+  <span class="token number">0x3060</span><span class="token punctuation">,</span> <span class="token number">0x3062</span><span class="token punctuation">,</span> <span class="token number">0x3065</span><span class="token punctuation">,</span> <span class="token number">0x3067</span><span class="token punctuation">,</span> <span class="token number">0x3069</span><span class="token punctuation">,</span>  <span class="token comment">// だぢづでど</span>
+  <span class="token number">0x3070</span><span class="token punctuation">,</span> <span class="token number">0x3073</span><span class="token punctuation">,</span> <span class="token number">0x3076</span><span class="token punctuation">,</span> <span class="token number">0x3079</span><span class="token punctuation">,</span> <span class="token number">0x307C</span><span class="token punctuation">,</span>  <span class="token comment">// ばびぶべぼ</span>
+  <span class="token number">0x3071</span><span class="token punctuation">,</span> <span class="token number">0x3074</span><span class="token punctuation">,</span> <span class="token number">0x3077</span><span class="token punctuation">,</span> <span class="token number">0x307A</span><span class="token punctuation">,</span> <span class="token number">0x307D</span><span class="token punctuation">,</span>  <span class="token comment">// ぱぴぷぺぽ</span>
+  <span class="token number">0x3094</span><span class="token punctuation">,</span>                                  <span class="token comment">// ゔ</span>
+  <span class="token number">0x30AC</span><span class="token punctuation">,</span> <span class="token number">0x30AE</span><span class="token punctuation">,</span> <span class="token number">0x30B0</span><span class="token punctuation">,</span> <span class="token number">0x30B2</span><span class="token punctuation">,</span> <span class="token number">0x30B4</span><span class="token punctuation">,</span>  <span class="token comment">// ガギグゲゴ</span>
+  <span class="token number">0x30B6</span><span class="token punctuation">,</span> <span class="token number">0x30B8</span><span class="token punctuation">,</span> <span class="token number">0x30BA</span><span class="token punctuation">,</span> <span class="token number">0x30BC</span><span class="token punctuation">,</span> <span class="token number">0x30BE</span><span class="token punctuation">,</span>  <span class="token comment">// ザジズゼゾ</span>
+  <span class="token number">0x30C0</span><span class="token punctuation">,</span> <span class="token number">0x30C2</span><span class="token punctuation">,</span> <span class="token number">0x30C5</span><span class="token punctuation">,</span> <span class="token number">0x30C7</span><span class="token punctuation">,</span> <span class="token number">0x30C9</span><span class="token punctuation">,</span>  <span class="token comment">// ダヂヅデド</span>
+  <span class="token number">0x30D0</span><span class="token punctuation">,</span> <span class="token number">0x30D3</span><span class="token punctuation">,</span> <span class="token number">0x30D6</span><span class="token punctuation">,</span> <span class="token number">0x30D9</span><span class="token punctuation">,</span> <span class="token number">0x30DC</span><span class="token punctuation">,</span>  <span class="token comment">// バビブベボ</span>
+  <span class="token number">0x30D1</span><span class="token punctuation">,</span> <span class="token number">0x30D4</span><span class="token punctuation">,</span> <span class="token number">0x30D7</span><span class="token punctuation">,</span> <span class="token number">0x30DA</span><span class="token punctuation">,</span> <span class="token number">0x30DD</span><span class="token punctuation">,</span>  <span class="token comment">// パピプペポ</span>
+  <span class="token number">0x30F4</span>                                   <span class="token comment">// ヴ</span>
+<span class="token punctuation">]</span><span class="token punctuation">;</span>
+</code></pre>
+<p>NFD 文字になっている場合、たとえば「ザ」は「サ゛」という2文字になっている。入力文字列を1文字ずつ切り取って検証していく中で、</p>
+<ul>
+  <li>次の文字が NFD 濁点 (<code>&#x26;#x3099</code>) か NFD 半濁点 (<code>&#x26;#x309A</code>) の場合</li>
+</ul>
+<p>かつ、</p>
+<ul>
+  <li>現在検証中の文字が変数 <code>uncombinedKanaDict</code> の中にある場合</li>
+</ul>
+<p>に、<code>uncombinedKanaDict</code> のどこにこの文字があるか、<code>findIndex()</code> で添字を取得しておく。</p>
+<p>変数 <code>combinedKanaDict</code> とは、清音と濁音の文字を配列の順番で対応付けてあるので、「サ」が <code>uncombinedKanaDict[31]</code> にあることが分かれば、「ザ」は <code>combinedKanaDict[31]</code> にあることが分かる。</p>
+<p>このようにして、「清音文字 + NFD 濁点」の組み合わせから、通常の濁音文字を取得して結合しているのである。</p>
+<hr>
+<p>ところで、NFD 用の濁点 (<code>&#x26;#x3099</code>) と半濁点 (<code>&#x26;#x309A</code>) は、通常の全角濁音 (<code>&#x26;#x309B</code>・<code>&#x26;#x309C</code>) および半角濁音 (<code>&#x26;#xFF9E</code>・<code>&#x26;#xFF9F</code>) とは別の文字で、手前の文字と合成して使うことを前提として構成されている。そのため、通常 Mac で文字列選択する際も、濁点だけ・半濁点だけを選択することができず、手前の文字が濁音のない文字であっても、変な形で強制的に合成表示されてしまう。</p>
+<p>あまりないとは思うが、何かの拍子に「オ゜」のようにありえない濁音ができてしまった時に、単独の NFD 濁音文字を全角の濁音文字に変換するオプションも用意した。これなら、単独の濁音文字が混じっていてもコピペしたり扱いやすくなる。</p>
+<hr>
+<p>ついでに、<strong>ngx-clipboard</strong> というモジュールを導入して、変換後の文字列をコピペしやすくした。</p>
+<ul>
+  <li>参考：<a href="https://github.com/maxisam/ngx-clipboard">GitHub - maxisam/ngx-clipboard: A pure angular clipboard directive</a></li>
+</ul>
+<p>内部的には、よくある実装のとおり、<code>textarea</code> 要素を画面外に生成して、文字列をコピーしている。自分で実装するとなるとちょいと面倒になるので、こういう風にエコな使い回しができるのは良き良き。</p>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2018-10-24</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2018-10-24</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

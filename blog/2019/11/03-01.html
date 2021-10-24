@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>Windows10 Home に Docker Toolbox を使って Docker をインストールするまでの戦いの記録 - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2019/11/03-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2019/index.html">2019年</a></li>
+            <li><a href="/blog/2019/11/index.html">11月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2019-11-03</time></div>
+        <h1 id="page-title">Windows10 Home に Docker Toolbox を使って Docker をインストールするまでの戦いの記録</h1>
+
+<p><strong>Windows10 Home</strong> は Hyper-V が使えないため、通常の <em>Docker for Windows</em> はインストールできない。Docker for Windows が対応しているのは Windows10 Pro なのだ。</p>
+<p>そんな残念な Windows10 Home のために用意されているのが、VirtualBox を組み合わせて Docker を動かす、<strong>Docker Toolbox</strong> というツールだ。VirtualBox 上に、Docker が使用する基本 VM を立てて (<code>docker-machine</code>) 使用するという構成だ。</p>
+<p>今回はこの Docker Toolbox を使って、Windows10 Home 上で最終的に <code>docker</code> コマンドが使えて Docker イメージを扱えるようにするところまで辿り着きたいのだが、なかなかに苦戦したので、その記録を紹介する。</p>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#%E6%9C%AC%E6%9D%A5%E3%81%AA%E3%82%89%E3%81%93%E3%81%AE%E6%89%8B%E9%A0%86%E3%81%A7%E4%BD%95%E3%81%AE%E5%95%8F%E9%A1%8C%E3%82%82%E3%81%AA%E3%81%8F%E5%AE%8C%E4%BA%86%E3%81%99%E3%82%8B%E3%81%AF%E3%81%9A%E3%81%A0%E3%81%A3%E3%81%9F">本来ならこの手順で何の問題もなく完了するはずだった</a></li>
+  <li><a href="#%E8%87%AA%E5%88%86%E3%81%8C%E3%81%A4%E3%81%BE%E3%81%A5%E3%81%84%E3%81%9F%E3%83%9D%E3%82%A4%E3%83%B3%E3%83%88%E3%82%92%E3%81%BE%E3%81%A8%E3%82%81%E3%82%8B%E3%81%A8%E3%80%81%E3%81%93%E3%82%93%E3%81%AA%E6%89%8B%E9%A0%86%E3%81%AB%E3%81%AA%E3%82%8B">自分がつまづいたポイントをまとめると、こんな手順になる</a></li>
+  <li><a href="#virtualbox-%E3%81%AE-host-only-adapter-%E3%81%8C%E8%BF%BD%E5%8A%A0%E3%81%95%E3%82%8C%E3%81%AA%E3%81%84%E5%95%8F%E9%A1%8C">VirtualBox の Host Only Adapter が追加されない問題</a></li>
+  <li><a href="#virtualbox-%E3%81%AE%E6%9C%80%E6%96%B0%E7%89%88%E3%82%92%E5%85%A5%E3%82%8C%E3%81%A6%E3%81%BF%E3%82%8B">VirtualBox の最新版を入れてみる</a></li>
+  <li><a href="#docker-toolbox-%E3%81%A8%E3%81%84%E3%81%86%E3%82%88%E3%82%8A%E3%80%81virtualbox-%E3%82%92%E3%82%A4%E3%83%B3%E3%82%B9%E3%83%88%E3%83%BC%E3%83%AB%E3%81%99%E3%82%8B%E9%9A%9B%E3%81%AE%E6%B3%A8%E6%84%8F%E7%82%B9">Docker Toolbox というより、VirtualBox をインストールする際の注意点</a></li>
+  <li><a href="#docker-toolbox-%E3%82%A4%E3%83%B3%E3%82%B9%E3%83%88%E3%83%BC%E3%83%AB%E3%81%AB%E9%96%A2%E3%81%99%E3%82%8B%E3%81%9D%E3%81%AE%E4%BB%96%E5%8F%82%E8%80%83%E6%96%87%E7%8C%AE">Docker Toolbox インストールに関するその他参考文献</a></li>
+  <li><a href="#docker-toolbox-%E3%81%AE%E8%B5%B7%E5%8B%95%E3%81%AF%E6%88%90%E5%8A%9F%E3%81%99%E3%82%8B%E3%81%8C-unexpected-token-%E3%81%A8%E3%81%8B%E3%81%84%E3%81%86%E3%82%A8%E3%83%A9%E3%83%BC%E3%81%8C%E5%87%BA%E3%82%8B%E4%BB%B6">Docker Toolbox の起動は成功するが <code>unexpected token</code> とかいうエラーが出る件</a></li>
+  <li><a href="#docker-toolbox-%E3%81%AE%E7%99%96%E3%81%8C%E3%82%B9%E3%82%B4%E3%82%A4">Docker Toolbox の癖がスゴイ</a>
+    <ul>
+      <li><a href="#docker-%E3%81%A8-winpty-%E3%81%AE%E7%9B%B8%E6%80%A7%E3%81%8C%E6%82%AA%E3%81%84">Docker と <code>winpty</code> の相性が悪い</a></li>
+      <li><a href="#-v-%E3%82%AA%E3%83%97%E3%82%B7%E3%83%A7%E3%83%B3%E3%81%A7-windows-%E3%83%9B%E3%82%B9%E3%83%88%E3%83%87%E3%82%A3%E3%83%AC%E3%82%AF%E3%83%88%E3%83%AA%E3%82%92%E3%83%9E%E3%82%A6%E3%83%B3%E3%83%88%E3%81%99%E3%82%8B%E3%81%AB%E3%81%AF"><code>-v</code> オプションで Windows ホストディレクトリをマウントするには</a></li>
+    </ul>
+  </li>
+  <li><a href="#%E4%BB%A5%E4%B8%8A">以上</a></li>
+</ul>
+<h2 id="本来ならこの手順で何の問題もなく完了するはずだった"><a class="header-link" href="#本来ならこの手順で何の問題もなく完了するはずだった"><span class="header-link-mark"></span></a>本来ならこの手順で何の問題もなく完了するはずだった</h2>
+<p>まず、公式のガイドラインが紹介している本来の手順で紹介する。公式のガイドなので、コレで何の問題もなく完了するように見えるはずなのだが、そうはいかなかった。</p>
+<ul>
+  <li><a href="https://docs.docker.com/toolbox/toolbox_install_windows/">Install Docker Toolbox on Windows | Docker Documentation</a></li>
+</ul>
+<p>↑ コレがガイドライン。</p>
+<ol>
+  <li>OS バージョンを確認しようね。Windows10 Home の 64bit であることを改めて確認。</li>
+  <li>タスクマネージャの「パフォーマンス」タブを開き、CPU の「仮想化」が「有効」であることを確認する。</li>
+  <li>次のページから <code>DockerToolbox-XX.exe</code> インストーラをダウンロードする。
+    <ul>
+      <li><a href="https://github.com/docker/toolbox/releases">Releases · docker/toolbox · GitHub</a></li>
+      <li>本稿執筆時点では v19.03.1 だったので <code>DockerToolbox-19.03.1.exe</code> を落とす。</li>
+    </ul>
+  </li>
+  <li>インストーラを起動し、デフォルトの選択状態のまま進めていく。</li>
+  <li>デスクトップなどにできる「Docker Quickstart Terminal」アイコンを開く。</li>
+  <li>ターミナルが起動し、自動的に初期設定が始まる。最終的にクジラの AA が表示され、GitBash 的なプロンプトが表示されたら完了。</li>
+  <li>念のため確認。<code>$ docker run hello-world</code> と実行して上手くコンソール出力されれば OK。</li>
+</ol>
+<p>…以上が手順の全て。大変シンプルなのだが、つまづきポイントが多々あった。</p>
+<h2 id="自分がつまづいたポイントをまとめると、こんな手順になる"><a class="header-link" href="#自分がつまづいたポイントをまとめると、こんな手順になる"><span class="header-link-mark"></span></a>自分がつまづいたポイントをまとめると、こんな手順になる</h2>
+<p>自分の環境でつまづいたポイントについてはこのあと一つずつ紹介していくが、時系列順にまとめると、以下のように作業していけば、かなり<strong>成功率が上がる</strong>かと思う。</p>
+<ol>
+  <li>事前準備
+    <ol>
+      <li>OS バージョン、CPU の仮想化が有効であることの確認は公式どおりに実施する</li>
+      <li>VirtualBox をインストールしてあったらアンインストールする</li>
+      <li>ユーザホームディレクトリ直下に <code>.docker/</code> や <code>.VirtualBox/</code> ディレクトリが存在する場合は削除しておく</li>
+      <li><code>C:\Windows\System32\drivers</code> 配下に以下のファイルがあったら削除する
+        <ul>
+          <li><code>VBoxDrv.sys</code></li>
+          <li><code>VBoxNetAdp.sys</code></li>
+          <li><code>VBoxNetFlt.sys</code></li>
+          <li><code>VBoxUSBMon.sys</code></li>
+        </ul>
+      </li>
+      <li>レジストリエディタで以下のキー配下を確認し、<code>VBOX</code> で始まるフォルダがあったら全て削除する
+        <ul>
+          <li><code>\HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\</code></li>
+        </ul>
+      </li>
+      <li>「Windows の機能の有効化または無効化」にて、「Windows サンドボックス」「Windows ハイパーバイザープラットフォーム」「Hyper-V」など、仮想化関連の機能を無効にする</li>
+      <li>UAC は「確認しない」に下げておく</li>
+      <li>マシンをシャットダウンし、再起動する : <strong>単純な「再起動」ではなく、一度「シャットダウン」するのが確実</strong>。<em>以降「再起動」と表現した場合はシャットダウン → 起動、の手順を示す</em></li>
+      <li>マシン起動後、<strong>ウイルスバスターなどのアンチウイルスソフトが起動していれば終了させる</strong> : <em>以降の再起動でも都度必須</em></li>
+      <li><em>MacType</em> をインストールして起動している場合は、終了しておく</li>
+    </ol>
+  </li>
+  <li>Docker Toolbox のインストーラをダウンロードする</li>
+  <li>Docker Toolbox のインストーラを右クリックして<strong>「管理者権限で実行」</strong>する</li>
+  <li><code>Select Components</code> ではコンポーネントは全て選択する</li>
+  <li><code>Select Additional Tasks</code> で <strong><code>Install VirtualBox with NDIS5 driver [default NDIS6]</code></strong> にチェックを<strong>入れない</strong>
+    <ul>
+      <li>多くの文献ではこのチェックを入れるよう書かれているが、チェックしても、チェックしなくても成功した</li>
+      <li>インストールが失敗してやり直す時、他に失敗する要因が見つからなければココのチェック有無を変えてみる</li>
+    </ul>
+  </li>
+  <li>インストール後、すぐに「再起動」する。再起動後はアンチウイルスソフトと MacType を終了させる</li>
+  <li>「環境変数」画面を開き、以下の<em>システム環境変数</em>が設定されているか確認する
+    <ul>
+      <li><code>DOCKER_MACHINE</code> : <code>C:\Program Files\Docker Toolbox\docker-machine.exe</code></li>
+      <li><code>DOCKER_TOOLBOX_INSTALL_PATH</code> : <code>C:\Program Files\Docker Toolbox</code></li>
+      <li><code>VBOX_MSI_INSTALL_PATH</code> : <code>C:\Program Files\Oracle\VirtualBox\</code> (末尾にバックスラッシュ記号が付いていること)</li>
+    </ul>
+  </li>
+  <li><code>C:\Program Files\Oracle\VirtualBox\</code> 配下にある以下のファイルについて、「互換性」→「互換モード」にチェックを入れ、「Windows 7」を選択する
+    <ul>
+      <li><code>VBoxManage.exe</code></li>
+      <li><code>VBoxHeadless.exe</code></li>
+      <li><code>VBoxNetDHCP.exe</code></li>
+      <li><code>VBoxSVC.exe</code></li>
+      <li><code>VirtualBox.exe</code></li>
+    </ul>
+  </li>
+  <li>「Docker Quickstart Terminal」アイコンを右クリックして<em>「管理者権限で実行」</em>する
+    <ul>
+      <li>初期設定の中で、一瞬ダイアログが表示されてすぐに消えるのは、Docker Toolbox が自動的に何かやっているだけなので、気にしなくて OK</li>
+    </ul>
+  </li>
+</ol>
+<p>コレですんなりとクジラの AA が表示されれば成功。</p>
+<p>自分はこの結論にたどり着くまでなかなか時間がかかった。以下は自分が遭遇したトラブルと、解消に至るまで試行錯誤した情報を載せておく。</p>
+<h2 id="virtualbox-の-host-only-adapter-が追加されない問題"><a class="header-link" href="#virtualbox-の-host-only-adapter-が追加されない問題"><span class="header-link-mark"></span></a>VirtualBox の Host Only Adapter が追加されない問題</h2>
+<p>Docker Quickstart Terminal を実行すると、以下のようなエラーが発生して、コレに数時間つまづいた。</p>
+<pre><code>Creating CA: C:\Users\Neo\.docker\machine\certs\ca.pem
+Creating client certificate: C:\Users\Neo\.docker\machine\certs\cert.pem
+Running pre-create checks...
+(default) Image cache directory does not exist, creating it at C:\Users\Neo\.docker\machine\cache...
+(default) No default Boot2Docker ISO found locally, downloading the latest release...
+(default) Latest release for github.com/boot2docker/boot2docker is v19.03.4
+(default) Downloading C:\Users\Neo\.docker\machine\cache\boot2docker.iso from https://github.com/boot2docker/boot2docker/releases/download/v19.03.4/boot2docker.iso...
+(default) 0%....10%....20%....30%....40%....50%....60%....70%....80%....90%....100%
+Creating machine...
+(default) Copying C:\Users\Neo\.docker\machine\cache\boot2docker.iso to C:\Users\Neo\.docker\machine\machines\default\boot2docker.iso...
+(default) Creating VirtualBox VM...
+(default) Creating SSH key...
+(default) Starting the VM...
+(default) Check network to re-create if needed...
+(default) Windows might ask for the permission to create a network adapter. Sometimes, such confirmation window is minimized in the taskbar.
+(default) Creating a new host-only adapter produced an error: C:\Program Files\Oracle\VirtualBox\VBoxManage.exe hostonlyif create failed:
+(default) 0%...
+(default) Progress state: E_FAIL
+(default) VBoxManage.exe: error: Failed to create the host-only adapter
+(default) VBoxManage.exe: error: Querying NetCfgInstanceId failed (0x00000002)
+(default) VBoxManage.exe: error: Details: code E_FAIL (0x80004005), component HostNetworkInterfaceWrap, interface IHostNetworkInterface
+(default) VBoxManage.exe: error: Context: "enum RTEXITCODE __cdecl handleCreate(struct HandlerArg *)" at line 94 of file VBoxManageHostonly.cpp
+(default)
+(default) This is a known VirtualBox bug. Let's try to recover anyway...
+Error creating machine: Error in driver during machine creation: Error setting up host only network on machine start: The host-only adapter we just created is not visible. This is a well known VirtualBox bug. You might want to uninstall it and reinstall at least version 5.0.12 that is is supposed to fix this issue
+Looks like something went wrong in step ´Checking if machine default exists´... Press any key to continue...
+</code></pre>
+<p><code>Failed to create the host-only adapter</code> とか言ってる。</p>
+<p>他に再インストール等を繰り返した時は、以下のようなエラーのバリエーションも出た。</p>
+<pre><code>Starting "default"...
+(default) Check network to re-create if needed...
+Error setting up host only network on machine start: C:\Program Files\Oracle\VirtualBox\VBoxManage.exe list hostonlyifs failed:
+VBoxManage.exe: error: Code E_ACCESSDENIED (0x80070005) - General access denied error (extended info not available)
+VBoxManage.exe: error: Context: "FindHostNetworkInterfacesOfType(HostNetworkInterfaceType_HostOnly, ComSafeArrayAsOutParam(hostNetworkInterfaces))" at line 138 of file VBoxManageList.cpp
+Looks like something went wrong in step ´Checking status on default´... Press any key to continue...
+</code></pre>
+<pre><code>Running pre-create checks...
+Error with pre-create check: "C:\\Program Files\\Oracle\\VirtualBox\\VBoxManage.exe list hostonlyifs failed:\nVBoxManage.exe: error: Code E_ACCESSDENIED (0x80070005) - General access denied error (extended info not available)\r\nVBoxManage.exe: error: Context: \"FindHostNetworkInterfacesOfType(HostNetworkInterfaceType_HostOnly, ComSafeArrayAsOutParam(hostNetworkInterfaces))\" at line 138 of file VBoxManageList.cpp\r\n"
+Looks like something went wrong in step ´Checking if machine default exists´... Press any key to continue...
+</code></pre>
+<p>Docker Quickstart Terminal の実体は、Docker Toolbox インストールディレクトリの直下にある <strong><code>start.sh</code></strong> だ。</p>
+<p>この <code>start.sh</code> 内で、最終的に</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># -d は --driver の略</span>
+$ docker-machine create -d virtualbox default
+</code></pre>
+<p>というコマンドを実行している。コレは、Docker が使用する VirtualBox イメージを作成するためのコマンドだ。</p>
+<p>そしてこのコマンドの内部では、VirtualBox の以下のようなコマンドが実行されている。</p>
+<pre class="language-bash"><code class="language-bash">$ VBoxManage.exe hostonlyif create
+</code></pre>
+<p>コレは、VirtualBox の画面上でも作れる、<strong>ホストオンリーアダプター</strong>というモノを作成するコマンドなのだが、<em>コレが上手く作成できない事象に物凄く苦戦した。</em></p>
+<p>ホストオンリーアダプタが正常に作成されると、「ネットワークと共有センター」から「アダプターの接続を変更」を選択したところにある<em>「ネットワーク接続」</em>画面に、</p>
+<ul>
+  <li>VirtualBox Host-Only Network</li>
+</ul>
+<p>というネットワークが作成されるはずなのだが、コレが作成されない。</p>
+<p><code>start.sh</code> を叩いて失敗する場合は、<code>docker-machine create</code> も <code>VBoxManage hostonlyif create</code> も同様に失敗するはずで、結局は Docker Toolbox の問題というよりは <strong>VirualBox が上手く動いていない</strong>のが問題だと分かる。</p>
+<p>ホストオンリーアダプターを作成させようとしているプロンプトのところで、<em>「デバイスマネージャー」の「ネットワークアダプター」</em>を開いてみると、</p>
+<ul>
+  <li>VirtualBox Host-Only Ethernet Adapter</li>
+</ul>
+<p>というネットワークアダプタが一時作成されるが、ビックリマーク <code>!</code> アイコンが付いていて、不正なデバイスになっているようである。詳細を見ると、署名がどうこうというエラーが出ていると思う。コレを解消する方法がなかなか分からないでいた。</p>
+<h2 id="virtualbox-の最新版を入れてみる"><a class="header-link" href="#virtualbox-の最新版を入れてみる"><span class="header-link-mark"></span></a>VirtualBox の最新版を入れてみる</h2>
+<p>そこで、試しに VirtualBox の最新版を上書きインストールしてみることにした。</p>
+<ol>
+  <li>ゴミデータの削除
+    <ol>
+      <li>VirtualBox を開き、「default」という VM が作成されていたら削除する</li>
+      <li>VirtualBox に「ホストオンリーアダプター」が作成されていたら削除する</li>
+      <li>ユーザホームディレクトリ直下に <code>.docker/</code> や <code>.VirtualBox/</code> ディレクトリが存在したら削除する</li>
+      <li><code>C:\Windows\System32\drivers</code> 配下に以下のファイルがあったら削除する
+        <ul>
+          <li><code>VBoxDrv.sys</code></li>
+          <li><code>VBoxNetAdp.sys</code></li>
+          <li><code>VBoxNetFlt.sys</code></li>
+          <li><code>VBoxUSBMon.sys</code></li>
+        </ul>
+      </li>
+      <li>レジストリエディタで以下のキー配下を確認し、<code>VBOX</code> で始まるフォルダがあったら全て削除する
+        <ul>
+          <li><code>\HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\</code></li>
+        </ul>
+      </li>
+      <li>「再起動」し、再起動後はアンチウイルスソフトと MacType を切る</li>
+    </ol>
+  </li>
+  <li>VirtualBox の最新版のインストーラをダウンロードする
+    <ul>
+      <li><a href="https://www.virtualbox.org/wiki/Downloads">Downloads – Oracle VM VirtualBox</a></li>
+      <li>本稿執筆時点では v6.0.14 だったので <code>VirtualBox-6.0.14-133895-Win.exe</code> を落とした</li>
+    </ul>
+  </li>
+  <li>PowerShell を管理者権限で起動する
+    <ul>
+      <li><code>Win + X</code> → <code>A</code> と押下して「PowerShell (管理者)」を開くのが手っ取り早い</li>
+    </ul>
+  </li>
+  <li>ダウンロードした VirutalBox インストーラのディレクトリに移動し、次のように実行する
+    <ul>
+      <li><code>PS1> .\VirtualBox-6.0.14-133895-Win.exe -msiparams NETWORKTYPE=NDIS5</code></li>
+    </ul>
+  </li>
+  <li>インストーラが起動するので、デフォルトの設定のまま進めていく</li>
+  <li>インストール後、すぐに「再起動」し、再起動後はアンチウイルスソフトを切る</li>
+  <li>「Docker Quickstart Terminal」を管理者権限で実行する</li>
+</ol>
+<p>コレで上手く行った場合もあったのだが、何が悪かったのかを検証するため、全部アンインストールしてから再度試してみたところ、コレでも上手くいかなくなってしまった。</p>
+<h2 id="docker-toolbox-というより、virtualbox-をインストールする際の注意点"><a class="header-link" href="#docker-toolbox-というより、virtualbox-をインストールする際の注意点"><span class="header-link-mark"></span></a>Docker Toolbox というより、VirtualBox をインストールする際の注意点</h2>
+<p>前述の自分が成功させるために工夫した手順の中にも書いてはいるが、VirtualBox のインストールを成功させるために注意した点を書き出してみる。</p>
+<ul>
+  <li>インストーラや実行ファイルは管理者権限で実行する</li>
+  <li>ウイルスバスターなどのアンチウイルスソフトは終了させた状態でインストール・アンインストール作業を行う
+    <ul>
+      <li>ネットワーク周りの設定を変更するため、ウイルスバスターなどが誤検知するようだ</li>
+    </ul>
+  </li>
+  <li>MacType を使っている場合は終了させておく
+    <ul>
+      <li><code>VBox</code> から始まるプロセスの邪魔をしてしまうので、インストールが完了するまで MacType は切っておく</li>
+      <li>全てのインストールが終わって Docker Toolbox が起動しているところで、MacType を起動し、<code>VBox</code> で始まるプロセスを全て除外設定することで、以降は MacType が邪魔しなくなる</li>
+    </ul>
+  </li>
+  <li>インストールやアンインストール作業を行ったら再起動する
+    <ul>
+      <li>シャットダウンしてから起動、とした方が確実っぽい。少なくとも通常の再起動のオペレーションは必須みたいだ</li>
+    </ul>
+  </li>
+  <li>既に VirtualBox がインストールされている環境はアンインストールしておくと成功しやすい</li>
+  <li>インストールに失敗してやり直す時は、ホームディレクトリや <code>drivers</code> ディレクトリ、レジストリなどに残るゴミファイルを消してから再トライする</li>
+  <li>VirtualBox の実行ファイル系に互換設定を行うと良い</li>
+</ul>
+<p>以下に参考文献をまとめて書いておくが、特に参考になったのは以下の記事だった。</p>
+<ul>
+  <li><a href="http://acchi-muite-hoi.hatenablog.com/entry/2016/06/20/042002">windows10でDocker Toolboxのエラーとインストール【ざっくり手順あり】 - This is a Pen</a></li>
+  <li><a href="http://acchi-muite-hoi.hatenablog.com/entry/2016/06/23/020317">windows10でなぜDockerがVirtualBoxで繋がらないのか - This is a Pen</a></li>
+</ul>
+<p>自分はココまで色々注意して何とか成功に辿り着いた。</p>
+<h2 id="docker-toolbox-インストールに関するその他参考文献"><a class="header-link" href="#docker-toolbox-インストールに関するその他参考文献"><span class="header-link-mark"></span></a>Docker Toolbox インストールに関するその他参考文献</h2>
+<ul>
+  <li><a href="https://qiita.com/idani/items/fb7681d79eeb48c05144">windows 10 home で docker を導入するメモ - Qiita</a></li>
+  <li><a href="https://qiita.com/osuo/items/99a2b7413ce75f8217be">Windows10マシンにDocker Toolbox を入れて個人用の開発環境を作る - Qiita</a>
+    <ul>
+      <li>Docker Toolbox の最も簡単なインストール手順、すんなり行ってる例</li>
+    </ul>
+  </li>
+  <li><a href="https://4649-24.com/cloud/docker-windows-for-hyper-v/">Windows10 Home 64bit でDockerするならWindows10 ProかBizspark！ – AMAZON AWS/Microsoft Azure/WordPress | ニシインターナショナル</a>
+    <ul>
+      <li>Docker Toolbox つらみ</li>
+    </ul>
+  </li>
+  <li><a href="https://www.lisz-works.com/entry/docker-toolbox-setup-error">Docker Toolboxインストールでエラーを解決 - lisz-works</a>
+    <ul>
+      <li>「Windows の機能の有効化または無効化」で「Hyper-V」をオフにする</li>
+    </ul>
+  </li>
+  <li><a href="https://sites.google.com/site/ryunosukehm/study/ml-with-python/impact-ss2017/docker">開発環境の準備 - Dockerでの開発環境構築 - Ryunosuke HAMADA</a></li>
+  <li><a href="https://ic8ghatake.wordpress.com/2017/05/26/docker-%E3%82%92%E4%BD%BF%E3%81%A3%E3%81%A6%E3%81%BF%E3%82%8B%E3%81%AE%E5%B7%BB/">Docker を使ってみるの巻 – 8GtestSite</a></li>
+  <li><a href="https://books.google.co.jp/books?id=MX63DwAAQBAJ&#x26;pg=PA32&#x26;lpg=PA32&#x26;dq=virtualbox+ndis5&#x26;source=bl&#x26;ots=L_brobQDNa&#x26;sig=ACfU3U1P8jFBaqrOO_FAzASvdVwpZIv2Mw&#x26;hl=ja&#x26;sa=X&#x26;ved=2ahUKEwi5x-CAtcXlAhVszIsBHVPyC18Q6AEwCHoECE8QAQ#v=onepage&#x26;q=virtualbox%20ndis5&#x26;f=false">Dockerによるアプリケーション開発環境構築ガイド - 櫻井洋一郎, 村崎大輔 - Google ブックス</a>
+    <ul>
+      <li><code>Install VirtualBox with NDIS5 driver [default NDIS6]</code> にチェックを入れよ、という記事</li>
+    </ul>
+  </li>
+  <li><a href="https://arm-lab.blogspot.com/2018/06/dockerwindows10.html">arm-lab: DockerをWindows10で使ってみる</a>
+    <ul>
+      <li><code>Install VirtualBox with NDIS5 driver [default NDIS6]</code> にチェックは要らないかも、という記事</li>
+    </ul>
+  </li>
+  <li><a href="https://gist.github.com/RobCranfill/21186a1cea079c697b90">How to install VirtualBox 5 so it will use the old NDIS5 network driver, instead of the not-working version 6. · GitHub</a>
+    <ul>
+      <li>VirtualBox インストール時に <code>-msiparams NETWORKTYPE=NDIS5</code> オプションを指定する</li>
+    </ul>
+  </li>
+  <li><a href="https://stackoverflow.com/questions/39373217/docker-looks-something-went-wrong-in-step-looking-for-vboxmanage-exe/51564572">virtualbox - Docker: Looks something went wrong in step Looking for vboxmanage.exe - Stack Overflow</a>
+    <ul>
+      <li>環境変数 <code>VBOX_MSI_INSTALL_PATH</code> に指定するフォルダパスの末尾にはバックスラッシュが必要。<code>start.sh</code> の中で、<code>VBOXMANAGE="${VBOX_MSI_INSTALL_PATH}VBoxManage.exe"</code> というようにスクリプトを書いており、バックスラッシュがないとうまくパスが解釈されない。</li>
+      <li>参考：<a href="https://github.com/docker/toolbox/blob/d8907fbc3f7e69f2ad1afe04fc63f3bdc9d87708/windows/start.sh#L21-L26">toolbox/start.sh at d8907fbc3f7e69f2ad1afe04fc63f3bdc9d87708 · docker/toolbox · GitHub</a></li>
+    </ul>
+  </li>
+  <li><a href="https://appuals.com/how-to-fix-usb-error-digital-signature-code-52-error/">How to Fix USB Error Digital Signature (Code 52) Error - Appuals.com</a>
+    <ul>
+      <li>VirtualBox インストール時はウイルスバスターを停止しておく必要がある</li>
+    </ul>
+  </li>
+  <li><a href="https://qiita.com/yaju/items/0e98e88f3638d25d69e0">Docker Quickstart Terminalのエラー発生(Looks like something went wrong)について - Qiita</a>
+    <ul>
+      <li><code>start.sh</code> の <code>clear</code> コマンドが邪魔している場合はコメントアウトする</li>
+      <li>参考：<a href="https://github.com/docker/toolbox/blob/d8907fbc3f7e69f2ad1afe04fc63f3bdc9d87708/windows/start.sh#L84">toolbox/start.sh at d8907fbc3f7e69f2ad1afe04fc63f3bdc9d87708 · docker/toolbox · GitHub</a></li>
+    </ul>
+  </li>
+  <li><a href="https://answers.microsoft.com/ja-jp/windows/forum/all/%E5%8F%A4%E3%81%84%E3%83%8D%E3%83%83%E3%83%88/046f38af-a0af-43a9-8eef-78b5619d6ad8">古いネットワークアダプタ情報が削除出来ない - マイクロソフト コミュニティ</a>
+    <ul>
+      <li>ネットワークアダプタは「ネットワーク接続」画面ではなく「デバイスマネージャ」から削除できる</li>
+    </ul>
+  </li>
+</ul>
+<h2 id="docker-toolbox-の起動は成功するが-unexpected-token-とかいうエラーが出る件"><a class="header-link" href="#docker-toolbox-の起動は成功するが-unexpected-token-とかいうエラーが出る件"><span class="header-link-mark"></span></a>Docker Toolbox の起動は成功するが <code>unexpected token</code> とかいうエラーが出る件</h2>
+<p>さて、何とか VirtualBox の問題は解消して、クジラの AA は出たのだが、そのすぐ後に以下のようなエラーメッセージが出力されてしまった。</p>
+<pre><code>bash: C:\Program Files\Docker Toolbox\start.sh: line 104: syntax error near unexpected token `('
+Looks like something went wrong in step ´Finalize´... Press any key to continue...
+</code></pre>
+<p>このあとキーを入力してプロンプトを閉じたあと、別のターミナルで <code>docker</code> コマンドが動作するようにはなったのだが、キモいので原因を調べてみた。</p>
+<p>問題は</p>
+<ul>
+  <li><code>C:\Program Files\Docker Toolbox\start.sh</code></li>
+</ul>
+<p>このファイルの104行目にある以下のコード。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token function-name function">docker</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token assign-left variable">MSYS_NO_PATHCONV</span><span class="token operator">=</span><span class="token number">1</span> docker.exe <span class="token string">"<span class="token variable">$@</span>"</span>
+<span class="token punctuation">}</span>
+<span class="token builtin class-name">export</span> -f docker
+</code></pre>
+<ul>
+  <li>参考：<a href="https://github.com/docker/toolbox/blob/d8907fbc3f7e69f2ad1afe04fc63f3bdc9d87708/windows/start.sh#L104-L107">toolbox/start.sh at d8907fbc3f7e69f2ad1afe04fc63f3bdc9d87708 · docker/toolbox · GitHub</a></li>
+</ul>
+<p>ココの <code>docker ()</code> 部分の手前に <code>function</code> を付け足し、以下のようにするとエラーが解消された。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token keyword">function</span> <span class="token function-name function">docker</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token assign-left variable">MSYS_NO_PATHCONV</span><span class="token operator">=</span><span class="token number">1</span> docker.exe <span class="token string">"<span class="token variable">$@</span>"</span>
+<span class="token punctuation">}</span>
+<span class="token builtin class-name">export</span> -f docker
+</code></pre>
+<p>コレでエラーを解消すると、Docker Quickstart Terminal はクジラの AA の後に GitBash を表示してくれる。</p>
+<h2 id="docker-toolbox-の癖がスゴイ"><a class="header-link" href="#docker-toolbox-の癖がスゴイ"><span class="header-link-mark"></span></a>Docker Toolbox の癖がスゴイ</h2>
+<p>やっとインストールが完了したので、少し動作確認してみた。</p>
+<h3 id="docker-と-winpty-の相性が悪い"><a class="header-link" href="#docker-と-winpty-の相性が悪い"><span class="header-link-mark"></span></a>Docker と <code>winpty</code> の相性が悪い</h3>
+<p>Docker Quickstart Terminal を起動し、バックグラウンドで VirtualBox と Docker Toolbox を起動させておいたら、Docker Quickstart Terminal は閉じて、いつも使っている Git SDK を開いてみた。</p>
+<p>そこで <code>docker</code> コマンドを使うと、<code>docker ps</code> や <code>docker run hello-world</code> などは大丈夫だったのだが、</p>
+<pre class="language-bash"><code class="language-bash">$ docker run -it centos:7 <span class="token function">bash</span>
+</code></pre>
+<p>のように対話プロンプトに移るコマンドを実行した時に、<em>結果が出力されなく</em>て困った。</p>
+<p>GitBash を使っている場合、対話プロンプトを正常に動かすには <code>winpty</code> をかませるのはよくあることで、Docker コマンドもそうだろうと思って設定したのだが、<code>winpty</code> をかませてもダメだった。<em><code>winpty</code> との相性悪し。</em></p>
+<ul>
+  <li>参考：<a href="https://qiita.com/yKanazawa/items/866c1e4ef024bee03e34">Git for Windowsでdocker execをwinptyなしで実行する - Qiita</a>
+    <ul>
+      <li>この辺は効果なし。</li>
+    </ul>
+  </li>
+</ul>
+<p><strong>VSCode 上のターミナルペインで、同じ Git SDK を使って動かしてみると、<code>winpty</code> なしで正常に動いた。</strong>なんだこりゃ。しかし VSCode は、ターミナルからデタッチする時の <code>Ctrl + P</code> → <code>Ctrl + Q</code> キー入力が、コマンドパレットを開くショートカットと衝突し、少々操作がやりづらい。</p>
+<p>また、<em>Docker Quickstart Terminal を使う分には <code>winpty</code> は不要で正常に動いた。</em>どうもこの Docker Quickstart Terminal は、コマンドプロンプト上で GitBash を起動する、いわゆる「Git CMD」に近いモノのようだ。</p>
+<p>というワケで、<code>docker</code> コマンドを使う際は、自前の Git SDK なんかは使わず、素直に Docker Quickstart Terminal を使っておくのが安定するだろう。</p>
+<h3 id="-v-オプションで-windows-ホストディレクトリをマウントするには"><a class="header-link" href="#-v-オプションで-windows-ホストディレクトリをマウントするには"><span class="header-link-mark"></span></a><code>-v</code> オプションで Windows ホストディレクトリをマウントするには</h3>
+<p>ひとまず、Docker Quickstart Terminal で <code>$ docker run -it centos:7 bash</code> などは動作したので、続いて</p>
+<pre class="language-bash"><code class="language-bash">$ docker run -v <span class="token variable"><span class="token variable">$(</span><span class="token builtin class-name">pwd</span><span class="token variable">)</span></span>:/data -it centos:7 <span class="token function">bash</span>
+</code></pre>
+<p>のようにして、<code>-v</code> (<code>--volume</code>) オプションで現在のディレクトリをマウントしてみた。</p>
+<p>すると、コンテナは起動するのだが、<code>/data</code> ディレクトリ配下が空になっていた。マウントに失敗しているようだ。</p>
+<p>調べたところ、2つの原因が分かった。</p>
+<ol>
+  <li>ディレクトリパスの先頭にもう一つスラッシュ <code>/</code> を書かないといけない
+    <ul>
+      <li><code>$ docker run -v /$(pwd):/data -it centos:7 bash</code> (pwd の手前に <code>/</code> がついてる)</li>
+      <li><code>$ docker run -v //c/Users/Neo/data:/data -it centos:7 bash</code> (フルパスをベタ書きした場合だと、こういう風に書かないといけない)</li>
+    </ul>
+  </li>
+  <li>ユーザホームディレクトリ配下でないとマウントできない
+    <ul>
+      <li>当初自分は <code>-v //c/Neos21/docker-example/data:/data</code> のように、C ドライブ直下の <code>Neos21/</code> フォルダ配下をマウントしようとしていた</li>
+      <li>しかし、ユーザホームディレクトリ配下、つまり <code>//c/Users/Neo/</code> 配下でないとマウントできないようだ。</li>
+    </ul>
+  </li>
+</ol>
+<p>というワケで、</p>
+<pre class="language-bash"><code class="language-bash">$ docker run -v //c/Users/Neo/data:/data -it centos:7 <span class="token function">bash</span>
+</code></pre>
+<p>という書き方・マウントパスであれば、正常にマウントできた。</p>
+<ul>
+  <li>参考：<a href="https://yuis-programming.com/?p=335">docker: windowsホストディレクトリがマウント出来ない件 | yuipro</a>
+    <ul>
+      <li>
+        <blockquote>
+          <p>"docker tool box"の場合，<code>//c/Users/</code> 以下ディレクトリでないとマウントできない．</p>
+        </blockquote>
+      </li>
+    </ul>
+  </li>
+  <li>参考：<a href="https://osa030.hatenablog.com/entry/2016/05/10/124504">Docker for Windowsを試してみた - 初老のボケ防止日記</a>
+    <ul>
+      <li>
+        <blockquote>
+          <p>実はこれはGit bashのせい。スラッシュで始まるパス文字列の先頭にスラッシュをつけると回避できる。</p>
+        </blockquote>
+      </li>
+      <li>参考：<a href="https://stackoverflow.com/questions/16344985/how-do-i-pass-an-absolute-path-to-the-adb-command-via-git-bash-for-windows">How do I pass an absolute path to the adb command via git bash for windows? - Stack Overflow</a></li>
+    </ul>
+  </li>
+</ul>
+<h2 id="以上"><a class="header-link" href="#以上"><span class="header-link-mark"></span></a>以上</h2>
+<p>かなり苦戦したが、とりあえずコレで Windows10 Home でも Docker を使えるようになった。</p>
+<p>自分は MacBook と Windows10 Pro マシン (ZenBook) も持っていて、MacOS はホントにストレスなく Docker for Mac が正常に動くし、Windows10 Pro における Docker for Windows も全然問題なし。Win10 Home はホントにしんどかった…。</p>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2019-11-03</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2019-11-03</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

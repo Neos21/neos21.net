@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>mocha で行うユニットテスト内でスパイ・モック化するなら「sinon」 - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2019/02/23-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2019/index.html">2019年</a></li>
+            <li><a href="/blog/2019/02/index.html">02月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2019-02-23</time></div>
+        <h1 id="page-title">mocha で行うユニットテスト内でスパイ・モック化するなら「sinon」</h1>
+
+<p>以前、<em>mocha</em> という npm パッケージを使った単体テスト環境を構築したが、この mocha はテストランナーとしての側面が強く、特定のメソッドをモック化したりする機能は有していない。</p>
+<ul>
+  <li><a href="/blog/2019/02/07-01.html">Express で構築した WebAPI サーバをユニットテストする (コードカバレッジも見る)</a></li>
+</ul>
+<p>Jasmine のように、<code>spyOn().and.callFake()</code> や <code>toHaveBeenCalled()</code> といったことをやりたく、似たようなライブラリがないか調べたところ、<strong>sinon</strong> というパッケージを使う例が多く見つかった。</p>
+<ul>
+  <li><a href="https://sinonjs.org/">Sinon.JS - Standalone test fakes, spies, stubs and mocks for JavaScript. Works with any unit testing framework.</a></li>
+</ul>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#%E3%82%A4%E3%83%B3%E3%82%B9%E3%83%88%E3%83%BC%E3%83%AB">インストール</a></li>
+  <li><a href="#%E6%8C%87%E5%AE%9A%E3%81%AE%E9%96%A2%E6%95%B0%E3%81%8C%E5%91%BC%E3%81%B0%E3%82%8C%E3%81%9F%E3%81%8B%E7%A2%BA%E8%AA%8D%E3%81%99%E3%82%8B">指定の関数が呼ばれたか確認する</a></li>
+  <li><a href="#%E3%81%82%E3%82%8B%E9%96%A2%E6%95%B0%E3%82%92%E3%83%A2%E3%83%83%E3%82%AF%E5%8C%96%E3%81%97%E3%80%81%E3%83%86%E3%82%B9%E3%83%88%E7%94%A8%E3%81%AE%E6%88%BB%E3%82%8A%E5%80%A4%E3%82%92%E8%BF%94%E3%81%99">ある関数をモック化し、テスト用の戻り値を返す</a></li>
+  <li><a href="#%E4%BB%A5%E4%B8%8A">以上</a></li>
+</ul>
+<h2 id="インストール"><a class="header-link" href="#インストール"><span class="header-link-mark"></span></a>インストール</h2>
+<p>インストールはいつもどおり。テストランナーである mocha と、結果値検証に使う expect も入れてみる。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">npm</span> <span class="token function">install</span> --save-dev mocha <span class="token function">expect</span> sinon
+</code></pre>
+<h2 id="指定の関数が呼ばれたか確認する"><a class="header-link" href="#指定の関数が呼ばれたか確認する"><span class="header-link-mark"></span></a>指定の関数が呼ばれたか確認する</h2>
+<p>まずは、ある関数が呼ばれたかを確認するための、<code>sinon.spy()</code> と <code>.called</code> を使ってみる。Jasmine の <code>toHaveBeenCalled()</code> 相当だ。</p>
+<p>テスト対象のコードは以下のとおり。</p>
+<ul>
+  <li><code>hoge.js</code></li>
+</ul>
+<pre class="language-javascript"><code class="language-javascript"><span class="token doc-comment comment">/** テスト対象のクラス */</span>
+<span class="token keyword">class</span> <span class="token class-name">HogeClass</span> <span class="token punctuation">{</span>
+  <span class="token doc-comment comment">/** テスト対象の関数 */</span>
+  <span class="token function">execHoge</span><span class="token punctuation">(</span><span class="token parameter">value<span class="token punctuation">,</span> callback</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span>value<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">callback</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>コレに対するテストコードは以下のとおり。</p>
+<ul>
+  <li><code>hoge.spec.js</code></li>
+</ul>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword">const</span> expect <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'expect'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">const</span> sinon <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'sinon'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token keyword">const</span> <span class="token maybe-class-name">HogeClass</span> <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'../src/hoge'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token function">describe</span><span class="token punctuation">(</span><span class="token string">'execHoge() メソッドのテスト'</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token function">it</span><span class="token punctuation">(</span><span class="token string">'第2引数のコールバック関数が呼ばれること'</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+    <span class="token comment">// 第2引数に指定するコールバック関数をスパイで作る</span>
+    <span class="token keyword">const</span> stubCallback <span class="token operator">=</span> sinon<span class="token punctuation">.</span><span class="token method function property-access">spy</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token comment">// テスト対象関数を実行する</span>
+    <span class="token keyword">const</span> hogeClass <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">HogeClass</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    hogeClass<span class="token punctuation">.</span><span class="token method function property-access">execHoge</span><span class="token punctuation">(</span><span class="token string">'Test'</span><span class="token punctuation">,</span> stubCallback<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token comment">// スパイ関数が実行されたかどうかを確認する</span>
+    <span class="token function">expect</span><span class="token punctuation">(</span>stubCallback<span class="token punctuation">.</span><span class="token property-access">called</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">toBe</span><span class="token punctuation">(</span><span class="token boolean">true</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>こんな感じ。</p>
+<h2 id="ある関数をモック化し、テスト用の戻り値を返す"><a class="header-link" href="#ある関数をモック化し、テスト用の戻り値を返す"><span class="header-link-mark"></span></a>ある関数をモック化し、テスト用の戻り値を返す</h2>
+<p>Jasmine における <code>and.callFake()</code> や <code>and.returnValue()</code> 相当。</p>
+<ul>
+  <li>テスト対象コード</li>
+</ul>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword">class</span> <span class="token class-name">HogeClass</span> <span class="token punctuation">{</span>
+  <span class="token comment">// FugaClass を DI (依存性注入) するような実装</span>
+  <span class="token function">constructor</span><span class="token punctuation">(</span><span class="token parameter">fugaClass</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">fugaClass</span> <span class="token operator">=</span> fugaClass<span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  
+  <span class="token comment">// FugaClass の exec() を実行し、その戻り値を2倍する関数</span>
+  <span class="token function">execFuga</span><span class="token punctuation">(</span><span class="token parameter">value</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token keyword">const</span> result <span class="token operator">=</span> <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">fugaClass</span><span class="token punctuation">.</span><span class="token method function property-access">exec</span><span class="token punctuation">(</span>value<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword control-flow">return</span> result <span class="token operator">*</span> <span class="token number">2</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>ココで、DI する <code>FugaClass</code> がどのように実装されているかは、単体テストにおいては関係ない。</p>
+<ul>
+  <li>テストコード</li>
+</ul>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword">const</span> expect <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'expect'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">const</span> sinon <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'sinon'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token keyword">const</span> <span class="token maybe-class-name">HogeClass</span> <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'../src/hoge'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token function">describe</span><span class="token punctuation">(</span><span class="token string">'execFuga() メソッドのテスト'</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token comment">// FugaClass.exec() メソッドのモックを控える変数</span>
+  <span class="token keyword">let</span> stubFugaExec <span class="token operator">=</span> <span class="token keyword null nil">null</span><span class="token punctuation">;</span>
+  
+  <span class="token function">it</span><span class="token punctuation">(</span><span class="token string">'計算結果を2倍して返すこと'</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+    <span class="token comment">// とりあえずインスタンスを生成する</span>
+    <span class="token keyword">const</span> dummyFugaClass <span class="token operator">=</span> <span class="token punctuation">{</span>
+      <span class="token function-variable function">exec</span><span class="token operator">:</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span> <span class="token comment">/* ダミー */</span> <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span><span class="token punctuation">;</span>
+    <span class="token keyword">const</span> hogeClass <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">HogeClass</span><span class="token punctuation">(</span>dummyFugaClass<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    
+    <span class="token comment">// FugaClass.exec() メソッドの動作をモック化する</span>
+    stubFugaExec <span class="token operator">=</span> sinon<span class="token punctuation">.</span><span class="token method function property-access">stub</span><span class="token punctuation">(</span>hogeClass<span class="token punctuation">.</span><span class="token property-access">fugaClass</span><span class="token punctuation">,</span> <span class="token string">'exec'</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">callsFake</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token parameter">value</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+      <span class="token comment">// 引数が 10 であることを確認する</span>
+      <span class="token function">expect</span><span class="token punctuation">(</span>value<span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">toBe</span><span class="token punctuation">(</span><span class="token number">10</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token comment">// 戻り値を固定で渡す</span>
+      <span class="token keyword control-flow">return</span> <span class="token number">1</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token comment">// もしくは sinon.stub().returns(1);</span>
+    
+    <span class="token comment">// テスト対象関数を実行する (引数はデタラメでもいい)</span>
+    <span class="token keyword">const</span> result <span class="token operator">=</span> hogeClass<span class="token punctuation">.</span><span class="token method function property-access">execFuga</span><span class="token punctuation">(</span><span class="token number">10</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    
+    <span class="token comment">// 結果が「1」を2倍にした値であること</span>
+    <span class="token function">expect</span><span class="token punctuation">(</span>result<span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">toBe</span><span class="token punctuation">(</span><span class="token number">2</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  
+  <span class="token function">afterEach</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+    <span class="token comment">// スタブで変更した関数を元に戻す</span>
+    <span class="token keyword control-flow">if</span><span class="token punctuation">(</span>stubFugaExec <span class="token operator">&#x26;&#x26;</span> stubFugaExec<span class="token punctuation">.</span><span class="token property-access">restore</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      stubFugaExec<span class="token punctuation">.</span><span class="token method function property-access">restore</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>こんな感じで一応テストはできる。</p>
+<p>テスト対象クラスがテキトーすぎてイマイチ分かりづらいかもだけど、Jasmine における <code>spyOn()</code> と同等の機能が <code>sinon.stub()</code> である。<code>.and.callFake()</code> や <code>.and.returnValue()</code> といった繋ぎ方ではなく、<code>.callsFake()</code>・<code>.returns()</code> という風に書くので、対応するメソッド名を確認されたし。</p>
+<p>そして Jasmine の <code>spyOn()</code> と大きく違うのは、モック化した関数が1つのテストケース (<code>it()</code>) 内でリセットされず、残り続けてしまうという挙動だ。そのために、<code>sinon.stub()</code> の戻り値である <code>SinonStub</code> クラスのインスタンスを変数に控えておき、1つのテストケースが終了した段階で <em><code>.restore()</code></em> メソッドを呼んで元の関数に戻してあげている。コレを怠って、再度同じ関数に <code>sinon.stub()</code> を適用しようとすると、例外が発生するので注意。</p>
+<h2 id="以上"><a class="header-link" href="#以上"><span class="header-link-mark"></span></a>以上</h2>
+<p>sinon における Spy と Stub の違いがちょっと怪しい…。一応こんな感じでテストはできたものの、もっと効率的な書き方もありそうだ。</p>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2019-02-23</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2019-02-23</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

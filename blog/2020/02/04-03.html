@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>CentOS に Ruby をインストールして Apache で CGI として実行できるようにする - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2020/02/04-03.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2020/index.html">2020年</a></li>
+            <li><a href="/blog/2020/02/index.html">02月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2020-02-04</time></div>
+        <h1 id="page-title">CentOS に Ruby をインストールして Apache で CGI として実行できるようにする</h1>
+
+<p>以前、GCE (Google Compute Engine) に Apache をインストールして、Web サーバを公開した。</p>
+<ul>
+  <li><a href="/blog/2019/12/13-01.html">GCE インスタンスに Apache と PHP をインストールして Web サーバを公開してみた</a></li>
+</ul>
+<p>今回はこの環境をベースに、Apache インストール済の CentOS 7 に Ruby をインストールし、Apache 上で Ruby を CGI として動作させられるようにしてみる。</p>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#rbenv-%E3%82%92%E4%BD%BF%E3%81%A3%E3%81%A6%E3%81%BF%E3%82%8B-%E4%B8%8A%E6%89%8B%E3%81%8F%E3%81%84%E3%81%8B%E3%81%AA%E3%81%8F%E3%81%A6%E6%96%AD%E5%BF%B5%E3%81%97%E3%81%9F">rbenv を使ってみる (上手くいかなくて断念した)</a>
+    <ul>
+      <li><a href="#rbenv-%E3%82%92%E3%82%A4%E3%83%B3%E3%82%B9%E3%83%88%E3%83%BC%E3%83%AB%E3%81%99%E3%82%8B">rbenv をインストールする</a></li>
+      <li><a href="#ruby-build-%E3%82%92%E3%82%A4%E3%83%B3%E3%82%B9%E3%83%88%E3%83%BC%E3%83%AB%E3%81%99%E3%82%8B">ruby-build をインストールする</a></li>
+      <li><a href="#rbenv-%E3%81%A7-ruby-%E3%82%92%E3%82%A4%E3%83%B3%E3%82%B9%E3%83%88%E3%83%BC%E3%83%AB%E3%81%99%E3%82%8B">rbenv で Ruby をインストールする</a></li>
+      <li><a href="#%E7%B5%90%E5%B1%80%E4%B8%8A%E6%89%8B%E3%81%8F%E8%A1%8C%E3%81%8B%E3%81%AA%E3%81%8B%E3%81%A3%E3%81%9F">結局上手く行かなかった</a></li>
+    </ul>
+  </li>
+  <li><a href="#rpm-%E3%81%A7-ruby-%E3%82%92%E3%82%A4%E3%83%B3%E3%82%B9%E3%83%88%E3%83%BC%E3%83%AB%E3%81%99%E3%82%8B">RPM で Ruby をインストールする</a></li>
+  <li><a href="#apache-%E3%81%AE%E8%A8%AD%E5%AE%9A%E3%82%92%E5%A4%89%E6%9B%B4%E3%81%97%E3%81%A6-ruby-cgi-%E3%81%8C%E5%8B%95%E4%BD%9C%E3%81%99%E3%82%8B%E3%82%88%E3%81%86%E3%81%AB%E3%81%99%E3%82%8B">Apache の設定を変更して Ruby CGI が動作するようにする</a></li>
+  <li><a href="#%E4%BB%A5%E4%B8%8A">以上</a></li>
+</ul>
+<h2 id="rbenv-を使ってみる-上手くいかなくて断念した"><a class="header-link" href="#rbenv-を使ってみる-上手くいかなくて断念した"><span class="header-link-mark"></span></a>rbenv を使ってみる (上手くいかなくて断念した)</h2>
+<p>まずは CentOS に Ruby をインストールしていく。Ruby は <code>$ yum install ruby</code> でもインストールできるが、バージョンが v2.0.0 と少し古めなので、<em>rbenv</em> を使ってインストールしてみる。</p>
+<p>以降やったことを書いていくが、結論から書くと<strong>どうも <code>rbenv install</code> 時のエラーが解消できなくで諦めた</strong>ので、参考程度に。</p>
+<h3 id="rbenv-をインストールする"><a class="header-link" href="#rbenv-をインストールする"><span class="header-link-mark"></span></a>rbenv をインストールする</h3>
+<p>以降の手順は全て root ユーザで実施している。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># Git がなければ入れておく</span>
+$ yum <span class="token function">install</span> -y <span class="token function">git</span>
+
+<span class="token comment"># rbenv を設定する</span>
+$ <span class="token function">git</span> clone https://github.com/rbenv/rbenv.git <span class="token string">"<span class="token variable">${<span class="token environment constant">HOME</span>}</span>/.rbenv"</span>
+$ <span class="token builtin class-name">cd</span> <span class="token string">"<span class="token variable">${<span class="token environment constant">HOME</span>}</span>/.rbenv"</span>
+$ src/configure
+$ <span class="token function">make</span> -C src
+$ <span class="token builtin class-name">echo</span> <span class="token string">'export PATH="<span class="token variable">${<span class="token environment constant">HOME</span>}</span>/.rbenv/bin:<span class="token variable">${<span class="token environment constant">PATH</span>}</span>"'</span> <span class="token operator">>></span> <span class="token string">"<span class="token variable">${<span class="token environment constant">HOME</span>}</span>/.bash_profile"</span>
+$ <span class="token builtin class-name">echo</span> <span class="token string">'eval "<span class="token variable"><span class="token variable">$(</span>rbenv init -<span class="token variable">)</span></span>"'</span> <span class="token operator">>></span> <span class="token string">"<span class="token variable">${<span class="token environment constant">HOME</span>}</span>/.bash_profile"</span>
+
+<span class="token comment"># 最後に再読み込み</span>
+$ <span class="token builtin class-name">source</span> <span class="token string">"<span class="token variable">${<span class="token environment constant">HOME</span>}</span>/.bash_profile"</span>
+<span class="token comment"># 「rbenv は関数です」と表示されれば OK</span>
+$ <span class="token builtin class-name">type</span> rbenv
+</code></pre>
+<h3 id="ruby-build-をインストールする"><a class="header-link" href="#ruby-build-をインストールする"><span class="header-link-mark"></span></a>ruby-build をインストールする</h3>
+<p><code>rbenv install</code> コマンドを叩けるようにするため、ruby-build プラグインをインストールしておく。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">git</span> clone https://github.com/rbenv/ruby-build.git <span class="token string">"<span class="token variable">${<span class="token environment constant">HOME</span>}</span>/.rbenv/plugins/ruby-build"</span>
+$ <span class="token string">"<span class="token variable">${<span class="token environment constant">HOME</span>}</span>/.rbenv/plugins/ruby-build/install.sh"</span>
+</code></pre>
+<ul>
+  <li>参考：<a href="https://takatoshiono.hatenablog.com/entry/2015/01/09/012040">rbenv + ruby-build はどうやって動いているのか - takatoshiono's blog</a></li>
+</ul>
+<h3 id="rbenv-で-ruby-をインストールする"><a class="header-link" href="#rbenv-で-ruby-をインストールする"><span class="header-link-mark"></span></a>rbenv で Ruby をインストールする</h3>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># インストールに必要なパッケージを先にインストールしておく</span>
+$ yum <span class="token function">install</span> -y <span class="token function">bzip2</span> gcc gcc-c++ openssl-devel readline-devel zlib-devel
+
+<span class="token comment"># インストール可能なバージョンを確認する</span>
+$ rbenv <span class="token function">install</span> -l
+
+<span class="token comment"># 現時点で最新安定版の 2.6.5 をインストールする</span>
+$ rbenv <span class="token function">install</span> --verbose <span class="token number">2.6</span>.5
+
+<span class="token comment"># ↑が上手くいけば、以下のように設定していく…</span>
+
+<span class="token comment"># グローバルで利用する Ruby として設定する</span>
+$ rbenv global <span class="token number">2.6</span>.5
+
+<span class="token comment"># バージョン確認する</span>
+$ ruby -v
+</code></pre>
+<p><code>$ rbenv install 2.6.5</code> コマンドに <code>--verbose</code> を付けておくと進捗が分かる (付けないと <code>Installing ruby-2.6.5...</code> のあとしばらく待たされて不安になるｗ)。</p>
+<p><code>rbenv install</code> コマンドはソースからビルドしているので、とにかく時間がかかる。<code>BUILD FAILED</code> エラーが出た場合は Yum で必要なパッケージをインストールできているか要確認。</p>
+<ul>
+  <li>参考：<a href="https://arma-search.jp/article/centos-ruby">CentOSサーバにRubyをインストールする方法 | ARMA SEARCH</a></li>
+  <li>参考：<a href="https://qiita.com/micheleno13/items/c0f8160b0deb2984677f">CentOS 7.3にRuby 2.4.1をインストールする - Qiita</a></li>
+  <li>参考：<a href="https://qiita.com/jjjjjj/items/75a946fe84ca40b5d9a9">CentOS7にRubyをインストール - Qiita</a></li>
+  <li>参考：<a href="https://qiita.com/NaokiIshimura/items/ff04b6eaa40b33c4bea8">CentOSにrbenv, Rubyをインストールする - Qiita</a></li>
+  <li>参考：<a href="http://dqn.sakusakutto.jp/2014/02/rbenv_rehash_what_it_does.html">rbenv rehashは何をやっているのか？ · DQNEO起業日記</a></li>
+  <li>参考：<a href="https://qiita.com/moich/items/79c75b5a80080c869876">rbenvでインストールしたrubyがcommand not foundになる - Qiita</a></li>
+  <li>参考：<a href="https://qiita.com/hellhellmymy/items/fccbc17e20323c5c8a8d">rbenv install 遅くて痺れを切らした話 - Qiita</a></li>
+</ul>
+<h3 id="結局上手く行かなかった"><a class="header-link" href="#結局上手く行かなかった"><span class="header-link-mark"></span></a>結局上手く行かなかった</h3>
+<pre class="language-bash"><code class="language-bash"> <span class="token number">95</span>% <span class="token punctuation">[</span><span class="token number">1044</span>/1093<span class="token punctuation">]</span>  parse.y
+make: *** <span class="token punctuation">[</span>rdoc<span class="token punctuation">]</span> 強制終了
+
+BUILD FAILED <span class="token punctuation">(</span>CentOS Linux <span class="token number">7</span> using ruby-build <span class="token number">20191205</span>-4-gf04eb99<span class="token punctuation">)</span>
+
+Inspect or clean up the working tree at /tmp/ruby-build.20191223140436.21245.BAWEaU
+Results logged to /tmp/ruby-build.20191223140436.21245.log
+
+Last <span class="token number">10</span> log lines:
+ <span class="token number">94</span>% <span class="token punctuation">[</span><span class="token number">1036</span>/1093<span class="token punctuation">]</span>  mjit.c
+ <span class="token number">94</span>% <span class="token punctuation">[</span><span class="token number">1037</span>/1093<span class="token punctuation">]</span>  mjit_compile.c
+ <span class="token number">94</span>% <span class="token punctuation">[</span><span class="token number">1038</span>/1093<span class="token punctuation">]</span>  mjit_worker.c
+ <span class="token number">95</span>% <span class="token punctuation">[</span><span class="token number">1039</span>/1093<span class="token punctuation">]</span>  node.c
+ <span class="token number">95</span>% <span class="token punctuation">[</span><span class="token number">1040</span>/1093<span class="token punctuation">]</span>  numeric.c
+ <span class="token number">95</span>% <span class="token punctuation">[</span><span class="token number">1041</span>/1093<span class="token punctuation">]</span>  object.c
+ <span class="token number">95</span>% <span class="token punctuation">[</span><span class="token number">1042</span>/1093<span class="token punctuation">]</span>  pack.c
+ <span class="token number">95</span>% <span class="token punctuation">[</span><span class="token number">1043</span>/1093<span class="token punctuation">]</span>  parse.c
+ <span class="token number">95</span>% <span class="token punctuation">[</span><span class="token number">1044</span>/1093<span class="token punctuation">]</span>  parse.y
+make: *** <span class="token punctuation">[</span>rdoc<span class="token punctuation">]</span> 強制終了
+</code></pre>
+<p>このようなエラーがどうにも解消できなくて、上手くいかないから止めた。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># インストールしかけたファイルを全部消す</span>
+$ <span class="token function">rm</span> -rf <span class="token string">"<span class="token variable">${<span class="token environment constant">HOME</span>}</span>/.rbenv"</span>
+$ <span class="token function">rm</span> -rf /tmp/ruby-build*
+
+<span class="token comment"># 追記した文言を消す</span>
+$ <span class="token function">vi</span> <span class="token string">"<span class="token variable">${<span class="token environment constant">HOME</span>}</span>/.bash_profile"</span>
+</code></pre>
+<h2 id="rpm-で-ruby-をインストールする"><a class="header-link" href="#rpm-で-ruby-をインストールする"><span class="header-link-mark"></span></a>RPM で Ruby をインストールする</h2>
+<p>rbenv を使ってソースからビルドしていくのはどうも失敗してしまったので、ビルド済のパッケージをインストールできないか探してみた。すると、以下で RPM が配布されていたので、コレを使ってみる。</p>
+<ul>
+  <li><a href="https://github.com/feedforce/ruby-rpm">GitHub - feedforce/ruby-rpm: ruby-rpm</a>
+    <ul>
+      <li><a href="https://github.com/feedforce/ruby-rpm/releases/tag/2.6.5">Release Ruby-2.6.5 · feedforce/ruby-rpm · GitHub</a></li>
+    </ul>
+  </li>
+</ul>
+<pre class="language-bash"><code class="language-bash">$ yum <span class="token function">install</span> -y https://github.com/feedforce/ruby-rpm/releases/download/2.6.5/ruby-2.6.5-1.el7.centos.x86_64.rpm
+
+$ ruby -v
+ruby <span class="token number">2.6</span>.5p114 <span class="token punctuation">(</span><span class="token number">2019</span>-10-01 revision <span class="token number">67812</span><span class="token punctuation">)</span> <span class="token punctuation">[</span>x86_64-linux<span class="token punctuation">]</span>
+</code></pre>
+<p>コチラはすんなり上手くインストールできた。時間もかからないし、rbenv で複数バージョン管理したいこともそうそうないし、今後ともコレでいいかな。</p>
+<h2 id="apache-の設定を変更して-ruby-cgi-が動作するようにする"><a class="header-link" href="#apache-の設定を変更して-ruby-cgi-が動作するようにする"><span class="header-link-mark"></span></a>Apache の設定を変更して Ruby CGI が動作するようにする</h2>
+<p>前回の記事で次のような Apache がインストール済だ。</p>
+<pre class="language-bash"><code class="language-bash">$ httpd -v
+Server version: Apache/2.4.6 <span class="token punctuation">(</span>CentOS<span class="token punctuation">)</span>
+Server built:   Aug  <span class="token number">8</span> <span class="token number">2019</span> <span class="token number">11</span>:41:18
+</code></pre>
+<p>Apache の設定ファイルを次のように修正し、Ruby CGI が動作するようにしていく。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">vi</span> /etc/httpd/conf/httpd.conf
+
+<span class="token comment"># ↓131行 : ルートディレクトリ</span>
+<span class="token operator">&#x3C;</span>Directory <span class="token string">"/var/www/html"</span><span class="token operator">></span>
+  <span class="token comment"># ↓144行 : ExecCGI を追加し CGI の実行を許可する</span>
+  Options Indexes FollowSymLinks ExecCGI
+  
+  <span class="token comment"># ↓151行 : .htaccess で使用できるディレクティブを設定する。None から All に変えて .htaccess の設定が効くようにしておく</span>
+  AllowOverride All
+
+<span class="token comment"># ↓261行</span>
+<span class="token operator">&#x3C;</span>IfModule mime_module<span class="token operator">></span>
+  <span class="token comment"># ↓294行 : コメントアウトされているのをアンコメントして「.rb」を追加する</span>
+  AddHandler cgi-script .cgi .rb
+</code></pre>
+<ul>
+  <li>参考：<a href="http://bashalog.c-brains.jp/10/11/16-121901.php">Apache Options と AllowOverRide の設定値を改めて整理してみる | バシャログ。</a></li>
+  <li>参考：<a href="https://qiita.com/hirotoyoshidome/items/6d103e04dd07e90519d2">ApacheでRubyを起動するときの設定 - Qiita</a></li>
+</ul>
+<p>設定変更したら、以下のコマンドで再起動する。</p>
+<pre class="language-bash"><code class="language-bash">$ systemctl restart httpd
+</code></pre>
+<ul>
+  <li>参考：<a href="https://www.rem-system.com/centos-httpd-inst/">https://www.rem-system.com/centos-httpd-inst/</a></li>
+</ul>
+<p>動作確認のため、次のような Ruby スクリプトを用意する。</p>
+<ul>
+  <li><code>/var/www/html/check.rb</code></li>
+</ul>
+<pre class="language-bash"><code class="language-bash"><span class="token shebang important">#!/usr/bin/ruby</span>
+
+print<span class="token punctuation">(</span><span class="token string">"content-type: text/html<span class="token entity" title="\n">\n</span><span class="token entity" title="\n">\n</span>"</span><span class="token punctuation">)</span>
+print<span class="token punctuation">(</span><span class="token string">"&#x3C;title>Hello World&#x3C;/title><span class="token entity" title="\n">\n</span>"</span><span class="token punctuation">)</span>
+print<span class="token punctuation">(</span><span class="token string">"&#x3C;p>&#x3C;strong>Hello World&#x3C;/strong>&#x3C;/p><span class="token entity" title="\n">\n</span>"</span><span class="token punctuation">)</span>
+</code></pre>
+<p>改行コード <code>\n</code> を展開させるために、シングルクォートではなくダブルクォートを使う。</p>
+<p>ブラウザで <code>check.rb</code> ファイルにアクセスすると <code>Internal Server Error</code> になった。ログを見てみる。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">vi</span> /var/log/httpd/error_log
+
+<span class="token number">1</span> <span class="token punctuation">[</span>Mon Dec <span class="token number">23</span> <span class="token number">14</span>:43:06.604584 <span class="token number">2019</span><span class="token punctuation">]</span> <span class="token punctuation">[</span>cgi:error<span class="token punctuation">]</span> <span class="token punctuation">[</span>pid <span class="token number">6163</span><span class="token punctuation">]</span> <span class="token punctuation">[</span>client <span class="token number">210.138</span>.100.192:52667<span class="token punctuation">]</span> AH01215: <span class="token punctuation">(</span><span class="token number">13</span><span class="token punctuation">)</span>Permission denied: <span class="token builtin class-name">exec</span> of <span class="token string">'/var/www/html/check.rb'</span> failed
+ <span class="token number">12</span> <span class="token punctuation">[</span>Mon Dec <span class="token number">23</span> <span class="token number">14</span>:43:06.604650 <span class="token number">2019</span><span class="token punctuation">]</span> <span class="token punctuation">[</span>cgi:error<span class="token punctuation">]</span> <span class="token punctuation">[</span>pid <span class="token number">6163</span><span class="token punctuation">]</span> <span class="token punctuation">[</span>client <span class="token number">210.138</span>.100.192:52667<span class="token punctuation">]</span> End of script output before headers: check.rb
+</code></pre>
+<p><code>Permission denied</code> となっているので、ファイルの実行権限がないっぽい。というワケでファイルに実行権限をつける。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">chmod</span> <span class="token number">777</span> /var/www/html/check.rb
+</code></pre>
+<p>コレで動いた。</p>
+<p>なお、<code>$ which ruby</code> の結果は <code>/bin/ruby</code> だったが、Shebang は <code>#!/usr/bin/ruby</code> でも大丈夫だった (<code>/usr/bin/ruby</code> も存在するので)。</p>
+<p>以下は一応見たが直接採用しなかった。</p>
+<ul>
+  <li>参考：<a href="https://qiita.com/suzutsuki0220/items/660af1f0a3e80a39ec69">Apacheで cgi-bin 以外のディレクトリにCGIスクリプトを配置する - Qiita</a></li>
+  <li>参考：<a href="http://note.kurodigi.com/apache-cgi/">【Linux】Rubyで書いたCGIをApacheで動かしてみる</a></li>
+  <li>参考：<a href="https://tech.nosuz.jp/2015/11/load-cgi-module/">CGIプログラムが動かずにソースが表示される | やってみよう準備室</a></li>
+  <li>参考：<a href="https://www.server-world.info/query?os=CentOS_6&#x26;p=httpd&#x26;f=3">CentOS 6 - Apache httpd - Rubyを利用する : Server World</a></li>
+  <li>参考：<a href="https://stackoverflow.com/questions/2245634/setting-up-ruby-cgi-in-apache">Setting up Ruby CGI in Apache - Stack Overflow</a></li>
+  <li>参考：<a href="https://teratail.com/questions/41507">Perl - ApacheでCGI(Ruby)を実行出来ない(Internal Server Error)｜teratail</a></li>
+</ul>
+<h2 id="以上"><a class="header-link" href="#以上"><span class="header-link-mark"></span></a>以上</h2>
+<p>Rails の場合は <em>Passenger</em> というモジュールを使ったりするようだが、単純な Ruby スクリプトを CGI として動作させる場合は、こんな感じで済んだ。</p>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2020-02-04</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2020-02-04</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

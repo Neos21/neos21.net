@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>SSH 接続のパスワード入力を自動化するシェルスクリプトを作ってコマンド化した - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2018/09/19-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2018/index.html">2018年</a></li>
+            <li><a href="/blog/2018/09/index.html">09月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2018-09-19</time></div>
+        <h1 id="page-title">SSH 接続のパスワード入力を自動化するシェルスクリプトを作ってコマンド化した</h1>
+
+<p>MacOS にて実施。</p>
+<p>SSH 接続する際、とある理由で公開鍵認証方式が使えず、sshpass という便利なツールも導入できなかったので、他の方法でパスワード入力を自動化する方法を調べた。</p>
+<h2 id="expect・spawn・send-コマンドで作れる！"><a class="header-link" href="#expect・spawn・send-コマンドで作れる！"><span class="header-link-mark"></span></a><code>expect</code>・<code>spawn</code>・<code>send</code> コマンドで作れる！</h2>
+<p>結論からいうと、以下のようなシェルスクリプトを作れば、SSH 接続とパスワード入力を自動化できる。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token shebang important">#!/bin/sh</span>
+
+<span class="token function">expect</span> -c <span class="token string">"
+set timeout 5
+spawn ssh -p 22 【ユーザ名】@【接続先 URL】
+expect <span class="token entity" title="\&#x22;">\"</span>Password:<span class="token entity" title="\&#x22;">\"</span>
+send <span class="token entity" title="\&#x22;">\"</span>【パスワード文字列】<span class="token entity" title="\n">\n</span><span class="token entity" title="\&#x22;">\"</span>
+interact
+"</span>
+</code></pre>
+<ul>
+  <li><code>expect -c</code> で対話を自動化する。以降のコマンド全体をダブルクォートで囲んでいる</li>
+  <li><code>set timeout</code> で応答がない場合のタイムアウト秒数を設定する</li>
+  <li><code>spawn</code> で任意のコマンド入力を再現する</li>
+  <li><code>spawn</code> 直後の <code>expect</code> で、指定の文言が出力されていることを確認する
+    <ul>
+      <li>今回の場合、<code>ssh</code> コマンド実行後にパスワードを問われる「<code>Password:</code>」という文字列が出力されているかを確認している</li>
+      <li>ダブルクォートは <code>\</code> でエスケープし、<code>\"</code> と書く</li>
+    </ul>
+  </li>
+  <li><code>send</code> でパスワード文字列の入力を再現している。エンターキーによる改行は <code>\n</code> を付与することで再現する</li>
+  <li><code>interact</code> でプロセスの制御をユーザに渡し、ユーザからの標準入力を受け付けるようにする</li>
+</ul>
+<p>というワケ。</p>
+<p>こんなファイルを <code>~/myssh.sh</code> に保存して、<code>$ sh ~/myssh.sh</code> という風に実行してやれば、自動 SSH ログインできるようになった。</p>
+<h2 id="コマンド化する"><a class="header-link" href="#コマンド化する"><span class="header-link-mark"></span></a>コマンド化する</h2>
+<p>これだけでもだいぶ楽になったが、毎回 <code>$ sh ~/myssh.sh</code> とタイプするのは面倒だ。そこで、自作コマンドとして動作するようにする。</p>
+<p>まずは PATH を確認する。最初から <code>/usr/local/bin</code> などに PATH が通っていると思うのでココに置いても良いが、今回はユーザホームの <code>~/bin/</code> 配下に自作コマンドを置きたいので、<code>~/.bash_profile</code> にて PATH を追加する。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># ~/.bash_profile</span>
+<span class="token builtin class-name">export</span> <span class="token assign-left variable"><span class="token environment constant">PATH</span></span><span class="token operator">=</span>~/bin:<span class="token environment constant">$PATH</span>
+</code></pre>
+<p>このようにすると、<code>~/</code> が展開されてユーザホームのフルパスを示すようになる。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token builtin class-name">echo</span> <span class="token environment constant">$PATH</span>
+/Users/Neo/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin
+
+<span class="token comment"># 最初の「/Users/Neo/bin」がコレ。</span>
+</code></pre>
+<p>編集後は <code>$ . ~/.bash_profile</code> で再読込する (ピリオド <code>.</code> は <code>source</code> コマンドと同じ)。</p>
+<p>次に、先程作った <code>myssh.sh</code> を <code>~/bin/</code> 配下に移動し、名前を拡張子なしの <code>myssh</code> にリネームする。</p>
+<p>リネームできたら、コマンドラインから以下の要領で全ユーザに実行権限を付ける。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">chmod</span> a+x ~/bin/myssh
+</code></pre>
+<p>ココまでできたら完成。以降は <em><code>$ myssh</code></em> と打つだけで自動 SSH ログインできるようになる。やったぜ。</p>
+<h2 id="参考文献"><a class="header-link" href="#参考文献"><span class="header-link-mark"></span></a>参考文献</h2>
+<ul>
+  <li>参考：<a href="https://qiita.com/ine1127/items/cd6bc91174635016db9b">Linuxの対話がめんどくさい?そんな時こそ自動化だ！-expect編-</a></li>
+  <li>参考：<a href="https://qiita.com/yoshiken/items/2b8e6c24d6b95e65b625">自作のコマンドを作成した</a></li>
+</ul>
+<p>sshpass については以下などを参照のこと。</p>
+<ul>
+  <li>参考：<a href="https://qiita.com/LowSE01/items/f4919fff8f51887a2690">Macへsshpassコマンドをインストールする方法</a></li>
+  <li>参考：<a href="https://qiita.com/na1412/items/e8b20c1389b6c83c5d72">【Mac】ssh接続で毎回パスワードを求められるのでaliasとsshpassを使って解決</a></li>
+</ul>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2018-09-19</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2018-09-19</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

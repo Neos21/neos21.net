@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>Twitter に投稿された画像・動画をダウンロードする CLI ツール「twsv」を作った - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2019/10/04-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2019/index.html">2019年</a></li>
+            <li><a href="/blog/2019/10/index.html">10月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2019-10-04</time></div>
+        <h1 id="page-title">Twitter に投稿された画像・動画をダウンロードする CLI ツール「twsv」を作った</h1>
+
+<p>Twitter に投稿された画像や動画をダウンロードする際、</p>
+<ul>
+  <li>画像 : Chrome ブラウザでツイートを開き、画像をアドレス欄までドラッグして開き、ダウンロード</li>
+  <li>動画 : <a href="https://lab.syncer.jp/Tool/Twitter-Video-URL-Converter/">Syncer - Twitter の動画を保存するための URL 変換器</a>でダウンロード</li>
+</ul>
+<p>としていた。</p>
+<p>コレをもっと手軽に、複数のツイートからのダウンロードをバッチ処理できないかと思い、自分で同様のツールを作ってみることにした。その名も <strong>twsv</strong>。「<strong>TW</strong>itter <strong>S</strong>a<strong>V</strong>er」の略だ。</p>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#%E5%85%88%E3%81%AB%E4%BD%9C%E3%81%A3%E3%81%9F%E3%83%84%E3%83%BC%E3%83%AB%E3%81%AE%E7%B4%B9%E4%BB%8B">先に作ったツールの紹介</a></li>
+  <li><a href="#%E4%BB%A5%E9%99%8D%E3%83%84%E3%83%BC%E3%83%AB%E3%82%92%E4%BD%9C%E3%82%8B%E3%81%BE%E3%81%A7%E3%81%AE%E8%8B%A6%E5%8A%B4%E8%A9%B1">以降ツールを作るまでの苦労話</a></li>
+  <li><a href="#%E4%BB%A5%E4%B8%8A">以上</a></li>
+</ul>
+<h2 id="先に作ったツールの紹介"><a class="header-link" href="#先に作ったツールの紹介"><span class="header-link-mark"></span></a>先に作ったツールの紹介</h2>
+<p><em>twsv</em> は Node.js 製の CLI ツール。npm でインストールできる。パッケージ名としては <strong><code>@neos21/twsv</code></strong>。</p>
+<ul>
+  <li><a href="https://www.npmjs.com/package/@neos21/twsv">@neos21/twsv - npm</a></li>
+  <li><a href="https://github.com/Neos21/twsv">GitHub - Neos21/twsv: Twitter の画像・動画をダウンロードする CLI ツール</a></li>
+</ul>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">npm</span> <span class="token function">install</span> -g @neos21/twsv
+</code></pre>
+<p>裏では Twitter API を使っているので、各自 Twitter の Developer 登録を行い、API キーを発行しておくこと。環境変数で以下のように設定しておく。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># Twitter クレデンシャル情報を設定する</span>
+<span class="token builtin class-name">export</span> <span class="token assign-left variable">TWITTER_CONSUMER_KEY</span><span class="token operator">=</span><span class="token string">'Your Consumer Key'</span>
+<span class="token builtin class-name">export</span> <span class="token assign-left variable">TWITTER_CONSUMER_SECRET</span><span class="token operator">=</span><span class="token string">'Your Consumer Secret'</span>
+<span class="token builtin class-name">export</span> <span class="token assign-left variable">TWITTER_ACCESS_TOKEN_KEY</span><span class="token operator">=</span><span class="token string">'Your Access Token Key'</span>
+<span class="token builtin class-name">export</span> <span class="token assign-left variable">TWITTER_ACCESS_TOKEN_SECRET</span><span class="token operator">=</span><span class="token string">'Your Access Token Secret'</span>
+</code></pre>
+<p>グローバルインストールしたら <code>twsv</code> コマンドが使えるようになっているので、以下のように Twitter の URL を引数で指定してやる。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># 指定ユーザのタイムラインより直近200件のツイートを取得し、それらに紐付く画像・動画を取得する</span>
+$ twsv https://twitter.com/USERNAME
+
+<span class="token comment"># 指定のユーザのいいね一覧より直近200件のツイートを取得し、それらに紐付く画像・動画を取得する</span>
+$ twsv https://twitter.com/USERNAME/likes
+
+<span class="token comment"># 指定のツイートから画像・動画を取得する</span>
+$ twsv https://twitter.com/USERNAME/status/0000000000000000000
+</code></pre>
+<p>デフォルトの保存先は、コマンドを実行した時のカレントディレクトリに <code>twsv-downloads/</code> ディレクトリを作り、その下にファイルを保存する。</p>
+<p>保存先ディレクトリを変更する場合は、環境変数か第2引数で指定できる。両方指定されている場合は第2引数が優先される。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># 環境変数で指定して実行</span>
+$ <span class="token builtin class-name">export</span> <span class="token assign-left variable">TWSV_SAVE_DIRECTORY</span><span class="token operator">=</span><span class="token string">'/home/downloads'</span>
+$ twsv https://twitter.com/USERNAME/status/0000000000000000000
+
+<span class="token comment"># 第2引数で指定して実行</span>
+$ twsv https://twitter.com/USERNAME/status/0000000000000000000 <span class="token string">'/home/downloads'</span>
+</code></pre>
+<p>動画については、画質 (ビットレート) が一番良いモノを選んで取得している。</p>
+<h2 id="以降ツールを作るまでの苦労話"><a class="header-link" href="#以降ツールを作るまでの苦労話"><span class="header-link-mark"></span></a>以降ツールを作るまでの苦労話</h2>
+<p>Syncer のツールはブラウザで操作し、「URL 貼り付け」→「動画 URL を選んで DL」というステップを踏んでいた。複数のツイートから動画を拾いたい場合は毎回この操作でダルかった。</p>
+<p>そこで、ツールは CLI ツールにし、ツイートの URL をかき集めたらバッチ処理で一気に DL できるようにすることにした。</p>
+<p>当初は Twitter API を使わないで済む方法がないかと思い、Web ページをスクレイピングして取得できないか調べてみた。</p>
+<p>画像については、ページ内の <code>img</code> 要素を取得し、<code>https://pbs.twimg.com/media/</code> を含む URL を引っ張ってくればダウンロードできた。</p>
+<p>動画については、<code>video</code> 要素を調べてみたが、<code>blob:</code> から始まる URL になっていて、うまくダウンロードできなかった。Syncer では <code>https://video.twimg.com/ext_tw_video/【色々…】.mp4</code> といった URL が拾えていたのだが、ウェブページ上からはこの URL は拾えなさそうだったので断念した。</p>
+<p>仕方なく Twitter API を使ってツイートオブジェクトを取得し、画像や動画の URL を拾い上げることにした。</p>
+<p>Twitter API を叩くのは、公式の <code>twitter</code> npm パッケージを使った。いいね一覧とユーザタイムラインを拾えそうだったので、ツイート単体の DL だけでなく、そういうツイート一覧から拾えるだけ画像や動画を拾えるようにも対応させてみた。</p>
+<p>ツイートオブジェクトの中は愚直に見ていった。画像も動画も、ツイートオブジェクトの <code>.extended_entries.media</code> という配列プロパティの中に入っている。画像の場合は、配列の中の各要素の <code>.media_url</code> が目的の URL。</p>
+<p>動画の場合は <code>.video_info.variants</code> プロパティが配列になっていて、ビットレートごとに目的の URL が入っている。そこで、ビットレートを比較して、ビットレートが一番大きい動画の URL を拾うことにした。</p>
+<p>動画のダウンロードには <code>request-promise</code> を使ったが、同時接続数が多いと上手くダウンロードできなくなってしまったので、同時接続数を制限する仕組みを入れた。以下の記事のコードほぼそのまま。</p>
+<ul>
+  <li>参考：<a href="https://qiita.com/you21979@github/items/81460d1c667de868ed25">request-promise 接続数管理 - Qiita</a></li>
+</ul>
+<p>保存先ディレクトリの存在確認、作成、保存処理などは <code>fs</code> や <code>path</code> あたりの Node.js 組み込みのパッケージを使っている。</p>
+<p>最終的に、外部依存パッケージは <code>twitter</code>・<code>request</code>・<code>request-promise</code> の3つで、コードは単一の JS ファイルに454行でまとまった。</p>
+<h2 id="以上"><a class="header-link" href="#以上"><span class="header-link-mark"></span></a>以上</h2>
+<p>割と愚直にコーディングしまくっただけだが、自分が欲しいモノが作れた。Twitter API を使っているので、API コールのレート制限が確認できるとなお良しか。コンソール出力はもう少し改善の余地ありそうだが、特に気にせず。ｗ</p>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2019-10-04</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2019-10-04</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>圧縮ファイルのダウンロードと解凍を一気に行う (wget・curl・tar) - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2021/05/13-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2021/index.html">2021年</a></li>
+            <li><a href="/blog/2021/05/index.html">05月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2021-05-13</time></div>
+        <h1 id="page-title">圧縮ファイルのダウンロードと解凍を一気に行う (wget・curl・tar)</h1>
+
+<p>Bash において、<code>wget</code> や <code>curl</code> で圧縮ファイルをダウンロードして、それを <code>tar</code> とかで解凍して、それから実行したり指定の場所に配置したり、みたいな処理はよくあると思う。</p>
+<p>愚直にスクリプトを書くと、</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># 圧縮ファイルをダウンロードして、解凍して、圧縮ファイルは削除して…</span>
+<span class="token function">wget</span> http://example.com/example.tar.gz
+<span class="token function">tar</span> xvf ./example.tar.gz
+<span class="token function">rm</span> ./example.tar.gz
+
+<span class="token comment"># 解凍して取り出したファイルを処理して…</span>
+<span class="token function">mv</span> ./example.bash /<span class="token environment constant">PATH</span>/TO/DIST-DIRECTORY/
+</code></pre>
+<p>…みたいな感じで、複数のコマンドになってしまって面倒臭い。</p>
+<p>そこで、こうしたよくある処理をワンライナーで行うスクリプトをチートシート的に紹介する。</p>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#%E3%82%AB%E3%83%AC%E3%83%B3%E3%83%88%E3%83%87%E3%82%A3%E3%83%AC%E3%82%AF%E3%83%88%E3%83%AA%E3%81%AB-targz-%E3%83%95%E3%82%A1%E3%82%A4%E3%83%AB%E3%82%92%E3%83%80%E3%82%A6%E3%83%B3%E3%83%AD%E3%83%BC%E3%83%89%E3%83%BB%E8%A7%A3%E5%87%8D%E3%81%99%E3%82%8B">カレントディレクトリに <code>.tar.gz</code> ファイルをダウンロード・解凍する</a></li>
+  <li><a href="#%E6%8C%87%E5%AE%9A%E3%81%AE%E3%83%87%E3%82%A3%E3%83%AC%E3%82%AF%E3%83%88%E3%83%AA%E9%85%8D%E4%B8%8B%E3%81%AB-targz-%E3%83%95%E3%82%A1%E3%82%A4%E3%83%AB%E3%82%92%E3%83%80%E3%82%A6%E3%83%B3%E3%83%AD%E3%83%BC%E3%83%89%E3%83%BB%E8%A7%A3%E5%87%8D%E3%81%99%E3%82%8B">指定のディレクトリ配下に <code>.tar.gz</code> ファイルをダウンロード・解凍する</a></li>
+  <li><a href="#targz-%E3%83%95%E3%82%A1%E3%82%A4%E3%83%AB%E3%82%92%E3%83%80%E3%82%A6%E3%83%B3%E3%83%AD%E3%83%BC%E3%83%89%E3%83%BB%E8%A7%A3%E5%87%8D%E3%81%97%E3%81%A6%E3%81%99%E3%81%90-bash-%E3%82%B9%E3%82%AF%E3%83%AA%E3%83%97%E3%83%88%E3%81%A8%E3%81%97%E3%81%A6%E5%AE%9F%E8%A1%8C%E3%81%99%E3%82%8B"><code>.tar.gz</code> ファイルをダウンロード・解凍してすぐ Bash スクリプトとして実行する</a></li>
+  <li><a href="#zip-%E3%83%95%E3%82%A1%E3%82%A4%E3%83%AB%E3%82%92%E3%83%80%E3%82%A6%E3%83%B3%E3%83%AD%E3%83%BC%E3%83%89%E3%83%BB%E8%A7%A3%E5%87%8D%E3%81%99%E3%82%8B"><code>.zip</code> ファイルをダウンロード・解凍する</a></li>
+  <li><a href="#%E3%82%88%E3%81%8F%E4%BD%BF%E3%81%84%E3%81%9D%E3%81%86%E3%81%AA%E3%82%AA%E3%83%97%E3%82%B7%E3%83%A7%E3%83%B3">よく使いそうなオプション</a></li>
+  <li><a href="#%E5%8F%82%E8%80%83%E6%96%87%E7%8C%AE">参考文献</a></li>
+</ul>
+<h2 id="カレントディレクトリに-targz-ファイルをダウンロード・解凍する"><a class="header-link" href="#カレントディレクトリに-targz-ファイルをダウンロード・解凍する"><span class="header-link-mark"></span></a>カレントディレクトリに <code>.tar.gz</code> ファイルをダウンロード・解凍する</h2>
+<p><code>wget</code>・<code>curl</code> どちらでも同じように処理できる。コレで、<code>example.tar.gz</code> という圧縮ファイルは残さずに、解凍した中身のファイルだけを保存できる。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">wget</span> http://example.com/example.tar.gz -O - <span class="token operator">|</span> <span class="token function">tar</span> xvf -
+$ <span class="token function">curl</span> http://localhost/test.tar.gz <span class="token operator">|</span> <span class="token function">tar</span> xvf -
+</code></pre>
+<ul>
+  <li><code>wget</code> の場合、<code>-O -</code> でダウンロードしたファイルを標準出力に吐ける</li>
+  <li><code>curl</code> はデフォルトでダウンロードしたファイルを標準出力に吐くので、特にオプションなし</li>
+  <li><code>tar xvf</code> でファイルを解凍するが、ハイフン <code>-</code> で標準入力からのデータを受け取る</li>
+</ul>
+<h2 id="指定のディレクトリ配下に-targz-ファイルをダウンロード・解凍する"><a class="header-link" href="#指定のディレクトリ配下に-targz-ファイルをダウンロード・解凍する"><span class="header-link-mark"></span></a>指定のディレクトリ配下に <code>.tar.gz</code> ファイルをダウンロード・解凍する</h2>
+<p><code>tar</code> の <code>-C</code> オプションを使うと、解凍したファイルをどのディレクトリに置くか指定できる。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">wget</span> http://example.com/example.tar.gz -O - <span class="token operator">|</span> <span class="token function">tar</span> xvf - -C /<span class="token environment constant">PATH</span>/TO/directory/
+$ <span class="token function">curl</span> http://localhost/test.tar.gz <span class="token operator">|</span> <span class="token function">tar</span> xvf - -C /<span class="token environment constant">PATH</span>/TO/directory/
+</code></pre>
+<h2 id="targz-ファイルをダウンロード・解凍してすぐ-bash-スクリプトとして実行する"><a class="header-link" href="#targz-ファイルをダウンロード・解凍してすぐ-bash-スクリプトとして実行する"><span class="header-link-mark"></span></a><code>.tar.gz</code> ファイルをダウンロード・解凍してすぐ Bash スクリプトとして実行する</h2>
+<p><code>example.bash.tar.gz</code> といった圧縮ファイルを解凍すると、中に <code>example.bash</code> という一つのファイルが入っている、というテイ。</p>
+<p><code>tar</code> の <code>-O</code> オプションを使うと、解凍した内容を標準出力に吐けるので、コレを <code>bash</code> にパイプして流してやれば良い。同じ要領で、<code>python</code> でも <code>perl</code> でも何でもできると思う。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">wget</span> http://example.com/example.bash.tar.gz -O - <span class="token operator">|</span> <span class="token function">tar</span> xvf - -O <span class="token operator">|</span> <span class="token function">bash</span>
+$ <span class="token function">curl</span> http://example.com/example.bash.tar.gz <span class="token operator">|</span> <span class="token function">tar</span> xvf - -O <span class="token operator">|</span> <span class="token function">bash</span>
+</code></pre>
+<h2 id="zip-ファイルをダウンロード・解凍する"><a class="header-link" href="#zip-ファイルをダウンロード・解凍する"><span class="header-link-mark"></span></a><code>.zip</code> ファイルをダウンロード・解凍する</h2>
+<p><code>.tar.gz</code> ファイルの扱いについてはこんな感じだが、<code>.zip</code> ファイルは少々扱いづらい。</p>
+<p>GNU <code>tar</code> だと <code>.zip</code> は解凍出来ず、<em><code>unzip</code></em> コマンドは標準入力からファイルを受け取っての解凍ができないのだ。そこで、いくつかのやり方を紹介する。</p>
+<ul>
+  <li>MacOS に同梱されている <em><code>bsdtar</code></em> だと、前述の <code>tar</code> コマンドと同じ要領で Zip ファイルが解凍できる。<code>bsdtar xvf -</code> と書けば良い
+    <ul>
+      <li>MacOS の <code>tar</code> コマンドは <code>bsdtar</code> のエイリアスになっているので、Mac 環境だけでいえば前述の <code>tar</code> コマンドがそのまま動く</li>
+      <li>Ubuntu であれば <code>apt install bsdtar</code> でインストールできる</li>
+      <li><code>$ wget http://example.com/example.tar.gz -O - | bsdtar xvf -</code></li>
+      <li><code>$ curl http://localhost/test.tar.gz | bsdtar xvf -</code></li>
+    </ul>
+  </li>
+  <li>Java をインストールしていて <strong><code>jar</code></strong> コマンドが存在すれば、<code>jar</code> コマンドで標準入力から受け取った Zip ファイルを解凍できる
+    <ul>
+      <li><code>$ wget http://example.com/example.zip -O - | jar xv</code></li>
+      <li><code>$ curl http://example.com/example.zip | jar xv</code></li>
+      <li>解凍したファイルを標準出力に流すことはできず、解凍したファイルがディレクトリ配下に展開される</li>
+    </ul>
+  </li>
+  <li><code>busybox</code> に内蔵されている <strong><code>busybox unzip</code></strong> コマンドだと、標準入力からファイルを受け取って解凍できる
+    <ul>
+      <li>Ubuntu だと <code>apt install busybox</code> でインストールできる</li>
+      <li><code>$ wget http://example.com/example.zip -O - | busybox unzip -</code></li>
+      <li><code>$ curl http://example.com/example.zip | busybox unzip -</code></li>
+      <li><code>busybox unzip -p</code> オプションで解凍したファイルを標準出力に吐けるので、コレを使えば実行まで一気に出来る</li>
+      <li><code>$ wget http://example.com/example.zip -O - | busybox unzip - -p | bash</code></li>
+      <li><code>$ curl http://example.com/example.zip | busybox unzip - -p | bash</code></li>
+    </ul>
+  </li>
+  <li><code>gunzip</code> および <code>gzip -d</code> コマンドで、ファイルを解凍して標準出力に吐くことは出来た
+    <ul>
+      <li><code>$ wget http://localhost/test.zip -O - | gunzip | bash</code></li>
+      <li><code>$ wget http://localhost/test.zip -O - | gzip -d | bash</code></li>
+      <li><code>$ curl http://localhost/test.zip | gunzip | bash</code></li>
+      <li><code>$ curl http://localhost/test.zip | gzip -d | bash</code></li>
+    </ul>
+  </li>
+  <li><strong><code>funzip</code></strong> コマンドは標準入力からファイルを受け取って標準出力に吐ける
+    <ul>
+      <li><code>$ wget http://localhost/test.zip -O - | funzip | bash</code></li>
+      <li><code>$ curl http://localhost/test.zip | funzip | bash</code></li>
+    </ul>
+  </li>
+</ul>
+<p>ファイルを解凍して保存したいなら、<code>jar</code> か <code>busybox unzip</code> が扱いやすいだろう。</p>
+<p>ファイルを解凍してその場で実行するなら、Linux に標準搭載されているであろう <code>gzip -d</code>・<code>gunzip</code>・<code>funzip</code> でまかなえる。これらは標準出力に吐くだけなので、<code>> ./dest.txt</code> といった形でファイルに吐き出すことはできる。</p>
+<p>一番汎用性が高く手っ取り早いのは、<code>bsdtar</code> を Linux 環境にインストールしてしまうのが良いだろう。解凍したファイルを保存することも、標準出力に流すこともできる。</p>
+<h2 id="よく使いそうなオプション"><a class="header-link" href="#よく使いそうなオプション"><span class="header-link-mark"></span></a>よく使いそうなオプション</h2>
+<p>その他使いそうなオプションを書いておく。</p>
+<ul>
+  <li><code>wget</code> のメッセージを非表示にする : <code>-q</code></li>
+  <li><code>curl</code> のメッセージを非表示にする : <code>-sS</code></li>
+  <li><code>curl</code> でリダイレクトに対応する : <code>-L</code></li>
+  <li><code>tar</code> のメッセージを非表示にする : <code>v</code> を付けない</li>
+</ul>
+<p>以上。</p><div class="ad-rakuten">
+  <div class="ad-rakuten-image">
+    <a href="https://hb.afl.rakuten.co.jp/hgc/g00reb42.waxycf23.g00reb42.waxyd080/?pc=https%3A%2F%2Fitem.rakuten.co.jp%2Frakutenkobo-ebooks%2Fa31e70cdba6a35e684c4e164fd450608%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Frakutenkobo-ebooks%2Fi%2F13192330%2F">
+      <img src="https://thumbnail.image.rakuten.co.jp/@0_mall/rakutenkobo-ebooks/cabinet/2875/2000001862875.jpg?_ex=128x128">
+    </a>
+  </div>
+  <div class="ad-rakuten-info">
+    <div class="ad-rakuten-title">
+      <a href="https://hb.afl.rakuten.co.jp/hgc/g00reb42.waxycf23.g00reb42.waxyd080/?pc=https%3A%2F%2Fitem.rakuten.co.jp%2Frakutenkobo-ebooks%2Fa31e70cdba6a35e684c4e164fd450608%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Frakutenkobo-ebooks%2Fi%2F13192330%2F">電子書籍で学ぶシェルスクリプト基礎編［bash/zsh/tcsh］ 〜今すぐ使える設定ファイル大公開【電子書籍】[ 後藤大地 ]</a>
+    </div>
+    <div class="ad-rakuten-shop">
+      <a href="https://hb.afl.rakuten.co.jp/hgc/g00reb42.waxycf23.g00reb42.waxyd080/?pc=https%3A%2F%2Fwww.rakuten.co.jp%2Frakutenkobo-ebooks%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Frakutenkobo-ebooks%2F">楽天Kobo電子書籍ストア</a>
+    </div>
+    <div class="ad-rakuten-price">価格 : 550円</div>
+  </div>
+</div>
+<div class="ad-amazon">
+  <div class="ad-amazon-image">
+    <a href="https://www.amazon.co.jp/dp/479811815X?tag=neos21-22&amp;linkCode=osi&amp;th=1&amp;psc=1">
+      <img src="https://m.media-amazon.com/images/I/41hfmaKyVgL._SL160_.jpg" width="113" height="160">
+    </a>
+  </div>
+  <div class="ad-amazon-info">
+    <div class="ad-amazon-title">
+      <a href="https://www.amazon.co.jp/dp/479811815X?tag=neos21-22&amp;linkCode=osi&amp;th=1&amp;psc=1">zsh最強シェル入門</a>
+    </div>
+  </div>
+</div>
+<h2 id="参考文献"><a class="header-link" href="#参考文献"><span class="header-link-mark"></span></a>参考文献</h2>
+<ul>
+  <li><a href="https://takuya-1st.hatenablog.jp/entry/20120205/1328464011">wgetは保存せずに、直接展開できるんだよ。 - それマグで！</a></li>
+  <li><a href="https://takuya-1st.hatenablog.jp/entry/2016/07/25/202706">tar から一部のファイル・指定ファイル名・標準出力(stdout)に取出す方法。 - それマグで！</a></li>
+  <li><a href="https://tech.withsin.net/2015/07/14/curl-pipe-tar/">ファイルを取得して直接解凍 | technote</a></li>
+  <li><a href="https://www.tecmint.com/download-and-extract-tar-files-with-one-command/">How to Download and Extract Tar Files with One Command</a></li>
+  <li><a href="https://serverfault.com/questions/26474/unzipping-files-that-are-flying-in-through-a-pipe">linux - Unzipping files that are flying in through a pipe - Server Fault</a></li>
+</ul>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2021-05-13</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2021-05-13</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

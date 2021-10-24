@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>OCI の Resource Manager を使って Terraform を実行する - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2019/06/08-02.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2019/index.html">2019年</a></li>
+            <li><a href="/blog/2019/06/index.html">06月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2019-06-08</time></div>
+        <h1 id="page-title">OCI の Resource Manager を使って Terraform を実行する</h1>
+
+<p><em>Oracle Cloud Infrastructure (OCI)</em> の中にある <strong>Oracle Resource Manager (ORM)</strong> というサービスを使うと、OCI 上で Terraform 定義ファイルを実行でき、状態管理ファイルを一元管理できる。</p>
+<p>Terraform で OCI の操作をしたことがある人なら始めるのは簡単なので、紹介する。</p>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#resource-manager-%E3%81%AF%E3%81%A9%E3%81%93%E3%81%AB%E3%81%82%E3%82%8B%EF%BC%9F">Resource Manager はどこにある？</a></li>
+  <li><a href="#stack-%E3%81%A8-job">Stack と Job</a></li>
+  <li><a href="#terraform-%E5%AE%9A%E7%BE%A9%E3%83%95%E3%82%A1%E3%82%A4%E3%83%AB%E3%81%AE%E6%B3%A8%E6%84%8F%E7%82%B9">Terraform 定義ファイルの注意点</a></li>
+  <li><a href="#stack-%E3%82%92%E4%BD%9C%E3%82%8B">Stack を作る</a></li>
+  <li><a href="#job-%E3%82%92%E5%AE%9F%E8%A1%8C%E3%81%99%E3%82%8B">Job を実行する</a></li>
+  <li><a href="#%E5%89%8A%E9%99%A4%E3%81%AB%E3%81%A4%E3%81%84%E3%81%A6">削除について</a></li>
+</ul>
+<h2 id="resource-manager-はどこにある？"><a class="header-link" href="#resource-manager-はどこにある？"><span class="header-link-mark"></span></a>Resource Manager はどこにある？</h2>
+<p>リソースマネージャは、</p>
+<ul>
+  <li>OCI コンソール → ハンバーガーメニュー → 「Solutions, Platform and Edge」セクション → 「Resource Manager」リンク</li>
+</ul>
+<p>と進む。</p>
+<h2 id="stack-と-job"><a class="header-link" href="#stack-と-job"><span class="header-link-mark"></span></a>Stack と Job</h2>
+<p>最初に表示されるのは「Stacks」というリソースで、その他に「Jobs」というリソースがあるのが分かる。</p>
+<p>これらは何かというと、1つの Terraform ファイル群を <strong>Stack</strong> と呼んでおり、その Stack 定義を元に <code>terraform</code> コマンドが実行される1回の履歴を <em>Job</em> として管理するのだ。つまり、<strong>Stack : Job = 1 : n</strong> という関係。</p>
+<p>Stack が Terraform 定義ファイルを置いているディレクトリで、Job がコマンドの実行履歴、といったところで良いだろう。</p>
+<h2 id="terraform-定義ファイルの注意点"><a class="header-link" href="#terraform-定義ファイルの注意点"><span class="header-link-mark"></span></a>Terraform 定義ファイルの注意点</h2>
+<p>Resource Manager という名前だが、実態は単なる Terraform 実行基盤だ。使用する Terraform 定義ファイルは、ローカル開発マシンで <code>terraform</code> コマンドを使って実行した時のファイルがほぼそのまま使える。</p>
+<p>ただ、Resource Manager 特有の特徴として、<em><code>provider.oci</code></em> には <strong><code>region</code> プロパティ以外の指定が要らない</strong>、というところが特徴だ。<code>region</code> だけは、対象のリージョンを特定するために必要だが、Tenancy OCID だったり、Terraform を実行するユーザの情報、といったものは必要ない。<em>Resource Manager 自身が <code>manage all-resources in tenancy</code> な特権を持っている状態</em>だ。</p>
+<p>この仕様による弊害は、OCI の場合は <code>oci_containerengine_cluster_kube_config</code> Data Source を使った KubeConfig ファイルの生成が出来なくなることぐらいだろうか。<code>local_file</code> を使ったファイル出力もできないので、KubeConfig ファイルの生成は Resource Manager を使わず別の手段をとろう。</p>
+<h2 id="stack-を作る"><a class="header-link" href="#stack-を作る"><span class="header-link-mark"></span></a>Stack を作る</h2>
+<p>それでは、まずは Stack を作ってみよう。先程書いたとおり、Resource Manager はテナンシー内のどこにあるリソースでも作成・更新できるので、<em>当該 Stack が所属するコンパートメントと、作れるリソースの範囲は関係ない。</em></p>
+<p>Stack 作成画面で、Terraform 定義ファイル群をまとめた Zip ファイルをアップロードする。すると、ファイル内の <code>variable</code> 宣言と <code>default</code> 値を読み取って、変数のフォームをある程度自動入力してくれる。</p>
+<p>公式ドキュメントを読むと、<code>terraform.tfvars</code> か <code>*.auto.tfvars</code> というファイルが Zip 内にあれば、その値を勝手に代入してくれるっぽいのだが、自分が試した限りでは変数値の代入はしてくれなかった。<code>.tfvars</code> ファイルから手作業で値をコピペしよう。</p>
+<p>なお、配列の変数に関しては、テキストボックスに <code>[ "hoge" ]</code> といった形で書いていけば良い。</p>
+<h2 id="job-を実行する"><a class="header-link" href="#job-を実行する"><span class="header-link-mark"></span></a>Job を実行する</h2>
+<p>Stack が作れたら、その Stack 定義を元に Terraform を実行する。選択できる Action は Plan、Apply、Destroy の3つで、<code>terraform plan</code>・<code>terraform apply</code>・<code>terraform destroy</code> コマンドと同じだ。</p>
+<p>実際に Plan なり Apply なりを実行してみると、ステータスが「Accepted」になると思う。そこから数分待つと「In Progress」ステータスに移行し、実際に Terraform が実行されている様子が「Logs」画面で分かる。サラッと書いたが、<strong>1回のコマンド (Job) 実行に5〜10分くらいかかるので、動作速度は物凄く遅い。</strong></p>
+<p>こうして作業が終わると、実行結果は「Outputs」欄に表示される。「Logs」欄もそうだが、まさに <code>terraform</code> コマンドの実行結果がそのまま出力されている。</p>
+<p>この Resource Manager の利点は、状態管理ファイル <code>.tfstate</code> の共有が不要になること。Terraform の機能にリモートステートといったモノがあるが、その設定すら不要になる。一度アップした Terraform ファイル群は Resource Manager からダウンロードできるし、複数の開発者で一つの Terraform ファイルを編集し、リソースを更新していきやすいのが特徴だろう。</p>
+<h2 id="削除について"><a class="header-link" href="#削除について"><span class="header-link-mark"></span></a>削除について</h2>
+<p>Stack を削除する場合は、きちんと「Destroy」Job を実行してから Stack を Delete するようにしないと、リソースが残ったままになってしまうので注意。</p>
+<p>また、<em>Stack を削除した後、その Stack が所属していたコンパートメントを削除しようとすると、「Job」リソースが裏側でまだ残ったままとみなされてしまい、コンパートメントの削除に失敗してしまった。</em>コレはどうやったら解決できるのか、まだ分かっていない。しばらく放置してみるか。</p>
+<hr>
+<p>以上。実行速度が著しく遅いが、定義ファイルなどを共用しやすいので、例えば本番環境の構築などは、ローカルから Terraform を叩くのではなく、Resource Manager を使うようにしておくと良いかもしれない。</p>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2019-06-08</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2019-06-08</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

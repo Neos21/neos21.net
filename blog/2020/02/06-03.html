@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>OCI Always Free Compute (Oracle Linux・CentOS 7) に nginx をインストールする - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2020/02/06-03.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2020/index.html">2020年</a></li>
+            <li><a href="/blog/2020/02/index.html">02月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2020-02-06</time></div>
+        <h1 id="page-title">OCI Always Free Compute (Oracle Linux・CentOS 7) に nginx をインストールする</h1>
+
+<p>OCI の Always Free Compute に nginx をインストールして、外部から Public IP を指定してアクセスできるようにしてみる。</p>
+<p>使用する Compute の OS は Oracle Linux 7 だが、Oracle Linux は RedHat Enterprise Linux ベースなので、CentOS 7 でも同様の設定で同じことが実現できるはずだ。</p>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#%E7%92%B0%E5%A2%83%E7%A2%BA%E8%AA%8D%E3%81%A8-oci-%E3%82%B3%E3%83%B3%E3%82%BD%E3%83%BC%E3%83%AB%E3%81%A7%E3%81%AE%E4%BD%9C%E6%A5%AD">環境確認と OCI コンソールでの作業</a></li>
+  <li><a href="#nginx-%E3%82%92%E3%82%A4%E3%83%B3%E3%82%B9%E3%83%88%E3%83%BC%E3%83%AB%E3%81%99%E3%82%8B">nginx をインストールする</a></li>
+  <li><a href="#nginx-%E3%82%92%E8%B5%B7%E5%8B%95%E3%81%99%E3%82%8B">nginx を起動する</a></li>
+  <li><a href="#firewall-cmd-%E3%81%A7%E5%A4%96%E9%83%A8%E3%81%8B%E3%82%89%E3%81%AE%E3%82%A2%E3%82%AF%E3%82%BB%E3%82%B9%E3%82%92%E8%A8%B1%E5%8F%AF%E3%81%99%E3%82%8B"><code>firewall-cmd</code> で外部からのアクセスを許可する</a></li>
+  <li><a href="#nginx-%E3%81%AE%E8%A8%AD%E5%AE%9A%E3%81%AF%E3%81%A9%E3%81%93%E3%81%A7%E8%A1%8C%E3%81%86%EF%BC%9F">nginx の設定はどこで行う？</a></li>
+  <li><a href="#%E3%81%A4%E3%81%84%E3%81%A7%E3%81%AB-oci-always-free-load-balancer-%E3%82%82%E8%A9%A6%E3%81%97%E3%81%A6%E3%81%BF%E3%81%9F">ついでに OCI Always Free Load Balancer も試してみた</a></li>
+</ul>
+<h2 id="環境確認と-oci-コンソールでの作業"><a class="header-link" href="#環境確認と-oci-コンソールでの作業"><span class="header-link-mark"></span></a>環境確認と OCI コンソールでの作業</h2>
+<p>対象の VM の OS 情報は以下のとおり。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">cat</span> /etc/os-release 
+<span class="token assign-left variable">NAME</span><span class="token operator">=</span><span class="token string">"Oracle Linux Server"</span>
+<span class="token assign-left variable">VERSION</span><span class="token operator">=</span><span class="token string">"7.7"</span>
+<span class="token assign-left variable">ID</span><span class="token operator">=</span><span class="token string">"ol"</span>
+<span class="token assign-left variable">ID_LIKE</span><span class="token operator">=</span><span class="token string">"fedora"</span>
+<span class="token assign-left variable">VARIANT</span><span class="token operator">=</span><span class="token string">"Server"</span>
+<span class="token assign-left variable">VARIANT_ID</span><span class="token operator">=</span><span class="token string">"server"</span>
+<span class="token assign-left variable">VERSION_ID</span><span class="token operator">=</span><span class="token string">"7.7"</span>
+<span class="token assign-left variable">PRETTY_NAME</span><span class="token operator">=</span><span class="token string">"Oracle Linux Server 7.7"</span>
+<span class="token assign-left variable">ANSI_COLOR</span><span class="token operator">=</span><span class="token string">"0;31"</span>
+<span class="token assign-left variable">CPE_NAME</span><span class="token operator">=</span><span class="token string">"cpe:/o:oracle:linux:7:7:server"</span>
+<span class="token assign-left variable">HOME_URL</span><span class="token operator">=</span><span class="token string">"https://linux.oracle.com/"</span>
+<span class="token assign-left variable">BUG_REPORT_URL</span><span class="token operator">=</span><span class="token string">"https://bugzilla.oracle.com/"</span>
+
+<span class="token assign-left variable">ORACLE_BUGZILLA_PRODUCT</span><span class="token operator">=</span><span class="token string">"Oracle Linux 7"</span>
+<span class="token assign-left variable">ORACLE_BUGZILLA_PRODUCT_VERSION</span><span class="token operator">=</span><span class="token number">7.7</span>
+<span class="token assign-left variable">ORACLE_SUPPORT_PRODUCT</span><span class="token operator">=</span><span class="token string">"Oracle Linux"</span>
+<span class="token assign-left variable">ORACLE_SUPPORT_PRODUCT_VERSION</span><span class="token operator">=</span><span class="token number">7.7</span>
+</code></pre>
+<p>OCI コンソールにて、次の前提を満たすよう設定しておく。</p>
+<ul>
+  <li>対象の VM には Public IP が割り当ててある前提とする</li>
+  <li>対象の VM に適用する Security List にて、インターネット (<code>0.0.0.0/0</code>) から80番ポートへのアクセスを許可する Ingress Rule を設定しておく</li>
+</ul>
+<h2 id="nginx-をインストールする"><a class="header-link" href="#nginx-をインストールする"><span class="header-link-mark"></span></a>nginx をインストールする</h2>
+<p>続いて nginx をインストールする。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># 事前に入れておく</span>
+$ yum <span class="token function">install</span> -y yum-utils
+
+<span class="token comment"># Yum リポジトリファイルを作る</span>
+$ <span class="token function">vi</span> /etc/yum.repos.d/nginx.repo
+</code></pre>
+<p>内容は次のようにする。CentOS 用のリポジトリを使っている。</p>
+<ul>
+  <li><code>/etc/yum.repos.d/nginx.repo</code></li>
+</ul>
+<pre class="language-bash"><code class="language-bash"><span class="token punctuation">[</span>nginx-stable<span class="token punctuation">]</span>
+<span class="token assign-left variable">name</span><span class="token operator">=</span>nginx stable repo
+<span class="token assign-left variable">baseurl</span><span class="token operator">=</span>http://nginx.org/packages/centos/7/<span class="token variable">$basearch</span>/
+<span class="token assign-left variable">gpgcheck</span><span class="token operator">=</span><span class="token number">1</span>
+<span class="token assign-left variable">enabled</span><span class="token operator">=</span><span class="token number">1</span>
+<span class="token assign-left variable">gpgkey</span><span class="token operator">=</span>https://nginx.org/keys/nginx_signing.key
+<span class="token assign-left variable">module_hotfixes</span><span class="token operator">=</span>true
+
+<span class="token punctuation">[</span>nginx-mainline<span class="token punctuation">]</span>
+<span class="token assign-left variable">name</span><span class="token operator">=</span>nginx mainline repo
+<span class="token assign-left variable">baseurl</span><span class="token operator">=</span>http://nginx.org/packages/mainline/centos/7/<span class="token variable">$basearch</span>/
+<span class="token assign-left variable">gpgcheck</span><span class="token operator">=</span><span class="token number">1</span>
+<span class="token assign-left variable">enabled</span><span class="token operator">=</span><span class="token number">0</span>
+<span class="token assign-left variable">gpgkey</span><span class="token operator">=</span>https://nginx.org/keys/nginx_signing.key
+<span class="token assign-left variable">module_hotfixes</span><span class="token operator">=</span>true
+</code></pre>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># パッケージが参照できるようになったか確認する</span>
+$ yum info nginx
+
+<span class="token comment"># インストールする</span>
+$ yum <span class="token function">install</span> -y nginx
+
+$ nginx -v
+nginx version: nginx/1.16.1
+</code></pre>
+<p>デフォルトでは Stable (安定版) がインストールされる。</p>
+<h2 id="nginx-を起動する"><a class="header-link" href="#nginx-を起動する"><span class="header-link-mark"></span></a>nginx を起動する</h2>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># 起動する</span>
+$ systemctl start nginx
+
+<span class="token comment"># 状態を確認する</span>
+$ systemctl status nginx
+
+<span class="token comment"># 動作確認する</span>
+$ <span class="token function">curl</span> http://localhost:80/
+</code></pre>
+<p>「Welcome to nginx!」といった HTML が返ってくれば OK。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># OS 起動時に起動するようにする</span>
+$ systemctl <span class="token builtin class-name">enable</span> nginx
+
+<span class="token comment"># OS 起動時に起動するよう設定できたか確認する (enabled と返れば OK)</span>
+$ systemctl is-enabled nginx
+</code></pre>
+<h2 id="firewall-cmd-で外部からのアクセスを許可する"><a class="header-link" href="#firewall-cmd-で外部からのアクセスを許可する"><span class="header-link-mark"></span></a><code>firewall-cmd</code> で外部からのアクセスを許可する</h2>
+<p>ココまでの状態だと、firewalld によるファイアウォールが有効になっていて、外部から80番ポートへのアクセスはできないはずだ。そこで、次のコマンドを実行する。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># 次のコマンドで http (80ポート) へのアクセスを許可する</span>
+$ firewall-cmd --add-service<span class="token operator">=</span>http --permanent
+</code></pre>
+<p>コレを実行すると、<code>/etc/firewalld/zones/public.xml</code> というファイルに <code>&#x3C;service name="http"/></code> という設定が追加されるはずだ。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># 設定を反映する</span>
+$ firewall-cmd --reload
+</code></pre>
+<p>コレで、Public IP を指定してインターネットからこのサーバへアクセスできるようになったはずだ。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># 以下の IP は例</span>
+$ <span class="token function">curl</span> http://141.255.255.255/
+</code></pre>
+<p>グローバル IP でアクセスして「Welcome to nginx!」のメッセージが確認できれば OK だ。</p>
+<h2 id="nginx-の設定はどこで行う？"><a class="header-link" href="#nginx-の設定はどこで行う？"><span class="header-link-mark"></span></a>nginx の設定はどこで行う？</h2>
+<p>nginx の設定は次のディレクトリ配下のファイル群で行っている。</p>
+<ul>
+  <li><code>/etc/nginx/</code></li>
+</ul>
+<p>配下の <code>nginx.conf</code> や、<code>conf.d/</code> 配下のファイルたちが主な設定ファイルだ。</p>
+<p><code>/etc/nginx/conf.d/default.conf</code> を見ると、80番ポートでサーバを用意し、<code>index.html</code> を返すための設定が確認できる。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">cat</span> default.conf 
+
+server <span class="token punctuation">{</span>
+    listen       <span class="token number">80</span><span class="token punctuation">;</span>
+    server_name  localhost<span class="token punctuation">;</span>
+
+    <span class="token comment">#charset koi8-r;</span>
+    <span class="token comment">#access_log  /var/log/nginx/host.access.log  main;</span>
+
+    location / <span class="token punctuation">{</span>
+        root   /usr/share/nginx/html<span class="token punctuation">;</span>
+        index  index.html index.htm<span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+    
+    <span class="token comment"># 以下略…</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>ログファイルの所在もこの辺の設定ファイルを見れば分かる。</p>
+<ul>
+  <li>アクセスログ : <code>/var/log/nginx/access.log</code></li>
+  <li>エラーログ : <code>/var/log/nginx/error.log</code></li>
+</ul>
+<p>「Welcome to nginx!」と書かれた <code>index.html</code> はどこにあるかというと、以下のディレクトリにある。</p>
+<ul>
+  <li><code>/usr/share/nginx/html/</code></li>
+</ul>
+<p>ココが、Apache のデフォルトでいう <code>/var/www/html/</code> ディレクトリに相当する。</p>
+<h2 id="ついでに-oci-always-free-load-balancer-も試してみた"><a class="header-link" href="#ついでに-oci-always-free-load-balancer-も試してみた"><span class="header-link-mark"></span></a>ついでに OCI Always Free Load Balancer も試してみた</h2>
+<p>このように、nginx をインストールして80番ポートを開けた OCI Always Free Compute を2つ用意した。それぞれの Public IP でアクセスすると、別々のコンテンツが参照できる状態だ。</p>
+<p>ココに OCI Always Free Load Balancer を作成し、この2つの Compute を Backend に設定してみると、無事ロードバランサが使えた。</p>
+<p>今のところ用途が思い付かないが、何かロードバランシングしたくなったら使ってみる。</p>
+<ul>
+  <li>参考：<a href="http://nginx.org/en/linux_packages.html#RHEL-CentOS">nginx: Linux packages</a></li>
+  <li>参考：<a href="https://weblabo.oscasierra.net/nginx-centos7-install/">Nginx を CentOS 7 にインストールする手順 | WEB ARCH LABO</a></li>
+  <li>参考：<a href="https://www.rem-system.com/centos-nginx-inst/">https://www.rem-system.com/centos-nginx-inst/</a></li>
+  <li>参考：<a href="https://qiita.com/nooboolean/items/ffcd6b2229f846f195ec">CentOS 7にnginxをインストールしてブラウザ確認するまで - Qiita</a></li>
+  <li>参考：<a href="https://qiita.com/MuuKojima/items/afc0ad8309ba9c5ed5ee">CentOS7 に nginx導入 - Qiita</a></li>
+  <li>参考：<a href="https://qiita.com/ryota_hnk/items/0fd83891377197648c9a">今日から始める Oracle Cloud 【VM + ロードバランサ】 - Qiita</a></li>
+</ul>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2020-02-06</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2020-02-06</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

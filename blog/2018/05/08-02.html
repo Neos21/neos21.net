@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>Express と SQLite を使って REST API サーバを作ってみた - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2018/05/08-02.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2018/index.html">2018年</a></li>
+            <li><a href="/blog/2018/05/index.html">05月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2018-05-08</time></div>
+        <h1 id="page-title">Express と SQLite を使って REST API サーバを作ってみた</h1>
+
+<p><strong>Express</strong> で <strong>REST API</strong> を構築、<em>SQLite</em> で<em>データ永続化</em>を実現して、Node.js オンリーで Web API サーバを作ってみた。</p>
+<p>作成したソースコード一式が置いてある GitHub リポジトリは以下。</p>
+<ul>
+  <li><a href="https://github.com/Neos21/example-node-js-rest-api-sqlite-db">GitHub - Neos21/node-js-rest-api-sqlite-db: Node.js + Express + REST API + SQLite DB Example.</a></li>
+</ul>
+<p>以降、このリポジトリのソースコードの使い方とか、構造の説明とか、作成に至るまでの話とか。</p>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#%E3%81%93%E3%81%AE%E3%82%BD%E3%83%BC%E3%82%B9%E3%82%B3%E3%83%BC%E3%83%89%E3%81%AE%E4%BD%BF%E3%81%84%E6%96%B9">このソースコードの使い方</a></li>
+  <li><a href="#%E6%A7%8B%E9%80%A0">構造</a></li>
+  <li><a href="#%E4%BD%9C%E6%88%90%E3%81%AB%E8%87%B3%E3%82%8B%E3%81%BE%E3%81%A7%E3%81%AE%E9%9B%91%E8%A8%98">作成に至るまでの雑記</a></li>
+</ul>
+<h2 id="このソースコードの使い方"><a class="header-link" href="#このソースコードの使い方"><span class="header-link-mark"></span></a>このソースコードの使い方</h2>
+<p>この REST API サーバは Node.js・npm オンリーで作ったので、上述の GitHub リポジトリを <code>git clone</code> したら、<code>$ npm install</code> するだけでサーバとして動作するようになる。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">npm</span> <span class="token function">install</span>
+$ <span class="token function">npm</span> start
+
+サーバ起動 <span class="token builtin class-name">:</span> http://localhost:3000/
+</code></pre>
+<p>コレだけ。</p>
+<p>サンプルとして、ユーザ情報を扱う <code>Users</code> という API を用意している。それぞれ、以下のメソッド・URL を指定して参照・操作できる。</p>
+<table>
+  <thead>
+    <tr>
+      <th>機能</th>
+      <th>メソッド</th>
+      <th>URL</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>全件取得</td>
+      <td>GET</td>
+      <td><code>http://localhost:3000/api/users/</code></td>
+    </tr>
+    <tr>
+      <td>ID を指定して1件取得</td>
+      <td>GET</td>
+      <td><code>http://localhost:3000/api/users/1</code></td>
+    </tr>
+    <tr>
+      <td>新規登録</td>
+      <td>POST</td>
+      <td><code>http://localhost:3000/api/users/</code></td>
+    </tr>
+    <tr>
+      <td>ID を指定して更新</td>
+      <td>PUT</td>
+      <td><code>http://localhost:3000/api/users/1</code></td>
+    </tr>
+    <tr>
+      <td>ID を指定して削除</td>
+      <td>DELETE</td>
+      <td><code>http://localhost:3000/api/users/1</code></td>
+    </tr>
+  </tbody>
+</table>
+<p><code>./test/</code> 配下に、これらの API を叩く Node.js スクリプトが置いてあるので、<code>$ npm start</code> でサーバ起動後、以下のコマンドを試しに実行してみてほしい。</p>
+<ul>
+  <li>全件取得：<code>$ node ./test/user-find-all-test.js</code></li>
+  <li>ID を指定して1件取得：<code>$ node ./test/user-find-by-id-test.js</code></li>
+  <li>新規登録：<code>$ node ./test/user-create-test.js</code></li>
+  <li>ID を指定して更新：<code>$ node ./test/user-update-test.js</code></li>
+  <li>ID を指定して削除：<code>$ node ./test/user-delete-test.js</code></li>
+</ul>
+<p>GET 系なら、ブラウザ上で <code>http://localhost:3000/api/users/</code> に直接アクセスすることで、JSON 形式のレスポンスが返ってくることが確認できるはずだ。</p>
+<h2 id="構造"><a class="header-link" href="#構造"><span class="header-link-mark"></span></a>構造</h2>
+<p>このサーバのディレクトリ構成は以下のとおり。</p>
+<pre><code>node-js-rest-api-sqlite-db/
+├ README.md                    説明ファイル
+├ package.json                 利用する npm パッケージなどの情報
+├ index.js                     エントリポイント。サーバの起動と DB の準備を行う
+├ app/                         サーバ・DB を動作させるためのファイルは全てこの中
+│ ├ db/                       DB (SQLite) 関連のファイルを置くディレクトリ
+│ │ ├ db.js                  DB ファイルの生成とテーブル定義の準備を行う
+│ │ └ sqlite3-database.db    サーバを起動すると db.js により生成される
+│ ├ routes/                   ルータ関連のディレクトリ
+│ │ ├ router.js              API 別のルータの登録などを行うベースルータ
+│ │ └ users-router.js        Users に関するルーティングの定義
+│ ├ controllers/              ルータから呼ばれるコントローラクラスを置くディレクトリ
+│ │ ├ controller.js          各コントローラクラスで共通的に利用する処理をまとめたクラス
+│ │ └ users-controller.js    Users に関するコントローラ
+│ ├ models/                   DB 接続を行うクラス (DAO) を置くディレクトリ
+│ │ ├ model.js               各モデルクラスで共通的に利用する処理をまとめたクラス
+│ │ ├ model-error.js         DB 操作時のエラー情報を保持するためのオブジェクト
+│ │ └ user-model.js          Users に関するモデル
+│ └ entities/                 コントローラ・モデル間でデータをやり取りする際のクラス (DTO) を置くディレクトリ
+│    └ user-entity.js         Users に関するエンティティ
+└ test/                        サーバにリクエストを投げてテストするための Node.js スクリプト
+   ├ user-find-all-test.js     Users の全件取得を行う
+   ├ user-find-by-id-test.js   Users の ID を指定して1件取得を行う
+   ├ user-create-test.js       Users にデータを新規登録する
+   ├ user-update-test.js       Users のデータを更新する
+   └ user-delete-test.js       Users のデータを削除する
+</code></pre>
+<p><code>index.js</code> がエントリポイント。サーバを起動し、<code>db.js</code> にDB ファイルを用意させ、<code>router.js</code> を呼び出してルーティングの定義を行わせる。</p>
+<p>特定の URL にアクセスすると、Router から Controller が呼び出される。Controller でリクエスト情報が整理され、DB 操作を行う Model クラスが呼び出される。Controller と Model 間のデータやり取りのために、Entity クラスを利用している。</p>
+<p><code>Users</code> 以外の API を作る場合は、</p>
+<ul>
+  <li><code>db.js</code> … <code>CREATE TABLE</code> 文の追加</li>
+  <li>Router … API 別のルータの作成と <code>router.js</code> への追加</li>
+  <li>Controller … 共通処理は <code>controller.js</code> を利用</li>
+  <li>Model … 共通処理は <code>model.js</code> を利用</li>
+  <li>Entity</li>
+</ul>
+<p>を用意することで、<code>Users</code> と同じように動作させられる。</p>
+<h2 id="作成に至るまでの雑記"><a class="header-link" href="#作成に至るまでの雑記"><span class="header-link-mark"></span></a>作成に至るまでの雑記</h2>
+<p>JSON-Server で簡易 API サーバを構築してみたり、Rails5 の API モードを触ってみたりして、ふと「REST API と DB 操作を Node.js だけで完結できないか」と思い立ち、作り始めた。</p>
+<ul>
+  <li><a href="/blog/2017/07/08-01.html">テストに使える簡易 API サーバがサクッと立てられる「json-server」</a></li>
+</ul>
+<p>Node.js でサーバを構築するには <em>Express</em> というツールがよく使われていて、名前は知っていたが使ったことはなかったので、今回色々調べながら作ってみた。</p>
+<p>DB の方は、以前紹介した node-sqlite3 を使えば SQLite DB がサクッと作れると思い、コレを使うことにした。</p>
+<ul>
+  <li><a href="/blog/2018/04/22-01.html">Node.js で SQLite を扱う</a></li>
+</ul>
+<p>で、「Express + SQLite」といったキーワードで調べてみると、色々と先人の情報が出てきた。</p>
+<ul>
+  <li>参考：<a href="https://gist.github.com/dalelane/6ce08b52d5cca8f92926">Node.js, Express, and SQLite to wrap a REST API around an SQL database · GitHub</a></li>
+  <li>参考：<a href="https://qiita.com/kaikusakari/items/a64c447167efdcf068c2">Node.js+Express経由でSQLite3にデータ登録する - Qiita</a></li>
+  <li>参考：<a href="https://qiita.com/kaikusakari/items/f2812ea1e9ea6949f214">Node.jsでWebAPI作成(Express + SQLite3) - Qiita</a></li>
+  <li>参考：<a href="https://garafu.blogspot.jp/2017/02/nodejs-express-webapi.html">Node.js + Express で WebAPI を作る - galife</a></li>
+</ul>
+<p>さらには SQLite を利用した WebAPI をうまいこと構築してくれる npm パッケージも見付けた。日本語 README なのが嬉しい。</p>
+<ul>
+  <li>参考：<a href="https://github.com/ktty1220/sqlite3-webapi-kit">GitHub - ktty1220/sqlite3-webapi-kit: SQLite3をデータベースサーバー化するNode.js用APIキット</a></li>
+</ul>
+<p>ただ、コチラは RESTful な API の URL 設計にはなっていなかったので、作りだけ参考に、まずは Rails の Scaffold で作れる構成を真似て自作することにした。</p>
+<p>もう少し調べてみると、自分がやりたいことをまさに実現しているリポジトリを見付けた。</p>
+<ul>
+  <li>参考：<em><a href="https://github.com/romwaldtff/NodeJS-REST-API-SQLite">GitHub - romwaldtff/NodeJS-REST-API-SQLite: NodeJS REST API using SQLite as a database</a></em></li>
+</ul>
+<p>今回自分が作ったサンプルコード群は、ほとんどこのリポジトリが元ネタになっている。一部ディレクトリ構成やメソッド等を簡略化させている。</p>
+<p>Express の操作はまだまだ見様見真似で、体系的に覚えられていない。SQLite の操作に関しても、SQLite の方言に関する知識も怪しかったり、node-sqlite3 の API も理解しきっていない感じ。それでもとりあえずは思ったような CRUD 操作ができるようになったので、コレでよしとする。</p>
+<p>何かコードに問題があればご指摘いただきたい…。</p>
+<p>その他参考にした記事↓</p>
+<ul>
+  <li>参考：<a href="https://gist.github.com/mitsuruog/fc48397a8e80f051a145">express実践入門 · GitHub</a></li>
+  <li>参考：<a href="https://www.dbonline.jp/sqlite/">SQLite入門</a></li>
+</ul>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2018-05-08</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2018-05-08</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

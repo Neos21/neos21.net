@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>nginx でトレイリングスラッシュなしの URL に POST するとリクエストボディが欠落する - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2020/11/27-03.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2020/index.html">2020年</a></li>
+            <li><a href="/blog/2020/11/index.html">11月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2020-11-27</time></div>
+        <h1 id="page-title">nginx でトレイリングスラッシュなしの URL に POST するとリクエストボディが欠落する</h1>
+
+<p>nginx における<em>トレイリングスラッシュ</em>の有無と POST リクエストにまつわる話。</p>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#%E7%99%BA%E7%AB%AF">発端</a></li>
+  <li><a href="#%E8%A7%A3%E6%B1%BA%E7%AD%96">解決策</a></li>
+</ul>
+<h2 id="発端"><a class="header-link" href="#発端"><span class="header-link-mark"></span></a>発端</h2>
+<p>nginx サーバの次のような位置に PHP を配置した。</p>
+<pre><code>http://example.com/example/index.php
+</code></pre>
+<p>この <code>index.php</code> は、GET リクエストすると普通の HTML を返す。POST リクエストすると、ちゃんとそのデータを受け取ってレスポンスできる、というモノになっている。</p>
+<p><code>/index.php</code> という部分は、nginx の <code>index</code> ディレクティブにより、<strong>トレイリングスラッシュ (末尾のスラッシュ) なし</strong>でアクセスしても、キチンと <code>/index.php</code> が返るようになっている。</p>
+<pre class="language-nginx"><code class="language-nginx"><span class="token comment"># nginx の設定ファイル</span>
+<span class="token keyword">server</span> <span class="token punctuation">{</span>
+  <span class="token comment"># …中略…</span>
+  
+  <span class="token keyword">location</span> <span class="token operator">/</span> <span class="token punctuation">{</span>
+    <span class="token keyword">root</span>   <span class="token operator">/</span>var<span class="token operator">/</span>www<span class="token operator">/</span>html<span class="token punctuation">;</span>
+    <span class="token keyword">index</span>  <span class="token keyword">index</span><span class="token punctuation">.</span>html <span class="token keyword">index</span><span class="token punctuation">.</span>php<span class="token punctuation">;</span>  <span class="token comment"># ← コレのおかげで…</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># 以下のどれでも同じように GET リクエストできている</span>
+$ <span class="token function">curl</span> -X GET http://example.com/example/index.php
+$ <span class="token function">curl</span> -X GET http://example.com/example/
+$ <span class="token function">curl</span> -X GET http://example.com/example
+</code></pre>
+<p><code>example/</code> で終わっているのが「トレイリングスラッシュあり」、<code>example</code> で終わっているのが「トレイリングスラッシュなし」と呼ばれる URL 形式だ。</p>
+<ul>
+  <li>参考：<a href="https://wa3.i-3-i.info/word11910.html">https://wa3.i-3-i.info/word11910.html</a></li>
+</ul>
+<p>コレで <code>/index.php</code> を書かずに済むならスッキリするなーと思ったのだが、POST してみてつまづいた。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># /index.php まで指定した場合。リクエストボディを認識しているテイ</span>
+$ <span class="token function">curl</span> -X POST -d <span class="token string">'my_param=example'</span> http://example.com/example/index.php
+Hello <span class="token punctuation">[</span>example<span class="token punctuation">]</span> <span class="token operator">!</span>
+
+<span class="token comment"># トレイリングスラッシュありでも。リクエストボディを認識している</span>
+$ <span class="token function">curl</span> -X POST -d <span class="token string">'my_param=example'</span> http://example.com/example/
+Hello <span class="token punctuation">[</span>example<span class="token punctuation">]</span> <span class="token operator">!</span>
+
+<span class="token comment"># トレイリングスラッシュなし</span>
+$ <span class="token function">curl</span> -X POST -d <span class="token string">'my_param=example'</span> http://example.com/example
+<span class="token operator">&#x3C;</span>html<span class="token operator">></span>
+<span class="token operator">&#x3C;</span>head<span class="token operator">></span><span class="token operator">&#x3C;</span>title<span class="token operator">></span><span class="token number">301</span> Moved Permanently<span class="token operator">&#x3C;</span>/title<span class="token operator">></span><span class="token operator">&#x3C;</span>/head<span class="token operator">></span>
+<span class="token operator">&#x3C;</span>body<span class="token operator">></span>
+<span class="token operator">&#x3C;</span>center<span class="token operator">></span><span class="token operator">&#x3C;</span>h<span class="token operator"><span class="token file-descriptor important">1</span>></span><span class="token number">301</span> Moved Permanently<span class="token operator">&#x3C;</span>/h<span class="token operator"><span class="token file-descriptor important">1</span>></span><span class="token operator">&#x3C;</span>/center<span class="token operator">></span>
+<span class="token operator">&#x3C;</span>hr<span class="token operator">></span><span class="token operator">&#x3C;</span>center<span class="token operator">></span>nginx/1.16.<span class="token operator"><span class="token file-descriptor important">1</span>&#x3C;</span>/center<span class="token operator">></span>
+<span class="token operator">&#x3C;</span>/body<span class="token operator">></span>
+<span class="token operator">&#x3C;</span>/html<span class="token operator">></span>
+</code></pre>
+<p>お！？</p>
+<p>トレイリングスラッシュなしのパターンだけ、301 のリダイレクトが発生している…。</p>
+<p>じゃあリダイレクトして確認してみるか、と思うと…</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># トレイリングスラッシュなし・リダイレクト (-L) とデバッグ出力 (-vvv) を有効にする</span>
+$ <span class="token function">curl</span> -X POST -d <span class="token string">'my_param=example'</span> -L -vvv http://example.com/example
+
+<span class="token comment"># デバッグログ抜粋</span>
+<span class="token operator">&#x3C;</span> HTTP/1.1 <span class="token number">301</span> Moved Permanently
+<span class="token operator">&#x3C;</span> Location: http://example.com/example/
+* Issue another request to this URL: <span class="token string">'http://example.com/example/'</span>
+* Violate RFC <span class="token number">2616</span>/10.3.2 and switch from POST to GET
+
+<span class="token comment"># GET リクエストのレスポンスが返される</span>
+</code></pre>
+<p>なんと、トレイリングスラッシュありの URL にリダイレクトしつつ、<strong>POST メソッドが GET メソッドに変換されている</strong>ようだ。コレでは POST リクエストが通らないだろう。</p>
+<p>トレイリングスラッシュ「なし」から「あり」にリダイレクトする挙動は元々の仕様らしいが、その中に「POST リクエストだった場合は GET リクエストに変換する」という動きがあるようだ。</p>
+<ul>
+  <li>参考：<a href="https://www.suzukikenichi.com/blog/differences-between-trailing-slash-and-non-trailing-slash/">URLの最後に付ける「トレイリング スラッシュ」ありなしの違いはSEOに影響するのか？ | 海外SEO情報ブログ</a></li>
+  <li>参考：<a href="https://stackoverflow.com/questions/8156073/curl-violate-rfc-2616-10-3-2-and-switch-from-post-to-get">php - Curl : Violate RFC 2616/10.3.2 and switch from POST to GET - Stack Overflow</a></li>
+</ul>
+<h2 id="解決策"><a class="header-link" href="#解決策"><span class="header-link-mark"></span></a>解決策</h2>
+<p>ドンズバな解決策がネット上では見つからず、自分で編み出した解決策を紹介する。</p>
+<pre class="language-nginx"><code class="language-nginx"><span class="token comment"># nginx の設定ファイル</span>
+<span class="token keyword">server</span> <span class="token punctuation">{</span>
+  <span class="token comment"># …中略… (今までの設定部分はそのまま)</span>
+  
+  <span class="token comment"># トレイリングスラッシュなしで POST リクエストされる URL パスを指定する</span>
+  <span class="token keyword">location</span> <span class="token operator">~</span> <span class="token operator">^</span><span class="token operator">/</span>example$ <span class="token punctuation">{</span>
+    <span class="token keyword">return</span>  <span class="token number">307</span>  <span class="token variable">$scheme</span><span class="token punctuation">:</span><span class="token operator">/</span><span class="token operator">/</span><span class="token variable">$host</span><span class="token operator">/</span>example<span class="token operator">/</span><span class="token keyword">index</span><span class="token punctuation">.</span>php<span class="token operator">?</span><span class="token variable">$args</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>HTTP 307 で <code>/index.php</code> まで付与した URL をレスポンスするように指定している。</p>
+<ul>
+  <li>参考：<a href="https://developer.mozilla.org/ja/docs/Web/HTTP/Status/307">307 Temporary Redirect - HTTP | MDN</a>
+    <ul>
+      <li>
+        <blockquote>
+          <p>307 はリダイレクトされたリクエストが行われるときに、メソッドと本文が変更されないことが保証される</p>
+        </blockquote>
+      </li>
+    </ul>
+  </li>
+  <li>参考：<a href="https://developer.mozilla.org/ja/docs/Web/HTTP/Status/302">302 Found - HTTP | MDN</a>
+    <ul>
+      <li>
+        <blockquote>
+          <p>POST メソッドのままリダイレクトする場合は代わりに 307 Temporary Redirect (こちらでは明確にメソッドの変更が禁止されている) を使用することが推奨されています。</p>
+        </blockquote>
+      </li>
+    </ul>
+  </li>
+</ul>
+<p><code>http</code> でも <code>https</code> でも認識するように <code>$scheme</code> 変数を使い、Public IP 直打ちでも独自ドメインでも CORS 制約に引っかからないようにするために <code>$host</code> 変数を使っている。<code>$args</code> はリクエストパラメータが付いていた場合の制御だが、なくても大丈夫かと。</p>
+<p>POST リクエストを処理したい URL ごとにコレを用意しないといけなくて、ちょっと微妙な気がしているが、そんなに大量の設定を nginx で持たないように、nginx はプロキシ的に軽く使うのが本来は推奨なんだろうなーと思った。</p>
+<p>nginx の設定ファイルはまだまだ勉強していかないとよく分からないぞー。</p>
+<ul>
+  <li>参考：<a href="https://qiita.com/pickles/items/6ac6ade6d51d30c63d65">nginxでPOSTメソッドのリダイレクトを行う - Qiita</a>
+    <ul>
+      <li>307 によるリダイレクトが参考になった</li>
+    </ul>
+  </li>
+  <li>参考：<a href="https://qastack.jp/server/312111/how-do-i-get-nginx-to-forward-http-post-requests-via-rewrite">書き換えによってHTTP POSTリクエストを転送するには、nginxを取得するにはどうすればよいですか？</a>
+    <ul>
+      <li><code>proxy_set_header</code> とか出てきてる、別のローカルサーバに転送する前提っぽい</li>
+    </ul>
+  </li>
+  <li>参考：<a href="https://stackoverflow.com/questions/42809659/nginx-rewrite-post-request">nginx rewrite POST request - Stack Overflow</a>
+    <ul>
+      <li><code>proxy_pass</code></li>
+    </ul>
+  </li>
+  <li>参考：<a href="https://stackoverflow.com/questions/27795068/nginx-rewrite-post-data">laravel 4 - nginx rewrite post data - Stack Overflow</a></li>
+  <li>参考：<a href="https://www.skyarch.net/blog/?p=7088">nginxのrewriteを使ったリダイレクト | Skyarch Broadcasting</a>
+    <ul>
+      <li><code>rewrite</code>・<code>last</code> で再検索させる方法なども試したが、キレイにいかなかった</li>
+    </ul>
+  </li>
+</ul>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2020-11-27</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2020-11-27</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

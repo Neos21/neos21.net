@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>Node.js でプライベートファイルエクスプローラ CGI を作ってみた - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2020/10/12-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2020/index.html">2020年</a></li>
+            <li><a href="/blog/2020/10/index.html">10月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2020-10-12</time></div>
+        <h1 id="page-title">Node.js でプライベートファイルエクスプローラ CGI を作ってみた</h1>
+
+<p>かつて存在した CGI 配布サイト<em>「すえぽんさいと」</em>で、<strong>「Xplorer」「Web Editor」</strong>という2つの CGI が配布されていた。</p>
+<p>Xplorer は、サーバ上の指定のディレクトリ配下のファイルツリーを表示し、Web Editor はさらにファイル編集も出来るシロモノだった。</p>
+<p>すえぽんさいとの URL <code>http://CGIScriptMarket.com/</code> はもう死んでいるようで、当該スクリプトも公式での配布は見当たらない。自分がローカルに保存していたモノを勝手に GitHub にアップしているので、どんなコードだったかは確認していただける。</p>
+<ul>
+  <li><a href="https://github.com/Neos21/favourite-cgi/blob/master/xplorer/Xplorer.cgi">favourite-cgi/Xplorer.cgi at master · Neos21/favourite-cgi · GitHub</a></li>
+  <li><a href="https://github.com/Neos21/favourite-cgi/blob/master/web%20editor/web_editor.cgi">favourite-cgi/web_editor.cgi at master · Neos21/favourite-cgi · GitHub</a></li>
+</ul>
+<p>元々は Perl 製で、実装はまともに読んでいないのだが、今回このスクリプトのアイデアを元に Node.js 製の CGI スクリプトを作ってみた。それが <strong>Node.js CGI Explorer</strong>。</p>
+<ul>
+  <li><a href="https://github.com/Neos21/nodejs-cgi-explorer">GitHub - Neos21/nodejs-cgi-explorer: File Explorer CGI Made With Node.js</a></li>
+</ul>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#%E3%82%A4%E3%83%B3%E3%82%B9%E3%83%88%E3%83%BC%E3%83%AB%E6%96%B9%E6%B3%95">インストール方法</a></li>
+  <li><a href="#%E4%BD%BF%E3%81%84%E6%96%B9">使い方</a></li>
+  <li><a href="#%E4%B8%80%E5%BF%9C%E8%80%83%E6%85%AE%E3%81%97%E3%81%A6%E3%81%82%E3%82%8B%E3%81%93%E3%81%A8">一応考慮してあること</a></li>
+</ul>
+<h2 id="インストール方法"><a class="header-link" href="#インストール方法"><span class="header-link-mark"></span></a>インストール方法</h2>
+<p>簡単にインストール方法を紹介する。</p>
+<p>まず、対象のサーバの Apache や nginx で CGI が扱えるようにしておき、さらにそのサーバに Node.js をインストールしておく (<code>async</code> を使っているので v12 以降)。</p>
+<p>Node.js をインストールしたら <code>$ type node</code> とかで Node.js のフルパスを確認しておく。<code>/usr/bin/node</code> などと分かるはず。</p>
+<p>そしたら本スクリプト <code>index.js.cgi</code> をサーバに配置する。ファイル名や拡張子は自由に変更して問題ない。</p>
+<ul>
+  <li><a href="https://github.com/Neos21/nodejs-cgi-explorer">GitHub - Neos21/nodejs-cgi-explorer: File Explorer CGI Made With Node.js</a>
+    <ul>
+      <li><a href="https://github.com/Neos21/nodejs-cgi-explorer/blob/master/index.js.cgi">nodejs-cgi-explorer/index.js.cgi at master · Neos21/nodejs-cgi-explorer · GitHub</a></li>
+    </ul>
+  </li>
+</ul>
+<p>1行目の Shebang を、先程確認した Node.js のフルパスに書き換える。大抵は <code>#!/usr/bin/node</code> とかになるかな。</p>
+<p>また、ファイル中に定数を2ヶ所ほど設定する。</p>
+<ul>
+  <li>アクセスパスワードとなる <code>const credential</code></li>
+  <li>ファイルツリーを表示したいルートディレクトリを <code>const rootDirectory</code></li>
+</ul>
+<p>ルートディレクトリは、この CGI を実行するユーザの権限さえあればどこでも良い。つまり、よくある <code>/var/www/html/</code> 以外の場所を指定することもできるワケだ。</p>
+<p>CGI ファイルを編集したら、最後に実行権限を付与して (<code>$ chmod 755 index.js.cgi</code>) 完了。</p>
+<h2 id="使い方"><a class="header-link" href="#使い方"><span class="header-link-mark"></span></a>使い方</h2>
+<p>ブラウザで CGI の URL にアクセスすると、最初はパスワード入力欄が表示される。<code>const credential</code> で指定したパスワードを入力してログインする。</p>
+<p>ログインできると、<code>const rootDirectory</code> で指定したディレクトリ直下のファイルやディレクトリがツリー表示される。ツリーといっても、リンクの箇条書きだが…。</p>
+<p>ディレクトリのリンクを押下すれば、ディレクトリを掘り下げていける。子階層からは1階層上に上がれる <code>../</code> リンクがある。</p>
+<p>ファイルのリンクを押下すると、そのファイルを表示またはダウンロードできる。</p>
+<ul>
+  <li>テキストファイル系は <code>text/plain</code> 扱いでそのまま表示</li>
+  <li>ブラウザで表示できる画像ファイル系はそのまま表示</li>
+  <li>それ以外はブラウザ上で表示するのがキツそうなので <code>application/octet-stream</code> でダウンロードさせる</li>
+</ul>
+<p>この辺は <code>Content-Type</code> ヘッダと <code>Content-Disposition</code> ヘッダを付与して雑に <code>process.stdout.write()</code> しているだけなので、もしかしたら上手く行かないことがあるかも。</p>
+<p>Node.js におけるファイル一覧の取得や、CGI でファイルをレスポンスする方法は以下を参考にした。</p>
+<ul>
+  <li>参考：<a href="https://qiita.com/shisama/items/affb219514eb1166198e">Node.jsで高速にファイル一覧を取得するfs.readdirのwithFileTypesオプション - Qiita</a></li>
+  <li>参考：<a href="https://tech.katsubemakito.net/perl/cgi_filedownload">perl:cgi_filedownload とあるエンジニアの闇歴史帳</a></li>
+  <li>参考：<a href="http://cms.phys.s.u-tokyo.ac.jp/~naoki/CIPINTRO/CCGI/download.html">Download many kinds of files from CGI</a></li>
+</ul>
+<h2 id="一応考慮してあること"><a class="header-link" href="#一応考慮してあること"><span class="header-link-mark"></span></a>一応考慮してあること</h2>
+<p>GET リクエストの場合は常にログインページが表示される。ログイン後の全てのページ遷移は POST で行っていて、ログインページで入力させたパスワードを都度検証している (CGI という古い技術なのに LocalStorage とか組み合わせていてカオス感ある)。</p>
+<p><code>credential</code> の値が平文保存なのはイケてないと思うが、一応はコレを外部に漏らさなければファイルツリーが表示できない作りにしてある。</p>
+<p>ディレクトリ移動の際は、<code>rootDirectory</code> で指定したパス配下しか表示させないようにしている。うかつに <code>/</code> まで上れたりしないようにしてはある。</p>
+<p>ファイルの編集機能は持たせていない。面倒臭かったのでｗ．表示だけだからまぁ安心？ｗ</p>
+<p>つーワケで以上。</p>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2020-10-12</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2020-10-12</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

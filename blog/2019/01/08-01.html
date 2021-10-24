@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>Columnify を使って Node.js スクリプトのコンソール出力をテーブルっぽく整形する - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2019/01/08-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2019/index.html">2019年</a></li>
+            <li><a href="/blog/2019/01/index.html">01月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2019-01-08</time></div>
+        <h1 id="page-title">Columnify を使って Node.js スクリプトのコンソール出力をテーブルっぽく整形する</h1>
+
+<p>Node.js スクリプトでコンソール出力を整形する際、最も手軽なのは <em><code>console.table()</code></em> だろう。</p>
+<pre class="language-bash"><code class="language-bash">$ node -e <span class="token string">"console.table([ { id: 1, name: 'testA' }, { id: 2, name: 'testB' } ]);"</span>
+
+┌─────────┬────┬─────────┐
+│ <span class="token punctuation">(</span>index<span class="token punctuation">)</span> │ <span class="token function">id</span> │  name   │
+├─────────┼────┼─────────┤
+│    <span class="token number">0</span>    │ <span class="token number">1</span>  │ <span class="token string">'testA'</span> │
+│    <span class="token number">1</span>    │ <span class="token number">2</span>  │ <span class="token string">'testB'</span> │
+└─────────┴────┴─────────┘
+</code></pre>
+<p>(コンソールからコピペしただけなので、閲覧環境によっては横棒の罫線が長く見えているかもしれない。コンソール上では綺麗に見えている)</p>
+<p><code>console.table()</code> は組み込み済なので手軽ではあるが、細かな出力仕様の調整が効かないので、他にコンソール出力をテーブルっぽく整形してくれるライブラリがないか探した。すると、<strong>Columnify</strong> という npm パッケージが使いやすかったので、コレを試してみた。</p>
+<ul>
+  <li><a href="https://www.npmjs.com/package/columnify">columnify - npm</a></li>
+</ul>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#%E3%82%A4%E3%83%B3%E3%82%B9%E3%83%88%E3%83%BC%E3%83%AB">インストール</a></li>
+  <li><a href="#%E5%9F%BA%E7%A4%8E1--%E5%8D%98%E3%81%AB%E3%82%AA%E3%83%96%E3%82%B8%E3%82%A7%E3%82%AF%E3%83%88%E3%82%92%E6%B8%A1%E3%81%97%E3%81%A6%E3%81%BF%E3%82%8B">基礎1 : 単にオブジェクトを渡してみる</a></li>
+  <li><a href="#%E5%9F%BA%E7%A4%8E2--%E8%A4%87%E6%95%B0%E3%82%AA%E3%83%96%E3%82%B8%E3%82%A7%E3%82%AF%E3%83%88%E3%82%92%E6%8C%81%E3%81%A4%E9%85%8D%E5%88%97%E3%82%92%E6%B8%A1%E3%81%97%E3%81%A6%E3%81%BF%E3%82%8B">基礎2 : 複数オブジェクトを持つ配列を渡してみる</a></li>
+  <li><a href="#%E3%82%AB%E3%82%B9%E3%82%BF%E3%83%9E%E3%82%A4%E3%82%BA%E8%89%B2%E3%80%85">カスタマイズ色々</a>
+    <ul>
+      <li><a href="#%E5%88%97%E3%81%94%E3%81%A8%E3%81%AE%E5%8C%BA%E5%88%87%E3%82%8A%E7%B7%9A%E3%82%92%E5%85%A5%E3%82%8C%E3%81%A6%E3%81%BF%E3%82%8B">列ごとの区切り線を入れてみる</a></li>
+      <li><a href="#%E5%80%A4%E3%82%92%E4%B8%AD%E5%A4%AE%E6%8F%83%E3%81%88%E3%82%84%E5%8F%B3%E6%8F%83%E3%81%88%E3%81%AB%E3%81%97%E3%81%A6%E3%81%BF%E3%82%8B">値を中央揃えや右揃えにしてみる</a></li>
+      <li><a href="#%E5%88%97%E3%81%AE%E8%A6%8B%E5%87%BA%E3%81%97%E6%96%87%E8%A8%80%E3%82%92%E5%A4%89%E3%81%88%E3%82%8B">列の見出し文言を変える</a></li>
+    </ul>
+  </li>
+  <li><a href="#%E4%BB%A5%E4%B8%8A">以上</a></li>
+</ul>
+<h2 id="インストール"><a class="header-link" href="#インストール"><span class="header-link-mark"></span></a>インストール</h2>
+<p>いつもどおり。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">npm</span> <span class="token function">install</span> --save columnify
+</code></pre>
+<h2 id="基礎1--単にオブジェクトを渡してみる"><a class="header-link" href="#基礎1--単にオブジェクトを渡してみる"><span class="header-link-mark"></span></a>基礎1 : 単にオブジェクトを渡してみる</h2>
+<ul>
+  <li><code>columnify.js</code> … 以下のようなサンプルコードを書いてみる</li>
+</ul>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword">const</span> columnify <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'columnify'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token function">columnify</span><span class="token punctuation">(</span><span class="token punctuation">{</span>
+  hoge<span class="token operator">:</span> <span class="token string">'HOGE value'</span><span class="token punctuation">,</span>
+  fugafuga<span class="token operator">:</span> <span class="token string">'FUGA value'</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>コレを実行してみると、以下のようになる。</p>
+<pre class="language-bash"><code class="language-bash">$ node columnify.js
+
+KEY      VALUE
+hoge     HOGE value
+fugafuga FUGA value
+</code></pre>
+<p>オブジェクトを渡せば、<code>KEY</code> と <code>VALUE</code> という列名で上手く表示してくれる。</p>
+<h2 id="基礎2--複数オブジェクトを持つ配列を渡してみる"><a class="header-link" href="#基礎2--複数オブジェクトを持つ配列を渡してみる"><span class="header-link-mark"></span></a>基礎2 : 複数オブジェクトを持つ配列を渡してみる</h2>
+<p>次に、サンプルコードを以下のように修正してみる。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token function">columnify</span><span class="token punctuation">(</span><span class="token punctuation">[</span>
+  <span class="token punctuation">{</span> id<span class="token operator">:</span> <span class="token number">1</span><span class="token punctuation">,</span> name<span class="token operator">:</span> <span class="token string">'テスト 太郎'</span><span class="token punctuation">,</span> gender<span class="token operator">:</span> <span class="token string">'Male'</span> <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span> id<span class="token operator">:</span> <span class="token number">99</span><span class="token punctuation">,</span> name<span class="token operator">:</span> <span class="token string">'Test'</span><span class="token punctuation">,</span> gender<span class="token operator">:</span> <span class="token string">'Feale'</span><span class="token punctuation">,</span> flag<span class="token operator">:</span> <span class="token string">'Administrator'</span> <span class="token punctuation">}</span>
+<span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>配列に、2つのオブジェクトが格納されている。<code>id</code>・<code>name</code>・<code>gender</code> プロパティは同じだが、<code>flag</code> プロパティは2つ目の要素しか持っていない。このようなデータはどう表示されるかというと…。</p>
+<pre class="language-bash"><code class="language-bash">$ node columnify.js
+
+ID NAME        GENDER FLAG
+<span class="token number">1</span>  テスト 太郎 Male
+<span class="token number">99</span> Test        Feale  Administrator
+</code></pre>
+<p>注目すべきは、<code>テスト 太郎</code> のように全角文字を含んでいても列の整形が上手くできている点だ。また、<code>flag</code> プロパティのように一部の要素しか持っていないプロパティも上手く表示できた。</p>
+<h2 id="カスタマイズ色々"><a class="header-link" href="#カスタマイズ色々"><span class="header-link-mark"></span></a>カスタマイズ色々</h2>
+<p>Columnify は出力形式を色々とカスタマイズできるので、いくつか試してみる。</p>
+<h3 id="列ごとの区切り線を入れてみる"><a class="header-link" href="#列ごとの区切り線を入れてみる"><span class="header-link-mark"></span></a>列ごとの区切り線を入れてみる</h3>
+<p>列ごとの区切り線を入れるには、<code>columnSplitter</code> プロパティを使う。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token function">columnify</span><span class="token punctuation">(</span><span class="token punctuation">[</span>
+  <span class="token punctuation">{</span> id<span class="token operator">:</span> <span class="token number">1</span><span class="token punctuation">,</span> name<span class="token operator">:</span> <span class="token string">'テスト 太郎'</span><span class="token punctuation">,</span> gender<span class="token operator">:</span> <span class="token string">'Male'</span> <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span> id<span class="token operator">:</span> <span class="token number">99</span><span class="token punctuation">,</span> name<span class="token operator">:</span> <span class="token string">'Test'</span><span class="token punctuation">,</span> gender<span class="token operator">:</span> <span class="token string">'Feale'</span><span class="token punctuation">,</span> flag<span class="token operator">:</span> <span class="token string">'Administrator'</span> <span class="token punctuation">}</span>
+<span class="token punctuation">]</span><span class="token punctuation">,</span> <span class="token punctuation">{</span>
+  columnSplitter<span class="token operator">:</span> <span class="token string">' | '</span>  <span class="token comment">// ← こんな風に縦線を入れてもらう</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<pre class="language-bash"><code class="language-bash">$ node columnify.js
+
+ID <span class="token operator">|</span> NAME        <span class="token operator">|</span> GENDER <span class="token operator">|</span> FLAG
+<span class="token number">1</span>  <span class="token operator">|</span> テスト 太郎 <span class="token operator">|</span> Male   <span class="token operator">|</span>
+<span class="token number">99</span> <span class="token operator">|</span> Test        <span class="token operator">|</span> Feale  <span class="token operator">|</span> Administrator
+</code></pre>
+<p>このとおり。</p>
+<h3 id="値を中央揃えや右揃えにしてみる"><a class="header-link" href="#値を中央揃えや右揃えにしてみる"><span class="header-link-mark"></span></a>値を中央揃えや右揃えにしてみる</h3>
+<p>CSS でいう <code>text-align</code> のように、値を中央揃えや右揃えにできる。<code>config</code> プロパティは列名ごとに個別の指定ができるモノ。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token function">columnify</span><span class="token punctuation">(</span><span class="token punctuation">[</span>
+  <span class="token punctuation">{</span> id<span class="token operator">:</span> <span class="token number">1</span><span class="token punctuation">,</span> name<span class="token operator">:</span> <span class="token string">'テスト 太郎'</span><span class="token punctuation">,</span> gender<span class="token operator">:</span> <span class="token string">'Male'</span> <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span> id<span class="token operator">:</span> <span class="token number">99</span><span class="token punctuation">,</span> name<span class="token operator">:</span> <span class="token string">'Test'</span><span class="token punctuation">,</span> gender<span class="token operator">:</span> <span class="token string">'Feale'</span><span class="token punctuation">,</span> flag<span class="token operator">:</span> <span class="token string">'Administrator'</span> <span class="token punctuation">}</span>
+<span class="token punctuation">]</span><span class="token punctuation">,</span> <span class="token punctuation">{</span>
+  columnSplitter<span class="token operator">:</span> <span class="token string">' | '</span><span class="token punctuation">,</span>
+  config<span class="token operator">:</span> <span class="token punctuation">{</span>
+    id<span class="token operator">:</span> <span class="token punctuation">{</span>
+      align<span class="token operator">:</span> <span class="token string">'right'</span>
+    <span class="token punctuation">}</span><span class="token punctuation">,</span>
+    name<span class="token operator">:</span> <span class="token punctuation">{</span>
+      align<span class="token operator">:</span> <span class="token string">'center'</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>ココでは <code>id</code> 列を右揃え、<code>name</code> 列を中央揃えにした。</p>
+<pre class="language-bash"><code class="language-bash">$ node columnify.js
+
+ID <span class="token operator">|</span>    NAME     <span class="token operator">|</span> GENDER <span class="token operator">|</span> FLAG
+ <span class="token number">1</span> <span class="token operator">|</span> テスト 太郎 <span class="token operator">|</span> Male   <span class="token operator">|</span>
+<span class="token number">99</span> <span class="token operator">|</span>    Test     <span class="token operator">|</span> Feale  <span class="token operator">|</span> Administrator
+</code></pre>
+<p>上手く文字揃えが設定されている。</p>
+<h3 id="列の見出し文言を変える"><a class="header-link" href="#列の見出し文言を変える"><span class="header-link-mark"></span></a>列の見出し文言を変える</h3>
+<p>列の見出しは、プロパティを大文字にしたモノが使われる。コレに固定されるのは嫌なので、見出しを自由に変えてみる。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token function">columnify</span><span class="token punctuation">(</span><span class="token punctuation">[</span>
+  <span class="token punctuation">{</span> id<span class="token operator">:</span> <span class="token number">1</span><span class="token punctuation">,</span> name<span class="token operator">:</span> <span class="token string">'テスト 太郎'</span><span class="token punctuation">,</span> gender<span class="token operator">:</span> <span class="token string">'Male'</span> <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span> id<span class="token operator">:</span> <span class="token number">99</span><span class="token punctuation">,</span> name<span class="token operator">:</span> <span class="token string">'Test'</span><span class="token punctuation">,</span> gender<span class="token operator">:</span> <span class="token string">'Feale'</span><span class="token punctuation">,</span> flag<span class="token operator">:</span> <span class="token string">'Administrator'</span> <span class="token punctuation">}</span>
+<span class="token punctuation">]</span><span class="token punctuation">,</span> <span class="token punctuation">{</span>
+  columnSplitter<span class="token operator">:</span> <span class="token string">' | '</span><span class="token punctuation">,</span>
+  config<span class="token operator">:</span> <span class="token punctuation">{</span>
+    id<span class="token operator">:</span> <span class="token punctuation">{</span>
+      <span class="token function-variable function">headingTransform</span><span class="token operator">:</span> <span class="token punctuation">(</span><span class="token parameter">heading</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">ユーザ </span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>heading<span class="token punctuation">.</span><span class="token method function property-access">toUpperCase</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token interpolation-punctuation punctuation">}</span></span><span class="token template-punctuation string">`</span></span><span class="token punctuation">,</span>
+      align<span class="token operator">:</span> <span class="token string">'right'</span>
+    <span class="token punctuation">}</span><span class="token punctuation">,</span>
+    name<span class="token operator">:</span> <span class="token punctuation">{</span>
+      <span class="token function-variable function">headingTransform</span><span class="token operator">:</span> <span class="token punctuation">(</span><span class="token parameter">heading</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token string">'氏名'</span><span class="token punctuation">,</span>
+      align<span class="token operator">:</span> <span class="token string">'center'</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>列ごとの設定 (<code>config</code>) にて、<code>headingTransform</code> というプロパティを定義し、そこに文字列を返す関数を用意する。仮引数 <code>heading</code> には、大文字に変換される前のプロパティがそのまま入っている。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token punctuation">{</span>
+  config<span class="token operator">:</span> <span class="token punctuation">{</span>
+    id<span class="token operator">:</span> <span class="token punctuation">{</span>
+      <span class="token comment">// アロー関数を省略せず書くとこのとおり</span>
+      <span class="token function-variable function">headingTransform</span><span class="token operator">:</span> <span class="token punctuation">(</span><span class="token parameter">heading</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+        <span class="token keyword control-flow">return</span> <span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">ユーザ </span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>heading<span class="token punctuation">.</span><span class="token method function property-access">toUpperCase</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token interpolation-punctuation punctuation">}</span></span><span class="token template-punctuation string">`</span></span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p><code>name</code> プロパティの方は、仮引数 <code>heading</code> を使わず、問答無用で <code>'氏名'</code> という見出しにするようにした。</p>
+<p>結果は以下のとおり。</p>
+<pre class="language-bash"><code class="language-bash">$ node columnify.js
+ユーザ ID <span class="token operator">|</span>    氏名     <span class="token operator">|</span> GENDER <span class="token operator">|</span> FLAG
+        <span class="token number">1</span> <span class="token operator">|</span> テスト 太郎 <span class="token operator">|</span> Male   <span class="token operator">|</span>
+       <span class="token number">99</span> <span class="token operator">|</span>    Test     <span class="token operator">|</span> Feale  <span class="token operator">|</span> Administrator
+</code></pre>
+<p><code>ID</code>・<code>NAME</code> となっていた見出し文言が <code>ユーザ ID</code>・<code>氏名</code> に変わっているのが分かるだろう。</p>
+<h2 id="以上"><a class="header-link" href="#以上"><span class="header-link-mark"></span></a>以上</h2>
+<p>割と柔軟にカスタマイズできるので、あとは公式の README を見ながら自由にコンソール出力を整形してみよう。</p>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2019-01-08</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2019-01-08</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

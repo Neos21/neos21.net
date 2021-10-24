@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>テキストを色々なケースに変換する Angular アプリを作った - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2018/08/15-02.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2018/index.html">2018年</a></li>
+            <li><a href="/blog/2018/08/index.html">08月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2018-08-15</time></div>
+        <h1 id="page-title">テキストを色々なケースに変換する Angular アプリを作った</h1>
+
+<p>最近精力的に <a href="https://neos21.github.io/angular-utilities/">Angular Utilities</a> を作っていた。今回は、入力したテキストをスネークケースにしたり、キャメルケースにしたりするツールを作った。</p>
+<ul>
+  <li><a href="https://neos21.github.io/angular-utilities/text-converter/case-converter">Angular Utilities - Case Converter</a></li>
+</ul>
+<p>ケース変換に使ったのは <strong>Lodash</strong>。Underscore.js をベースにした汎用ライブラリの、文字列操作部分を利用した。</p>
+<ul>
+  <li>参考：<a href="https://lodash.com/">Lodash</a></li>
+</ul>
+<p>まんま <code>Lodash#camelCase()</code> などのメソッドが存在しているので、ほとんどコレを叩いてやるだけ。</p>
+<p>ただ、表示欄を沢山作って、それぞれに値をバインドするのをベタ書きで作るのは面倒なので、以下のようなオブジェクトを用意し、ループによって描画や処理をさせるようにしてみた。</p>
+<pre class="language-typescript"><code class="language-typescript">@<span class="token function"><span class="token maybe-class-name">Component</span></span><span class="token punctuation">(</span><span class="token punctuation">{</span> <span class="token comment">/* 省略 */</span> <span class="token punctuation">}</span><span class="token punctuation">)</span>
+<span class="token keyword">export</span> <span class="token keyword">class</span> <span class="token class-name"><span class="token maybe-class-name">CaseConverterComponent</span></span> <span class="token keyword">implements</span> <span class="token class-name"><span class="token maybe-class-name">DoCheck</span></span> <span class="token punctuation">{</span>
+  <span class="token doc-comment comment">/** 入力値 */</span>
+  <span class="token keyword">public</span> input<span class="token operator">:</span> <span class="token builtin">string</span> <span class="token operator">=</span> <span class="token string">''</span><span class="token punctuation">;</span>
+  
+  <span class="token doc-comment comment">/**
+   * 様々なケースに変換するオブジェクトたち
+   * 
+   * - title : 画面に表示する「変換方法」のラベル
+   * - value : テキストエリアに表示する「変換結果」
+   * - transform : 行データを変換し返却する関数
+   * - isCollapsed : 行を縮小表示するかどうか
+   */</span>
+  <span class="token keyword">public</span> cases<span class="token operator">:</span> <span class="token builtin">any</span> <span class="token operator">=</span> <span class="token punctuation">{</span>
+    pascal    <span class="token operator">:</span> <span class="token punctuation">{</span> title<span class="token operator">:</span> <span class="token string">'パスカルケース'</span><span class="token punctuation">,</span>         value<span class="token operator">:</span> <span class="token string">''</span><span class="token punctuation">,</span> <span class="token function-variable function">transform</span><span class="token operator">:</span> line <span class="token arrow operator">=></span> _<span class="token punctuation">.</span><span class="token method function property-access">upperFirst</span><span class="token punctuation">(</span>_<span class="token punctuation">.</span><span class="token method function property-access">camelCase</span><span class="token punctuation">(</span>line<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">,</span> isCollapsed<span class="token operator">:</span> <span class="token boolean">false</span> <span class="token punctuation">}</span><span class="token punctuation">,</span>
+    camel     <span class="token operator">:</span> <span class="token punctuation">{</span> title<span class="token operator">:</span> <span class="token string">'キャメルケース'</span><span class="token punctuation">,</span>         value<span class="token operator">:</span> <span class="token string">''</span><span class="token punctuation">,</span> <span class="token function-variable function">transform</span><span class="token operator">:</span> line <span class="token arrow operator">=></span> _<span class="token punctuation">.</span><span class="token method function property-access">camelCase</span><span class="token punctuation">(</span>line<span class="token punctuation">)</span>              <span class="token punctuation">,</span> isCollapsed<span class="token operator">:</span> <span class="token boolean">false</span> <span class="token punctuation">}</span><span class="token punctuation">,</span>
+    kebab     <span class="token operator">:</span> <span class="token punctuation">{</span> title<span class="token operator">:</span> <span class="token string">'ハイフンケース'</span><span class="token punctuation">,</span>         value<span class="token operator">:</span> <span class="token string">''</span><span class="token punctuation">,</span> <span class="token function-variable function">transform</span><span class="token operator">:</span> line <span class="token arrow operator">=></span> _<span class="token punctuation">.</span><span class="token method function property-access">kebabCase</span><span class="token punctuation">(</span>line<span class="token punctuation">)</span>              <span class="token punctuation">,</span> isCollapsed<span class="token operator">:</span> <span class="token boolean">false</span> <span class="token punctuation">}</span><span class="token punctuation">,</span>
+    snake     <span class="token operator">:</span> <span class="token punctuation">{</span> title<span class="token operator">:</span> <span class="token string">'スネークケース'</span><span class="token punctuation">,</span>         value<span class="token operator">:</span> <span class="token string">''</span><span class="token punctuation">,</span> <span class="token function-variable function">transform</span><span class="token operator">:</span> line <span class="token arrow operator">=></span> _<span class="token punctuation">.</span><span class="token method function property-access">snakeCase</span><span class="token punctuation">(</span>line<span class="token punctuation">)</span>              <span class="token punctuation">,</span> isCollapsed<span class="token operator">:</span> <span class="token boolean">false</span> <span class="token punctuation">}</span><span class="token punctuation">,</span>
+    upperSnake<span class="token operator">:</span> <span class="token punctuation">{</span> title<span class="token operator">:</span> <span class="token string">'アッパースネークケース'</span><span class="token punctuation">,</span> value<span class="token operator">:</span> <span class="token string">''</span><span class="token punctuation">,</span> <span class="token function-variable function">transform</span><span class="token operator">:</span> line <span class="token arrow operator">=></span> _<span class="token punctuation">.</span><span class="token method function property-access">toUpper</span><span class="token punctuation">(</span>_<span class="token punctuation">.</span><span class="token method function property-access">snakeCase</span><span class="token punctuation">(</span>line<span class="token punctuation">)</span><span class="token punctuation">)</span>   <span class="token punctuation">,</span> isCollapsed<span class="token operator">:</span> <span class="token boolean">false</span> <span class="token punctuation">}</span><span class="token punctuation">,</span>
+    lower     <span class="token operator">:</span> <span class="token punctuation">{</span> title<span class="token operator">:</span> <span class="token string">'ロウワーケース'</span><span class="token punctuation">,</span>         value<span class="token operator">:</span> <span class="token string">''</span><span class="token punctuation">,</span> <span class="token function-variable function">transform</span><span class="token operator">:</span> line <span class="token arrow operator">=></span> _<span class="token punctuation">.</span><span class="token method function property-access">lowerCase</span><span class="token punctuation">(</span>line<span class="token punctuation">)</span>              <span class="token punctuation">,</span> isCollapsed<span class="token operator">:</span> <span class="token boolean">false</span> <span class="token punctuation">}</span><span class="token punctuation">,</span>
+    upper     <span class="token operator">:</span> <span class="token punctuation">{</span> title<span class="token operator">:</span> <span class="token string">'アッパーケース'</span><span class="token punctuation">,</span>         value<span class="token operator">:</span> <span class="token string">''</span><span class="token punctuation">,</span> <span class="token function-variable function">transform</span><span class="token operator">:</span> line <span class="token arrow operator">=></span> _<span class="token punctuation">.</span><span class="token method function property-access">upperCase</span><span class="token punctuation">(</span>line<span class="token punctuation">)</span>              <span class="token punctuation">,</span> isCollapsed<span class="token operator">:</span> <span class="token boolean">false</span> <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span><span class="token punctuation">;</span>
+  
+  <span class="token doc-comment comment">/**
+   * 変更を監視してケースを変換する
+   */</span>
+  <span class="token keyword">public</span> <span class="token function">ngDoCheck</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator">:</span> <span class="token keyword">void</span> <span class="token punctuation">{</span>
+    <span class="token comment">// 入力値を行ごとに配列に分割する</span>
+    <span class="token keyword">const</span> lines <span class="token operator">=</span> <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">input</span><span class="token punctuation">.</span><span class="token method function property-access">split</span><span class="token punctuation">(</span><span class="token string">'\n'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token comment">// ケースごとに処理する</span>
+    <span class="token known-class-name class-name">Object</span><span class="token punctuation">.</span><span class="token method function property-access">keys</span><span class="token punctuation">(</span><span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">cases</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">forEach</span><span class="token punctuation">(</span><span class="token punctuation">(</span>key<span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+      <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">cases</span><span class="token punctuation">[</span>key<span class="token punctuation">]</span><span class="token punctuation">.</span><span class="token property-access">value</span> <span class="token operator">=</span> lines<span class="token punctuation">.</span><span class="token method function property-access">map</span><span class="token punctuation">(</span><span class="token punctuation">(</span>line<span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+        <span class="token comment">// 行ごとに所定の変換メソッドを利用する</span>
+        <span class="token keyword">return</span> <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">cases</span><span class="token punctuation">[</span>key<span class="token punctuation">]</span><span class="token punctuation">.</span><span class="token method function property-access">transform</span><span class="token punctuation">(</span>line<span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">join</span><span class="token punctuation">(</span><span class="token string">'\n'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment">// 配列を結合して返す</span>
+    <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>このようにすると、<code>cases.pascal.value</code> や <code>cases.camel.value</code> が変換後の値を持つことになる。</p>
+<p>ただ、今回、メンバ変数 <code>cases</code> を Array ではなく Object で作ったので、画面側で <code>*ngFor</code> によるループ表示ができない。連想配列を順に操作する時は、</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token known-class-name class-name">Object</span><span class="token punctuation">.</span><span class="token method function property-access">keys</span><span class="token punctuation">(</span><span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">cases</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">forEach</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token parameter">key</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">cases</span><span class="token punctuation">[</span>key<span class="token punctuation">]</span><span class="token punctuation">;</span>  <span class="token comment">// コレで「pascal」や「camel」にアクセスできる</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>このように <code>Object.keys()</code> を使う必要がある。</p>
+<p>コレを画面側で実現するために、連想配列を Angular パイプで渡し、キーの配列を返す、<strong>独自の「KeyPipe」なるものを作った。</strong></p>
+<pre class="language-typescript"><code class="language-typescript"><span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">Pipe</span><span class="token punctuation">,</span> <span class="token maybe-class-name">PipeTransform</span> <span class="token punctuation">}</span></span> <span class="token keyword">from</span> <span class="token string">'@angular/core'</span><span class="token punctuation">;</span>
+
+<span class="token doc-comment comment">/** 連想配列のキーの配列を返すパイプ : オブジェクトを *ngFor でループさせたい時に */</span>
+@<span class="token function"><span class="token maybe-class-name">Pipe</span></span><span class="token punctuation">(</span><span class="token punctuation">{</span> name<span class="token operator">:</span> <span class="token string">'keys'</span> <span class="token punctuation">}</span><span class="token punctuation">)</span>
+<span class="token keyword">export</span> <span class="token keyword">class</span> <span class="token class-name"><span class="token maybe-class-name">KeysPipe</span></span> <span class="token keyword">implements</span> <span class="token class-name"><span class="token maybe-class-name">PipeTransform</span></span> <span class="token punctuation">{</span>
+  <span class="token function">transform</span><span class="token punctuation">(</span>value<span class="token operator">:</span> <span class="token builtin">any</span><span class="token punctuation">,</span> args<span class="token operator">?</span><span class="token operator">:</span> <span class="token builtin">any</span><span class="token punctuation">)</span><span class="token operator">:</span> <span class="token builtin">any</span> <span class="token punctuation">{</span>
+    <span class="token keyword">return</span> <span class="token known-class-name class-name">Object</span><span class="token punctuation">.</span><span class="token method function property-access">keys</span><span class="token punctuation">(</span>value<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>パイプはコレだけ。</p>
+<p>HTML 側では、このパイプを利用して以下のようにケース変換結果欄を作っている。</p>
+<pre class="language-html"><code class="language-html"><span class="token comment">&#x3C;!-- さきほどのパイプを使い、cases のキーを順にループする --></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>tr</span> <span class="token attr-name">*ngFor</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>let key of cases | keys<span class="token punctuation">"</span></span><span class="token punctuation">></span></span>
+  <span class="token comment">&#x3C;!-- ラベルのセルをクリックすると、その行の高さを縮めたりできる --></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>td</span> <span class="token attr-name">(click)</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>cases[key].isCollapsed = !cases[key].isCollapsed<span class="token punctuation">"</span></span><span class="token punctuation">></span></span>
+    <span class="token comment">&#x3C;!-- ラベルを表示する --></span>
+    {{ cases[key].title }}
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>td</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>td</span><span class="token punctuation">></span></span>
+    <span class="token comment">&#x3C;!-- 変換結果を表示。ngStyle を利用して height 値を動的に書き換える --></span>
+    <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>textarea</span> <span class="token attr-name">[value]</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>cases[key].value<span class="token punctuation">"</span></span> <span class="token attr-name">readonly</span>
+              <span class="token attr-name">[ngStyle]</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>{ <span class="token punctuation">'</span>height<span class="token punctuation">'</span>: cases[key].isCollapsed ? <span class="token punctuation">'</span>2.5em<span class="token punctuation">'</span> : <span class="token punctuation">'</span>4em<span class="token punctuation">'</span> }<span class="token punctuation">"</span></span><span class="token punctuation">></span></span>
+    <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>textarea</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>td</span><span class="token punctuation">></span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>tr</span><span class="token punctuation">></span></span>
+</code></pre>
+<p>こんな感じ。KeyPipe なんて Angular 組み込みで作っておいてくれても良さそうなのにね〜。というか <code>cases</code> を連想配列にする必要がなかった…！？w</p>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2018-08-15</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2018-08-15</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

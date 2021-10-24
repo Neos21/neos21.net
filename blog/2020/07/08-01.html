@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>コミットされた YAML ファイルを Kubernetes にデプロイする GitHub Actions - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2020/07/08-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2020/index.html">2020年</a></li>
+            <li><a href="/blog/2020/07/index.html">07月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2020-07-08</time></div>
+        <h1 id="page-title">コミットされた YAML ファイルを Kubernetes にデプロイする GitHub Actions</h1>
+
+<p>Kubernetes のマニフェストファイルを管理している GitHub リポジトリがあって、そこにコミット・プッシュされた YAML ファイルを特定して、Kubernetes クラスタにデプロイするような GitHub Actions を作ってみた。</p>
+<h2 id="コード全量と使い方"><a class="header-link" href="#コード全量と使い方"><span class="header-link-mark"></span></a>コード全量と使い方</h2>
+<p>先にコード全量。</p>
+<ul>
+  <li><code>.github/workflows/deploy-manifests.yaml</code></li>
+</ul>
+<pre class="language-yaml"><code class="language-yaml"><span class="token comment"># コミットされた YAML ファイルを Kubernetes クラスタにデプロイする</span>
+<span class="token key atrule">name</span><span class="token punctuation">:</span> deploy<span class="token punctuation">-</span>manifests
+<span class="token key atrule">on</span><span class="token punctuation">:</span>
+  <span class="token key atrule">push</span><span class="token punctuation">:</span>
+    <span class="token key atrule">branches</span><span class="token punctuation">:</span>
+      <span class="token punctuation">-</span> master
+<span class="token key atrule">jobs</span><span class="token punctuation">:</span>
+  <span class="token key atrule">deploy</span><span class="token punctuation">:</span>
+    <span class="token key atrule">name</span><span class="token punctuation">:</span> Deploy Manifests
+    <span class="token key atrule">runs-on</span><span class="token punctuation">:</span> ubuntu<span class="token punctuation">-</span>latest
+    <span class="token key atrule">steps</span><span class="token punctuation">:</span>
+      <span class="token punctuation">-</span> <span class="token key atrule">name</span><span class="token punctuation">:</span> Checkout
+        <span class="token key atrule">uses</span><span class="token punctuation">:</span> actions/checkout@v2
+      <span class="token punctuation">-</span> <span class="token key atrule">name</span><span class="token punctuation">:</span> Get Changed Files
+        <span class="token key atrule">id</span>  <span class="token punctuation">:</span> get_changed_files
+        <span class="token key atrule">uses</span><span class="token punctuation">:</span> jitterbit/get<span class="token punctuation">-</span>changed<span class="token punctuation">-</span>files@v1
+        <span class="token key atrule">with</span><span class="token punctuation">:</span>
+          <span class="token key atrule">format</span><span class="token punctuation">:</span> json
+      <span class="token comment"># 対象とする deployments/ ディレクトリ配下の YAML ファイルのみにフィルタリングし ' -f FILE1.yaml -f FILE2.yaml' といった文字列を作成する</span>
+      <span class="token comment"># - added_modified は追加・更新したファイルのみで、リネームした場合が含まれない。そこで renamed を配列結合してからフィルタリングする</span>
+      <span class="token comment"># - TEMPLATE.yaml は除外する</span>
+      <span class="token comment"># - フィルタリングした結果が0件なら空文字となる</span>
+      <span class="token punctuation">-</span> <span class="token key atrule">name</span><span class="token punctuation">:</span> Filter Files
+        <span class="token key atrule">id</span>  <span class="token punctuation">:</span> filter_files
+        <span class="token key atrule">run</span> <span class="token punctuation">:</span> <span class="token punctuation">|</span><span class="token scalar string">
+          echo "::set-output name=filtered_files::$(jq -r -j --argjson added_modified '${{ steps.get_changed_files.outputs.added_modified }}' --argjson renamed '${{ steps.get_changed_files.outputs.renamed }}' -n '$added_modified + $renamed | map(select(test("deployments/"))) | map(select(test("TEMPLATE") | not)) | map(select(test(".(?i)(yml|yaml)$"))) | map(" -f " + . + " ")[]')"</span>
+      <span class="token punctuation">-</span> <span class="token key atrule">name</span><span class="token punctuation">:</span> Print Filtered Files
+        <span class="token key atrule">run</span> <span class="token punctuation">:</span> <span class="token punctuation">|</span><span class="token scalar string">
+          echo 'Filtered Files :'
+          echo "${{ steps.filter_files.outputs.filtered_files }}"</span>
+      <span class="token comment"># フィルタリングした結果、追加・更新されたファイルがある場合のみ kubectl apply を実行する</span>
+      <span class="token punctuation">-</span> <span class="token key atrule">name</span><span class="token punctuation">:</span> Deploy Files With Kubernetes CLI
+        <span class="token key atrule">if</span>  <span class="token punctuation">:</span> steps.filter_files.outputs.filtered_files <span class="token tag">!=</span> null <span class="token important">&#x26;&#x26;</span> steps.filter_files.outputs.filtered_files <span class="token tag">!=</span> ''
+        <span class="token key atrule">run</span> <span class="token punctuation">:</span> <span class="token punctuation">|</span><span class="token scalar string">
+          echo "${{ secrets.KUBE_CONFIG }}" | base64 --decode > /tmp/config
+          export KUBECONFIG=/tmp/config
+          kubectl apply ${{ steps.filter_files.outputs.filtered_files }}</span>
+</code></pre>
+<p>KubeConfig の内容を Secret として使用しているので、次のように <em>KubeConfig の内容を Base64 エンコードして、<code>KUBE_CONFIG</code> という Secret 名で登録</em>しておく。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">cat</span> <span class="token string">"<span class="token variable">${<span class="token environment constant">HOME</span>}</span>/.kube/config"</span> <span class="token operator">|</span> base64
+</code></pre>
+<h2 id="詳細解説"><a class="header-link" href="#詳細解説"><span class="header-link-mark"></span></a>詳細解説</h2>
+<p>それでは使い方を説明する。</p>
+<p><code>on.push.branches</code> で指定したブランチに対する Push が発生した時に、この GitHub Actions ワークフローが実行される。ココでは <code>master</code> ブランチへの Push 時となる。</p>
+<hr>
+<p><code>name: Get Changed Files</code> Step では、<code>jitterbit/get-changed-files@v1</code> を使い、コミット内容から「新規追加されたファイル」「更新されたファイル」「リネームされたファイル」などを JSON 形式で取得している。</p>
+<ul>
+  <li><a href="https://github.com/marketplace/actions/get-all-changed-files">Get All Changed Files · Actions · GitHub Marketplace · GitHub</a></li>
+</ul>
+<p>取得結果を次の Step で利用したいので、<strong><code>id: get_changed_files</code></strong> と Step ID を付与している。Step ID を書いておくと、別の Step で <strong><code>${{ steps.【Step ID】.outputs.【変数名】 }}</code></strong> という風に参照できるようになる。</p>
+<hr>
+<p><code>name: Filter Files</code> Step でやっているのがキモで、変更があったファイルの JSON 情報を利用して jq 芸を行っている。</p>
+<ul>
+  <li><code>jq -r -j</code> (<code>--raw-output</code>・<code>--join-output</code>) で、最終結果を1行にまとめる</li>
+  <li>2つの JSON 配列をマージする。<code>--argjson 【名前】 '【】'</code> で JSON 配列をそれぞれ定義し、<code>-n $【名前1】 + $【名前2】</code> (<code>--null-input</code>) とすると結合できる</li>
+  <li>結合した JSON 配列に対し、<code>map(select(test( )))</code> のパイプを組み合わせることで、対象としたいファイル、除外したいファイルを見極めている
+    <ul>
+      <li><code>map(select(test("deployments/")))</code> で、<code>deployments/</code> ディレクトリ配下に保存されたファイルのみに絞り込む</li>
+      <li>その内、<code>map(select(test("TEMPLATE") | not))</code> で、<code>deployments/</code> ディレクトリ配下にあっても <code>TEMPLATE</code> の文字を含むファイルは除外している (<code>deployments/TEMPLATE.yaml</code> なんかを <code>kubectl apply</code> 対象にしないようにする)</li>
+      <li>最後に拡張子判定。<code>map(select(test(".(?i)(yml|yaml)$")))</code> で、大文字・小文字を区別せ YAML ファイル (<code>.yml</code>・<code>.yaml</code>・<code>.YML</code>・<code>.YAML</code>) のみに絞り込む</li>
+      <li>フィルタリングした結果、対象となるファイルが1つもないと空の配列になるので、その場合は最終的に<em>空文字</em>になる</li>
+    </ul>
+  </li>
+  <li>最後に <code>map(" -f " + . + " ")[]'</code> と書いて、<em><code>'-f deployments/FILE1.yaml -f deployments/FILE2.yaml'</code></em> といった文字列を作成する。<code>-f</code> は <code>kubectl apply</code> コマンドに渡す際に必要になるので付与している</li>
+</ul>
+<p>これらのコマンドの結果を、次の Step で使えるようにするため、</p>
+<pre class="language-bash"><code class="language-bash"><span class="token builtin class-name">echo</span> <span class="token string">"::set-output name=【変数名】::<span class="token variable"><span class="token variable">$(</span> 【コマンド】 <span class="token variable">)</span></span>"</span>
+
+<span class="token builtin class-name">echo</span> <span class="token string">"::set-output name=filtered_files::<span class="token variable"><span class="token variable">$(</span> jq -r -j …… <span class="token variable">)</span></span>"</span>
+</code></pre>
+<p>という専用の構文で変数名を付けて Output している。ココで Output した内容を使用する時は、</p>
+<pre class="language-bash"><code class="language-bash"><span class="token variable">${{ steps.【Step ID】.outputs.【変数名】 }</span><span class="token punctuation">}</span>
+
+<span class="token variable">${{ steps.filter_files.outputs.filtered_files }</span><span class="token punctuation">}</span>
+</code></pre>
+<p>といった形で読み込める。</p>
+<hr>
+<p>ある Step を実行するかどうかは、<code>if</code> プロパティが使える。ココはシェルではなく独特の構文が使えるところ。jq 芸の結果が null や空文字でないことを確認している。</p>
+<pre class="language-yaml"><code class="language-yaml"><span class="token key atrule">if</span><span class="token punctuation">:</span> steps.filter_files.outputs.filtered_files <span class="token tag">!=</span> null <span class="token important">&#x26;&#x26;</span> steps.filter_files.outputs.filtered_files <span class="token tag">!=</span> ''
+</code></pre>
+<p>Secret に登録しておいた、Base64 エンコードされた KubeConfig をデコードしてファイルに出力、そしてそれを <code>export KUBECONFIG</code> で読み込んでいる。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token builtin class-name">echo</span> <span class="token string">"<span class="token variable">${{ secrets.KUBE_CONFIG }</span>}"</span> <span class="token operator">|</span> base64 --decode <span class="token operator">></span> /tmp/config
+<span class="token builtin class-name">export</span> <span class="token assign-left variable">KUBECONFIG</span><span class="token operator">=</span>/tmp/config
+</code></pre>
+<p>このやり方は以下を参考にした。</p>
+<ul>
+  <li>参考：<a href="https://github.com/steebchen/kubectl">GitHub - steebchen/kubectl: A Github action for kubectl, the Kubernetes CLI</a></li>
+</ul>
+<p><code>kubectl</code> コマンドは GitHub Actions のデフォルト環境にインストールされているので、<code>KUBECONFIG</code> を用意しておくだけで良い。</p>
+<p>Output を渡す際はクォートで囲まずに渡すことで、<code>eval</code> 的に適用させている。</p>
+<pre class="language-bash"><code class="language-bash">kubectl apply <span class="token variable">${{ steps.filter_files.outputs.filtered_files }</span><span class="token punctuation">}</span>
+
+<span class="token comment"># 以下のように解釈・実行させる。クォートで囲んでしまうとおかしくなる</span>
+kubectl apply -f deployments/FILE1.yaml -f deployments/FILE2.yaml
+</code></pre>
+<p>ということで、コミットされたファイルを <code>kubectl apply</code> するので、<code>kubectl apply --prune</code> だったり、<code>kubectl delete</code> には対応していないのが惜しいところ。良い方法があったら教えてください。</p>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2020-07-08</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2020-07-08</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>Karma を使ったユニットテストの結果を Jenkins 上で綺麗に表示するための設定 - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2018/04/08-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2018/index.html">2018年</a></li>
+            <li><a href="/blog/2018/04/index.html">04月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2018-04-08</time></div>
+        <h1 id="page-title">Karma を使ったユニットテストの結果を Jenkins 上で綺麗に表示するための設定</h1>
+
+<p>Angular CLI 製のプロジェクトなどで、Karma を使ったユニットテストを実施した時に、テスト結果を Jenkins 上で良い感じに表示させたい。そのために必要な設定をまとめる。</p>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#karma-%E3%81%AE%E8%A8%AD%E5%AE%9A">Karma の設定</a></li>
+  <li><a href="#%E5%BF%85%E8%A6%81%E3%81%AB%E5%BF%9C%E3%81%98%E3%81%A6-%E8%A4%87%E6%95%B0%E3%83%96%E3%83%A9%E3%82%A6%E3%82%B6%E3%81%A7%E3%83%86%E3%82%B9%E3%83%88%E3%82%92%E5%AE%9F%E8%A1%8C%E3%81%99%E3%82%8B%E3%81%9F%E3%82%81%E3%81%AE%E8%A8%AD%E5%AE%9A">(必要に応じて) 複数ブラウザでテストを実行するための設定</a></li>
+  <li><a href="#%E3%83%AC%E3%83%9D%E3%83%BC%E3%83%88%E3%81%AE%E7%94%9F%E6%88%90%E7%A2%BA%E8%AA%8D">レポートの生成確認</a></li>
+  <li><a href="#jenkins-%E3%83%97%E3%83%A9%E3%82%B0%E3%82%A4%E3%83%B3%E3%82%92%E3%82%A4%E3%83%B3%E3%82%B9%E3%83%88%E3%83%BC%E3%83%AB%E3%81%99%E3%82%8B">Jenkins プラグインをインストールする</a></li>
+  <li><a href="#jenkinsfile-%E3%82%92%E4%BD%9C%E6%88%90%E3%81%99%E3%82%8B">Jenkinsfile を作成する</a></li>
+  <li><a href="#%E3%83%86%E3%82%B9%E3%83%88%E5%AE%9F%E6%96%BD%E7%B5%90%E6%9E%9C%E3%81%AE%E8%A6%8B%E6%96%B9">テスト実施結果の見方</a></li>
+</ul>
+<h2 id="karma-の設定"><a class="header-link" href="#karma-の設定"><span class="header-link-mark"></span></a>Karma の設定</h2>
+<p>Karma の設定ファイル <code>karma.conf.js</code> を修正して、テスト実施後に JUnit 形式のテスト結果レポートと Cobertura 形式のカバレッジレポートを出力するようにする。いずれも、対応する Jenkins プラグインがあるためである。</p>
+<p>まずはレポートを作成するために以下のパッケージをインストールする。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># Cobertura 形式のレポートを出力するためのプラグイン・Angular CLI で生成した場合は導入済</span>
+$ <span class="token function">npm</span> i -D karma-coverage-istanbul-reporter
+
+<span class="token comment"># JUnit 形式のレポートを出力するためのプラグイン</span>
+$ <span class="token function">npm</span> i -D karma-junit-reporter
+</code></pre>
+<p><code>karma.conf.js</code> の <code>plugins</code> に追加し、以下のようにプラグインが揃うようにしておく。</p>
+<pre class="language-javascript"><code class="language-javascript">module<span class="token punctuation">.</span><span class="token method-variable function-variable method function property-access">exports</span> <span class="token operator">=</span> <span class="token keyword">function</span><span class="token punctuation">(</span><span class="token parameter">config</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  config<span class="token punctuation">.</span><span class="token method function property-access">set</span><span class="token punctuation">(</span><span class="token punctuation">{</span>
+    basePath<span class="token operator">:</span> <span class="token string">''</span><span class="token punctuation">,</span>
+    frameworks<span class="token operator">:</span> <span class="token punctuation">[</span><span class="token string">'jasmine'</span><span class="token punctuation">,</span> <span class="token string">'jasmine-matchers'</span><span class="token punctuation">,</span> <span class="token string">'@angular/cli'</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
+    plugins<span class="token operator">:</span> <span class="token punctuation">[</span>
+      <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'karma-jasmine'</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+      <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'karma-jasmine-matchers'</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+      <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'karma-chrome-launcher'</span><span class="token punctuation">)</span><span class="token punctuation">,</span>   <span class="token comment">// Chrome ブラウザでテストする場合</span>
+      <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'karma-firefox-launcher'</span><span class="token punctuation">)</span><span class="token punctuation">,</span>  <span class="token comment">// Firefox ブラウザでテストする場合</span>
+      <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'karma-ie-launcher'</span><span class="token punctuation">)</span><span class="token punctuation">,</span>       <span class="token comment">// IE ブラウザでテストする場合</span>
+      <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'karma-spec-reporter'</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+      <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'karma-jasmine-html-reporter'</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+      <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'karma-coverage-istanbul-reporter'</span><span class="token punctuation">)</span><span class="token punctuation">,</span>  <span class="token comment">// Cobertura 形式レポート用・Angular CLI の場合導入済</span>
+      <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'karma-junit-reporter'</span><span class="token punctuation">)</span><span class="token punctuation">,</span>              <span class="token comment">// JUnit 形式レポート用</span>
+      <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'@angular/cli/plugins/karma'</span><span class="token punctuation">)</span>
+    <span class="token punctuation">]</span><span class="token punctuation">,</span>
+  <span class="token comment">// 以下略…</span>
+</code></pre>
+<p>続いて、Cobertura 形式のレポートが生成できるよう、<code>coverageIstanbulReporter</code> プロパティを書き加える。</p>
+<pre class="language-javascript"><code class="language-javascript">module<span class="token punctuation">.</span><span class="token method-variable function-variable method function property-access">exports</span> <span class="token operator">=</span> <span class="token keyword">function</span><span class="token punctuation">(</span><span class="token parameter">config</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  config<span class="token punctuation">.</span><span class="token method function property-access">set</span><span class="token punctuation">(</span><span class="token punctuation">{</span>
+    basePath<span class="token operator">:</span> <span class="token string">''</span><span class="token punctuation">,</span>
+    frameworks<span class="token operator">:</span> <span class="token punctuation">[</span><span class="token string">'jasmine'</span><span class="token punctuation">,</span> <span class="token string">'jasmine-matchers'</span><span class="token punctuation">,</span> <span class="token string">'@angular/cli'</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
+    plugins<span class="token operator">:</span> <span class="token punctuation">[</span> <span class="token comment">/* …中略… */</span> <span class="token punctuation">]</span><span class="token punctuation">,</span>
+    <span class="token comment">// Cobertura 形式のカバレッジレポートを出力するための設定</span>
+    coverageIstanbulReporter<span class="token operator">:</span> <span class="token punctuation">{</span>
+      reports<span class="token operator">:</span> <span class="token punctuation">[</span><span class="token string">'html'</span><span class="token punctuation">,</span> <span class="token string">'lcovonly'</span><span class="token punctuation">,</span> <span class="token string">'cobertura'</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
+      fixWebpackSourcePaths<span class="token operator">:</span> <span class="token boolean">true</span>
+    <span class="token punctuation">}</span><span class="token punctuation">,</span>
+    reporters<span class="token operator">:</span> config<span class="token punctuation">.</span><span class="token property-access">angularCli</span> <span class="token operator">&#x26;&#x26;</span> config<span class="token punctuation">.</span><span class="token property-access">angularCli</span><span class="token punctuation">.</span><span class="token property-access">codeCoverage</span>
+      <span class="token operator">?</span> <span class="token punctuation">[</span><span class="token string">'spec'</span><span class="token punctuation">,</span> <span class="token string">'coverage-istanbul'</span><span class="token punctuation">,</span> <span class="token string">'junit'</span><span class="token punctuation">]</span>  <span class="token comment">// この行については後述</span>
+      <span class="token operator">:</span> <span class="token punctuation">[</span><span class="token string">'spec'</span><span class="token punctuation">,</span> <span class="token string">'kjhtml'</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
+    <span class="token comment">// 以下略</span>
+</code></pre>
+<p>さらに、JUnit 形式のレポートを出力するための設定を追加する。これで <code>./coverage/junit-report.xml</code> が生成されるようになる。</p>
+<pre class="language-javascript"><code class="language-javascript">    <span class="token comment">// Cobertura 形式のカバレッジレポートを出力するための設定</span>
+    coverageIstanbulReporter<span class="token operator">:</span> <span class="token punctuation">{</span>
+      reports<span class="token operator">:</span> <span class="token punctuation">[</span><span class="token string">'html'</span><span class="token punctuation">,</span> <span class="token string">'lcovonly'</span><span class="token punctuation">,</span> <span class="token string">'cobertura'</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
+      fixWebpackSourcePaths<span class="token operator">:</span> <span class="token boolean">true</span>
+    <span class="token punctuation">}</span><span class="token punctuation">,</span>
+    <span class="token comment">// JUnit 形式のレポートを出力するための設定</span>
+    junitReporter<span class="token operator">:</span> <span class="token punctuation">{</span>
+      outputDir<span class="token operator">:</span> <span class="token string">'coverage'</span><span class="token punctuation">,</span>
+      outputFile<span class="token operator">:</span> <span class="token string">'junit-report.xml'</span><span class="token punctuation">,</span>
+      suite<span class="token operator">:</span> <span class="token string">''</span><span class="token punctuation">,</span>
+      useBrowserName<span class="token operator">:</span> <span class="token boolean">false</span><span class="token punctuation">,</span>
+      nameFormatter<span class="token operator">:</span> <span class="token keyword nil">undefined</span><span class="token punctuation">,</span>
+      classNameFormatter<span class="token operator">:</span> <span class="token keyword nil">undefined</span><span class="token punctuation">,</span>
+      properties<span class="token operator">:</span> <span class="token punctuation">{</span><span class="token punctuation">}</span><span class="token punctuation">,</span>
+      xmlVersion<span class="token operator">:</span> <span class="token keyword null nil">null</span>
+    <span class="token punctuation">}</span><span class="token punctuation">,</span>
+</code></pre>
+<p>最後に、<code>reporters</code> プロパティで Cobertura 形式のレポートと JUnit 形式のレポートが出力されるよう設定する。これも Angular CLI で生成した雛形をベースにしているので、適宜調整すること。</p>
+<pre class="language-javascript"><code class="language-javascript">    junitReporter<span class="token operator">:</span> <span class="token punctuation">{</span> <span class="token comment">/* …中略… */</span> <span class="token punctuation">}</span><span class="token punctuation">,</span>
+    <span class="token comment">// Cobertura・JUnit 形式のレポートを出力する</span>
+    reporters<span class="token operator">:</span> config<span class="token punctuation">.</span><span class="token property-access">angularCli</span> <span class="token operator">&#x26;&#x26;</span> config<span class="token punctuation">.</span><span class="token property-access">angularCli</span><span class="token punctuation">.</span><span class="token property-access">codeCoverage</span>
+      <span class="token operator">?</span> <span class="token punctuation">[</span><span class="token string">'spec'</span><span class="token punctuation">,</span> <span class="token string">'coverage-istanbul'</span><span class="token punctuation">,</span> <span class="token string">'junit'</span><span class="token punctuation">]</span>  <span class="token comment">// ← ココ</span>
+      <span class="token operator">:</span> <span class="token punctuation">[</span><span class="token string">'spec'</span><span class="token punctuation">,</span> <span class="token string">'kjhtml'</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
+</code></pre>
+<h2 id="必要に応じて-複数ブラウザでテストを実行するための設定"><a class="header-link" href="#必要に応じて-複数ブラウザでテストを実行するための設定"><span class="header-link-mark"></span></a>(必要に応じて) 複数ブラウザでテストを実行するための設定</h2>
+<p>複数のブラウザで同時にテストする際は、タイムアウト設定を入れておく必要がある。</p>
+<p>Jenkins サーバ上で動作を見ていると、最大2ブラウザまでしか同時接続 (テスト実行) しないようだったので、残りの1ブラウザがタイムアウトにならないよう、タイムうと設定を長め (3分程度) にしておくと良いだろう。</p>
+<pre class="language-javascript"><code class="language-javascript">    <span class="token comment">// 複数ブラウザでの動作を安定させるためタイムアウト設定を追加する (3分)</span>
+    browserNoActivityTimeout<span class="token operator">:</span> <span class="token number">180000</span><span class="token punctuation">,</span>
+    <span class="token comment">// テストするブラウザの指定</span>
+    browsers<span class="token operator">:</span> <span class="token punctuation">[</span><span class="token string">'Chrome'</span><span class="token punctuation">,</span> <span class="token string">'Firefox'</span><span class="token punctuation">,</span> <span class="token string">'IE_extoff'</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
+    <span class="token comment">// IE はアドオンを無効にしないと正常に動作しないため独自に設定する</span>
+    customLaunchers<span class="token operator">:</span> <span class="token punctuation">{</span>
+      <span class="token maybe-class-name">IE_extoff</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+        base<span class="token operator">:</span> <span class="token string">'IE'</span><span class="token punctuation">,</span>
+        flags<span class="token operator">:</span> <span class="token punctuation">[</span><span class="token string">'-extoff'</span><span class="token punctuation">]</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span><span class="token punctuation">,</span>
+</code></pre>
+<h2 id="レポートの生成確認"><a class="header-link" href="#レポートの生成確認"><span class="header-link-mark"></span></a>レポートの生成確認</h2>
+<p>ここまでの作業でテストを実行してみて、以下の2ファイルが生成されるか確認する。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">npm</span> <span class="token builtin class-name">test</span> – --single-run
+</code></pre>
+<ul>
+  <li><code>./coverage/cobertura-coverage.xml</code> (Cobertura 形式)</li>
+  <li><code>./coverage/junit-report.xml</code> (JUnit 形式)</li>
+</ul>
+<p>正常に出力できていれば OK。あとはコレを Jenkins から呼ぶだけ。</p>
+<p>一応、Angular CLI で生成した雛形をベースにした <code>karma.conf.js</code> の全量を置いておく。</p>
+<pre class="language-javascript"><code class="language-javascript">module<span class="token punctuation">.</span><span class="token method-variable function-variable method function property-access">exports</span> <span class="token operator">=</span> <span class="token keyword">function</span><span class="token punctuation">(</span><span class="token parameter">config</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  config<span class="token punctuation">.</span><span class="token method function property-access">set</span><span class="token punctuation">(</span><span class="token punctuation">{</span>
+    basePath<span class="token operator">:</span> <span class="token string">''</span><span class="token punctuation">,</span>
+    frameworks<span class="token operator">:</span> <span class="token punctuation">[</span><span class="token string">'jasmine'</span><span class="token punctuation">,</span> <span class="token string">'jasmine-matchers'</span><span class="token punctuation">,</span> <span class="token string">'@angular/cli'</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
+    plugins<span class="token operator">:</span> <span class="token punctuation">[</span>
+      <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'karma-jasmine'</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+      <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'karma-jasmine-matchers'</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+      <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'karma-chrome-launcher'</span><span class="token punctuation">)</span><span class="token punctuation">,</span>   <span class="token comment">// Chrome ブラウザでテストする場合</span>
+      <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'karma-firefox-launcher'</span><span class="token punctuation">)</span><span class="token punctuation">,</span>  <span class="token comment">// Firefox ブラウザでテストする場合</span>
+      <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'karma-ie-launcher'</span><span class="token punctuation">)</span><span class="token punctuation">,</span>       <span class="token comment">// IE ブラウザでテストする場合</span>
+      <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'karma-spec-reporter'</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+      <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'karma-jasmine-html-reporter'</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+      <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'karma-coverage-istanbul-reporter'</span><span class="token punctuation">)</span><span class="token punctuation">,</span>  <span class="token comment">// Cobertura 形式レポート用・Angular CLI の場合導入済</span>
+      <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'karma-junit-reporter'</span><span class="token punctuation">)</span><span class="token punctuation">,</span>              <span class="token comment">// JUnit 形式レポート用</span>
+      <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'@angular/cli/plugins/karma'</span><span class="token punctuation">)</span>
+    <span class="token punctuation">]</span><span class="token punctuation">,</span>
+    client<span class="token operator">:</span> <span class="token punctuation">{</span>
+      clearContext<span class="token operator">:</span> <span class="token boolean">false</span>
+    <span class="token punctuation">}</span><span class="token punctuation">,</span>
+    files<span class="token operator">:</span> <span class="token punctuation">[</span>
+      <span class="token punctuation">{</span> pattern<span class="token operator">:</span> <span class="token string">'./src/test.ts'</span><span class="token punctuation">,</span> watched<span class="token operator">:</span> <span class="token boolean">false</span> <span class="token punctuation">}</span>
+    <span class="token punctuation">]</span><span class="token punctuation">,</span>
+    preprocessors<span class="token operator">:</span> <span class="token punctuation">{</span>
+      <span class="token string">'./src/test.ts'</span><span class="token operator">:</span> <span class="token punctuation">[</span><span class="token string">'@angular/cli'</span><span class="token punctuation">]</span>
+    <span class="token punctuation">}</span><span class="token punctuation">,</span>
+    mime<span class="token operator">:</span> <span class="token punctuation">{</span>
+      <span class="token string">'text/x-typescript'</span><span class="token operator">:</span> <span class="token punctuation">[</span><span class="token string">'ts'</span><span class="token punctuation">,</span> <span class="token string">'tsx'</span><span class="token punctuation">]</span>
+    <span class="token punctuation">}</span><span class="token punctuation">,</span>
+    angularCli<span class="token operator">:</span> <span class="token punctuation">{</span>
+      environment<span class="token operator">:</span> <span class="token string">''</span>
+    <span class="token punctuation">}</span><span class="token punctuation">,</span>
+    specReporter<span class="token operator">:</span> <span class="token punctuation">{</span>
+      maxLogLines<span class="token operator">:</span> <span class="token number">5</span><span class="token punctuation">,</span>
+      suppressErrorSummary<span class="token operator">:</span> <span class="token boolean">true</span><span class="token punctuation">,</span>
+      suppressFailed<span class="token operator">:</span> <span class="token boolean">false</span><span class="token punctuation">,</span>
+      suppressPassed<span class="token operator">:</span> <span class="token boolean">false</span><span class="token punctuation">,</span>
+      suppressSkipped<span class="token operator">:</span> <span class="token boolean">true</span><span class="token punctuation">,</span>
+      showSpecTiming<span class="token operator">:</span> <span class="token boolean">false</span>
+    <span class="token punctuation">}</span><span class="token punctuation">,</span>
+    <span class="token comment">// Cobertura 形式のカバレッジレポートを出力するための設定</span>
+    coverageIstanbulReporter<span class="token operator">:</span> <span class="token punctuation">{</span>
+      reports<span class="token operator">:</span> <span class="token punctuation">[</span><span class="token string">'html'</span><span class="token punctuation">,</span> <span class="token string">'lcovonly'</span><span class="token punctuation">,</span> <span class="token string">'cobertura'</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
+      fixWebpackSourcePaths<span class="token operator">:</span> <span class="token boolean">true</span>
+    <span class="token punctuation">}</span><span class="token punctuation">,</span>
+    <span class="token comment">// JUnit 形式のレポートを出力するための設定</span>
+    junitReporter<span class="token operator">:</span> <span class="token punctuation">{</span>
+      outputDir<span class="token operator">:</span> <span class="token string">'coverage'</span><span class="token punctuation">,</span>
+      outputFile<span class="token operator">:</span> <span class="token string">'junit-report.xml'</span><span class="token punctuation">,</span>
+      suite<span class="token operator">:</span> <span class="token string">''</span><span class="token punctuation">,</span>
+      useBrowserName<span class="token operator">:</span> <span class="token boolean">false</span><span class="token punctuation">,</span>
+      nameFormatter<span class="token operator">:</span> <span class="token keyword nil">undefined</span><span class="token punctuation">,</span>
+      classNameFormatter<span class="token operator">:</span> <span class="token keyword nil">undefined</span><span class="token punctuation">,</span>
+      properties<span class="token operator">:</span> <span class="token punctuation">{</span><span class="token punctuation">}</span><span class="token punctuation">,</span>
+      xmlVersion<span class="token operator">:</span> <span class="token keyword null nil">null</span>
+    <span class="token punctuation">}</span><span class="token punctuation">,</span>
+    <span class="token comment">// Cobertura・JUnit 形式のレポートを出力する</span>
+    reporters<span class="token operator">:</span> config<span class="token punctuation">.</span><span class="token property-access">angularCli</span> <span class="token operator">&#x26;&#x26;</span> config<span class="token punctuation">.</span><span class="token property-access">angularCli</span><span class="token punctuation">.</span><span class="token property-access">codeCoverage</span>
+      <span class="token operator">?</span> <span class="token punctuation">[</span><span class="token string">'spec'</span><span class="token punctuation">,</span> <span class="token string">'coverage-istanbul'</span><span class="token punctuation">,</span> <span class="token string">'junit'</span><span class="token punctuation">]</span>
+      <span class="token operator">:</span> <span class="token punctuation">[</span><span class="token string">'spec'</span><span class="token punctuation">,</span> <span class="token string">'kjhtml'</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
+    port<span class="token operator">:</span> <span class="token number">9876</span><span class="token punctuation">,</span>
+    colors<span class="token operator">:</span> <span class="token boolean">true</span><span class="token punctuation">,</span>
+    logLevel<span class="token operator">:</span> config<span class="token punctuation">.</span><span class="token constant">LOG_INFO</span><span class="token punctuation">,</span>
+    autoWatch<span class="token operator">:</span> <span class="token boolean">true</span><span class="token punctuation">,</span>
+    singleRun<span class="token operator">:</span> <span class="token boolean">false</span><span class="token punctuation">,</span>
+    <span class="token comment">// 複数ブラウザでの動作を安定させるためタイムアウト設定を追加する (3分)</span>
+    browserNoActivityTimeout<span class="token operator">:</span> <span class="token number">180000</span><span class="token punctuation">,</span>
+    <span class="token comment">// テストするブラウザの指定</span>
+    browsers<span class="token operator">:</span> <span class="token punctuation">[</span><span class="token string">'Chrome'</span><span class="token punctuation">,</span> <span class="token string">'Firefox'</span><span class="token punctuation">,</span> <span class="token string">'IE_extoff'</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
+    <span class="token comment">// IE はアドオンを無効にしないと正常に動作しないため独自に設定する</span>
+    customLaunchers<span class="token operator">:</span> <span class="token punctuation">{</span>
+      <span class="token maybe-class-name">IE_extoff</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+        base<span class="token operator">:</span> <span class="token string">'IE'</span><span class="token punctuation">,</span>
+        flags<span class="token operator">:</span> <span class="token punctuation">[</span><span class="token string">'-extoff'</span><span class="token punctuation">]</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+</code></pre>
+<h2 id="jenkins-プラグインをインストールする"><a class="header-link" href="#jenkins-プラグインをインストールする"><span class="header-link-mark"></span></a>Jenkins プラグインをインストールする</h2>
+<p>JUnit 形式のレポートと、Cobertura 形式のカバレッジレポートを出力し、Jenkins 管理画面上で表示できるようにするため、以下の2つのプラグインをインストールしておく。</p>
+<ul>
+  <li>JUnit Plugin</li>
+  <li>Cobertura Plugin</li>
+</ul>
+<h2 id="jenkinsfile-を作成する"><a class="header-link" href="#jenkinsfile-を作成する"><span class="header-link-mark"></span></a>Jenkinsfile を作成する</h2>
+<p>今回は Declarative Pipeline で作ってみる。</p>
+<p>それぞれのプラグインをインストールしておくと、「Pipeline Syntax」画面で以下の2項目が選べるようになっているはずなので、コレでスニペットを生成すると良いだろう。</p>
+<ul>
+  <li>junit: Archive JUnit-formatted test results</li>
+  <li>cobertura: Cobertura カバレッジ・レポートの集計
+    <ul>
+      <li>必ず<em>「高度な設定」で「ソースエンコーディング」</em>の設定を見ておこう。<strong>デフォルトでは「ASCII」</strong>が選択されているので、UTF-8 を選び、<code>sourceEncoding</code> オプションを出力しないようにしておくのが望ましい。</li>
+    </ul>
+  </li>
+</ul>
+<pre class="language-groovy"><code class="language-groovy">pipeline <span class="token punctuation">{</span>
+  <span class="token comment">// エージェント : 「any」で良い</span>
+  agent any
+  <span class="token comment">// ビルドトリガ</span>
+  triggers <span class="token punctuation">{</span>
+    <span class="token function">bitbucketPush</span><span class="token punctuation">(</span><span class="token punctuation">)</span>  <span class="token comment">// 「Build when a change is pushed to BitBucket」相当 (Bitbucket との連携時)</span>
+    <span class="token function">pollSCM</span><span class="token punctuation">(</span><span class="token string">''</span><span class="token punctuation">)</span>  <span class="token comment">// 「SCM をポーリング」相当</span>
+  <span class="token punctuation">}</span>
+  options <span class="token punctuation">{</span>
+    <span class="token comment">// ビルドの保存最大数を設定する</span>
+    <span class="token function">buildDiscarder</span><span class="token punctuation">(</span><span class="token function">logRotator</span><span class="token punctuation">(</span>numToKeepStr<span class="token punctuation">:</span> <span class="token string">'5'</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+  <span class="token punctuation">}</span>
+  <span class="token comment">// 変数定義</span>
+  environment <span class="token punctuation">{</span>
+    <span class="token comment">// チェックアウトするブランチ名 : ココでは develop ブランチでテストするテイ</span>
+    BRANCH <span class="token operator">=</span> <span class="token string">'develop'</span>
+    <span class="token comment">// プロジェクト・リポジトリ URL</span>
+    GIT_URL <span class="token operator">=</span> <span class="token string">'ssh://git@【プロジェクト・リポジトリ URL】.git'</span>
+    <span class="token comment">// リポジトリ・ブラウザ URL</span>
+    BROWSER_URL <span class="token operator">=</span> <span class="token string">'http://【Bitbucket リポジトリ・ブラウザ URL】/browse'</span>
+  <span class="token punctuation">}</span>
+  stages <span class="token punctuation">{</span>
+    <span class="token function">stage</span><span class="token punctuation">(</span><span class="token string">'Git チェックアウト'</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      steps <span class="token punctuation">{</span>
+        <span class="token comment">// Push を監視しチェックアウトする</span>
+        checkout poll<span class="token punctuation">:</span> <span class="token boolean">true</span><span class="token punctuation">,</span>
+                 scm<span class="token punctuation">:</span> <span class="token punctuation">[</span>
+                   <span class="token punctuation">$</span><span class="token keyword">class</span><span class="token punctuation">:</span> <span class="token string">'GitSCM'</span><span class="token punctuation">,</span>
+                   branches<span class="token punctuation">:</span> <span class="token punctuation">[</span><span class="token punctuation">[</span>name<span class="token punctuation">:</span> <span class="token string gstring">"origin/<span class="token expression"><span class="token punctuation">$</span><span class="token punctuation">{</span>BRANCH<span class="token punctuation">}</span></span>"</span><span class="token punctuation">]</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
+                   browser<span class="token punctuation">:</span> <span class="token punctuation">[</span>
+                     <span class="token punctuation">$</span><span class="token keyword">class</span><span class="token punctuation">:</span> <span class="token string">'BitbucketWeb'</span><span class="token punctuation">,</span>
+                     repoUrl<span class="token punctuation">:</span> <span class="token string gstring">"<span class="token expression"><span class="token punctuation">$</span><span class="token punctuation">{</span>BROWSER_URL<span class="token punctuation">}</span></span>"</span>
+                   <span class="token punctuation">]</span><span class="token punctuation">,</span>
+                   doGenerateSubmoduleConfigurations<span class="token punctuation">:</span> <span class="token boolean">false</span><span class="token punctuation">,</span>
+                   extensions<span class="token punctuation">:</span> <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
+                   submoduleCfg<span class="token punctuation">:</span> <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
+                   userRemoteConfigs<span class="token punctuation">:</span> <span class="token punctuation">[</span><span class="token punctuation">[</span>
+                     credentialsId<span class="token punctuation">:</span> <span class="token string">'【認証情報】'</span><span class="token punctuation">,</span>
+                     url<span class="token punctuation">:</span> <span class="token string gstring">"<span class="token expression"><span class="token punctuation">$</span><span class="token punctuation">{</span>GIT_URL<span class="token punctuation">}</span></span>"</span>
+                   <span class="token punctuation">]</span><span class="token punctuation">]</span>
+                 <span class="token punctuation">]</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span>
+    <span class="token function">stage</span><span class="token punctuation">(</span><span class="token string">'インストール'</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      steps <span class="token punctuation">{</span>
+        <span class="token function">nodejs</span><span class="token punctuation">(</span>configId<span class="token punctuation">:</span> <span class="token string">'【.npmrc ファイル】'</span><span class="token punctuation">,</span> nodeJSInstallationName<span class="token punctuation">:</span> <span class="token string">'【Node.js バージョン】'</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+          bat <span class="token string">'npm install'</span>
+        <span class="token punctuation">}</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span>
+    <span class="token function">stage</span><span class="token punctuation">(</span><span class="token string">'テスト実行'</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      steps <span class="token punctuation">{</span>
+        <span class="token function">nodejs</span><span class="token punctuation">(</span>configId<span class="token punctuation">:</span> <span class="token string">'【.npmrc ファイル】'</span><span class="token punctuation">,</span> nodeJSInstallationName<span class="token punctuation">:</span> <span class="token string">'【Node.js バージョン】'</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+          bat <span class="token string">'npm test -- --single-run'</span>
+        <span class="token punctuation">}</span>
+      <span class="token punctuation">}</span>
+      post <span class="token punctuation">{</span>
+        <span class="token comment">// UT が失敗しても必ず実行する</span>
+        always <span class="token punctuation">{</span>
+          <span class="token comment">// JUnit 結果集計を行う</span>
+          junit <span class="token string">'coverage/junit-report.xml'</span>
+          
+          <span class="token comment">// Cobertura カバレッジレポートを出力する</span>
+          cobertura autoUpdateHealth<span class="token punctuation">:</span> <span class="token boolean">false</span><span class="token punctuation">,</span>
+                    autoUpdateStability<span class="token punctuation">:</span> <span class="token boolean">false</span><span class="token punctuation">,</span>
+                    coberturaReportFile<span class="token punctuation">:</span> <span class="token string">'coverage/cobertura-coverage.xml'</span><span class="token punctuation">,</span>
+                    conditionalCoverageTargets<span class="token punctuation">:</span> <span class="token string">'70, 0, 0'</span><span class="token punctuation">,</span>
+                    failUnhealthy<span class="token punctuation">:</span> <span class="token boolean">false</span><span class="token punctuation">,</span>
+                    failUnstable<span class="token punctuation">:</span> <span class="token boolean">false</span><span class="token punctuation">,</span>
+                    lineCoverageTargets<span class="token punctuation">:</span> <span class="token string">'80, 0, 0'</span><span class="token punctuation">,</span>
+                    maxNumberOfBuilds<span class="token punctuation">:</span> <span class="token number">0</span><span class="token punctuation">,</span>
+                    methodCoverageTargets<span class="token punctuation">:</span> <span class="token string">'80, 0, 0'</span><span class="token punctuation">,</span>
+                    onlyStable<span class="token punctuation">:</span> <span class="token boolean">false</span><span class="token punctuation">,</span>
+                    zoomCoverageChart<span class="token punctuation">:</span> <span class="token boolean">false</span>
+        <span class="token punctuation">}</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span>
+  post <span class="token punctuation">{</span>
+    always <span class="token punctuation">{</span>
+      <span class="token comment">// ワークスペースを削除する</span>
+      <span class="token function">deleteDir</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>あとは良きようにジョブを作って実行すれば OK。</p>
+<h2 id="テスト実施結果の見方"><a class="header-link" href="#テスト実施結果の見方"><span class="header-link-mark"></span></a>テスト実施結果の見方</h2>
+<p>テストの実施結果は、Jenkins 管理画面で当該ジョブの「ビルド履歴」を開き、</p>
+<ul>
+  <li>「テスト結果」リンクで JUnit 形式のレポート、</li>
+  <li>「Cobertura カバレッジ・レポート」リンクでカバレッジレポート</li>
+</ul>
+<p>を参照できる。</p>
+<p>「Cobertura カバレッジ・レポート」が文字化けしている場合は、生成した <code>./coverage/cobertura-coverage.xml</code> のエンコーディングに合わせて、Jenkinsfile で <code>sourceEncoding</code> 設定を変えてみよう (Pipeline Syntax を参照)。</p>
+<p>以上。</p>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2018-04-08</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2018-04-08</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>Jenkins の Multibranch Pipieline を試した - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2018/02/08-02.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2018/index.html">2018年</a></li>
+            <li><a href="/blog/2018/02/index.html">02月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2018-02-08</time></div>
+        <h1 id="page-title">Jenkins の Multibranch Pipieline を試した</h1>
+
+<p>前回、Jenkins でジョブをスクリプト形式で書ける<em>「Declarative Pipeline」</em>という記法を試した。</p>
+<ul>
+  <li><a href="/blog/2018/02/07-02.html">Jenkins の Declarative Pipeline を触ってみた</a></li>
+</ul>
+<p>今回は、このスクリプトファイルを複数のブランチに適用しやすくするための<strong>「Multibranch Pipeline」</strong>というモノを試してみる。</p>
+<h2 id="multibranch-pipeline-とは"><a class="header-link" href="#multibranch-pipeline-とは"><span class="header-link-mark"></span></a>Multibranch Pipeline とは</h2>
+<p>通常の Pipeline でブランチごとにジョブを実行したい場合、Pipeline スクリプトファイル内でトリガーの契機となったブランチを判定したりする必要があった。この時、ワークスペースは全部ランチで共有されており、ブランチごとに異なる依存ライブラリを扱ったりしている時に不都合が出やすかった。</p>
+<p><em>マルチブランチ・パイプライン</em>は、Git リポジトリと自動連携して複数ブランチを個別に管理してくれる仕組みだ。スクリプトファイル内でブランチを選択してチェックアウトする必要はなく、Git リポジトリへの Push を検知して自動的に対象ブランチ向けのジョブを実行してくれるのだ。</p>
+<h2 id="multibranch-pipeline-を作ってみる"><a class="header-link" href="#multibranch-pipeline-を作ってみる"><span class="header-link-mark"></span></a>Multibranch Pipeline を作ってみる</h2>
+<p>まずは Jenkins 管理画面のメニューから「新規ジョブ作成」を選び、「Multibranch Pipeline」を作る。</p>
+<p>設定画面での設定項目は以下のとおり。</p>
+<ul>
+  <li>Branch Sources
+    <ul>
+      <li>「Add source」ボタンより「Git」を選び、対象のリポジトリを設定する。GitHub との連携時は「GitHub」より設定する。</li>
+      <li>「高度な設定」ボタンを押すと、「対象ブランチ」「対象外ブランチ」を指定できる。ワイルドカードが使用できるので、「<code>feat/</code> で始まるブランチは Jenkinsfile が存在してもジョブを実行させたくない」場合は、「対象外ブランチ」に「<code>feat/*</code>」と設定すればよい。</li>
+    </ul>
+  </li>
+  <li>Build Configuration
+    <ul>
+      <li>リポジトリ中の Jenkinsfile のパスを指定する。大抵はルートディレクトリに「Jenkinsfile」という名前でスクリプトファイルを置くと思うので、そのままで良い。</li>
+    </ul>
+  </li>
+  <li>あとはお好みで「不要アイテムの扱い」など。</li>
+</ul>
+<p>ここまで設定できたら、対象のリポジトリのルートディレクトリに <code>Jenkinsfile</code> を作り、以下のように実装してみよう。</p>
+<pre class="language-groovy"><code class="language-groovy">pipeline <span class="token punctuation">{</span>
+  agent any
+  stages <span class="token punctuation">{</span>
+    <span class="token function">stage</span><span class="token punctuation">(</span><span class="token string">'npm install'</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      steps <span class="token punctuation">{</span>
+        <span class="token function">nodejs</span><span class="token punctuation">(</span>configId<span class="token punctuation">:</span> <span class="token string">'★'</span><span class="token punctuation">,</span> nodeJSInstallationName<span class="token punctuation">:</span> <span class="token string">'my nodejs'</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+          bat <span class="token string">'npm install'</span>
+        <span class="token punctuation">}</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span>
+    <span class="token function">stage</span><span class="token punctuation">(</span><span class="token string">'UT 実行'</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      steps <span class="token punctuation">{</span>
+        <span class="token function">nodejs</span><span class="token punctuation">(</span>configId<span class="token punctuation">:</span> <span class="token string">'★'</span><span class="token punctuation">,</span> nodeJSInstallationName<span class="token punctuation">:</span> <span class="token string">'my nodejs'</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+          bat <span class="token string">'npm test'</span>
+        <span class="token punctuation">}</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>内容は前回の記事で作った「<code>npm install</code> 後に <code>npm test</code> を実行する」というジョブのスクリプトとほぼ同じ。違うのは<em>「Git チェックアウト」の <code>stage</code> がなくなった</em>こと。ブランチのチェックアウトはジョブが勝手にやってくれるので、Jenkinsfile での指定は不要なのだ。</p>
+<p>このファイルを <code>git add</code>・<code>git commit</code> して、<code>git push</code> してみよう。Git リポジトリとの連携ができていれば、Jenkins のジョブが自動的に実行されるはずだ。</p>
+<p>試しに、別の名前のブランチを新たに作って <code>git push</code> してみよう。先程のブランチのジョブとは別のワークスペースができ、当該ブランチに対するジョブとして実行される。<strong>ブランチ別にサブジョブ</strong>として管理されるので、Jenkins の管理画面としても見やすい。例えば「master ブランチはテストをクリアしているが、<code>feat/test1</code> ブランチはテストが失敗している」といった見極めも容易だ。</p>
+<h2 id="特定ブランチのみ異なる-jenkinsfile-を実行させる"><a class="header-link" href="#特定ブランチのみ異なる-jenkinsfile-を実行させる"><span class="header-link-mark"></span></a>特定ブランチのみ異なる Jenkinsfile を実行させる</h2>
+<p>特定のブランチのみ、同リポジトリ内の Jenkinsfile ではなく、別リポジトリで管理している Jenkinsfile を実行する方法。</p>
+<p>実はサブジョブも一つの Pipeline ジョブとして扱うことができ、ブランチごとに個別の設定が可能なのだ。</p>
+<p>マルチブランチ・パイプラインの「Branches」から任意のブランチを選択し、「設定の参照」に移動する。すると通常の Pipeline ジョブとほぼ同等の設定画面が現れるはずだ。</p>
+<p>ココで最下部にある「Pipeline」のプルダウンにて、「Pipeline from multibranch configuration」から「Pipeline script」を選べばその場にスクリプトが書けるし、「Pipeline script from SCM」を選択して別リポジトリを選択すれば、異なる Jenkinsfile を実行できる。</p>
+<p>例えば「develop ブランチまでは UT を実行したいが、master ブランチではイチイチ UT を回す必要はない。master ブランチへの Push 時はリリース作業を行う別のスクリプトを実行させたい」といった場合に利用できるかと思う。</p>
+<p>ただし、Multibranch Pipeline の設定に沿わないブランチが出てくるのはあまり管理しやすい状態ではないので、多用は控えたい。</p>
+<h2 id="特定のブランチのみ実行する-stage-を書く"><a class="header-link" href="#特定のブランチのみ実行する-stage-を書く"><span class="header-link-mark"></span></a>特定のブランチのみ実行する <code>stage</code> を書く</h2>
+<p>次は、1つの Jenkinsfile 内で、ブランチを判別して特定のブランチのみ処理を行わせる方法。</p>
+<p><strong><code>when</code>・<code>branch</code></strong> というシンタックスを使って、以下のように書けば良い。</p>
+<pre class="language-groovy"><code class="language-groovy">pipeline <span class="token punctuation">{</span>
+  agent any
+  stages <span class="token punctuation">{</span>
+    <span class="token function">stage</span><span class="token punctuation">(</span><span class="token string">'master ブランチのみ処理する'</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      when <span class="token punctuation">{</span>
+        branch <span class="token string">'master'</span>
+      <span class="token punctuation">}</span>
+      steps <span class="token punctuation">{</span>
+        echo <span class="token string">'master ブランチのみ実行します'</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span>
+    <span class="token function">stage</span><span class="token punctuation">(</span><span class="token string">'feat/ 始まりのブランチのみ処理する'</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      when <span class="token punctuation">{</span>
+        branch <span class="token string">'feat/*'</span>
+      <span class="token punctuation">}</span>
+      steps <span class="token punctuation">{</span>
+        echo <span class="token string">'feat/ 始まりのブランチのみ実行します'</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>このようなスクリプトにすると、master ブランチで実行された場合は「master ブランチのみ処理する」の <code>stage</code> のみ実行され、「feat/ 始まりのブランチのみ処理する」<code>stage</code> はスキップされる。</p>
+<p><code>branch 'feat/*'</code> のようにワイルドカードも使える。Jenkins 管理画面における「対象ブランチ」「対象外ブランチ」の書き方と同じだ。</p>
+<p><code>not { when { branch</code> という構造にすると、当該ブランチ<em>以外</em>なら実行する、という <code>stage</code> も書ける。</p>
+<p>こちらもあまり多用すると、1つの Jenkinsfile に条件分岐が多く登場し、こんがらがるので、最低限に留めたい。</p>
+<h2 id="multibranch-pipeline-のジョブの後に別のジョブを実行する"><a class="header-link" href="#multibranch-pipeline-のジョブの後に別のジョブを実行する"><span class="header-link-mark"></span></a>Multibranch Pipeline のジョブの後に別のジョブを実行する</h2>
+<p>Multibranch Pipeline のジョブの後に、別のジョブを実行するためには、次のように設定する。</p>
+<p>後続のジョブの設定にて、「Build Triggers」→「他プロジェクトの後にビルド」を選択し、対象プロジェクトを<em>「【マルチブランチ・パイプライン名】/【ブランチ名】」</em>と指定する。例えば「<code>my-multi/master</code>」といった形だ。</p>
+<p>単に「<code>my-multi</code>」とマルチブランチ・パイプラインの名前を指定するだけではダメで、入力補完でもこの時点までは入力エラー扱いになるので指定できないかのように見えるが、スラッシュ <code>/</code> まで入力すると候補が登場する。</p>
+<p>コレで、「Multibranch Pipeline を使って全ブランチで UT を実行するが、master ブランチのみはその後に別のリリースジョブを実行する」といった設定が可能になる。</p>
+<h2 id="おわり"><a class="header-link" href="#おわり"><span class="header-link-mark"></span></a>おわり</h2>
+<p>なかなか Jenkins も奥が深い…。ジョブの構成やスクリプトファイルの管理方法に色々悩むが、あんまり綺麗に構造化しきろうとは思わない方が良いのかも。</p>
+<ul>
+  <li>参考：<a href="http://d.hatena.ne.jp/mallowlabs/20150609/jenkins_multi_branch_project_plugin">Jenkins でのブランチの自動ビルドに Multi-Branch Project Plugin が便利 - mallowlabsの備忘録</a></li>
+  <li>参考：<a href="https://www.slideshare.net/RecruitLifestyle/multibranch-pipeline-77688662">Multibranch pipelineでいろいろ学んだこと</a></li>
+</ul>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2018-02-08</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2018-02-08</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

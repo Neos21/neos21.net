@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>Kubernetes クラスタの Load Balancer に SSL を適用する - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2019/03/20-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2019/index.html">2019年</a></li>
+            <li><a href="/blog/2019/03/index.html">03月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2019-03-20</time></div>
+        <h1 id="page-title">Kubernetes クラスタの Load Balancer に SSL を適用する</h1>
+
+<p>Let's Encrypt などでサーバ証明書を発行した後、それを Kubernetes クラスタに適用する方法。</p>
+<p>今回は、各 Pod (Docker コンテナ) 内で SSL の<em>終端</em>をさせるのではなく、<strong>Load Balancer</strong> で終端させて、Kubernetes クラスタ内は HTTP で通信できる方法を取る。こうすれば、Pod 内に配備する Web サーバに関しては、ローカルの HTTP 環境で動かした時と同じままにできるからだ。</p>
+<p>Kubernetes 特有の <em>Secret</em> とかいう概念が出てきたりして躓いたのでまとめる。</p>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#%E7%94%A8%E8%AA%9E%E6%95%B4%E7%90%86">用語整理</a>
+    <ul>
+      <li><a href="#%E3%83%AD%E3%83%BC%E3%83%89%E3%83%90%E3%83%A9%E3%83%B3%E3%82%B5">ロードバランサ</a></li>
+      <li><a href="#%E7%B5%82%E7%AB%AF">終端</a></li>
+      <li><a href="#%E3%81%9D%E3%81%86%E3%81%84%E3%82%84-ssl-%E3%81%A8-tls-%E3%81%A3%E3%81%A6%E4%BD%95">そういや SSL と TLS って何</a></li>
+    </ul>
+  </li>
+  <li><a href="#load-balancer-%E3%82%B5%E3%83%BC%E3%83%93%E3%82%B9%E3%82%92%E4%BD%9C%E3%82%8B">Load Balancer サービスを作る</a></li>
+  <li><a href="#ssl-%E8%AA%8D%E8%A8%BC-secret-%E3%82%92%E7%99%BB%E9%8C%B2%E3%81%99%E3%82%8B">SSL 認証 Secret を登録する</a></li>
+  <li><a href="#load-balancer-%E3%82%B5%E3%83%BC%E3%83%93%E3%82%B9%E3%81%AB%E9%81%A9%E7%94%A8%E3%81%99%E3%82%8B">Load Balancer サービスに適用する</a></li>
+  <li><a href="#%E3%82%B5%E3%83%BC%E3%83%90%E8%A8%BC%E6%98%8E%E6%9B%B8%E3%82%92%E6%9B%B4%E6%96%B0%E3%81%99%E3%82%8B%E5%A0%B4%E5%90%88%E3%81%AF%EF%BC%9F">サーバ証明書を更新する場合は？</a></li>
+</ul>
+<h2 id="用語整理"><a class="header-link" href="#用語整理"><span class="header-link-mark"></span></a>用語整理</h2>
+<p>僕のようにインフラやネットワーク周りに弱い人間は「ロードバランサ」とか「終端」とか言われた時点で頭が真っ白になってしまう。まずは用語の整理から。</p>
+<h3 id="ロードバランサ"><a class="header-link" href="#ロードバランサ"><span class="header-link-mark"></span></a>ロードバランサ</h3>
+<p>まずは<strong>ロードバランサ (Load Balancer・LB)</strong> から。</p>
+<p>基本的には、クライアントとサーバの間に挟まって、通信を振り分けるモノ。1つのリクエストを複数のサーバに振り分けてやれば、負荷分散できし、1つのサーバが落ちていても冗長構成で稼動する他のサーバに処理を頼めるよね、という文脈でロードバランサが登場することが多い。</p>
+<p>ロードバランサには種類があって、<em>「OSI 参照モデル」</em>というネットワークの実装モデルで示される7層のレイヤーに合わせて、<strong>「L4 ロードバランサ」と「L7 ロードバランサ」</strong>というモノがある。</p>
+<ul>
+  <li>参考：<a href="http://d.hatena.ne.jp/keyword/OSI%BB%B2%BE%C8%A5%E2%A5%C7%A5%EB">OSI参照モデルとは - はてなキーワード</a></li>
+</ul>
+<p><em>L4LB</em> (Layer 4・OSI 参照モデルにおける「トランスポート層」) は、IP アドレスとポート番号を条件に振り分けする部分。Kubernetes の Load Balancer サービスはどちらかというとコッチ。</p>
+<p>対して <em>L7LB</em> (Layer 7・「アプリケーション層」) は、URL や HTTP ヘッダを見て振り分けられる。Kubernetes でいうと Ingress というサービスの一種がコレにあたる。</p>
+<ul>
+  <li>参考：<a href="https://www.slideshare.net/ryuichitakashima3/ss-72343772">ロードバランサ再入門</a></li>
+  <li>参考：<a href="http://nothing-titile.hatenablog.jp/entry/2014/09/03/211802">ロードバランサー(L7・・・・) - Notitle</a></li>
+  <li>参考：<a href="https://qiita.com/kimullaa/items/9e605e46ba63c6be7fe3">L7ロードバランサとL4ロードバランサ - Qiita</a></li>
+  <li>参考：<a href="https://cloud.nifty.com/cs/catalog/cloud_faq/catalog_130412001236_1.htm">ロードバランサー(L4)とロードバランサー(L7)の違いを教えてください | ニフクラ</a></li>
+  <li>参考：<a href="https://sff8.hatenablog.com/entry/2018/10/27/234757">KubernetesにおけるLoadBalancerとIngressの違いについて - Between Real and Ideal</a></li>
+</ul>
+<p>L7LB の方が URL や HTTP ヘッダなんかを見て振り分けできるので、機能としては高機能だが、そのためには暗号化された HTTPS 通信を復号してリクエスト情報を確認できるようにしないといけないし、処理としては高負荷になる。</p>
+<h3 id="終端"><a class="header-link" href="#終端"><span class="header-link-mark"></span></a>終端</h3>
+<p>L7LB の説明の最後にサラッと書いたが、<strong>「暗号化された HTTPS 通信を復号」することが終端の意味。</strong>ロードバランサが秘密鍵を持っていて、暗号通信を復号すれば、その裏にいる Web サーバは暗号化されていない HTTP として通信できるワケだ。コレを「SSL ターミネーション (終端)」という。SSL 通信がそこで終わっているから終端なのである。</p>
+<ul>
+  <li>参考：<a href="https://www.tribeck.jp/column/opinion/technology/20171016/">常時HTTPS化の落とし穴＜解決編＞｜テクノロジー | オピニオン｜トライベック・ストラテジー</a></li>
+  <li>参考：<a href="https://qiita.com/MahoTakara/items/befb97ab05be17f54fec">コンテナでHTTPSを利用するには （自己署名証明書、自営CA、 公的CAなどからの証明書の取得） - Qiita</a></li>
+</ul>
+<h3 id="そういや-ssl-と-tls-って何"><a class="header-link" href="#そういや-ssl-と-tls-って何"><span class="header-link-mark"></span></a>そういや SSL と TLS って何</h3>
+<p>SSL と TLS は、機能的には同じ暗号通信の方式。</p>
+<ul>
+  <li>SSL : Secure Sockets Layer</li>
+  <li>TLS : Transport Layer Security</li>
+</ul>
+<p>SSL 3.0 までバージョンアップしたあと、TLS 1.0 という名称に変更されたので、現在は TLS という技術を使用しているのだが、「SSL」と呼ばれている時代が長かったので、「SSL/TLS」と併記されているだけ。</p>
+<p>SSL を進めたのは Netscape だったが、IETF という第三者機関が引き継いで TLS へ移行したらしい。</p>
+<ul>
+  <li>参考：<a href="https://www.geotrust.co.jp/ssl_guideline/ssl_beginners/">SSL/TLSの解説と選び方まとめ</a></li>
+  <li>参考：<a href="https://ssl.sakura.ad.jp/column/ssl_tls/">SSLとTLSの違いとは | さくらのSSL</a></li>
+</ul>
+<h2 id="load-balancer-サービスを作る"><a class="header-link" href="#load-balancer-サービスを作る"><span class="header-link-mark"></span></a>Load Balancer サービスを作る</h2>
+<p>Kubernetes で Load Balancer サービスを設けるには、以下のような <code>service.yaml</code> を記述する。</p>
+<pre class="language-yaml"><code class="language-yaml"><span class="token key atrule">apiVersion</span><span class="token punctuation">:</span> v1
+<span class="token key atrule">kind</span><span class="token punctuation">:</span> Service
+<span class="token key atrule">metadata</span><span class="token punctuation">:</span>
+  <span class="token key atrule">name</span><span class="token punctuation">:</span> my<span class="token punctuation">-</span>service
+  <span class="token key atrule">labels</span><span class="token punctuation">:</span>
+    <span class="token key atrule">app</span><span class="token punctuation">:</span> my<span class="token punctuation">-</span>app
+<span class="token key atrule">spec</span><span class="token punctuation">:</span>
+  <span class="token key atrule">type</span><span class="token punctuation">:</span> LoadBalancer
+  <span class="token key atrule">selector</span><span class="token punctuation">:</span>
+    <span class="token key atrule">app</span><span class="token punctuation">:</span> my<span class="token punctuation">-</span>app
+  <span class="token key atrule">ports</span><span class="token punctuation">:</span>
+  <span class="token punctuation">-</span> <span class="token key atrule">name</span><span class="token punctuation">:</span> http
+    <span class="token key atrule">port</span><span class="token punctuation">:</span> <span class="token number">80</span>
+    <span class="token key atrule">targetPort</span><span class="token punctuation">:</span> <span class="token number">8080</span>
+</code></pre>
+<p>コレを <code>$ kubectl apply -f service.yaml</code> で適用すればロードバランサが生成され、クラウドサービスなどならパブリック IP が割り当てられるだろう。</p>
+<p>コイツにサーバ証明書と秘密鍵を持たせることで、HTTPS 通信を終端してくれて、Pod に届く通信は HTTP で行えるようになるワケだ。</p>
+<h2 id="ssl-認証-secret-を登録する"><a class="header-link" href="#ssl-認証-secret-を登録する"><span class="header-link-mark"></span></a>SSL 認証 Secret を登録する</h2>
+<p>サーバ証明書と秘密鍵は秘密情報なので、Kubernetes の <em>Secret 機能</em>を使う。Kubernetes には秘密情報を保持しておける領域があり、SSL 通信のための秘密情報を保持するための Type も用意されている。</p>
+<p>手元に以下の2ファイルを用意しよう。</p>
+<ul>
+  <li>サーバ証明書 : <code>server.crt.pem</code>
+    <ul>
+      <li>中間 CA 証明書と結合した「チェーン証明書」でも良い</li>
+    </ul>
+  </li>
+  <li>秘密鍵 : <code>server.key.pem</code>
+    <ul>
+      <li>パスフレーズは解除してあること</li>
+    </ul>
+  </li>
+</ul>
+<p>ファイルが用意できたら、以下のようにして登録する。</p>
+<pre class="language-bash"><code class="language-bash">$ kubectl create secret tls ssl-certificate-secret --key server.key.pem --cert server.crt.pem
+</code></pre>
+<p>登録できたら、以下のように確認できる。</p>
+<pre class="language-bash"><code class="language-bash">$ kubectl get secret
+NAME                                         TYPE                                  DATA   AGE
+default-token-0fwas                          kubernetes.io/service-account-token   <span class="token number">3</span>      23d
+my-private-docker-registry-secret            kubernetes.io/dockerconfigjson        <span class="token number">1</span>      23d
+my-environment-variables-secret              Opaque                                <span class="token number">17</span>     2d
+ssl-certificate-secret                       kubernetes.io/tls                     <span class="token number">2</span>      25s  <span class="token comment"># ← コレ</span>
+</code></pre>
+<p><code>ssl-certificate-secret</code> という名前のシークレットが用意できた。</p>
+<h2 id="load-balancer-サービスに適用する"><a class="header-link" href="#load-balancer-サービスに適用する"><span class="header-link-mark"></span></a>Load Balancer サービスに適用する</h2>
+<p>シークレットが用意できたので、コレを Load Balancer サービスに利用させるよう、<code>service.yaml</code> を書き換える。</p>
+<pre class="language-yaml"><code class="language-yaml"><span class="token key atrule">apiVersion</span><span class="token punctuation">:</span> v1
+<span class="token key atrule">kind</span><span class="token punctuation">:</span> Service
+<span class="token key atrule">metadata</span><span class="token punctuation">:</span>
+  <span class="token key atrule">name</span><span class="token punctuation">:</span> my<span class="token punctuation">-</span>service
+  <span class="token key atrule">labels</span><span class="token punctuation">:</span>
+    <span class="token key atrule">app</span><span class="token punctuation">:</span> my<span class="token punctuation">-</span>app
+  <span class="token comment"># 以下3行を追加する</span>
+  <span class="token key atrule">annotations</span><span class="token punctuation">:</span>
+    <span class="token key atrule">service.beta.kubernetes.io/oci-load-balancer-ssl-ports</span><span class="token punctuation">:</span> <span class="token string">"443"</span>
+    <span class="token key atrule">service.beta.kubernetes.io/oci-load-balancer-tls-secret</span><span class="token punctuation">:</span> ssl<span class="token punctuation">-</span>certificate<span class="token punctuation">-</span>secret
+<span class="token key atrule">spec</span><span class="token punctuation">:</span>
+  <span class="token key atrule">type</span><span class="token punctuation">:</span> LoadBalancer
+  <span class="token key atrule">selector</span><span class="token punctuation">:</span>
+    <span class="token key atrule">app</span><span class="token punctuation">:</span> my<span class="token punctuation">-</span>app
+  <span class="token key atrule">ports</span><span class="token punctuation">:</span>
+  <span class="token punctuation">-</span> <span class="token key atrule">name</span><span class="token punctuation">:</span> http
+    <span class="token key atrule">port</span><span class="token punctuation">:</span> <span class="token number">80</span>
+    <span class="token key atrule">targetPort</span><span class="token punctuation">:</span> <span class="token number">8080</span>
+  <span class="token comment"># 以下追加 : HTTPS 通信用に 443 ポートを設定する</span>
+  <span class="token punctuation">-</span> <span class="token key atrule">name</span><span class="token punctuation">:</span> https
+    <span class="token key atrule">port</span><span class="token punctuation">:</span> <span class="token number">443</span>
+    <span class="token key atrule">targetPort</span><span class="token punctuation">:</span> <span class="token number">8080</span>
+</code></pre>
+<p>コレで <code>$ kubectl apply -f service.yaml</code> を叩いて設定を反映させてやれば完了だ。Pod の再生成は特に要らない。</p>
+<h2 id="サーバ証明書を更新する場合は？"><a class="header-link" href="#サーバ証明書を更新する場合は？"><span class="header-link-mark"></span></a>サーバ証明書を更新する場合は？</h2>
+<p>サーバ証明書を更新する場合は、別名で Secret を作り、<code>service.yaml</code> を更新することで反映させるのが最も楽。ただし、一時的に10秒程度のアクセス断が発生してしまうらしい。それが許容できればこのやり方が楽かと。</p>
+<ul>
+  <li>参考：<a href="https://qiita.com/sugimount/items/39f18f0d50491a0b555e">OKE (Oracle Container Engine for Kubernetes) で、Let&#x26;#39;s Encrypt を使用して無料SSL LoadBalancer公開 - Qiita</a></li>
+</ul>
+<p>不要になった Secret は、以下のように削除できる。</p>
+<pre class="language-bash"><code class="language-bash">$ kubectl delete secret ssl-certificate-secret
+</code></pre>
+<ul>
+  <li>参考：<a href="https://qiita.com/Hirata-Masato/items/8e6b4536b6f1b23c5270">kubernetesにingressを導入する方法 - Qiita</a></li>
+</ul>
+<p>おわり。</p>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2019-03-20</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2019-03-20</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

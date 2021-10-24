@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>Ruby で自分だけのブックマークアプリを作ってみた - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2020/02/05-03.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2020/index.html">2020年</a></li>
+            <li><a href="/blog/2020/02/index.html">02月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2020-02-05</time></div>
+        <h1 id="page-title">Ruby で自分だけのブックマークアプリを作ってみた</h1>
+
+<p>「はてなブックマーク」や「Pocket」など、ログインして利用する系のブックマークサービスを使いたくない場面が出てきたので、オレオレブックマークアプリというか、オレオレ Read It Later アプリを作ってみた。</p>
+<p>CentOS の GCE インスタンスに、Apache と Ruby をインストール。Apache 上で Ruby を CGI として動作させられるよう設定変更した上で、単一の Ruby スクリプトファイルだけで動作するアプリを組んだ。Rails やサードパーティモジュールは使っていない。</p>
+<p>ソースコードは以下。</p>
+<ul>
+  <li><a href="https://github.com/Neos21/neos-ruby-bookmarks">Neos21/neos-ruby-bookmarks</a></li>
+</ul>
+<h2 id="どんなアプリ？"><a class="header-link" href="#どんなアプリ？"><span class="header-link-mark"></span></a>どんなアプリ？</h2>
+<p>ベースの考え方は、PHP で作った「オレオレ Twitter」アプリに近い。</p>
+<ul>
+  <li><a href="/blog/2019/12/23-01.html">PHP で自分だけの簡易 Twitter を作ってみた</a></li>
+</ul>
+<p>予め「クレデンシャルファイル」にアクセス用パスワード文字列を書いておき、リクエストパラメータで指定したパスワードをチェックすることで、自分だけがアクセスして閲覧できるアプリにしてある。</p>
+<p>パスワードを指定してアクセスすると、次のような画面になる。</p>
+<p>
+  <img src="05-03-01.png" alt="スクショ">
+</p>
+<p>上はブックマークの追加フォーム。下に追加してあるブックマークが一覧表示されている。チェックボックスをチェックしていけば削除できる、という仕組み。</p>
+<p>パスワードを指定しないと、ブックマーク一覧の閲覧もできないし、ブックマークの追加や削除もできない。</p>
+<p>今回も DB は使わず、テキストファイルでブックマーク一覧やシーケンス値を管理している。シーケンスの仕組みは、複数のブックマークを一括削除する際に、削除する行を特定する目的で用意した。</p>
+<p>ブックマークの追加・削除の処理を呼び出す時も GET メソッドでリクエストする乱暴な仕様だが、コレのおかげで「ブックマークレット」によるブックマーク追加が可能になっている。</p>
+<p>以下のようなブックマークレットを作れば、<em>閲覧中のページをブックマークに追加できる</em>という仕組みだ。</p>
+<pre class="language-javascript"><code class="language-javascript">javascript<span class="token operator">:</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token dom variable">window</span><span class="token punctuation">.</span><span class="token method function property-access">open</span><span class="token punctuation">(</span>
+    <span class="token string">'http://【HostName】/index.rb?credential=【Credential】&#x26;mode=add&#x26;title='</span>
+    <span class="token operator">+</span> <span class="token function">encodeURIComponent</span><span class="token punctuation">(</span><span class="token dom variable">document</span><span class="token punctuation">.</span><span class="token property-access">title</span><span class="token punctuation">)</span>
+    <span class="token operator">+</span> <span class="token string">'&#x26;url='</span>
+    <span class="token operator">+</span> <span class="token function">encodeURIComponent</span><span class="token punctuation">(</span><span class="token dom variable">document</span><span class="token punctuation">.</span><span class="token constant">URL</span><span class="token punctuation">)</span>
+  <span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>コレがやりたくてこのアプリを作った。</p>
+<h2 id="ruby-cgi-実装に際しての学習メモ"><a class="header-link" href="#ruby-cgi-実装に際しての学習メモ"><span class="header-link-mark"></span></a>Ruby CGI 実装に際しての学習メモ</h2>
+<p>コレまで自分は Rails 中心で、生 Ruby をほとんど触ってきてこなかったので、今回のようにある種レガシーな Ruby CGI を実装してみると、新たな学びも多かった。思いつくままに学習メモを書き残しておこうと思う。</p>
+<h3 id="命名規則"><a class="header-link" href="#命名規則"><span class="header-link-mark"></span></a>命名規則</h3>
+<ul>
+  <li>メソッド名、変数名 : スネークケース</li>
+  <li>定数 : アッパースネークケース (1文字目が大文字なら定数になる)</li>
+  <li>グローバル変数 : <code>$</code> 始まりの変数名にする</li>
+</ul>
+<h3 id="文字列のシングルクォートとダブルクォート"><a class="header-link" href="#文字列のシングルクォートとダブルクォート"><span class="header-link-mark"></span></a>文字列のシングルクォートとダブルクォート</h3>
+<p>Perl や PHP、Bash などと同じく、シングルクォートだと変数展開がされず、ダブルクォートだと変数展開される。</p>
+<p>文字列中に変数を書くには、<code>#{変数名}</code> と書く。</p>
+<h3 id="ヒアドキュメント"><a class="header-link" href="#ヒアドキュメント"><span class="header-link-mark"></span></a>ヒアドキュメント</h3>
+<p>以下のように書く。コレもシングルクォートで <code>&#x3C;&#x3C;'EOL'</code> とすると変数展開されず、ダブルクォートで <code>&#x3C;&#x3C;"EOL"</code> とすると変数展開される。</p>
+<pre class="language-ruby"><code class="language-ruby">print<span class="token punctuation">(</span><span class="token operator">&#x3C;</span><span class="token operator">&#x3C;</span><span class="token string">'EOL'</span><span class="token punctuation">)</span>
+hoge
+fuga
+<span class="token constant">EOL</span>
+
+print<span class="token punctuation">(</span><span class="token operator">&#x3C;</span><span class="token operator">&#x3C;</span><span class="token string">"EOL"</span><span class="token punctuation">)</span>
+<span class="token comment">#{some_variable}</span>
+foo
+bar
+<span class="token constant">EOL</span>
+</code></pre>
+<h3 id="ruby-スクリプトファイル自体のエンコーディングを確認する"><a class="header-link" href="#ruby-スクリプトファイル自体のエンコーディングを確認する"><span class="header-link-mark"></span></a>Ruby スクリプトファイル自体のエンコーディングを確認する</h3>
+<pre class="language-ruby"><code class="language-ruby">puts __ENCODING__
+
+<span class="token comment"># 基本は 'UTF-8' と出る</span>
+</code></pre>
+<ul>
+  <li>参考：<a href="https://techracho.bpsinc.jp/hachi8833/2016_10_13/26969">Rubyの内部文字コードはUTF-8ではない…だと…？！｜TechRacho（テックラッチョ）〜エンジニアの「？」を「！」に〜｜BPS株式会社</a></li>
+</ul>
+<h3 id="テキストファイルの読み書き"><a class="header-link" href="#テキストファイルの読み書き"><span class="header-link-mark"></span></a>テキストファイルの読み書き</h3>
+<pre class="language-ruby"><code class="language-ruby"><span class="token comment">#!/usr/bin/ruby</span>
+
+<span class="token builtin">File</span><span class="token punctuation">.</span>open<span class="token punctuation">(</span><span class="token string">'./ruby-test.txt'</span><span class="token punctuation">,</span> <span class="token string">'w:UTF-8'</span><span class="token punctuation">)</span> <span class="token keyword">do</span> <span class="token operator">|</span>text<span class="token operator">|</span>
+  text<span class="token punctuation">.</span>puts<span class="token punctuation">(</span><span class="token string">'Hello'</span><span class="token punctuation">)</span>
+<span class="token keyword">end</span>
+</code></pre>
+<p>第2引数で <code>r:UTF-8</code> (読取専用) とか <code>a+:UTF-8</code> (読取・追記) とかのように、<code>:UTF-8</code> とエンコーディングを指定すること。コレを忘れると、全角文字を含むファイルを開こうとした時にエラーになる。</p>
+<ul>
+  <li>参考：<a href="https://qiita.com/Morio/items/8f0dc0801cfcb98d8269">【Ruby入門】ファイルの書き込みと読み込み - Qiita</a></li>
+  <li>参考：<a href="https://uxmilk.jp/22615">Rubyでファイルの書き込み・読み込みを行う方法 | UX MILK</a></li>
+</ul>
+<p>新規で空ファイルを作るには <code>FileUtils.touch()</code> という関数が使える。</p>
+<pre class="language-ruby"><code class="language-ruby"><span class="token keyword">require</span> <span class="token string">'fileutils'</span>
+
+<span class="token keyword">unless</span> <span class="token builtin">File</span><span class="token punctuation">.</span>exist<span class="token operator">?</span><span class="token punctuation">(</span><span class="token constant">BOOKMARKS_FILE_PATH</span><span class="token punctuation">)</span>
+  <span class="token constant">FileUtils</span><span class="token punctuation">.</span>touch<span class="token punctuation">(</span><span class="token constant">BOOKMARKS_FILE_PATH</span><span class="token punctuation">)</span>
+<span class="token keyword">end</span>
+</code></pre>
+<p><code>unless</code> は <code>if ! 条件</code>。条件を満たさない場合…というブロックになる。</p>
+<ul>
+  <li>参考：<a href="http://rubytips86.hatenablog.com/entry/2014/04/03/123720">新しいファイルを作成する - Ruby Tips!</a></li>
+</ul>
+<h3 id="do-end-ブロックとブレース--によるブロックの違い"><a class="header-link" href="#do-end-ブロックとブレース--によるブロックの違い"><span class="header-link-mark"></span></a><code>do end</code> ブロックとブレース <code>{}</code> によるブロックの違い</h3>
+<p>以下の2つの書き方は、同じ結果が得られる。</p>
+<pre class="language-ruby"><code class="language-ruby"><span class="token builtin">File</span><span class="token punctuation">.</span>open<span class="token punctuation">(</span><span class="token constant">TARGET_FILE</span><span class="token punctuation">,</span> <span class="token string">'r:UTF-8'</span><span class="token punctuation">)</span> <span class="token keyword">do</span> <span class="token operator">|</span>file<span class="token operator">|</span>
+  puts<span class="token punctuation">(</span>file<span class="token punctuation">.</span>read<span class="token punctuation">)</span>
+<span class="token keyword">end</span>
+
+<span class="token builtin">File</span><span class="token punctuation">.</span>open<span class="token punctuation">(</span><span class="token constant">TARGET_FILE</span><span class="token punctuation">,</span> <span class="token string">'r:UTF-8'</span><span class="token punctuation">)</span> <span class="token punctuation">{</span> <span class="token operator">|</span>file<span class="token operator">|</span>
+  puts<span class="token punctuation">(</span>file<span class="token punctuation">.</span>read<span class="token punctuation">)</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p><code>do end</code> でブロックを作るのと、ブレース <code>{}</code> でブロックを作るのと、違いはあるのだろうか。</p>
+<p>以下の記事が見つかったが、イマイチ違いが分かんなかった。</p>
+<ul>
+  <li>参考：<a href="https://www.it-swarm.net/ja/ruby/do-block-vs%E3%83%96%E3%83%AC%E3%83%BC%E3%82%B9%E3%81%AE%E4%BD%BF%E7%94%A8/968280608/">ruby — do block vsブレース{}の使用</a></li>
+</ul>
+<p><code>and</code>・<code>or</code> より <code>&#x26;&#x26;</code>・<code>||</code> が優先される、という話もあるし、<code>do end</code> より <code>{}</code> が優先されると理解しておいたらいいのかな。</p>
+<h3 id="エスケープ関連は-cgi-モジュールを使うと良い"><a class="header-link" href="#エスケープ関連は-cgi-モジュールを使うと良い"><span class="header-link-mark"></span></a>エスケープ関連は <code>cgi</code> モジュールを使うと良い</h3>
+<pre class="language-ruby"><code class="language-ruby"><span class="token keyword">require</span> <span class="token string">'cgi'</span>
+
+<span class="token comment"># CGI オブジェクトをグローバル変数として定義する</span>
+<span class="token variable">$cgi</span> <span class="token operator">=</span> <span class="token constant">CGI</span><span class="token punctuation">.</span><span class="token keyword">new</span>
+
+<span class="token comment"># リクエストパラメータは以下のように取得できる</span>
+raw_my_param <span class="token operator">=</span> <span class="token variable">$cgi</span><span class="token punctuation">[</span><span class="token string">'my_param'</span><span class="token punctuation">]</span>
+
+<span class="token comment"># アンエスケープする</span>
+my_param <span class="token operator">=</span> <span class="token constant">CGI</span><span class="token punctuation">.</span>unescape<span class="token punctuation">(</span>raw_my_param<span class="token punctuation">)</span>
+
+<span class="token comment"># レスポンスの頭に `content-type` と改行コード2つを書いておくこと</span>
+print<span class="token punctuation">(</span><span class="token string">"content-type: text/html\n\n"</span><span class="token punctuation">)</span>
+
+<span class="token comment"># HTML 出力用にエスケープする</span>
+puts<span class="token punctuation">(</span><span class="token string">"&#x3C;p><span class="token interpolation"><span class="token delimiter tag">#{</span><span class="token constant">CGI</span><span class="token punctuation">.</span>escapeHTML<span class="token punctuation">(</span>some_text<span class="token punctuation">)</span><span class="token delimiter tag">}</span></span>&#x3C;/p>"</span><span class="token punctuation">)</span>
+</code></pre>
+<ul>
+  <li><code>print</code> は末尾に改行コードなし、<code>puts</code> は末尾に改行コードが勝手に付く</li>
+  <li><code>CGI.escapeHTML()</code> とか、<code>CGI.unescape()</code> とかの関数が良い感じ</li>
+  <li><code>CGI.unescape()</code> しても Tab 文字は変換されないみたいだったので、<code>gsub("\t", ' ')</code> (スペースに置換) だとか <code>gsub("\t", '%09')</code> (<code>%</code> エンコーディングに置換) だとか、適宜置換処理を追加しておいた</li>
+</ul>
+<p><code>cgi</code> モジュール便利。</p>
+<ul>
+  <li>参考：<a href="https://qiita.com/scivola/items/b2d749a5a720f9eb02b1">素の Ruby で HTML エスケープするなら cgi/escapeが最強 - Qiita</a></li>
+</ul>
+<h3 id="env-でサーバ関連の情報が引っこ抜ける"><a class="header-link" href="#env-でサーバ関連の情報が引っこ抜ける"><span class="header-link-mark"></span></a><code>ENV</code> でサーバ関連の情報が引っこ抜ける</h3>
+<p><code>ENV.keys</code> で、取得できる環境変数のキー一覧が確認できる。<code>ENV['SERVER_NAME']</code> でホスト部分とか。</p>
+<h3 id="スクリプト自体のファイル名を取得する"><a class="header-link" href="#スクリプト自体のファイル名を取得する"><span class="header-link-mark"></span></a>スクリプト自体のファイル名を取得する</h3>
+<p><code>File.basename(__FILE__)</code> で、<code>index.rb</code> だとか、自身のファイル名だけを取得できる。</p>
+<h3 id="trim-系の関数--strip-と-chomp"><a class="header-link" href="#trim-系の関数--strip-と-chomp"><span class="header-link-mark"></span></a>Trim 系の関数 : <code>strip</code> と <code>chomp</code></h3>
+<ul>
+  <li><code>strip</code> : 文字列の前後の改行コード、スペース、タブを削除する</li>
+  <li><code>chomp</code> : 文字列の前後の改行コードのみを削除する</li>
+</ul>
+<p>1行しかないテキストファイルから文字列だけ取り出したい時は、<code>my_text.chomp</code> で改行コードだけ消せば十分か。</p>
+<ul>
+  <li>参考：<a href="https://www.sejuku.net/blog/19466">【Ruby入門】chomp、chop、strip、gsubによる改行の削除徹底比較！ | 侍エンジニア塾ブログ（Samurai Blog） - プログラミング入門者向けサイト</a></li>
+</ul>
+<h3 id="文字列結合"><a class="header-link" href="#文字列結合"><span class="header-link-mark"></span></a>文字列結合</h3>
+<p>単純に <code>str1 + str2</code> と <code>+</code> で結合しても良いが、<code>&#x3C;&#x3C;</code> で <code>+=</code> 的な追記ができる。</p>
+<pre class="language-ruby"><code class="language-ruby">my_text <span class="token operator">=</span> <span class="token string">''</span>
+
+<span class="token builtin">File</span><span class="token punctuation">.</span>open<span class="token punctuation">(</span><span class="token constant">TARGET_FILE</span><span class="token punctuation">,</span> <span class="token string">'r:UTF-8'</span><span class="token punctuation">)</span> <span class="token punctuation">{</span> <span class="token operator">|</span>file<span class="token operator">|</span>
+  file<span class="token punctuation">.</span>each_line <span class="token punctuation">{</span> <span class="token operator">|</span>line<span class="token operator">|</span>
+    my_text <span class="token operator">&#x3C;</span><span class="token operator">&#x3C;</span> line
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+
+puts<span class="token punctuation">(</span>my_text<span class="token punctuation">)</span>
+</code></pre>
+<h3 id="ループ中の-continue-は-next"><a class="header-link" href="#ループ中の-continue-は-next"><span class="header-link-mark"></span></a>ループ中の <code>continue</code> は <code>next</code></h3>
+<p><code>next</code> で <code>continue</code> 相当。</p>
+<h2 id="以上"><a class="header-link" href="#以上"><span class="header-link-mark"></span></a>以上</h2>
+<p>かなり作りが甘いところもあるが、自分が欲しかったモノは作れたし、自分しか使わないのでコレでおけおけ。</p>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2020-02-05</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2020-02-05</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

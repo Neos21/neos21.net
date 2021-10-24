@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>Node.js や TypeScript で使える O/R マッパーライブラリを探してみたが、イマイチなので自前でやってみたり - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2018/06/01-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2018/index.html">2018年</a></li>
+            <li><a href="/blog/2018/06/index.html">06月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2018-06-01</time></div>
+        <h1 id="page-title">Node.js や TypeScript で使える O/R マッパーライブラリを探してみたが、イマイチなので自前でやってみたり</h1>
+
+<p>最近、</p>
+<ul>
+  <li>Node-SQLite などを用いて Node.js スクリプトから DB を操作してみたり、</li>
+  <li>TypeScript で JSON データを受け取って DTO 的なクラスに突っ込んでみたり、</li>
+</ul>
+<p>といったことをやっている。</p>
+<p>Java でいう POJO なクラスを用意しておいて、MyBatis (古くは iBatis) にクラスへのマッピングを任せたり、もしくは <code>BeanUtils#copyProperties()</code> を使うようなヤツを、最近は JavaScript・TypeScript でもやるようになってきた。というか、JavaScript には本質的に型がないので、「こういうプロパティがあるはずだよな」と決め打ちで書いてしまえば動きはするのだが、段々とその辺の管理が大変になってきたので、クラス・型で管理したいな、と思うようになってきた。</p>
+<p>ということで、npm パッケージとして良い感じの O/R マッパーが提供されていないかなーと思ったのだが、なんかあんまりない感じ。</p>
+<p>ネットを調べてみて皆がどうしているのか探ってみたので、その結果をまとめる。</p>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#%E3%82%B5%E3%83%B3%E3%83%97%E3%83%AB%E3%81%A7%E6%89%B1%E3%81%86%E3%83%87%E3%83%BC%E3%82%BF%E3%81%A8%E3%82%AF%E3%83%A9%E3%82%B9">サンプルで扱うデータとクラス</a></li>
+  <li><a href="#%E6%96%B9%E6%B3%951%EF%BC%9A%E3%82%AF%E3%83%A9%E3%82%B9%E3%81%AE%E3%82%B3%E3%83%B3%E3%82%B9%E3%83%88%E3%83%A9%E3%82%AF%E3%82%BF%E3%81%A7%E9%80%A3%E6%83%B3%E9%85%8D%E5%88%97%E3%82%92%E3%82%AF%E3%83%A9%E3%82%B9%E3%81%AB%E3%83%9E%E3%83%83%E3%83%94%E3%83%B3%E3%82%B0%E3%81%99%E3%82%8B">方法1：クラスのコンストラクタで連想配列をクラスにマッピングする</a></li>
+  <li><a href="#%E6%96%B9%E6%B3%952%EF%BC%9Ajson-%E3%81%8B%E3%82%89%E3%82%A4%E3%83%B3%E3%82%B9%E3%82%BF%E3%83%B3%E3%82%B9%E3%82%92%E7%94%9F%E6%88%90%E3%81%99%E3%82%8B-static-%E3%83%A1%E3%82%BD%E3%83%83%E3%83%89%E3%82%92%E7%94%A8%E6%84%8F%E3%81%99%E3%82%8B">方法2：JSON からインスタンスを生成する static メソッドを用意する</a></li>
+  <li><a href="#%E6%96%B9%E6%B3%953%EF%BC%9Ajson-%E3%83%87%E3%83%BC%E3%82%BF%E3%82%92%E3%82%AF%E3%83%A9%E3%82%B9%E3%81%AB%E3%83%9E%E3%83%83%E3%83%94%E3%83%B3%E3%82%B0%E3%81%99%E3%82%8B%E9%96%A2%E6%95%B0%E3%82%92%E7%94%A8%E6%84%8F%E3%81%99%E3%82%8B">方法3：JSON データをクラスにマッピングする関数を用意する</a></li>
+  <li><a href="#%E6%96%B9%E6%B3%954%EF%BC%9Aobject-mapper-%E3%82%92%E4%BD%BF%E3%81%A3%E3%81%A6%E3%81%BF%E3%82%8B">方法4：object-mapper を使ってみる</a></li>
+  <li><a href="#%E4%BB%A5%E4%B8%8A">以上</a></li>
+</ul>
+<h2 id="サンプルで扱うデータとクラス"><a class="header-link" href="#サンプルで扱うデータとクラス"><span class="header-link-mark"></span></a>サンプルで扱うデータとクラス</h2>
+<p>今回のサンプルで扱うデータは以下のようなイメージ。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token comment">// マッピングしたいデータ：受信した JSON データだったり、SQLResultSet だったりのテイ</span>
+<span class="token keyword">const</span> src <span class="token operator">=</span> <span class="token punctuation">{</span>
+  id<span class="token operator">:</span> <span class="token number">1</span><span class="token punctuation">,</span>
+  name<span class="token operator">:</span> <span class="token string">'Name'</span><span class="token punctuation">,</span>
+  age<span class="token operator">:</span> <span class="token number">25</span><span class="token punctuation">,</span>
+  address<span class="token operator">:</span> <span class="token string">'Tokyo'</span><span class="token punctuation">,</span>
+  dummyParams<span class="token operator">:</span> <span class="token string">'Dummy'</span>  <span class="token comment">// DTO クラスにないプロパティ</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+</code></pre>
+<p>Ajax 通信で受信した JSON データだったり、DB から SELECT した ResultSet の一つだったりするテイ。</p>
+<p>コレに対し、以下のような構造の DTO クラスにデータをうまいことマッピングしたい。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token comment">// マッピングに使う DTO クラス</span>
+<span class="token keyword">class</span> <span class="token class-name">User</span> <span class="token punctuation">{</span>
+  <span class="token function">constructor</span><span class="token punctuation">(</span><span class="token parameter">id<span class="token punctuation">,</span> name<span class="token punctuation">,</span> age<span class="token punctuation">,</span> address<span class="token punctuation">,</span> zipCode</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">id</span>      <span class="token operator">=</span> id<span class="token punctuation">;</span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">name</span>    <span class="token operator">=</span> name<span class="token punctuation">;</span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">age</span>     <span class="token operator">=</span> age<span class="token punctuation">;</span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">address</span> <span class="token operator">=</span> address<span class="token punctuation">;</span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">zipCode</span> <span class="token operator">=</span> zipCode<span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>以降、これらのコードをベースに、変数 <code>src</code> を上手いことマッピングした <code>User</code> インスタンスを生成しようとしてみる。</p>
+<h2 id="方法1：クラスのコンストラクタで連想配列をクラスにマッピングする"><a class="header-link" href="#方法1：クラスのコンストラクタで連想配列をクラスにマッピングする"><span class="header-link-mark"></span></a>方法1：クラスのコンストラクタで連想配列をクラスにマッピングする</h2>
+<p>まずは、クラスのコンストラクタでマッピングを試みる。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token comment">// マッピングに使う DTO クラス</span>
+<span class="token keyword">class</span> <span class="token class-name">User</span> <span class="token punctuation">{</span>
+  <span class="token function">constructor</span><span class="token punctuation">(</span><span class="token parameter">data<span class="token punctuation">,</span> name<span class="token punctuation">,</span> age<span class="token punctuation">,</span> address<span class="token punctuation">,</span> zipCode</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token comment">// プロパティ定義 : ES2015 ではクラス直下でプロパティ定義できないため</span>
+    <span class="token comment">// また、後述のマッピング時に undefined だと for...in ループが使えないため null を代入しておく</span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">id</span>      <span class="token operator">=</span> <span class="token keyword null nil">null</span><span class="token punctuation">;</span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">name</span>    <span class="token operator">=</span> <span class="token keyword null nil">null</span><span class="token punctuation">;</span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">age</span>     <span class="token operator">=</span> <span class="token keyword null nil">null</span><span class="token punctuation">;</span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">address</span> <span class="token operator">=</span> <span class="token keyword null nil">null</span><span class="token punctuation">;</span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">zipCode</span> <span class="token operator">=</span> <span class="token keyword null nil">null</span><span class="token punctuation">;</span>
+    
+    <span class="token comment">// 引数が1つで、第1引数が連想配列の場合は連想配列のデータをバインディングする</span>
+    <span class="token keyword control-flow">if</span><span class="token punctuation">(</span>arguments<span class="token punctuation">.</span><span class="token property-access">length</span> <span class="token operator">===</span> <span class="token number">1</span> <span class="token operator">&#x26;&#x26;</span> <span class="token class-name">Object</span><span class="token punctuation">.</span><span class="token property-access">prototype</span><span class="token punctuation">.</span><span class="token method function property-access">toString</span><span class="token punctuation">.</span><span class="token method function property-access">call</span><span class="token punctuation">(</span>arguments<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">)</span> <span class="token operator">===</span> <span class="token string">'[object Object]'</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token comment">// Object.assign() を使うと、dummyParams のように User クラスにないプロパティも取り込まれてしまう</span>
+      <span class="token comment">// Object.assign(this, data);</span>
+      
+      <span class="token comment">// クラスに定義していないプロパティを取り除くには以下のようにチェックしながら代入する</span>
+      <span class="token keyword control-flow">for</span><span class="token punctuation">(</span><span class="token keyword">const</span> key <span class="token keyword">in</span> data<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        <span class="token keyword control-flow">if</span><span class="token punctuation">(</span><span class="token keyword">this</span><span class="token punctuation">.</span><span class="token method function property-access">hasOwnProperty</span><span class="token punctuation">(</span>key<span class="token punctuation">)</span> <span class="token operator">&#x26;&#x26;</span> data<span class="token punctuation">[</span>key<span class="token punctuation">]</span> <span class="token operator">!==</span> <span class="token keyword null nil">null</span> <span class="token operator">&#x26;&#x26;</span> data<span class="token punctuation">[</span>key<span class="token punctuation">]</span> <span class="token operator">!==</span> <span class="token keyword nil">undefined</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+          <span class="token keyword">this</span><span class="token punctuation">[</span>key<span class="token punctuation">]</span> <span class="token operator">=</span> data<span class="token punctuation">[</span>key<span class="token punctuation">]</span><span class="token punctuation">;</span>
+        <span class="token punctuation">}</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span>
+    <span class="token keyword control-flow">else</span> <span class="token punctuation">{</span>
+      <span class="token comment">// 通常どおり引数が設定されている場合はそのまま設定する</span>
+      <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">id</span>      <span class="token operator">=</span> data<span class="token punctuation">;</span>  <span class="token comment">// 第1引数のみ直接的な引数名にできないがご容赦…</span>
+      <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">name</span>    <span class="token operator">=</span> name<span class="token punctuation">;</span>
+      <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">age</span>     <span class="token operator">=</span> age<span class="token punctuation">;</span>
+      <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">address</span> <span class="token operator">=</span> address<span class="token punctuation">;</span>
+      <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">zipCode</span> <span class="token operator">=</span> zipCode<span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+
+<span class="token comment">// どちらでもインスタンス化できる</span>
+<span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span> <span class="token keyword">new</span> <span class="token class-name">User</span><span class="token punctuation">(</span>src<span class="token punctuation">)</span> <span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span> <span class="token keyword">new</span> <span class="token class-name">User</span><span class="token punctuation">(</span><span class="token number">2</span><span class="token punctuation">,</span> <span class="token string">'My Name'</span><span class="token punctuation">,</span> <span class="token number">30</span><span class="token punctuation">,</span> <span class="token string">'Yokohama'</span><span class="token punctuation">,</span> <span class="token string">'100-0001'</span><span class="token punctuation">)</span> <span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>ES2015 のクラス構文の場合、オーバーロード (引数違いで同名のメソッドを複数作ること) ができないので、自前で条件分岐を入れて、第1引数が JSON データ (連想配列) かどうかを見ている。</p>
+<p>連想配列だった場合は、<em><code>Object.assign(this, 【第1引数のオブジェクト】)</code></em> と書くと、サクッとマッピングできる。ただしこのやり方をすると、「DTO クラスにないプロパティを第1引数が持っていた場合」に、そのプロパティが DTO クラスに付与されてしまう。前述の変数 <code>src</code> の場合、<code>dummyParams</code> というプロパティがあり、コレは <code>User</code> クラスにはないはずだが、コレもマッピングされてしまう。</p>
+<p>それを避けるには、<code>for ... in</code> ループと <code>hasOwnProperty()</code> を利用して、そのクラスが対象のプロパティを持っている場合のみ値を設定する、というやり方になる。しかしこの場合も注意点があって、<code>User</code> クラスにプロパティが定義されている (<code>hasOwnProperty()</code> が <code>true</code> になる) 状態にするには、<code>this.id;</code> のように宣言だけするのではダメで、<code>this.id = null;</code> というように何らかの値を代入して <code>undefined</code> 以外の状態にしておかないといけないのだ。そのため、前述のサンプルコードは先に全プロパティに <code>null</code> を代入している。</p>
+<ul>
+  <li>参考：<a href="https://stackoverflow.com/questions/30339675/how-to-map-json-data-to-a-class">javascript - How to map JSON data to a class - Stack Overflow</a> … <code>Object.assign()</code> を使う方法</li>
+  <li>参考：<a href="https://qiita.com/ConquestArrow/items/ec291d09ace0cb8008e1">ES6ではデータのプロパティをクラス直下で定義できない</a> … ES2015 ではクラス直下でプロパティ定義できない件</li>
+  <li>参考：<a href="https://qiita.com/PianoScoreJP/items/6ea62067495f11f84d25">JavaScript つい忘れてしまう、配列かオブジェクトかの判定方法</a> … <code>Object.prototype.toString.call()</code> で連想配列判定する</li>
+</ul>
+<h2 id="方法2：json-からインスタンスを生成する-static-メソッドを用意する"><a class="header-link" href="#方法2：json-からインスタンスを生成する-static-メソッドを用意する"><span class="header-link-mark"></span></a>方法2：JSON からインスタンスを生成する static メソッドを用意する</h2>
+<p>色々と面倒な感じになってきたので、少し違うアプローチを。</p>
+<p>コンストラクタは通常どおり用意しておいて、連想配列からインスタンスを生成する場合は、それ用の <strong>static メソッド</strong>を使う、という方法。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token comment">// JSON (連想配列) からインスタンスを生成する static メソッドを用意する</span>
+<span class="token keyword">class</span> <span class="token class-name">User</span> <span class="token punctuation">{</span>
+  <span class="token function">constructor</span><span class="token punctuation">(</span><span class="token parameter">id<span class="token punctuation">,</span> name<span class="token punctuation">,</span> age<span class="token punctuation">,</span> address<span class="token punctuation">,</span> zipCode</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">id</span>      <span class="token operator">=</span> id<span class="token punctuation">;</span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">name</span>    <span class="token operator">=</span> name<span class="token punctuation">;</span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">age</span>     <span class="token operator">=</span> age<span class="token punctuation">;</span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">address</span> <span class="token operator">=</span> address<span class="token punctuation">;</span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">zipCode</span> <span class="token operator">=</span> zipCode<span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  
+  <span class="token comment">// static メソッド</span>
+  <span class="token keyword">static</span> <span class="token function">fromHash</span><span class="token punctuation">(</span><span class="token parameter">hash</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token keyword control-flow">return</span> <span class="token keyword">new</span> <span class="token class-name">this</span><span class="token punctuation">(</span>hash<span class="token punctuation">.</span><span class="token property-access">id</span><span class="token punctuation">,</span> hash<span class="token punctuation">.</span><span class="token property-access">name</span><span class="token punctuation">,</span> hash<span class="token punctuation">.</span><span class="token property-access">age</span><span class="token punctuation">,</span> hash<span class="token punctuation">.</span><span class="token property-access">address</span><span class="token punctuation">,</span> hash<span class="token punctuation">.</span><span class="token property-access">zipCode</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+
+<span class="token comment">// static メソッドから生成する場合</span>
+<span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span> <span class="token maybe-class-name">User</span><span class="token punctuation">.</span><span class="token method function property-access">fromHash</span><span class="token punctuation">(</span>src<span class="token punctuation">)</span> <span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token comment">// それ以外は通常どおりコンストラクタを利用する</span>
+<span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span> <span class="token keyword">new</span> <span class="token class-name">User</span><span class="token punctuation">(</span><span class="token number">2</span><span class="token punctuation">,</span> <span class="token string">'My Name'</span><span class="token punctuation">,</span> <span class="token number">30</span><span class="token punctuation">,</span> <span class="token string">'Yokohama'</span><span class="token punctuation">,</span> <span class="token string">'100-0001'</span><span class="token punctuation">)</span> <span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>このように static メソッドを用意しておけば、コンストラクタ内で引数の数や型をチェックしたりする必要はなくなる。JSON データからインスタンスを生成する時は、<code>new User()</code> ではなく、</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword">const</span> myUser <span class="token operator">=</span> <span class="token maybe-class-name">User</span><span class="token punctuation">.</span><span class="token method function property-access">fromHash</span><span class="token punctuation">(</span>src<span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>と書けば良いのだ。</p>
+<ul>
+  <li>参考：<a href="https://stackoverflow.com/questions/32626524/why-doesnt-javascript-es6-support-multi-constructor-classes">class - Why doesn't JavaScript ES6 support multi-constructor classes? - Stack Overflow</a> … <code>fromHash()</code> を参考にした</li>
+</ul>
+<h2 id="方法3：json-データをクラスにマッピングする関数を用意する"><a class="header-link" href="#方法3：json-データをクラスにマッピングする関数を用意する"><span class="header-link-mark"></span></a>方法3：JSON データをクラスにマッピングする関数を用意する</h2>
+<p>「方法1」「方法2」ともに、DTO クラスごとに似たような実装を持たなくてはならず、いささか面倒臭い。先に作った <code>User</code> クラスの実装をコピペした時の修正忘れとかでくだらない不具合を生む恐れがありそうだ。</p>
+<p>そこで、「方法1」のやり方をもう少し汎用的にして、<em>特定のクラスに依存しないマッピング関数</em>を作ってみる。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token comment">// マッピングに使う DTO クラス : 基本的なコンストラクタの定義のみ</span>
+<span class="token keyword">class</span> <span class="token class-name">User</span> <span class="token punctuation">{</span>
+  <span class="token function">constructor</span><span class="token punctuation">(</span><span class="token parameter">id<span class="token punctuation">,</span> name<span class="token punctuation">,</span> age<span class="token punctuation">,</span> address<span class="token punctuation">,</span> zipCode</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">id</span> <span class="token operator">=</span> id<span class="token punctuation">;</span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">name</span> <span class="token operator">=</span> name<span class="token punctuation">;</span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">age</span> <span class="token operator">=</span> age<span class="token punctuation">;</span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">address</span> <span class="token operator">=</span> address<span class="token punctuation">;</span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">zipCode</span> <span class="token operator">=</span> zipCode<span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+
+<span class="token doc-comment comment">/**
+ * JSON オブジェクトからクラスのインスタンスを生成する
+ * 
+ * <span class="token keyword">@param</span> <span class="token parameter">type</span> クラスのオブジェクト・new して使用する
+ * <span class="token keyword">@param</span> <span class="token parameter">json</span> マッピングしたい JSON データ
+ * <span class="token keyword">@return</span> データをマッピングしたインスタンス
+ */</span>
+<span class="token keyword">function</span> <span class="token function">createInstanceFromJson</span><span class="token punctuation">(</span><span class="token parameter">type<span class="token punctuation">,</span> json</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token keyword">let</span> instance <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">type</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword control-flow">for</span><span class="token punctuation">(</span><span class="token keyword">const</span> key <span class="token keyword">in</span> json<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token keyword control-flow">if</span><span class="token punctuation">(</span>instance<span class="token punctuation">.</span><span class="token method function property-access">hasOwnProperty</span><span class="token punctuation">(</span>key<span class="token punctuation">)</span> <span class="token operator">&#x26;&#x26;</span> json<span class="token punctuation">[</span>key<span class="token punctuation">]</span> <span class="token operator">!==</span> <span class="token keyword null nil">null</span> <span class="token operator">&#x26;&#x26;</span> json<span class="token punctuation">[</span>key<span class="token punctuation">]</span> <span class="token operator">!==</span> <span class="token keyword nil">undefined</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      instance<span class="token punctuation">[</span>key<span class="token punctuation">]</span> <span class="token operator">=</span> json<span class="token punctuation">[</span>key<span class="token punctuation">]</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span>
+  <span class="token keyword control-flow">return</span> instance<span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+
+<span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span> <span class="token function">createInstanceFromJson</span><span class="token punctuation">(</span><span class="token maybe-class-name">User</span><span class="token punctuation">,</span> src<span class="token punctuation">)</span> <span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>仕組み上は TypeScript でも同様にできるはず。</p>
+<ul>
+  <li>参考：<a href="https://qiita.com/master-of-sugar/items/8be1c74f8a82bce64f9f">APIの戻りを特定のTypescriptクラスにマッピングしてキッチリ管理したい</a></li>
+</ul>
+<h2 id="方法4：object-mapper-を使ってみる"><a class="header-link" href="#方法4：object-mapper-を使ってみる"><span class="header-link-mark"></span></a>方法4：object-mapper を使ってみる</h2>
+<p>O/R マッパーライブラリが存在しないワケではなくて、極端に少なく感じた、というだけなので、今回は <strong>object-mapper</strong> というパッケージを使ってみる。</p>
+<ul>
+  <li>参考：<a href="https://www.npmjs.com/package/object-mapper">object-mapper - npm</a></li>
+</ul>
+<pre class="language-javascript"><code class="language-javascript"><span class="token comment">// 「npm install -S object-mapper」でインストールしておく</span>
+<span class="token keyword">const</span> objectMapper <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'object-mapper'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// マッピングしたいデータ：受信した JSON データだったり、SQLResultSet だったりのテイ</span>
+<span class="token keyword">const</span> src <span class="token operator">=</span> <span class="token punctuation">{</span>
+  id<span class="token operator">:</span> <span class="token number">1</span><span class="token punctuation">,</span>
+  name<span class="token operator">:</span> <span class="token string">'nAME'</span><span class="token punctuation">,</span>  <span class="token comment">// あとで変換させる</span>
+  age<span class="token operator">:</span> <span class="token number">25</span><span class="token punctuation">,</span>
+  zip_code<span class="token operator">:</span> <span class="token string">'100-0000'</span><span class="token punctuation">,</span>  <span class="token comment">// スネークケースのプロパティ</span>
+  zipCode<span class="token operator">:</span> <span class="token string">'100-9999'</span><span class="token punctuation">,</span>   <span class="token comment">// キャメルケースのプロパティ (userMap の設定順序によりコチラの値は無視される)</span>
+  dummyParams<span class="token operator">:</span> <span class="token string">'Dummy'</span>   <span class="token comment">// DTO クラスにないプロパティ</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+
+<span class="token comment">// マッピング用の設定オブジェクト</span>
+<span class="token keyword">const</span> userMap <span class="token operator">=</span> <span class="token punctuation">{</span>
+  <span class="token comment">// id プロパティを受け取ったら、そのまま id プロパティに出力する</span>
+  <span class="token string">'id'</span><span class="token operator">:</span> <span class="token string">'id'</span><span class="token punctuation">,</span>
+  <span class="token comment">// name プロパティを受け取ったら、name プロパティと originalName プロパティに出力する</span>
+  <span class="token string">'name'</span><span class="token operator">:</span> <span class="token punctuation">[</span>
+    <span class="token comment">// 出力する name プロパティの方は値をパスカルケースに変換する</span>
+    <span class="token punctuation">{</span>
+      key<span class="token operator">:</span> <span class="token string">'name'</span><span class="token punctuation">,</span>
+      <span class="token function-variable function">transform</span><span class="token operator">:</span> <span class="token punctuation">(</span><span class="token parameter">value</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+        <span class="token keyword control-flow">return</span> value<span class="token punctuation">.</span><span class="token method function property-access">charAt</span><span class="token punctuation">(</span><span class="token number">0</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">toUpperCase</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">+</span> value<span class="token punctuation">.</span><span class="token method function property-access">substr</span><span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">toLowerCase</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span><span class="token punctuation">,</span>
+    <span class="token comment">// originalName プロパティは、name プロパティの値をそのまま出力する</span>
+    <span class="token punctuation">{</span>
+      key<span class="token operator">:</span> <span class="token string">'originalName'</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">]</span><span class="token punctuation">,</span>
+  <span class="token string">'age'</span><span class="token operator">:</span> <span class="token string">'age'</span><span class="token punctuation">,</span>
+  <span class="token comment">// address プロパティがなかった場合はデフォルト値 '住所なし' を設定する</span>
+  <span class="token string">'address'</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+    key<span class="token operator">:</span> <span class="token string">'address'</span><span class="token punctuation">,</span>
+    <span class="token keyword module">default</span><span class="token operator">:</span> <span class="token string">'住所なし'</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token comment">// キャメルケースのプロパティで受け取った場合</span>
+  <span class="token string">'zipCode'</span><span class="token operator">:</span> <span class="token string">'zipCode'</span><span class="token punctuation">,</span>
+  <span class="token comment">// スネークケースのプロパティで受け取った場合</span>
+  <span class="token string">'zip_code'</span><span class="token operator">:</span> <span class="token string">'zipCode'</span>
+  <span class="token comment">// マッピング先のプロパティが同名で、両方のプロパティに値があった場合、設定オブジェクトの後ろの方で宣言した設定の方が優先される</span>
+  <span class="token comment">// つまりこの場合、src.zip_code の値の方が優先して利用される</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+
+<span class="token keyword">const</span> user <span class="token operator">=</span> <span class="token function">objectMapper</span><span class="token punctuation">(</span>src<span class="token punctuation">,</span> userMap<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span> user <span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>このライブラリは <code>User</code> クラスにマッピングするのではなく、<code>User</code> クラスに相当する、マッピング用の設定オブジェクトを用意する形になる。</p>
+<p>入力となるオブジェクトのプロパティ名に対し、どのような出力をするか、というマッピングと変換ができる。</p>
+<p>上の例では、<code>src.name</code> プロパティの値を利用して <code>user.name</code> と <code>user.originalName</code> という2つのプロパティを出力したり、<code>src.zipCode</code> と <code>src.zip_code</code> のいずれかの値を利用して <code>user.zipCode</code> というプロパティに出力したりしている。</p>
+<p>割と柔軟に設定できるので、「SQLResultSet はスネークケースのプロパティ名なのでキャメルケースにしたい」とかいう場合にも使いやすい。結局はモデル (DTO) に応じてそれぞれにマッピング処理が必要になってくると思うので、こういう作りでも良いのかもしれない。</p>
+<h2 id="以上"><a class="header-link" href="#以上"><span class="header-link-mark"></span></a>以上</h2>
+<p>なんだかこう、コレという方式が見付けきれなかったが、方法3がお手軽かつクラスに依存しなさそうで、プロパティ名やデータの変換もしたいなら方法4の object-mapper だろうか。</p>
+<ul>
+  <li>参考：<a href="https://stackoverflow.com/questions/37928113/mapping-json-to-es6-classes">javascript - Mapping JSON to ES6 Classes - Stack Overflow</a></li>
+</ul>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2018-06-01</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2018-06-01</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

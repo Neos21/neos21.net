@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>Webpack 入門 その3：Babel による ECMAScript のトランスパイル・TypeScript のトランスパイル - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2020/08/27-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2020/index.html">2020年</a></li>
+            <li><a href="/blog/2020/08/index.html">08月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2020-08-27</time></div>
+        <h1 id="page-title">Webpack 入門 その3：Babel による ECMAScript のトランスパイル・TypeScript のトランスパイル</h1>
+
+<p>Webpack を勉強しながら Browserslist の効果を確認するシリーズ企画第3弾。</p>
+<p>今回は初めに ECMAScript を Babel でトランスパイルしつつ、Browserslist の効果を確認。さらにその後、TypeScript もトランスパイルできるようにしてみる。</p>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#%E4%BD%BF%E7%94%A8%E3%81%99%E3%82%8B%E3%83%84%E3%83%BC%E3%83%AB%E3%81%A8%E9%81%A9%E7%94%A8%E9%A0%86">使用するツールと適用順</a></li>
+  <li><a href="#%E5%BF%85%E8%A6%81%E3%81%AA%E3%83%91%E3%83%83%E3%82%B1%E3%83%BC%E3%82%B8%E3%82%92%E3%82%A4%E3%83%B3%E3%82%B9%E3%83%88%E3%83%BC%E3%83%AB%E3%81%99%E3%82%8B">必要なパッケージをインストールする</a></li>
+  <li><a href="#ecmascript-%E3%82%92%E3%83%88%E3%83%A9%E3%83%B3%E3%82%B9%E3%83%91%E3%82%A4%E3%83%AB%E3%81%97%E3%81%A6%E3%81%BF%E3%82%8B">ECMAScript をトランスパイルしてみる</a></li>
+  <li><a href="#typescript-%E3%82%92%E3%83%88%E3%83%A9%E3%83%B3%E3%82%B9%E3%83%91%E3%82%A4%E3%83%AB%E3%81%99%E3%82%8B">TypeScript をトランスパイルする</a></li>
+  <li><a href="#scss-%E3%81%AE%E3%83%88%E3%83%A9%E3%83%B3%E3%82%B9%E3%83%91%E3%82%A4%E3%83%AB%E3%82%B3%E3%83%BC%E3%83%89%E3%81%A8%E5%90%88%E3%82%8F%E3%81%9B%E3%81%A6%E3%81%BE%E3%81%A8%E3%82%81">SCSS のトランスパイルコードと合わせてまとめ</a></li>
+  <li><a href="#%E4%BB%A5%E4%B8%8A">以上</a></li>
+</ul>
+<h2 id="使用するツールと適用順"><a class="header-link" href="#使用するツールと適用順"><span class="header-link-mark"></span></a>使用するツールと適用順</h2>
+<p>ECMAScript のトランスパイルに使用するのは、おなじみ Babel である。</p>
+<p>コアである <code>@babel/core</code> と、Polyfill を提供する <code>core-js</code>、ターゲットブラウザなどを判定する <code>@babel/preset-env</code>、そしてそれを Webpack で読み込むための <code>babel-loader</code> が必要になる。</p>
+<p>続いて TypeScript をトランスパイルするにあたって必要なのは、<code>typescript</code> 本体と、<code>ts-loader</code> となる。</p>
+<p>前回 SCSS をトランスパイルする際、CSS ファイルも <code>sass-loader</code> にかませていたのに気付いただろうか。</p>
+<ul>
+  <li><code>webpack.config.js</code></li>
+</ul>
+<pre class="language-javascript"><code class="language-javascript"><span class="token punctuation">{</span>
+  <span class="token comment">// ↓ この正規表現は .sass・.scss・.css ファイルに該当する</span>
+  test<span class="token operator">:</span> <span class="token punctuation">(</span><span class="token regex"><span class="token regex-delimiter">/</span><span class="token regex-source language-regex">\.(sa|sc|c)ss$</span><span class="token regex-delimiter">/</span><span class="token regex-flags">u</span></span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+  <span class="token comment">// test: [ (/\.sass$/u), (/\.scss$/u), (/\.css$/u) ] と書くのと同じ</span>
+  use<span class="token operator">:</span> <span class="token punctuation">[</span>
+    <span class="token maybe-class-name">MiniCssExtractPlugin</span><span class="token punctuation">.</span><span class="token property-access">loader</span><span class="token punctuation">,</span>
+    <span class="token string">'css-loader'</span><span class="token punctuation">,</span>
+    <span class="token string">'postcss-loader'</span><span class="token punctuation">,</span>
+    <span class="token string">'sass-loader'</span>
+  <span class="token punctuation">]</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>素の CSS は当然 SCSS 記法として認識させても素通りするだけで、その後の PostCSS がうまく効くというワケだ。</p>
+<p>ECMAScript と TypeScript を混在させることは少ないだろうが、今回の素振り環境では、混在させてもうまく動くよう、似たようなことをやろうと思う。すなわち、</p>
+<ol>
+  <li><code>ts-loader</code> を使って TypeScript をトランスパイルする
+    <ul>
+      <li>素の ECMAScript は素通り</li>
+      <li>トランスパイル処理自体は <code>typescript</code> パッケージが行う</li>
+    </ul>
+  </li>
+  <li><code>babel-loader</code> を通じて Babel が ECMAScript をトランスパイルする
+    <ul>
+      <li>トランスパイル処理は <code>@babel/core</code> が担う</li>
+      <li>どの Polyfill を適用するかは、<code>@babel/preset-env</code> が Browserslist 設定を参照しながら決める</li>
+      <li>実際に適用される Polyfill は <code>core-js</code> のコードが利用される</li>
+    </ul>
+  </li>
+</ol>
+<p>このような処理順となるワケだ。</p>
+<h2 id="必要なパッケージをインストールする"><a class="header-link" href="#必要なパッケージをインストールする"><span class="header-link-mark"></span></a>必要なパッケージをインストールする</h2>
+<p>というワケでパッケージのインストール。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># ECMAScript のトランスパイルに必要なモノたち</span>
+$ <span class="token function">npm</span> <span class="token function">install</span> -D @babel/core @babel/preset-env core-js babel-loader
+
+<span class="token comment"># TypeScript をトランスパイルする際はコレも追加する</span>
+$ <span class="token function">npm</span> <span class="token function">install</span> -D typescript ts-loader
+</code></pre>
+<ul>
+  <li><code>package.json</code> : インストールされたバージョン</li>
+</ul>
+<pre class="language-json"><code class="language-json"><span class="token property">"devDependencies"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+  <span class="token property">"@babel/core"</span><span class="token operator">:</span> <span class="token string">"7.10.5"</span><span class="token punctuation">,</span>
+  <span class="token property">"@babel/preset-env"</span><span class="token operator">:</span> <span class="token string">"7.10.4"</span><span class="token punctuation">,</span>
+  <span class="token property">"babel-loader"</span><span class="token operator">:</span> <span class="token string">"8.1.0"</span><span class="token punctuation">,</span>
+  <span class="token property">"core-js"</span><span class="token operator">:</span> <span class="token string">"3.6.5"</span><span class="token punctuation">,</span>
+  
+  <span class="token property">"ts-loader"</span><span class="token operator">:</span> <span class="token string">"8.0.1"</span><span class="token punctuation">,</span>
+  <span class="token property">"typescript"</span><span class="token operator">:</span> <span class="token string">"3.9.7"</span><span class="token punctuation">,</span>
+  
+  <span class="token property">"webpack"</span><span class="token operator">:</span> <span class="token string">"4.44.0"</span><span class="token punctuation">,</span>
+  <span class="token property">"webpack-cli"</span><span class="token operator">:</span> <span class="token string">"3.3.12"</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<h2 id="ecmascript-をトランスパイルしてみる"><a class="header-link" href="#ecmascript-をトランスパイルしてみる"><span class="header-link-mark"></span></a>ECMAScript をトランスパイルしてみる</h2>
+<p>まずは ECMAScript のトランスパイルから試してみよう。</p>
+<ul>
+  <li><code>src/js/main.js</code>
+    <ul>
+      <li>Polyfill が必要になりそうな <code>Promise</code> や <code>Map</code> なんかを使ったコードを適当に入れてみる</li>
+    </ul>
+  </li>
+</ul>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword">const</span> <span class="token function-variable function">wait</span> <span class="token operator">=</span> <span class="token punctuation">(</span><span class="token parameter">ms</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token keyword control-flow">return</span> <span class="token keyword">new</span> <span class="token class-name">Promise</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token parameter">resolve</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+    <span class="token function">setTimeout</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+      <span class="token function">resolve</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span><span class="token punctuation">,</span> ms<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+
+<span class="token function">wait</span><span class="token punctuation">(</span><span class="token number">1000</span><span class="token punctuation">)</span>
+  <span class="token punctuation">.</span><span class="token method function property-access">then</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+    <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'Test'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<ul>
+  <li><code>.babelrc</code>
+    <ul>
+      <li>新規で設定ファイルを作る</li>
+    </ul>
+  </li>
+</ul>
+<pre class="language-json"><code class="language-json"><span class="token comment">// .babelrc は JSON だがコメントが書ける</span>
+<span class="token punctuation">{</span>
+  <span class="token property">"presets"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
+    <span class="token punctuation">[</span>
+      <span class="token string">"@babel/preset-env"</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token comment">// usage にすると Browserslist の指定に応じて Polyfill を入れられる</span>
+        <span class="token property">"useBuiltIns"</span><span class="token operator">:</span> <span class="token string">"usage"</span><span class="token punctuation">,</span>
+        <span class="token comment">// Polyfill のために使用する core-js のバージョンを指定する</span>
+        <span class="token property">"corejs"</span><span class="token operator">:</span> <span class="token number">3</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">]</span>
+  <span class="token punctuation">]</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<ul>
+  <li><code>.browserslistrc</code>
+    <ul>
+      <li>前回 SCSS 用に用意したモノと全く同じで良い</li>
+      <li>Polyfill を適用させるため、古い IE を対象に入れてみる</li>
+    </ul>
+  </li>
+</ul>
+<pre><code>> 5%
+last 2 versions
+Firefox ESR
+dead
+
+# IE に対応させる
+ie >= 6
+</code></pre>
+<ul>
+  <li><code>webpack.config.js</code>
+    <ul>
+      <li>前回構築した SCSS に関する設定部分は全て省略</li>
+    </ul>
+  </li>
+</ul>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword">const</span> path <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'path'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+module<span class="token punctuation">.</span><span class="token property-access">exports</span> <span class="token operator">=</span> <span class="token punctuation">{</span>
+  mode<span class="token operator">:</span> <span class="token string">'production'</span><span class="token punctuation">,</span>
+  entry<span class="token operator">:</span> <span class="token string">'./src/js/main.js'</span><span class="token punctuation">,</span>
+  output<span class="token operator">:</span> <span class="token punctuation">{</span>
+    path    <span class="token operator">:</span> path<span class="token punctuation">.</span><span class="token method function property-access">resolve</span><span class="token punctuation">(</span>__dirname<span class="token punctuation">,</span> <span class="token string">'dist/'</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+    filename<span class="token operator">:</span> <span class="token string">'js/[name].js'</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  module<span class="token operator">:</span> <span class="token punctuation">{</span>
+    rules<span class="token operator">:</span> <span class="token punctuation">[</span>
+      <span class="token punctuation">{</span>
+        test<span class="token operator">:</span> <span class="token punctuation">(</span><span class="token regex"><span class="token regex-delimiter">/</span><span class="token regex-source language-regex">\.js$</span><span class="token regex-delimiter">/</span><span class="token regex-flags">u</span></span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+        use<span class="token operator">:</span> <span class="token punctuation">[</span>
+          <span class="token string">'babel-loader'</span>  <span class="token comment">// オプションは .babelrc で指定する</span>
+        <span class="token punctuation">]</span><span class="token punctuation">,</span>
+        exclude<span class="token operator">:</span> <span class="token punctuation">(</span><span class="token regex"><span class="token regex-delimiter">/</span><span class="token regex-source language-regex">node_modules</span><span class="token regex-delimiter">/</span><span class="token regex-flags">u</span></span><span class="token punctuation">)</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+    <span class="token punctuation">]</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+</code></pre>
+<p>コレでビルドしてみよう。すると <code>./dist/js/main.js</code> の中に Promise 関連の Polyfill が含まれていることが何となく確認できると思う。</p>
+<p>別ファイルのインポートやエクスポートにも、Webpack がデフォルトで対応している。</p>
+<ul>
+  <li><code>src/js/another.js</code></li>
+</ul>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword">const</span> another <span class="token operator">=</span> <span class="token string">'another.js'</span><span class="token punctuation">;</span>
+module<span class="token punctuation">.</span><span class="token property-access">exports</span> <span class="token operator">=</span> another<span class="token punctuation">;</span>
+</code></pre>
+<ul>
+  <li><code>src/js/main.js</code></li>
+</ul>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword">const</span> another <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'./another'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span>another<span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>こんな風に2ファイル用意しても、うまくビルドできる。</p>
+<h2 id="typescript-をトランスパイルする"><a class="header-link" href="#typescript-をトランスパイルする"><span class="header-link-mark"></span></a>TypeScript をトランスパイルする</h2>
+<p>続いて、TypeScript をトランスパイルできるようにする。</p>
+<ul>
+  <li><code>src/ts/main.ts</code>
+    <ul>
+      <li><strong>エントリポイントのディレクトリと拡張子を変更している</strong></li>
+      <li>前述のコードをベースに、TypeScript 記法を追加している</li>
+      <li>JS ファイルと TS ファイルをインポートしている</li>
+    </ul>
+  </li>
+</ul>
+<pre class="language-typescript"><code class="language-typescript"><span class="token keyword">import</span> <span class="token imports">child</span> <span class="token keyword">from</span> <span class="token string">'./child'</span><span class="token punctuation">;</span>  <span class="token comment">// TypeScript ファイル</span>
+<span class="token keyword">import</span> <span class="token imports"><span class="token operator">*</span> <span class="token keyword">as</span> another</span> <span class="token keyword">from</span> <span class="token string">'../js/another'</span><span class="token punctuation">;</span>  <span class="token comment">// ECMAScript ファイル</span>
+
+<span class="token keyword">const</span> <span class="token function-variable function">wait</span> <span class="token operator">=</span> <span class="token punctuation">(</span>ms<span class="token operator">:</span> <span class="token builtin">number</span> <span class="token operator">=</span> <span class="token number">1000</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token keyword">return</span> <span class="token keyword">new</span> <span class="token class-name"><span class="token known-class-name class-name">Promise</span></span><span class="token punctuation">(</span><span class="token punctuation">(</span>resolve<span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+    <span class="token function">setTimeout</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+      <span class="token function">resolve</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span><span class="token punctuation">,</span> ms<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+
+<span class="token keyword">const</span> waitMs<span class="token operator">:</span> <span class="token builtin">number</span> <span class="token operator">=</span> <span class="token number">2000</span><span class="token punctuation">;</span>
+<span class="token function">wait</span><span class="token punctuation">(</span>waitMs<span class="token punctuation">)</span>
+  <span class="token punctuation">.</span><span class="token method function property-access">then</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+    <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span>child<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span>another<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<ul>
+  <li><code>src/ts/child.ts</code>
+    <ul>
+      <li>TypeScript の <code>export</code></li>
+    </ul>
+  </li>
+</ul>
+<pre class="language-typescript"><code class="language-typescript"><span class="token keyword">const</span> child<span class="token operator">:</span> <span class="token builtin">string</span> <span class="token operator">=</span> <span class="token string">'child.ts'</span><span class="token punctuation">;</span>
+<span class="token keyword">export</span> <span class="token keyword">default</span> child<span class="token punctuation">;</span>
+</code></pre>
+<ul>
+  <li><code>src/js/another.js</code>
+    <ul>
+      <li>Node.js の <code>module.exports</code></li>
+    </ul>
+  </li>
+</ul>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword">const</span> another <span class="token operator">=</span> <span class="token string">'another.js'</span><span class="token punctuation">;</span>
+module<span class="token punctuation">.</span><span class="token property-access">exports</span> <span class="token operator">=</span> another<span class="token punctuation">;</span>
+</code></pre>
+<ul>
+  <li><code>tsconfig.json</code>
+    <ul>
+      <li>新規設定ファイル</li>
+    </ul>
+  </li>
+</ul>
+<pre class="language-json"><code class="language-json"><span class="token punctuation">{</span>
+  <span class="token property">"compilerOptions"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+    <span class="token property">"target"</span><span class="token operator">:</span> <span class="token string">"esnext"</span><span class="token punctuation">,</span>
+    <span class="token property">"module"</span><span class="token operator">:</span> <span class="token string">"esnext"</span><span class="token punctuation">,</span>
+    <span class="token property">"moduleResolution"</span><span class="token operator">:</span> <span class="token string">"node"</span><span class="token punctuation">,</span>
+    <span class="token comment">// JavaScript ファイルを読み込むために指定する</span>
+    <span class="token property">"allowJs"</span><span class="token operator">:</span> <span class="token boolean">true</span><span class="token punctuation">,</span>
+    <span class="token comment">// VSCode 上の「入力ファイルを上書きすることになるため、src/another.js を書き込めません。」エラーを回避するために宣言のみ記載・Webpack がファイル出力するため使用されない</span>
+    <span class="token property">"outDir"</span><span class="token operator">:</span> <span class="token string">""</span><span class="token punctuation">,</span>
+    
+    <span class="token comment">// 以下テキトーに設定…</span>
+    
+    <span class="token property">"strict"</span><span class="token operator">:</span> <span class="token boolean">true</span><span class="token punctuation">,</span>
+    <span class="token property">"noImplicitAny"</span><span class="token operator">:</span> <span class="token boolean">true</span><span class="token punctuation">,</span>
+    <span class="token property">"strictNullChecks"</span><span class="token operator">:</span> <span class="token boolean">true</span><span class="token punctuation">,</span>
+    
+    <span class="token property">"noUnusedLocals"</span><span class="token operator">:</span> <span class="token boolean">true</span><span class="token punctuation">,</span>
+    <span class="token property">"noUnusedParameters"</span><span class="token operator">:</span> <span class="token boolean">true</span><span class="token punctuation">,</span>
+    <span class="token property">"noImplicitReturns"</span><span class="token operator">:</span> <span class="token boolean">true</span><span class="token punctuation">,</span>
+    
+    <span class="token property">"esModuleInterop"</span><span class="token operator">:</span> <span class="token boolean">true</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token property">"include"</span><span class="token operator">:</span> <span class="token punctuation">[</span><span class="token string">"src/"</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
+  <span class="token property">"exclude"</span><span class="token operator">:</span> <span class="token punctuation">[</span><span class="token string">"node_modules/"</span><span class="token punctuation">]</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<ul>
+  <li><code>webpack.config.js</code>
+    <ul>
+      <li>色々設定が増えているのでよくよく注意…</li>
+    </ul>
+  </li>
+</ul>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword">const</span> path <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'path'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+module<span class="token punctuation">.</span><span class="token property-access">exports</span> <span class="token operator">=</span> <span class="token punctuation">{</span>
+  mode<span class="token operator">:</span> <span class="token string">'production'</span><span class="token punctuation">,</span>
+  entry<span class="token operator">:</span> <span class="token string">'./src/ts/main.ts'</span><span class="token punctuation">,</span>  <span class="token comment">// エントリポイントを TypeScript に直す</span>
+  output<span class="token operator">:</span> <span class="token punctuation">{</span>
+    path    <span class="token operator">:</span> path<span class="token punctuation">.</span><span class="token method function property-access">resolve</span><span class="token punctuation">(</span>__dirname<span class="token punctuation">,</span> <span class="token string">'dist/'</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+    filename<span class="token operator">:</span> <span class="token string">'js/[name].js'</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  resolve<span class="token operator">:</span> <span class="token punctuation">{</span>
+    <span class="token comment">// デフォルトでは拡張子 .ts を取得できないため指定する (import の解決などに使用する)</span>
+    extensions<span class="token operator">:</span> <span class="token punctuation">[</span><span class="token string">'.ts'</span><span class="token punctuation">,</span> <span class="token string">'.js'</span><span class="token punctuation">]</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  module<span class="token operator">:</span> <span class="token punctuation">{</span>
+    rules<span class="token operator">:</span> <span class="token punctuation">[</span>
+      <span class="token punctuation">{</span>
+        test<span class="token operator">:</span> <span class="token punctuation">[</span><span class="token punctuation">(</span><span class="token regex"><span class="token regex-delimiter">/</span><span class="token regex-source language-regex">\.ts$</span><span class="token regex-delimiter">/</span><span class="token regex-flags">u</span></span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token regex"><span class="token regex-delimiter">/</span><span class="token regex-source language-regex">\.js$</span><span class="token regex-delimiter">/</span><span class="token regex-flags">u</span></span><span class="token punctuation">)</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
+        use<span class="token operator">:</span> <span class="token punctuation">[</span>
+          <span class="token string">'babel-loader'</span><span class="token punctuation">,</span>  <span class="token comment">// オプションは .babelrc で指定する</span>
+          <span class="token string">'ts-loader'</span>      <span class="token comment">// tsconfig.json も参照</span>
+        <span class="token punctuation">]</span><span class="token punctuation">,</span>
+        exclude<span class="token operator">:</span> <span class="token punctuation">(</span><span class="token regex"><span class="token regex-delimiter">/</span><span class="token regex-source language-regex">node_modules</span><span class="token regex-delimiter">/</span><span class="token regex-flags">u</span></span><span class="token punctuation">)</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+    <span class="token punctuation">]</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+</code></pre>
+<p><code>resolve</code> セクションで <code>.ts</code> ファイルを解釈できるようにしておく。<code>test</code> 部分は <code>(/\.(j|t)s$/u)</code> と表現しても良いが、<code>.ts</code> と <code>.js</code> を対象にしている。</p>
+<p>…ふぅ…。設定ファイル多すぎない？ｗ</p>
+<p>コレでビルドしてみると、ちゃんとコードが動くことが確認できる。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">npm</span> start
+
+<span class="token operator">></span> practice-browserslist@ start /Users/Neo/practice-browserslist
+<span class="token operator">></span> <span class="token function">npm</span> run build <span class="token operator">&#x26;&#x26;</span> node ./dist/js/main.js
+
+<span class="token operator">></span> practice-browserslist@ build /Users/Neo/practice-browserslist
+<span class="token operator">></span> webpack
+
+Hash: 8cef69703bd99dbae1b4
+Version: webpack <span class="token number">4.44</span>.0
+Time: 1929ms
+Built at: <span class="token number">2020</span>-07-28 <span class="token number">14</span>:24:52
+     Asset      Size  Chunks             Chunk Names
+js/main.js  <span class="token number">18.7</span> KiB       <span class="token number">0</span>  <span class="token punctuation">[</span>emitted<span class="token punctuation">]</span>  main
+Entrypoint main <span class="token operator">=</span> js/main.js
+<span class="token punctuation">[</span><span class="token number">40</span><span class="token punctuation">]</span> ./src/js/another.js <span class="token number">68</span> bytes <span class="token punctuation">{</span><span class="token number">0</span><span class="token punctuation">}</span> <span class="token punctuation">[</span>built<span class="token punctuation">]</span>
+<span class="token punctuation">[</span><span class="token number">42</span><span class="token punctuation">]</span> <span class="token punctuation">(</span>webpack<span class="token punctuation">)</span>/buildin/global.js <span class="token number">472</span> bytes <span class="token punctuation">{</span><span class="token number">0</span><span class="token punctuation">}</span> <span class="token punctuation">[</span>built<span class="token punctuation">]</span>
+<span class="token punctuation">[</span><span class="token number">78</span><span class="token punctuation">]</span> ./src/ts/main.ts + <span class="token number">1</span> modules <span class="token number">760</span> bytes <span class="token punctuation">{</span><span class="token number">0</span><span class="token punctuation">}</span> <span class="token punctuation">[</span>built<span class="token punctuation">]</span>
+     <span class="token operator">|</span> ./src/ts/main.ts <span class="token number">695</span> bytes <span class="token punctuation">[</span>built<span class="token punctuation">]</span>
+     <span class="token operator">|</span> ./src/ts/child.ts <span class="token number">45</span> bytes <span class="token punctuation">[</span>built<span class="token punctuation">]</span>
+    + <span class="token number">76</span> hidden modules
+
+<span class="token comment"># Promise による待機のあと、以下が出力される</span>
+child.ts
+another.js
+</code></pre>
+<p>できたできた。</p>
+<h2 id="scss-のトランスパイルコードと合わせてまとめ"><a class="header-link" href="#scss-のトランスパイルコードと合わせてまとめ"><span class="header-link-mark"></span></a>SCSS のトランスパイルコードと合わせてまとめ</h2>
+<p>前回の設定もまとめたモノを再掲しよう。</p>
+<ul>
+  <li><code>.browserslistrc</code> (Browserslist の設定)</li>
+  <li><code>.babelrc</code> (ECMAScript のトランスパイル設定、および Browserslist 参照用)</li>
+  <li><code>postcss.config.js</code> (Autoprefixer の設定、および Browserslist 参照用)</li>
+  <li><code>tsconfig.json</code> (TypeScript のトランスパイル設定)</li>
+</ul>
+<p>これらは省略する。</p>
+<ul>
+  <li><code>src/ts/main.js</code></li>
+</ul>
+<pre class="language-typescript"><code class="language-typescript"><span class="token keyword">import</span> <span class="token string">'../css/other.css'</span><span class="token punctuation">;</span>   <span class="token comment">// CSS</span>
+<span class="token keyword">import</span> <span class="token string">'../scss/main.scss'</span><span class="token punctuation">;</span>  <span class="token comment">// SCSS</span>
+
+<span class="token keyword">import</span> <span class="token imports"><span class="token operator">*</span> <span class="token keyword">as</span> another</span> <span class="token keyword">from</span> <span class="token string">'../js/another'</span><span class="token punctuation">;</span>  <span class="token comment">// ECMAScript</span>
+<span class="token keyword">import</span> <span class="token imports">child</span> <span class="token keyword">from</span> <span class="token string">'./child'</span><span class="token punctuation">;</span>               <span class="token comment">// TypeScript</span>
+</code></pre>
+<ul>
+  <li><code>webpack.config.js</code></li>
+</ul>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword">const</span> path <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'path'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">const</span> <span class="token maybe-class-name">MiniCssExtractPlugin</span> <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'mini-css-extract-plugin'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+module<span class="token punctuation">.</span><span class="token property-access">exports</span> <span class="token operator">=</span> <span class="token punctuation">{</span>
+  mode<span class="token operator">:</span> <span class="token string">'production'</span><span class="token punctuation">,</span>  <span class="token comment">// モード指定</span>
+  entry<span class="token operator">:</span> <span class="token string">'./src/ts/main.ts'</span><span class="token punctuation">,</span>  <span class="token comment">// エントリポイント</span>
+  <span class="token comment">// 出力先パス・ファイル名</span>
+  output<span class="token operator">:</span> <span class="token punctuation">{</span>
+    path    <span class="token operator">:</span> path<span class="token punctuation">.</span><span class="token method function property-access">resolve</span><span class="token punctuation">(</span>__dirname<span class="token punctuation">,</span> <span class="token string">'dist/'</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+    filename<span class="token operator">:</span> <span class="token string">'js/[name].js'</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  plugins<span class="token operator">:</span> <span class="token punctuation">[</span>
+    <span class="token keyword">new</span> <span class="token class-name">MiniCssExtractPlugin</span><span class="token punctuation">(</span><span class="token punctuation">{</span>
+      filename<span class="token operator">:</span> <span class="token string">'/css/[name].css'</span>
+    <span class="token punctuation">}</span><span class="token punctuation">)</span>
+  <span class="token punctuation">]</span><span class="token punctuation">,</span>
+  resolve<span class="token operator">:</span> <span class="token punctuation">{</span>
+    <span class="token comment">// デフォルトでは拡張子 .ts を取得できないため指定する (import の解決などに使用する)</span>
+    extensions<span class="token operator">:</span> <span class="token punctuation">[</span><span class="token string">'.ts'</span><span class="token punctuation">,</span> <span class="token string">'.js'</span><span class="token punctuation">]</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  module<span class="token operator">:</span> <span class="token punctuation">{</span>
+    rules<span class="token operator">:</span> <span class="token punctuation">[</span>
+      <span class="token comment">// ECMAScript をトランスパイルする</span>
+      <span class="token punctuation">{</span>
+        test<span class="token operator">:</span> <span class="token punctuation">[</span><span class="token punctuation">(</span><span class="token regex"><span class="token regex-delimiter">/</span><span class="token regex-source language-regex">\.ts$</span><span class="token regex-delimiter">/</span><span class="token regex-flags">u</span></span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token regex"><span class="token regex-delimiter">/</span><span class="token regex-source language-regex">\.js$</span><span class="token regex-delimiter">/</span><span class="token regex-flags">u</span></span><span class="token punctuation">)</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
+        use<span class="token operator">:</span> <span class="token punctuation">[</span>
+          <span class="token string">'babel-loader'</span><span class="token punctuation">,</span>  <span class="token comment">// オプションは .babelrc で指定する</span>
+          <span class="token string">'ts-loader'</span>      <span class="token comment">// tsconfig.json も参照</span>
+        <span class="token punctuation">]</span><span class="token punctuation">,</span>
+        exclude<span class="token operator">:</span> <span class="token punctuation">(</span><span class="token regex"><span class="token regex-delimiter">/</span><span class="token regex-source language-regex">node_modules</span><span class="token regex-delimiter">/</span><span class="token regex-flags">u</span></span><span class="token punctuation">)</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token comment">// SCSS を CSS ファイルとして出力する</span>
+      <span class="token punctuation">{</span>
+        test<span class="token operator">:</span> <span class="token punctuation">(</span><span class="token regex"><span class="token regex-delimiter">/</span><span class="token regex-source language-regex">\.(sa|sc|c)ss$</span><span class="token regex-delimiter">/</span><span class="token regex-flags">u</span></span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+        use<span class="token operator">:</span> <span class="token punctuation">[</span>
+          <span class="token comment">// Loader は最後のモノから順に適用される</span>
+          <span class="token comment">// sass-loader で SCSS から CSS に変換 → postcss-loader (PostCSS) で Autoprefixer を適用し CSS 圧縮 → css-loader で @import などを解決 → mini-css-extract-plugin で CSS ファイルとして書き出す</span>
+          <span class="token maybe-class-name">MiniCssExtractPlugin</span><span class="token punctuation">.</span><span class="token property-access">loader</span><span class="token punctuation">,</span>
+          <span class="token string">'css-loader'</span><span class="token punctuation">,</span>
+          <span class="token string">'postcss-loader'</span><span class="token punctuation">,</span>  <span class="token comment">// Autoprefixer の指定は postcss.config.js で行う</span>
+          <span class="token string">'sass-loader'</span>
+        <span class="token punctuation">]</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">]</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+</code></pre>
+<p>こうなった。</p>
+<h2 id="以上"><a class="header-link" href="#以上"><span class="header-link-mark"></span></a>以上</h2>
+<p>設定多すぎてしんどい！Webpack の設定は自分で書くもんじゃない気がする…。</p>
+<p>Browserslist の効果はなかなか面白い。一つの設定ファイルで Autoprefixer (CSS) にも Babel (JS) にも効果が出るので、CSS と JS のブラウザサポートの範囲を統一できる。</p>
+<p>つらみはあったけど、コレで Browserslist および Webpack の扱いはおけおけですわ。</p>
+<ul>
+  <li>参考：<a href="https://note.com/kaito_takase/n/n58a325909bd0">【webpack】最低限開発できそうな環境まとめ｜KaitoTakase｜note</a></li>
+  <li>参考：<a href="https://qiita.com/olt/items/f9a17ab5830583504231">TypeScript + React + Sass + Babelを利用したWebpack環境構築 - Qiita</a></li>
+  <li>参考：<a href="http://kasheight.hatenablog.jp/entry/2018/12/nuxt-typescript">Nuxt2 + TypeScriptの環境構築 - 備忘録</a></li>
+  <li>参考：<a href="https://qiita.com/koedamon/items/92c986456e4b9e845acd">webpackとBabelの基本を理解する(2) ―Babel編― - Qiita</a></li>
+</ul>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2020-08-27</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2020-08-27</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>Oracle DB の「セッション」と「プロセス」って何？ - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2020/01/19-02.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2020/index.html">2020年</a></li>
+            <li><a href="/blog/2020/01/index.html">01月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2020-01-19</time></div>
+        <h1 id="page-title">Oracle DB の「セッション」と「プロセス」って何？</h1>
+
+<p>Web アプリと Oracle DB を接続する時、JDBC コネクションプール数を設定したりするが、この「プール数」というのは、Oracle DB 側で設定する<em>「セッション数」</em>や<strong>「プロセス数」</strong>よりも小さくしておかないといけない。受け入れ側 (DB 側) のキャパを超える接続をしようとしてしまうからだ。</p>
+<p>それはそうなんだろう、と思うが、じゃあこの<em>セッション</em>と<strong>プロセス</strong>というのは何なの？という話。</p>
+<hr>
+<p>調べてみたところ、以下のページが一番分かりやすかった。</p>
+<ul>
+  <li><a href="http://replication.hatenablog.com/entry/2015/03/13/093000">Oracleのプロセスとセッションはどう違うの？ - 小さい頃はエラ呼吸</a></li>
+</ul>
+<blockquote>
+  <ul>
+    <li>Oracleに接続するとセッションが1つ生成される</li>
+    <li>そのセッションを通じてSQL文を発行するとプロセスが生成される</li>
+    <li>通常は1セッション＝1プロセスだけど、パラレル実行すると1セッション＝nプロセスになる</li>
+  </ul>
+</blockquote>
+<p>なるほど、<strong>1 セッション・n プロセス</strong>という関係で考えておくのが良さそうだな。少なくとも、「セッション数よりもプロセス数の方が大きい」状態にはならないのだろう、と。</p>
+<hr>
+<p>…と思ったが、セッション数とプロセス数を変更してみたら、面白い動きをした。</p>
+<p>まず、現在のセッション数とプロセス数の上限は以下で確認できる。</p>
+<pre class="language-sql"><code class="language-sql"><span class="token keyword">SELECT</span> <span class="token operator">*</span> <span class="token keyword">FROM</span> V$RESOURCE_LIMIT <span class="token keyword">WHERE</span> RESOURCE_NAME <span class="token operator">IN</span> <span class="token punctuation">(</span><span class="token string">'processes'</span><span class="token punctuation">,</span> <span class="token string">'sessions'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<ul>
+  <li>参考：<a href="https://sun0range.com/information-technology/ora-12516">Oracle DBのセッションを増やすor強制終了する【ORA-12516対応】 | 分かりやすい技術ブログ</a></li>
+</ul>
+<p>手元の DB で見てみると、</p>
+<ul>
+  <li>プロセス : 200</li>
+  <li>セッション : 334</li>
+</ul>
+<p>…となっていた。どうもセッション数の方が大きいのだ。「1 セッション = n プロセス」になりうるのに？</p>
+<hr>
+<p>プロセス数とセッション数は以下の SQL で変更できる。反映は DB の再起動が必要になる。</p>
+<pre class="language-sql"><code class="language-sql"><span class="token keyword">ALTER</span> SYSTEM <span class="token keyword">SET</span> PROCESSES <span class="token operator">=</span> <span class="token number">400</span> SCOPE<span class="token operator">=</span>SPFILE<span class="token punctuation">;</span>
+<span class="token keyword">ALTER</span> SYSTEM <span class="token keyword">SET</span> SESSIONS  <span class="token operator">=</span> <span class="token number">450</span> SCOPE<span class="token operator">=</span>SPFILE<span class="token punctuation">;</span>
+</code></pre>
+<p>すると、プロセス数の上限は指定したとおりだったが、<strong>セッション数の上限が勝手に引き上げられていた。</strong></p>
+<ul>
+  <li>プロセス : 400</li>
+  <li>セッション : 622</li>
+</ul>
+<p>…うーん、この動きの意味が分からないや。でもなんか自動調整とかされるんならプロセス数だけ気にしておけばいいのかなー。</p>
+<hr>
+<p>ちなみに、現在のセッション一覧は以下で確認できる。</p>
+<pre class="language-sql"><code class="language-sql"><span class="token keyword">SELECT</span>
+   machine<span class="token punctuation">,</span>
+   TO_CHAR<span class="token punctuation">(</span>LOGON_TIME<span class="token punctuation">,</span> <span class="token string">'YYYY/MM/DD HH24:MI:SS'</span><span class="token punctuation">)</span> LOGON_TIME<span class="token punctuation">,</span>
+   sid<span class="token punctuation">,</span>
+   <span class="token keyword">serial</span><span class="token comment">#,</span>
+   USERNAME<span class="token punctuation">,</span>
+   OSUSER
+<span class="token keyword">FROM</span>
+   V$<span class="token keyword">SESSION</span>
+<span class="token keyword">WHERE</span>
+   <span class="token keyword">STATUS</span> <span class="token operator">=</span> <span class="token string">'INACTIVE'</span>
+<span class="token keyword">ORDER</span> <span class="token keyword">BY</span>
+   LOGON_TIME<span class="token punctuation">;</span>
+</code></pre>
+<p>理屈がまだ分からないので、要勉強…。</p>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2020-01-19</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2020-01-19</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

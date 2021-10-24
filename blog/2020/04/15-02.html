@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>AWS EC2 からしか接続できない RDS Aurora MySQL に外部から接続してみる - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2020/04/15-02.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2020/index.html">2020年</a></li>
+            <li><a href="/blog/2020/04/index.html">04月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2020-04-15</time></div>
+        <h1 id="page-title">AWS EC2 からしか接続できない RDS Aurora MySQL に外部から接続してみる</h1>
+
+<p>最近 AWS を触り始めた。</p>
+<p><em>Amazon RDS</em> で MySQL 互換の Aurora を構築してあって、この Aurora に接続できるのは踏み台となる EC2 インスタンスのみ、という構成の環境を作った。</p>
+<p>つまり、</p>
+<ol>
+  <li>EC2 インスタンスに SSH 接続する</li>
+  <li>EC2 インスタンスにインストールしておいた <code>mysql</code> コマンドで Aurora MySQL に接続する</li>
+</ol>
+<p>という接続方法が順当な手順になるが、<strong>SSH ポートフォワード</strong>でもう少し楽に接続できないか試してみた。</p>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#%E7%94%A8%E6%84%8F%E3%81%99%E3%82%8B-ssh-config-%E3%83%95%E3%82%A1%E3%82%A4%E3%83%AB">用意する SSH Config ファイル</a></li>
+  <li><a href="#%E3%83%90%E3%83%83%E3%82%AF%E3%82%B0%E3%83%A9%E3%82%A6%E3%83%B3%E3%83%89%E3%81%A7-ssh-%E6%8E%A5%E7%B6%9A%E3%81%99%E3%82%8B">バックグラウンドで SSH 接続する</a></li>
+  <li><a href="#mysql-%E3%82%B3%E3%83%9E%E3%83%B3%E3%83%89%E3%81%A7%E6%8E%A5%E7%B6%9A%E3%81%99%E3%82%8B"><code>mysql</code> コマンドで接続する</a></li>
+  <li><a href="#docker-%E3%81%AE-mysql-%E3%82%A4%E3%83%A1%E3%83%BC%E3%82%B8%E3%82%92%E5%88%A9%E7%94%A8%E3%81%97%E3%81%A6%E6%8E%A5%E7%B6%9A%E3%81%97%E3%81%A6%E3%81%BF%E3%82%8B">Docker の MySQL イメージを利用して接続してみる</a></li>
+  <li><a href="#%E4%BB%A5%E4%B8%8A">以上</a></li>
+</ul>
+<h2 id="用意する-ssh-config-ファイル"><a class="header-link" href="#用意する-ssh-config-ファイル"><span class="header-link-mark"></span></a>用意する SSH Config ファイル</h2>
+<p>ポートフォワードを行うので、次のような SSH Config ファイルを書いてやれば良い。</p>
+<pre><code>Host ec2-tunnel-rds
+  HostName      【EC2 の Public IP】
+  User          ec2-user
+  IdentityFile  ~/.ssh/id_rsa.pem
+  LocalForward  13306 【RDS 名】.cluster-xxxxxxxxxxxx.ap-northeast-1.rds.amazonaws.com:3306
+</code></pre>
+<p>EC2 と SSH 接続したら、<code>LocalForward</code> で RDS との接続ポートを指定し、ローカル端末から RDS までの接続を作ってやる。分かりやすくするため、ローカル側のポートは <code>13306</code> としてある。</p>
+<p>このようにポートフォワーディングを使って、対象のサーバとの接続を作ることを「トンネルを掘る」と表現したりする。</p>
+<p>もしも、EC2 インスタンスに接続するために別の踏み台サーバが存在する場合は、<code>ProxyCommand</code> で中継してやれば良い。</p>
+<pre><code># 踏み台サーバ
+Host bastion
+  HostName      【踏み台サーバの Public IP】
+  User          bastion-user
+  IdentityFile  ~/.ssh/bastion.pem
+
+Host ec2-tunnel-rds
+  HostName      【EC2 の Private IP】
+  User          ec2-user
+  IdentityFile  ~/.ssh/id_rsa.pem
+  ProxyCommand  ssh -W %h:%p bastion
+  LocalForward  13306 【RDS 名】.cluster-xxxxxxxxxxxx.ap-northeast-1.rds.amazonaws.com:3306
+</code></pre>
+<p>こんな風に書いてやれば OK。EC2 インスタンスが Public IP を持たず、Private IP でしか接続できないような場合であれば、こうやって踏み台を経由する。</p>
+<h2 id="バックグラウンドで-ssh-接続する"><a class="header-link" href="#バックグラウンドで-ssh-接続する"><span class="header-link-mark"></span></a>バックグラウンドで SSH 接続する</h2>
+<p>SSH Config を用意したので、コレを使って SSH 接続し、トンネルを掘ってやる。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">ssh</span> ec2-tunnel-rds -fN
+</code></pre>
+<ul>
+  <li><code>-N</code> オプション : <code>ssh</code> コマンド実行後、接続先サーバのプロンプトを開かないようにする</li>
+  <li><code>-f</code> オプション : <code>ssh</code> コマンド実行後、バックグラウンドで接続する</li>
+</ul>
+<p><code>-N</code> オプションだけだと接続している間はずっとターミナルのプロンプトが戻らないので、<code>-f</code> オプションも付けてバックグラウンド実行するようにしている。</p>
+<p>バックグラウンドで接続している <code>ssh</code> プロセスを終了するには <code>ps aux | grep ssh</code> で対象のプロセス ID を確認して <code>kill 【プロセス ID】</code> する。</p>
+<p>とりあえず、事前にこのようにトンネルを掘っておいてから、MySQL クライアントで接続する。</p>
+<h2 id="mysql-コマンドで接続する"><a class="header-link" href="#mysql-コマンドで接続する"><span class="header-link-mark"></span></a><code>mysql</code> コマンドで接続する</h2>
+<p>ローカル端末に <code>mysql</code> コマンドがインストールされていれば、次のようなコマンドで接続できるはずだ。</p>
+<pre class="language-bash"><code class="language-bash">$ mysql -h <span class="token number">127.0</span>.0.1 -P <span class="token number">13306</span> -u 【ユーザ名】 -p【パスワード】
+</code></pre>
+<p>ポートフォワード設定のとおり、<code>127.0.0.1</code> (= localhost) の <code>13306</code> ポートに接続するようにしている。</p>
+<p><code>mysql</code> の <code>-p</code> オプションは、<code>-p</code> オプションだけ指定すると、コマンド実行後にパスワードを聞いてくれる動作をするので、本来はココでパスワードを入力した方がセキュアだ。</p>
+<p>しかし、<code>-p【パスワード】</code> と、スペースを開けずにパスワードを書くことで、プロンプト表示なしに接続できるのだ。例えばパスワードが <code>MyPass</code> だったら、スペースを開けずに <code>-pMyPass</code> と書くワケだ (もしくは <code>--password=MyPass</code> でも良い)。</p>
+<p>コレでうまく繋がるはず。</p>
+<h2 id="docker-の-mysql-イメージを利用して接続してみる"><a class="header-link" href="#docker-の-mysql-イメージを利用して接続してみる"><span class="header-link-mark"></span></a>Docker の MySQL イメージを利用して接続してみる</h2>
+<p>ローカル端末に <code>mysql</code> コマンドをインストールしていない場合は、Docker の MySQL イメージで代用しても良いだろう。少し書式にクセがあるので注意が必要だ。</p>
+<p>予め SSH ポートフォワードした後、次のように <code>docker</code> コマンドを実行していく。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># MySQL イメージを取得しておく</span>
+$ docker pull mysql:latest
+
+<span class="token comment"># MySQL 接続する</span>
+$ docker run -it --rm mysql:latest mysql -h host.docker.internal -P <span class="token number">13306</span> -u 【ユーザ名】 -p【パスワード】
+</code></pre>
+<p><code>-h</code> で指定するホストは <code>127.0.0.1</code> ではなく、<strong><code>host.docker.inetrnal</code></strong> とする。Docker コンテナ内の localhost ではなく、Docker が動作しているホストマシンを指したいので、このような書式になっている。</p>
+<p>ポート番号を指定する <code>-P</code> や、その他のオプションは通常の <code>mysql</code> コマンドと同じ。</p>
+<p>その他、<code>--rm</code> を指定することで、コマンド終了時 (MySQL 切断時) にコンテナを破棄するようにしている。</p>
+<h2 id="以上"><a class="header-link" href="#以上"><span class="header-link-mark"></span></a>以上</h2>
+<p>外部から直接接続できる RDS であれば</p>
+<pre class="language-bash"><code class="language-bash">$ mysql -h 【RDS 名】.cluster-xxxxxxxxxxxx.ap-northeast-1.rds.amazonaws.com -P <span class="token number">3306</span> -u 【ユーザ名】 -p【パスワード】
+
+$ docker run -it --rm mysql:latest mysql -h 【RDS 名】.cluster-xxxxxxxxxxxx.ap-northeast-1.rds.amazonaws.com -P <span class="token number">3306</span> -u 【ユーザ名】 -p【パスワード】
+</code></pre>
+<p>こんな風に接続できるのだが、ネットワーク上の制約がある場合は、今回のように SSH ポートフォワーディングが必要になる。時々必要になるのでよく覚えておこう。</p>
+<ul>
+  <li>参考：<a href="https://www.kmc.gr.jp/advent-calendar/ssh/2013/12/09/tunnel2.html">楽しいトンネルの掘り方(オプション: -L, -R, -f, -N -g) — 京大マイコンクラブ (KMC)</a></li>
+  <li>参考：<a href="https://note.crohaco.net/2017/ssh-tunnel/">つながるSSHトンネルが俺の力だ！ - くろのて</a></li>
+  <li>参考：<a href="https://www.dbonline.jp/mysql/connect/index3.html">MySQLに接続するユーザー名とパスワードの指定 | MySQLの使い方</a></li>
+  <li>参考：<a href="https://qiita.com/ijufumi/items/badde64d530e6bade382">Dockerのコンテナの中からホストOS上のプロセスと通信する方法 - Qiita</a></li>
+</ul>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2020-04-15</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2020-04-15</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

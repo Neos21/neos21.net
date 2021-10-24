@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>踏み台サーバを2台経由して SSH ログイン・ポートフォワーディングする - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2019/11/08-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2019/index.html">2019年</a></li>
+            <li><a href="/blog/2019/11/index.html">11月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2019-11-08</time></div>
+        <h1 id="page-title">踏み台サーバを2台経由して SSH ログイン・ポートフォワーディングする</h1>
+
+<p>通常、最もシンプルな構成で別のサーバに SSH 接続する際は、</p>
+<ol>
+  <li><b style="color:#00c;">ローカルマシン</b></li>
+  <li><b style="color:#f00;">目的のサーバ</b></li>
+</ol>
+<p>という登場人物で、ローカルマシンから</p><pre><code>$ ssh -i <b style="color:#00c;">【ローカルマシンにある秘密鍵のパス】</b> <b style="color:#f00;">【目的のサーバのユーザ名】@【目的のサーバのパブリック IP】</b></code></pre>
+<p>と叩けば SSH 接続できた。</p>
+<p>踏み台サーバを用いる構成については以前も解説したことがある。</p>
+<ol>
+  <li><b style="color:#00c;">ローカルマシン</b></li>
+  <li><b style="color:#090;">踏み台サーバ</b></li>
+  <li><b style="color:#f00;">目的のサーバ</b></li>
+</ol>
+<p>を順に繋いで、以下のようなコマンドで接続するやり方だ。</p><pre><code>$ ssh -o ProxyCommand='ssh -W %h:%p -i <b style="color:#00c;">【ローカルマシンにある踏み台サーバ用の秘密鍵のパス】</b> <b style="color:#090;">【踏み台サーバのユーザ名】@【踏み台サーバのパブリック IP】</b>' -i <b style="color:#00c;">【ローカルマシンにある目的のサーバ用の秘密鍵のパス】</b> <b style="color:#f00;">【目的のサーバのユーザ名】@【目的のサーバのプライベート IP】</b></code></pre>
+<p>ローカルマシンから、<code>ProxyCommand</code> オプションで接続した踏み台サーバとの接続環境を利用して、目的のサーバに接続する形となる。</p>
+<p>この構成での SSH ポートフォワーディングについても以前解説した。</p>
+<p>今回は、間にさらに1台、別の踏み台サーバが登場する。</p>
+<ol>
+  <li><b style="color:#00c;">ローカルマシン</b></li>
+  <li><b style="color:#090;">踏み台サーバ A</b></li>
+  <li><b style="color:#f0f;">踏み台サーバ B</b></li>
+  <li><b style="color:#f00;">目的のサーバ</b></li>
+</ol>
+<p>いわゆる多段 SSH を行うワケだが、この場合の SSH ログインの方法と、SSH ポートフォワーディングの方法をまとめる。</p>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#3%E6%AE%B5-ssh-%E3%83%AD%E3%82%B0%E3%82%A4%E3%83%B3">3段 SSH ログイン</a>
+    <ul>
+      <li><a href="#%E3%82%B3%E3%83%9E%E3%83%B3%E3%83%89%E3%81%AE%E3%81%BF%E3%81%A7%E5%AE%9F%E7%8F%BE">コマンドのみで実現</a></li>
+      <li><a href="#ssh-config-%E3%83%95%E3%82%A1%E3%82%A4%E3%83%AB%E3%81%AB%E6%9B%B8%E3%81%8F">SSH Config ファイルに書く</a></li>
+    </ul>
+  </li>
+  <li><a href="#3%E6%AE%B5-ssh-%E3%83%9D%E3%83%BC%E3%83%88%E3%83%95%E3%82%A9%E3%83%AF%E3%83%BC%E3%83%87%E3%82%A3%E3%83%B3%E3%82%B0">3段 SSH ポートフォワーディング</a>
+    <ul>
+      <li><a href="#%E3%82%B3%E3%83%9E%E3%83%B3%E3%83%89%E3%81%AE%E3%81%BF%E3%81%A7%E5%AE%9F%E7%8F%BE-%E3%81%9D%E3%81%AE1">コマンドのみで実現 その1</a></li>
+      <li><a href="#%E3%82%B3%E3%83%9E%E3%83%B3%E3%83%89%E3%81%AE%E3%81%BF%E3%81%A7%E5%AE%9F%E7%8F%BE-%E3%81%9D%E3%81%AE2">コマンドのみで実現 その2</a></li>
+      <li><a href="#ssh-config-%E3%83%95%E3%82%A1%E3%82%A4%E3%83%AB%E3%81%AB%E6%9B%B8%E3%81%8F-1">SSH Config ファイルに書く</a></li>
+    </ul>
+  </li>
+  <li><a href="#%E4%BB%A5%E4%B8%8A">以上</a></li>
+</ul>
+<h2 id="3段-ssh-ログイン"><a class="header-link" href="#3段-ssh-ログイン"><span class="header-link-mark"></span></a>3段 SSH ログイン</h2>
+<h3 id="コマンドのみで実現"><a class="header-link" href="#コマンドのみで実現"><span class="header-link-mark"></span></a>コマンドのみで実現</h3>
+<p>先に答えから。</p><pre><code>$ ssh -o ProxyCommand=&quot;ssh -o ProxyCommand='ssh -i <b style="color:#00c;">【ローカルにある踏み台 A の秘密鍵パス】</b> <b style="color:#090;">【踏み台 A のユーザ名】@【踏み台 A の IP】</b> -W <b style="color:#f0f;">【踏み台 B の IP】:【踏み台 B のポート】</b>' -i <b style="color:#00c;">【ローカルにある踏み台 B の秘密鍵パス】</b> <b style="color:#f0f;">【踏み台 B のユーザ名】@【踏み台 B の IP】</b> -W %h:%p &quot; -i <b style="color:#00c;">【ローカルにある目的のサーバの秘密鍵パス】</b> <b style="color:#f00;">【目的のサーバのユーザ名】@【目的のサーバのプライベート IP】</b></code></pre>
+<p>随分長ったらしくなったが、コマンド内で擬似的に改行してみると少し読み取りやすくなるだろうか。</p><pre><code>$ ssh \
+  -o ProxyCommand=&quot; \
+    ssh -o ProxyCommand=' \
+      ssh -i <b style="color:#00c;">【ローカルにある踏み台 A の秘密鍵パス】</b> <b style="color:#090;">【踏み台 A のユーザ名】@【踏み台 A の IP】</b> -W <b style="color:#f0f;">【踏み台 B の IP】:【踏み台 B のポート】</b> \
+    ' \
+    -i <b style="color:#00c;">【ローカルにある踏み台 B の秘密鍵パス】</b> <b style="color:#f0f;">【踏み台 B のユーザ名】@【踏み台 B の IP】</b> -W %h:%p \
+  &quot; \
+  -i <b style="color:#00c;">【ローカルにある目的のサーバの秘密鍵パス】</b> <b style="color:#f00;">【目的のサーバのユーザ名】@【目的のサーバのプライベート IP】</b></code></pre>
+<p>実際に IP などを当てはめてみるとこんな感じ。IP は以下のようにテキトーに決めた。</p>
+<ul>
+  <li><b style="color:#090;">踏み台サーバ A = 100.11.1.1</b> (パブリック IP なイメージ)</li>
+  <li><b style="color:#f0f;">踏み台サーバ B = 10.22.2.2</b> (プライベート IP なイメージ)</li>
+  <li><b style="color:#f00;">目的のサーバ = 10.33.3.3</b> (プライベート IP なイメージ)</li>
+</ul><pre><code>$ ssh -o ProxyCommand=&quot;ssh -o ProxyCommand='ssh -i <b style="color:#00c;">~/.ssh/key-bastion-A</b> <b style="color:#090;">user-A@100.11.1.1</b> -W <b style="color:#f0f;">10.22.2.2:22</b>' -i <b style="color:#00c;">~/.ssh/key-bastion-B</b> <b style="color:#f0f;">user-B@10.22.2.2</b> -W %h:%p &quot; -i <b style="color:#00c;">~/.ssh/key-target</b> <b style="color:#f00;">user-target@10.33.3.3</b>
+
+# 複数行に分けるとこんな感じ
+$ ssh \
+  -o ProxyCommand=&quot; \
+    ssh -o ProxyCommand=' \
+      ssh -i <b style="color:#00c;">~/.ssh/key-bastion-A</b> <b style="color:#090;">user-A@100.11.1.1</b> -W <b style="color:#f0f;">10.22.2.2:22</b> \
+    ' \
+    -i <b style="color:#00c;">~/.ssh/key-bastion-B</b> <b style="color:#f0f;">user-B@10.22.2.2</b> -W %h:%p \
+  &quot; \
+  -i <b style="color:#00c;">~/.ssh/key-target</b> <b style="color:#f00;">user-target@10.33.3.3</b></code></pre>
+<p>ポイントは以下のとおり。</p>
+<ul>
+  <li>いずれのサーバも、ポートはデフォルトの22番で接続しているテイなので、<code>-p 22</code> オプションの表記がない。<code>-W 10.22.2.2:22</code> と、<b style="color:#f0f;">踏み台サーバ B の IP とポート</b>を指定している場所は、ポート番号を省略できないので書いてある。</li>
+  <li><code>-W %h:%p</code> というイディオムは、<code>ProxyCommand</code> 使用時に標準入力と標準出力を中継するためのオプション。<code>%h:%p</code> 部分は<b style="color:#f00;">目的のサーバのホストとポート</b>に置換される。</li>
+  <li>3段以上の SSH となると、<code>ProxyCommand</code> も入れ子になる。間にいるサーバでは、標準入出力の中継先を <code>%h:%p</code> で指定できないので、<b style="color:#f0f;">踏み台サーバ B の IP とポート</b>をベタ書きしている。</li>
+  <li><code>-i</code> オプションで指定する SSH 秘密鍵のファイルパスは、<strong>全て</strong>、<b style="color:#00c;">ローカルマシン上にあるファイルのパス</b>を指定する。踏み台サーバ A・B には秘密鍵ファイルを置いておく必要はない。</li>
+</ul>
+<p><code>ssh</code> コマンドはオプションの位置に特段制限がないので、<code>-o ProxyCommand</code> を先に書いて、なるべくコマンドの見た目が「(<b style="color:#00c;">ローカル</b> →) <b style="color:#090;">踏み台 A</b> → <b style="color:#f0f;">踏み台 B</b> → <b style="color:#f00;">目的のサーバ</b>」と読めるように並べてやると良いと思う。</p>
+<h3 id="ssh-config-ファイルに書く"><a class="header-link" href="#ssh-config-ファイルに書く"><span class="header-link-mark"></span></a>SSH Config ファイルに書く</h3>
+<p>とはいえ、毎回こんな長ったらしいコマンドを書くのもしんどいので、<code>~/.ssh/config</code> に書くことにする。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># 踏み台サーバ A</span>
+Host bastion-a
+  HostName      <span class="token number">100.11</span>.1.1
+  User          user-A
+  IdentityFile  ~/.ssh/key-bastion-A
+
+<span class="token comment"># 踏み台サーバ B</span>
+Host bastion-b
+  HostName      <span class="token number">10.22</span>.2.2
+  User          user-B
+  IdentityFile  ~/.ssh/key-bastion-B
+  ProxyCommand  <span class="token function">ssh</span> bastion-a -W %h:%p
+
+<span class="token comment"># 目的のサーバ</span>
+Host target-server
+  HostName      <span class="token number">10.33</span>.3.3
+  User          user-target
+  IdentityFile  ~/.ssh/key-target
+  ProxyCommand  <span class="token function">ssh</span> bastion-b -W %h:%p
+</code></pre>
+<p>やはり設定ファイルに書くとシンプル。コレで、</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">ssh</span> target-server
+</code></pre>
+<p>と入力するだけで、<b style="color:#090;">踏み台 A</b> → <b style="color:#f0f;">踏み台 B</b> を経由して<b style="color:#f00;">目的のサーバ</b>に SSH ログインできるようになった。</p>
+<p>ちなみに、この設定ファイルのまま、</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">ssh</span> bastion-b
+</code></pre>
+<p>と実行すれば、<b style="color:#090;">踏み台 A</b> を経由して<b style="color:#f0f;">踏み台 B</b> に SSH ログインできる。</p>
+<h2 id="3段-ssh-ポートフォワーディング"><a class="header-link" href="#3段-ssh-ポートフォワーディング"><span class="header-link-mark"></span></a>3段 SSH ポートフォワーディング</h2>
+<p>次はポートフォワーディング。</p>
+<ol>
+  <li><b style="color:#00c;">ローカルマシン</b></li>
+  <li><b style="color:#090;">踏み台サーバ</b></li>
+  <li><b style="color:#f00;">目的のサーバ</b></li>
+</ol>
+<p>という、踏み台が1台の場合は、</p><pre><code>$ ssh -t -i <b style="color:#00c;">【踏み台の秘密鍵】</b> <b style="color:#090;">【踏み台のユーザ名】@【踏み台の IP】</b>  -L <b style="color:#00c;">【ローカルのポート】</b>:<b style="color:#f00;">目的のサーバの IP</b>:<b style="color:#f00;">【目的のサーバのポート】</b>
+
+$ curl http://localhost:<b style="color:#00c;">【ローカルのポート】</b>/</code></pre>
+<p>こんな感じでポートフォワードが設定できる。</p>
+<p>それでは、この間にもう1台、踏み台サーバが増えた場合はどうするか。</p>
+<ol>
+  <li><b style="color:#00c;">ローカルマシン</b></li>
+  <li><b style="color:#090;">踏み台サーバ A</b></li>
+  <li><b style="color:#f0f;">踏み台サーバ B</b></li>
+  <li><b style="color:#f00;">目的のサーバ</b> (このサーバの <b>8080</b> ポートをフォワードしたい)</li>
+</ol>
+<h3 id="コマンドのみで実現-その1"><a class="header-link" href="#コマンドのみで実現-その1"><span class="header-link-mark"></span></a>コマンドのみで実現 その1</h3>
+<p>まずは、ターミナルを2タブ使い、2コマンドで実現する方法。</p>
+<ul>
+  <li>1つ目のタブで、<b style="color:#00c;">ローカルマシン</b>から、<b style="color:#090;">踏み台サーバ A</b> を経由して<b style="color:#f0f;">踏み台サーバ B</b> をトンネリングする。</li>
+  <li>2つ目のタブで、<b style="color:#00c;">1つ目のタブでトンネリングしたローカルのポート</b> (= <b style="color:#f0f;">踏み台サーバ B</b>) から、<b style="color:#f00;">目的のサーバ</b>をトンネリングする。</li>
+</ul>
+<p>コレをコマンドに直すと以下のとおり。</p><pre><code># 1つ目のタブ
+$ ssh -t -i <b style="color:#00c;">【踏み台 A の秘密鍵】</b> -p <b>22   </b> <b style="color:#090;">【踏み台 A のユーザ名】</b>@<b style="color:#090;">【踏み台 A の IP】</b> -L <b>10022</b>:<b style="color:#f0f;">【踏み台 B の IP】:22</b>
+
+# 2つ目のタブ
+$ ssh -t -i <b style="color:#00c;">【踏み台 B の秘密鍵】</b> -p <b>10022</b> <b style="color:#f0f;">【踏み台 B のユーザ名】</b>@<b style="color:#00c;">localhost</b>          -L <b>28080</b>:<b style="color:#f00;">【目的のサーバの IP】:8080</b></code></pre>
+<p>1つ目のタブで、<b style="color:#f0f;">踏み台 B</b> の22番ポートとのトンネルを作る。ココでは適当に、ローカルの <code>10022</code> ポートに当たるようにした。この時点で、</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">ssh</span> -i ~/.ssh/key-bastion-B -p <span class="token number">10022</span> user-B@localhost
+</code></pre>
+<p>とコマンドを指定すれば、<b style="color:#f0f;">踏み台 B</b> に SSH ログインできる状態になっているワケだ。ポートフォワードしているので、<code>localhost</code> の <code>10022</code> ポートを指定することで接続できるのであ。</p>
+<p>で、2つ目のタブは、このトンネルを利用して<b style="color:#f0f;">踏み台 B</b> に入り、<b style="color:#f00;">目的のサーバの 8080 ポート</b>とのトンネルを作る。ココでは <code>28080</code> ポートに割り当てたので、最終的には</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">curl</span> http://localhost:28080/
+</code></pre>
+<p>と叩けば、<b style="color:#f00;">目的のサーバ</b>の内容にアクセスできる。</p>
+<h3 id="コマンドのみで実現-その2"><a class="header-link" href="#コマンドのみで実現-その2"><span class="header-link-mark"></span></a>コマンドのみで実現 その2</h3>
+<p>続いて、コレを1つのコマンドにまとめてみる。長いので2行に改行したが、1行で実行できる。</p><pre><code>$ ssh  -o ProxyCommand='ssh -i <b style="color:#00c;">【踏み台 A の秘密鍵】</b> -p 22 <b style="color:#090;">【踏み台 A のユーザ名】@【踏み台 A の IP】</b> -L <b>10022</b>:<b style="color:#f00;">【目的のサーバの IP】:8080</b> -W %h:%p' \
+    -i <b style="color:#00c;">【踏み台 B の秘密鍵】</b> -p 22 <b style="color:#f0f;">【踏み台 B のユーザ名】@【踏み台 B の IP】</b> -L <b>28080</b>:<b style="color:#f00;">【目的のサーバの IP】:8080</b></code></pre>
+<p>自分で編み出しておきながらイマイチ分かっていないのだが、<code>ProxyCommand</code> で <code>10022</code> ポートとのトンネルを作っているが、このポート番号は以降指定することなく済んでしまう。実際に<b style="color:#f00;">目的のサーバの 8080 ポート</b>を流しているポートは、後半に出てくる <code>28080</code> ポートの方なので、先程と同様</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">curl</span> http://localhost:28080/
+</code></pre>
+<p>でアクセスできる状態になる。<code>ProxyCommand</code> 内の <code>-L</code> オプションを消すと上手く動かなくなるし、でもどんなポート番号を使っていてもよくて、上手く繋がる。何だろコレ。</p>
+<h3 id="ssh-config-ファイルに書く-1"><a class="header-link" href="#ssh-config-ファイルに書く-1"><span class="header-link-mark"></span></a>SSH Config ファイルに書く</h3>
+<p>続いてコレと同じモノを <code>~/.ssh/config</code> に書く。<code>bastion-a</code> と <code>bastion-b</code> の接続情報は先程掲載したモノと同じ。<b style="color:#f00;">目的のサーバの IP は 10.33.3.3 とする</b>。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># 踏み台サーバ A</span>
+Host bastion-a
+  HostName      <span class="token number">100.11</span>.1.1
+  User          user-A
+  IdentityFile  ~/.ssh/key-bastion-A
+
+<span class="token comment"># 踏み台サーバ B</span>
+Host bastion-b
+  HostName      <span class="token number">10.22</span>.2.2
+  User          user-B
+  IdentityFile  ~/.ssh/key-bastion-B
+  ProxyCommand  <span class="token function">ssh</span> bastion-a -W %h:%p
+
+<span class="token comment"># 目的のサーバの 8080 ポートを 28080 ポートにフォワーディングする</span>
+Host target-server-forwarding
+  HostName      <span class="token number">10.22</span>.2.2
+  User          user-B
+  IdentityFile  ~/.ssh/key-bastion-B
+                <span class="token comment"># ↑ ココまでは「踏み台サーバ B」に接続するための情報を書く</span>
+  ProxyCommand  <span class="token function">ssh</span> bastion-a -W %h:%p -L <span class="token number">10022</span>:10.33.3.3:8080
+                <span class="token comment"># ↑ 「Host bastion-b」の ProxyCommand に追加してローカルポートフォワードの設定を追加する</span>
+  LocalForward  <span class="token number">28080</span> <span class="token number">10.33</span>.3.3:8080
+                <span class="token comment"># ↑ 実際にローカルマシンで割り当てたいポートを指定する</span>
+</code></pre>
+<p><code>Host target-server-forwarding</code> の主な接続情報は、<b style="color:#f0f;">踏み台 B</b> のモノになる点に注意。<b style="color:#f00;">目的のサーバ</b>の情報は、2箇所に書いた <code>10.33.3.3.:8080</code> 部分にしか出てこない。</p>
+<p><code>ProxyCommand</code> 内で指定している <code>10022</code> ポートは、先程も書いた用途がよく分からないポート。<strong>ポート番号が何でも良い理由が分かっていない。</strong>実際にトンネリングができているのは、<code>LocalForward</code> で指定した <code>28080</code> ポートなので、繰り返しになるが接続 URL は</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">curl</span> http://localhost:28080/
+</code></pre>
+<p>となる。</p>
+<h2 id="以上"><a class="header-link" href="#以上"><span class="header-link-mark"></span></a>以上</h2>
+<p>SSH コマンドの仕様はなかなか覚えられない…。</p>
+<p>ただ、Windows ユーザは PuTTY とか Tera Term とかで設定してしまって、原理的なところを知らないまま使っていることが多いように見受けられる。自分はそうはなりたくないので、仕組みを理解して使えるようになりたい。とはいえ今回も、最後に出てきた <code>10022</code> 部分が、何ポートでも良い理由が解明できていないのだが…。</p>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2019-11-08</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2019-11-08</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

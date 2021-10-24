@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>textlint の対象ファイルが多過ぎるとエラーが出るので分割実行する - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2018/04/27-02.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2018/index.html">2018年</a></li>
+            <li><a href="/blog/2018/04/index.html">04月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2018-04-27</time></div>
+        <h1 id="page-title">textlint の対象ファイルが多過ぎるとエラーが出るので分割実行する</h1>
+
+<p>textlint を使って文書校正をしている。</p>
+<ul>
+  <li><a href="/blog/2017/09/19-02.html">TextLint を使ってみる</a></li>
+  <li><a href="/blog/2017/11/05-01.html">TextLint の技術文書向けのルールセットが便利だった</a></li>
+</ul>
+<p>GitBook など、多数の Markdown ファイルを扱っている場合、textlint の実行時に <em><code>JavaScript heap out of memory</code></em> エラーが発生してしまうことがある。</p>
+<p>メッセージのとおり、ヒープサイズが足りないことによるエラーで、Mac ではほぼ見かけないが Windows では時々起こる。ヒープサイズを大きくするよう設定変更しても良いのだが、<em>分割実行したら少しは改善するかな？</em>と思い、こんなスクリプトを書いてみた。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token comment">/*!
+ * textlint を分割実行する Node.js スクリプト
+ * 
+ * コマンドラインで実行するとヒープサイズが足りなくなることがあるため
+ * サブディレクトリごとに textlint を分割実行する
+ */</span>
+
+<span class="token keyword">const</span> fs <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'fs'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">const</span> <span class="token maybe-class-name">TextLintEngine</span> <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'textlint'</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token property-access"><span class="token maybe-class-name">TextLintEngine</span></span><span class="token punctuation">;</span>
+
+<span class="token doc-comment comment">/** textlint 対象の Markdown ファイルが格納されているベースディレクトリ */</span>
+<span class="token keyword">const</span> baseDir <span class="token operator">=</span> <span class="token string">'./text/'</span><span class="token punctuation">;</span>
+
+<span class="token doc-comment comment">/** textlint 対象外にするサブディレクトリがあれば指定する */</span>
+<span class="token keyword">const</span> ignoreDirectories <span class="token operator">=</span> <span class="token punctuation">[</span>
+  <span class="token string">'styles'</span><span class="token punctuation">,</span>
+  <span class="token string">'scripts'</span>
+<span class="token punctuation">]</span><span class="token punctuation">;</span>
+
+<span class="token doc-comment comment">/** textlint のエンジン */</span>
+<span class="token keyword">const</span> engine <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">TextLintEngine</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token doc-comment comment">/** Lint チェックエラーの総数をカウントする */</span>
+<span class="token keyword">let</span> problemsTotal <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span>
+
+<span class="token doc-comment comment">/**
+ * textlint 対象とするファイルもしくはディレクトリのパスを取得する
+ * 
+ * <span class="token keyword">@return</span> <span class="token class-name"><span class="token punctuation">{</span>Promise<span class="token punctuation">.</span><span class="token punctuation">&#x3C;</span>string<span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token punctuation">,</span> Error<span class="token punctuation">}</span></span> textlint 対象とするファイルもしくはディレクトリのパスの配列を Resolve する
+ */</span>
+<span class="token keyword">const</span> <span class="token function-variable function">getTargets</span> <span class="token operator">=</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token keyword control-flow">return</span> <span class="token keyword">new</span> <span class="token class-name">Promise</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token parameter">resolve<span class="token punctuation">,</span> reject</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+    <span class="token comment">// ベースディレクトリ配下のファイル・ディレクトリを検索する</span>
+    fs<span class="token punctuation">.</span><span class="token method function property-access">readdir</span><span class="token punctuation">(</span>baseDir<span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token parameter">error<span class="token punctuation">,</span> list</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+      <span class="token keyword control-flow">if</span> <span class="token punctuation">(</span>error<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        <span class="token keyword control-flow">return</span> <span class="token function">reject</span><span class="token punctuation">(</span>error<span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span>
+      
+      <span class="token comment">// textlint 対象にするファイルもしくはディレクトリのパスを格納する配列</span>
+      <span class="token keyword">const</span> targets <span class="token operator">=</span> <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token punctuation">;</span>
+      
+      list<span class="token punctuation">.</span><span class="token method function property-access">forEach</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token parameter">item</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+        <span class="token comment">// ベースディレクトリの直下にある .md ファイル</span>
+        <span class="token keyword">const</span> isMarkdownFile <span class="token operator">=</span> item<span class="token punctuation">.</span><span class="token method function property-access">endsWith</span><span class="token punctuation">(</span><span class="token string">'.md'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token comment">// ディレクトリのうち、対象外とするディレクトリでないもの</span>
+        <span class="token keyword">const</span> isTargetDirectory <span class="token operator">=</span> fs<span class="token punctuation">.</span><span class="token method function property-access">statSync</span><span class="token punctuation">(</span>baseDir <span class="token operator">+</span> item<span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">isDirectory</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">&#x26;&#x26;</span> <span class="token operator">!</span>ignoreDirectories<span class="token punctuation">.</span><span class="token method function property-access">includes</span><span class="token punctuation">(</span>item<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        
+        <span class="token comment">// textlint 対象を抜き出す</span>
+        <span class="token keyword control-flow">if</span> <span class="token punctuation">(</span>isMarkdownFile <span class="token operator">||</span> isTargetDirectory<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+          targets<span class="token punctuation">.</span><span class="token method function property-access">push</span><span class="token punctuation">(</span>baseDir <span class="token operator">+</span> item<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token punctuation">}</span>
+      <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      
+      <span class="token function">resolve</span><span class="token punctuation">(</span>targets<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+
+<span class="token doc-comment comment">/**
+ * textlint を実行し結果を出力する
+ * 
+ * <span class="token keyword">@param</span> <span class="token class-name"><span class="token punctuation">{</span>string<span class="token punctuation">}</span></span> <span class="token parameter">targetPath</span> textlint 対象とするファイルもしくはディレクトリのパス
+ * <span class="token keyword">@return</span> <span class="token class-name"><span class="token punctuation">{</span>Promise<span class="token punctuation">.</span><span class="token punctuation">&#x3C;</span><span class="token keyword">void</span><span class="token punctuation">></span><span class="token punctuation">}</span></span> textlint チェックエラーの有無に関わらず Resolve する関数を返す
+ */</span>
+<span class="token keyword">const</span> <span class="token function-variable function">executeTextlint</span> <span class="token operator">=</span> <span class="token punctuation">(</span><span class="token parameter">targetPath</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token keyword control-flow">return</span> <span class="token keyword">new</span> <span class="token class-name">Promise</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token parameter">resolve</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+    <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">Execute : </span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>targetPath<span class="token interpolation-punctuation punctuation">}</span></span><span class="token template-punctuation string">`</span></span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    
+    engine<span class="token punctuation">.</span><span class="token method function property-access">executeOnFiles</span><span class="token punctuation">(</span><span class="token punctuation">[</span>targetPath<span class="token punctuation">]</span><span class="token punctuation">)</span>
+      <span class="token punctuation">.</span><span class="token method function property-access">then</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token parameter">results</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+        <span class="token keyword control-flow">if</span> <span class="token punctuation">(</span>engine<span class="token punctuation">.</span><span class="token method function property-access">isErrorResults</span><span class="token punctuation">(</span>results<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+          <span class="token comment">// textlint チェックエラーがある場合</span>
+          <span class="token comment">// エラーメッセージ数を集計し加算する</span>
+          problemsTotal <span class="token operator">+=</span> results
+            <span class="token punctuation">.</span><span class="token method function property-access">map</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token parameter">result</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+              <span class="token keyword control-flow">return</span> result<span class="token punctuation">.</span><span class="token property-access">messages</span><span class="token punctuation">.</span><span class="token property-access">length</span><span class="token punctuation">;</span>
+            <span class="token punctuation">}</span><span class="token punctuation">)</span>
+            <span class="token punctuation">.</span><span class="token method function property-access">reduce</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token parameter">prevCount<span class="token punctuation">,</span> currentCount</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+              <span class="token keyword control-flow">return</span> prevCount <span class="token operator">+</span> currentCount<span class="token punctuation">;</span>
+            <span class="token punctuation">}</span><span class="token punctuation">,</span> <span class="token number">0</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+          
+          <span class="token comment">// メッセージを整形して出力する</span>
+          <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span>engine<span class="token punctuation">.</span><span class="token method function property-access">formatResults</span><span class="token punctuation">(</span>results<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token punctuation">}</span>
+        <span class="token keyword control-flow">else</span> <span class="token punctuation">{</span>
+          <span class="token comment">// textlint チェックエラーなし : 空行の入れ方を textlint チェックエラーの出力仕様と合わせておく</span>
+          <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'\nAll passed!\n'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token punctuation">}</span>
+        
+        <span class="token function">resolve</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+
+<span class="token comment">// textlint 対象のファイルまたはディレクトリを配列で取得し、要素ごとに textlint を実行する</span>
+<span class="token function">getTargets</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+  <span class="token punctuation">.</span><span class="token method function property-access">then</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token parameter">targets</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+    <span class="token keyword control-flow">return</span> targets
+      <span class="token punctuation">.</span><span class="token method function property-access">map</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token parameter">targetPath</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+        <span class="token comment">// 「Promise を返す関数」の配列に変換する</span>
+        <span class="token keyword control-flow">return</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+          <span class="token keyword control-flow">return</span> <span class="token function">executeTextlint</span><span class="token punctuation">(</span>targetPath<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token punctuation">}</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span><span class="token punctuation">)</span>
+      <span class="token punctuation">.</span><span class="token method function property-access">reduce</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token parameter">prevFunc<span class="token punctuation">,</span> currentFunc</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+        <span class="token comment">// 第2引数 (initialValue) の Promise.resolve() から Promise チェーンを構築し直列実行する</span>
+        <span class="token keyword control-flow">return</span> prevFunc<span class="token punctuation">.</span><span class="token method function property-access">then</span><span class="token punctuation">(</span>currentFunc<span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span> <span class="token known-class-name class-name">Promise</span><span class="token punctuation">.</span><span class="token method function property-access">resolve</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span>
+  <span class="token punctuation">.</span><span class="token method function property-access">then</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+    <span class="token comment">// 総エラー件数を出力する</span>
+    <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">Problems Total : </span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>problemsTotal<span class="token interpolation-punctuation punctuation">}</span></span><span class="token template-punctuation string">`</span></span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    
+    <span class="token comment">// エラーがある場合は異常終了の終了コードを設定する</span>
+    <span class="token keyword control-flow">if</span> <span class="token punctuation">(</span>problemsTotal <span class="token operator">!==</span> <span class="token number">0</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token comment">// 非同期処理の終了を待って安全に process.exit() するため exit イベントに追加する</span>
+      process<span class="token punctuation">.</span><span class="token method function property-access">on</span><span class="token punctuation">(</span><span class="token string">'exit'</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+        process<span class="token punctuation">.</span><span class="token method function property-access">exit</span><span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span>
+  <span class="token punctuation">.</span><span class="token keyword control-flow">catch</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token parameter">error</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+    <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">error</span><span class="token punctuation">(</span>error<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    
+    process<span class="token punctuation">.</span><span class="token method function property-access">on</span><span class="token punctuation">(</span><span class="token string">'exit'</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+      process<span class="token punctuation">.</span><span class="token method function property-access">exit</span><span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>これを <code>textlint-all.js</code> などという名前で保存し、textlint を行いたいプロジェクトに置いておく。そして、<code>$ textlint ./text/</code> といったコマンドラインからの呼び出しではなく、<code>$ node textlint-all.js</code> という風にこのスクリプトファイルを実行するように運用を変えるのだ。</p>
+<p>このスクリプトは、<code>./text/</code> 配下にサブディレクトリがある前提で <code>getTargets()</code> 関数を作っている。例えば以下のような構成だ。</p>
+<pre><code>プロジェクトルート
+├ package.json
+├ textlint-all.js (このファイル)
+├ .textlintrc (TextLintEngine が自動的に参照してくれる)
+└ text/
+   ├ README.md
+   ├ はじめに/
+   │ ├ ほげほげ.md
+   │ └ ふがふが.md
+   ├ ○○について/
+   │ ├ ○○の概要/
+   │ │ ├ ○○とは.md
+   │ │ └ ○○の特徴.md
+   │ └ ○○のサンプル/
+   │ │ └ ○○で◇◇するサンプル.md
+   ├ さいごに/
+   │ └ ふーばー.md
+   ├ styles/ (textlint チェックに無関係なディレクトリ)
+   │ └ styles.css
+   └ scripts/ (textlint チェックに無関係なディレクトリ)
+      └ scripts.js
+</code></pre>
+<p>このようなディレクトリ構成の時、<code>baseDir</code> 変数でドキュメント群のルートディレクトリを <code>./text/</code> ディレクトリに設定している。</p>
+<p>そのうえで、<code>./text/</code> 配下の <code>.md</code> ファイルとサブディレクトリを検索するのだが、変数 <code>ignoreDirectories</code> で指定しているとおり、<code>./text/styles/</code> と <code>./text/scripts/</code> ディレクトリは textlint 対象と見なさないようにしている。</p>
+<p>結局、<code>getTargets()</code> で抽出できる配列としては、</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword">const</span> targets <span class="token operator">=</span> <span class="token punctuation">[</span>
+  <span class="token string">'./text/README.md'</span><span class="token punctuation">,</span>
+  <span class="token string">'./text/はじめに/'</span><span class="token punctuation">,</span>
+  <span class="token string">'./text/○○について/'</span><span class="token punctuation">,</span>
+  <span class="token string">'./text/さいごに/'</span>
+<span class="token punctuation">]</span>
+</code></pre>
+<p>といった内容になる。</p>
+<p>そしてこれをそれぞれ TextLintEngine にかけて textlint を実行していくワケだが、並列実行してしまってはヒープメモリが不足しそうなので、直列実行してやる必要がある。そのために Promise チェーンを作っている。</p>
+<p>1つのサブディレクトリで textlint を実行し、Promise を返す処理は <code>executeTextlint()</code> 関数にしてあるので、先程の配列 <code>targets</code> を <code>.map()</code> と <code>.reduce()</code> で変換していき、以下のような Promise チェーンを構築している。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token comment">// 生成イメージとしてはこんな感じ</span>
+<span class="token known-class-name class-name">Promise</span><span class="token punctuation">.</span><span class="token method function property-access">resolve</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+  <span class="token punctuation">.</span><span class="token method function property-access">then</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span> <span class="token keyword control-flow">return</span> <span class="token function">executeTextlint</span><span class="token punctuation">(</span><span class="token string">'./text/README.md'</span>    <span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token punctuation">}</span><span class="token punctuation">)</span>
+  <span class="token punctuation">.</span><span class="token method function property-access">then</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span> <span class="token keyword control-flow">return</span> <span class="token function">executeTextlint</span><span class="token punctuation">(</span><span class="token string">'./text/はじめに/'</span>    <span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token punctuation">}</span><span class="token punctuation">)</span>
+  <span class="token punctuation">.</span><span class="token method function property-access">then</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span> <span class="token keyword control-flow">return</span> <span class="token function">executeTextlint</span><span class="token punctuation">(</span><span class="token string">'./text/○○について/'</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token punctuation">}</span><span class="token punctuation">)</span>
+  <span class="token punctuation">.</span><span class="token method function property-access">then</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span> <span class="token keyword control-flow">return</span> <span class="token function">executeTextlint</span><span class="token punctuation">(</span><span class="token string">'./text/さいごに/'</span>    <span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>全てが終わったら、総エラー件数を確認して終了コードを決めて終わらせる、という流れだ。</p>
+<p>こうしてサブディレクトリごとに textlint するようにしたところ、ヒープ領域不足のエラーも出なくなり、うまく行っている。</p>
+<p>上のスクリプトはプロジェクト構成に合わせて修正が必要かもしれないが、textlint 以外にもヒープサイズ不足によるエラーを回避する際の方法の一つとして、参考にしてもらえるかとは思う。</p>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2018-04-27</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2018-04-27</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

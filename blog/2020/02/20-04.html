@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>Python から BitFlyer API を叩く : pybitflyer を使ってみた - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2020/02/20-04.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2020/index.html">2020年</a></li>
+            <li><a href="/blog/2020/02/index.html">02月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2020-02-20</time></div>
+        <h1 id="page-title">Python から BitFlyer API を叩く : pybitflyer を使ってみた</h1>
+
+<p>BitFlyer は、<strong>BitFlyer Lightning API</strong> という API を公開している。</p>
+<ul>
+  <li><a href="https://lightning.bitflyer.com/docs?lang=ja">ビットコイン取引所【bitFlyer Lightning】</a></li>
+</ul>
+<p>今回は <strong>pybitflyer</strong> というライブラリを併用して、Python から BitFlyer API をコールしてみる。</p>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#bitflyer-lightning-api-%E3%81%A8%E3%81%AF">BitFlyer Lightning API とは</a>
+    <ul>
+      <li><a href="#%E8%AA%8D%E8%A8%BC%E3%81%8C%E5%BF%85%E8%A6%81%E3%81%AA-api-%E3%82%82%E8%BB%BD%E3%81%8F%E5%8F%A9%E3%81%84%E3%81%A6%E3%81%BF%E3%82%8B">認証が必要な API も軽く叩いてみる</a></li>
+    </ul>
+  </li>
+  <li><a href="#pybitflyer-%E3%82%92%E4%BD%BF%E3%81%A3%E3%81%A6%E3%81%BF%E3%82%8B">pybitflyer を使ってみる</a>
+    <ul>
+      <li><a href="#api-%E3%82%AD%E3%83%BC%E3%82%92%E4%BD%BF%E7%94%A8%E3%81%99%E3%82%8B%E5%A0%B4%E5%90%88%E3%81%AF">API キーを使用する場合は…</a></li>
+    </ul>
+  </li>
+  <li><a href="#%E4%BB%A5%E4%B8%8A">以上</a></li>
+</ul>
+<h2 id="bitflyer-lightning-api-とは"><a class="header-link" href="#bitflyer-lightning-api-とは"><span class="header-link-mark"></span></a>BitFlyer Lightning API とは</h2>
+<p>BitFlyer Lightning API は、認証不要でマーケット情報や為替レートなどを取得できる他、自身の BitFlyer アカウントから発行した API キーを使用すれば、資産残高を見たり、API からトレードを行ったりもできる。</p>
+<p>今回は認証不要で実行できる API を利用し、為替レートを取得してみることにする。</p>
+<ul>
+  <li><a href="https://lightning.bitflyer.com/docs?lang=ja">ビットコイン取引所【bitFlyer Lightning】</a></li>
+</ul>
+<p>上のドキュメントを参考に、軽く叩いてみる。</p>
+<ul>
+  <li>マーケット一覧
+    <ul>
+      <li>ココで取れる <code>product_code</code> の文字列が、以降の API で指定できる文言となる</li>
+    </ul>
+  </li>
+</ul>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">curl</span> -sS https://api.bitflyer.com/v1/markets <span class="token operator">|</span> jq <span class="token string">'.'</span>
+<span class="token punctuation">[</span>
+  <span class="token punctuation">{</span>
+    <span class="token string">"product_code"</span><span class="token builtin class-name">:</span> <span class="token string">"BTC_JPY"</span>
+  <span class="token punctuation">}</span>,
+  <span class="token punctuation">{</span>
+    <span class="token string">"product_code"</span><span class="token builtin class-name">:</span> <span class="token string">"FX_BTC_JPY"</span>
+  <span class="token punctuation">}</span>,
+  <span class="token punctuation">{</span>
+    <span class="token string">"product_code"</span><span class="token builtin class-name">:</span> <span class="token string">"ETH_BTC"</span>
+  <span class="token punctuation">}</span>,
+  <span class="token punctuation">{</span>
+    <span class="token string">"product_code"</span><span class="token builtin class-name">:</span> <span class="token string">"BCH_BTC"</span>
+  <span class="token punctuation">}</span>,
+  <span class="token punctuation">{</span>
+    <span class="token string">"product_code"</span><span class="token builtin class-name">:</span> <span class="token string">"ETH_JPY"</span>
+  <span class="token punctuation">}</span>,
+  <span class="token punctuation">{</span>
+    <span class="token string">"product_code"</span><span class="token builtin class-name">:</span> <span class="token string">"BTCJPY27MAR2020"</span>,
+    <span class="token string">"alias"</span><span class="token builtin class-name">:</span> <span class="token string">"BTCJPY_MAT3M"</span>
+  <span class="token punctuation">}</span>,
+  <span class="token punctuation">{</span>
+    <span class="token string">"product_code"</span><span class="token builtin class-name">:</span> <span class="token string">"BTCJPY31JAN2020"</span>,
+    <span class="token string">"alias"</span><span class="token builtin class-name">:</span> <span class="token string">"BTCJPY_MAT1WK"</span>
+  <span class="token punctuation">}</span>,
+  <span class="token punctuation">{</span>
+    <span class="token string">"product_code"</span><span class="token builtin class-name">:</span> <span class="token string">"BTCJPY07FEB2020"</span>,
+    <span class="token string">"alias"</span><span class="token builtin class-name">:</span> <span class="token string">"BTCJPY_MAT2WK"</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">]</span>
+</code></pre>
+<ul>
+  <li>板情報
+    <ul>
+      <li><code>?product_code=</code> で先程のマーケットを指定している。BitCoin ではなくイーサリアムと日本円の為替レートを見たければ <em><code>?product_code=ETH_JPY</code></em> と入力すれば良い</li>
+      <li>Bid は売値、Ask は買値。自分が持っている BitCoin を日本円に換金しよう、という時は「Bid」の値を見れば良い</li>
+    </ul>
+  </li>
+</ul>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">curl</span> -sS https://api.bitflyer.com/v1/board?product_code<span class="token operator">=</span>BTC_JPY <span class="token operator">|</span> jq <span class="token string">'.'</span>
+<span class="token punctuation">{</span>
+  <span class="token string">"mid_price"</span><span class="token builtin class-name">:</span> <span class="token number">985963</span>,
+  <span class="token string">"bids"</span><span class="token builtin class-name">:</span> <span class="token punctuation">[</span>
+    <span class="token punctuation">{</span>
+      <span class="token string">"price"</span><span class="token builtin class-name">:</span> <span class="token number">985830</span>,
+      <span class="token string">"size"</span><span class="token builtin class-name">:</span> <span class="token number">0.9</span>
+    <span class="token punctuation">}</span>,
+    <span class="token punctuation">{</span>
+      <span class="token string">"price"</span><span class="token builtin class-name">:</span> <span class="token number">985633</span>,
+      <span class="token string">"size"</span><span class="token builtin class-name">:</span> <span class="token number">0.4476</span>
+    <span class="token punctuation">}</span>,
+    <span class="token punctuation">{</span>
+      <span class="token string">"price"</span><span class="token builtin class-name">:</span> <span class="token number">985632</span>,
+      <span class="token string">"size"</span><span class="token builtin class-name">:</span> <span class="token number">0.25001151</span>
+    <span class="token punctuation">}</span>,
+    // 省略…
+  <span class="token punctuation">]</span>,
+  <span class="token string">"asks"</span><span class="token builtin class-name">:</span> <span class="token punctuation">[</span>
+    <span class="token punctuation">{</span>
+      <span class="token string">"price"</span><span class="token builtin class-name">:</span> <span class="token number">986097</span>,
+      <span class="token string">"size"</span><span class="token builtin class-name">:</span> <span class="token number">0.00264637</span>
+    <span class="token punctuation">}</span>,
+    <span class="token punctuation">{</span>
+      <span class="token string">"price"</span><span class="token builtin class-name">:</span> <span class="token number">986100</span>,
+      <span class="token string">"size"</span><span class="token builtin class-name">:</span> <span class="token number">3.51</span>
+    <span class="token punctuation">}</span>,
+    <span class="token punctuation">{</span>
+      <span class="token string">"price"</span><span class="token builtin class-name">:</span> <span class="token number">986488</span>,
+      <span class="token string">"size"</span><span class="token builtin class-name">:</span> <span class="token number">0.30000013</span>
+    <span class="token punctuation">}</span>,
+    // 省略…
+  <span class="token punctuation">]</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<ul>
+  <li>Ticker
+    <ul>
+      <li>上の「板情報」は、指定通貨と日本円との売り買いの履歴がズラッと取得できるるが、この「ティッカー」はもうちょいサマリ的な情報が取れる</li>
+      <li><code>best_bid</code> が売り価格</li>
+    </ul>
+  </li>
+</ul>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">curl</span> -sS https://api.bitflyer.com/v1/ticker?product_code<span class="token operator">=</span>BTC_JPY <span class="token operator">|</span> jq <span class="token string">'.'</span>
+<span class="token punctuation">{</span>
+  <span class="token string">"product_code"</span><span class="token builtin class-name">:</span> <span class="token string">"BTC_JPY"</span>,
+  <span class="token string">"timestamp"</span><span class="token builtin class-name">:</span> <span class="token string">"2020-01-28T07:53:39.843"</span>,  // UTC
+  <span class="token string">"tick_id"</span><span class="token builtin class-name">:</span> <span class="token number">27975501</span>,
+  <span class="token string">"best_bid"</span><span class="token builtin class-name">:</span> <span class="token number">985836</span>,
+  <span class="token string">"best_ask"</span><span class="token builtin class-name">:</span> <span class="token number">986419</span>,
+  <span class="token string">"best_bid_size"</span><span class="token builtin class-name">:</span> <span class="token number">0.2</span>,
+  <span class="token string">"best_ask_size"</span><span class="token builtin class-name">:</span> <span class="token number">0.05</span>,
+  <span class="token string">"total_bid_depth"</span><span class="token builtin class-name">:</span> <span class="token number">2025.31970209</span>,
+  <span class="token string">"total_ask_depth"</span><span class="token builtin class-name">:</span> <span class="token number">2185.18469304</span>,
+  <span class="token string">"ltp"</span><span class="token builtin class-name">:</span> <span class="token number">986105</span>,  // 最終取引価格
+  <span class="token string">"volume"</span><span class="token builtin class-name">:</span> <span class="token number">155749.30425403</span>,
+  <span class="token string">"volume_by_product"</span><span class="token builtin class-name">:</span> <span class="token number">6572.12508333</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<h3 id="認証が必要な-api-も軽く叩いてみる"><a class="header-link" href="#認証が必要な-api-も軽く叩いてみる"><span class="header-link-mark"></span></a>認証が必要な API も軽く叩いてみる</h3>
+<p>ついでに、API キーによる認証が必要な API も、ちょっとだけ叩いてみる。</p>
+<ul>
+  <li><a href="https://lightning.bitflyer.com/developer">ビットコイン取引所【bitFlyer Lightning】</a></li>
+</ul>
+<p>↑のページにログインし、API Key と API Secret を発行する。このとき、その API キーで実行できる操作を指定できるので、「資産残高を取得」にチェックを入れておこう (あまり余計な操作まで有効にしておくと悪用された時にリスクになる)。</p>
+<ul>
+  <li><a href="https://lightning.bitflyer.com/docs?lang=ja#%E8%AA%8D%E8%A8%BC">ビットコイン取引所【bitFlyer Lightning】</a></li>
+</ul>
+<p>上のページにあるサンプルコードを利用して、以下のようにコードを作っていく。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># 作業用ディレクトリを作る</span>
+$ <span class="token function">mkdir</span> practice-bitflyer-api <span class="token operator">&#x26;&#x26;</span> <span class="token builtin class-name">cd</span> <span class="token variable">$_</span>
+$ <span class="token function">npm</span> init -y
+
+<span class="token comment"># 依存モジュールをインストールする</span>
+$ <span class="token function">npm</span> <span class="token function">install</span> -D request crypto
+
+$ <span class="token function">touch</span> index.js
+</code></pre>
+<ul>
+  <li><code>index.js</code> : 次のように実装する</li>
+</ul>
+<pre class="language-javascript"><code class="language-javascript"><span class="token doc-comment comment">/** Node.js で BitFlyer API をコールする */</span>
+
+<span class="token keyword">const</span> request <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'request'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">const</span> crypto  <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'crypto'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token keyword">const</span> key    <span class="token operator">=</span> <span class="token string">'【API Key】'</span><span class="token punctuation">;</span>
+<span class="token keyword">const</span> secret <span class="token operator">=</span> <span class="token string">'【API Secret】'</span><span class="token punctuation">;</span>
+
+<span class="token keyword">const</span> timestamp <span class="token operator">=</span> <span class="token known-class-name class-name">Date</span><span class="token punctuation">.</span><span class="token method function property-access">now</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">toString</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">const</span> method <span class="token operator">=</span> <span class="token string">'GET'</span><span class="token punctuation">;</span>
+<span class="token keyword">const</span> path <span class="token operator">=</span> <span class="token string">'/v1/me/getbalance'</span><span class="token punctuation">;</span>  <span class="token comment">// コールする API のパス</span>
+<span class="token comment">// GET メソッドで、リクエストボディが不要な場合は、body を使用しない</span>
+<span class="token comment">//const body = JSON.stringify({});</span>
+
+<span class="token keyword">const</span> text <span class="token operator">=</span> timestamp <span class="token operator">+</span> method <span class="token operator">+</span> path<span class="token punctuation">;</span>  <span class="token comment">// body を付与する場合はさらに `+ body;` とする</span>
+<span class="token keyword">const</span> sign <span class="token operator">=</span> crypto<span class="token punctuation">.</span><span class="token method function property-access">createHmac</span><span class="token punctuation">(</span><span class="token string">'sha256'</span><span class="token punctuation">,</span> secret<span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">update</span><span class="token punctuation">(</span>text<span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">digest</span><span class="token punctuation">(</span><span class="token string">'hex'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token keyword">const</span> options <span class="token operator">=</span> <span class="token punctuation">{</span>
+  url<span class="token operator">:</span> <span class="token string">'https://api.bitflyer.com'</span> <span class="token operator">+</span> path<span class="token punctuation">,</span>
+  method<span class="token operator">:</span> method<span class="token punctuation">,</span>
+  <span class="token comment">// body を指定する場合は以下を有効にする</span>
+  <span class="token comment">//body: body,</span>
+  headers<span class="token operator">:</span> <span class="token punctuation">{</span>
+    <span class="token string">'ACCESS-KEY'</span><span class="token operator">:</span> key<span class="token punctuation">,</span>
+    <span class="token string">'ACCESS-TIMESTAMP'</span><span class="token operator">:</span> timestamp<span class="token punctuation">,</span>
+    <span class="token string">'ACCESS-SIGN'</span><span class="token operator">:</span> sign<span class="token punctuation">,</span>
+    <span class="token string">'Content-Type'</span><span class="token operator">:</span> <span class="token string">'application/json'</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+
+<span class="token function">request</span><span class="token punctuation">(</span>options<span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token parameter">error<span class="token punctuation">,</span> response<span class="token punctuation">,</span> payload</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span>payload<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>変数 <code>path</code> で <code>/v1/me/getbalance</code> を指定したので、自分の資産状況 (保有する仮想通貨) の情報が取得できる。実際に実行してみよう。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># 資産状況 (/v1/me/getbalance) を確認する</span>
+$ node index.js <span class="token operator">|</span> jq <span class="token string">'.'</span>
+<span class="token punctuation">[</span>
+  <span class="token punctuation">{</span>
+    <span class="token string">"currency_code"</span><span class="token builtin class-name">:</span> <span class="token string">"JPY"</span>,
+    <span class="token string">"amount"</span><span class="token builtin class-name">:</span> <span class="token number">0</span>,
+    <span class="token string">"available"</span><span class="token builtin class-name">:</span> <span class="token number">0</span>
+  <span class="token punctuation">}</span>,
+  <span class="token punctuation">{</span>
+    <span class="token string">"currency_code"</span><span class="token builtin class-name">:</span> <span class="token string">"BTC"</span>,
+    <span class="token string">"amount"</span><span class="token builtin class-name">:</span> <span class="token number">0.0313149</span>,
+    <span class="token string">"available"</span><span class="token builtin class-name">:</span> <span class="token number">0.0313149</span>
+  <span class="token punctuation">}</span>,
+  <span class="token punctuation">{</span>
+    <span class="token string">"currency_code"</span><span class="token builtin class-name">:</span> <span class="token string">"BCH"</span>,
+    <span class="token string">"amount"</span><span class="token builtin class-name">:</span> <span class="token number">0</span>,
+    <span class="token string">"available"</span><span class="token builtin class-name">:</span> <span class="token number">0</span>
+  <span class="token punctuation">}</span>,
+  <span class="token punctuation">{</span>
+    <span class="token string">"currency_code"</span><span class="token builtin class-name">:</span> <span class="token string">"ETH"</span>,
+    <span class="token string">"amount"</span><span class="token builtin class-name">:</span> <span class="token number">0.299</span>,
+    <span class="token string">"available"</span><span class="token builtin class-name">:</span> <span class="token number">0.299</span>
+  <span class="token punctuation">}</span>,
+  <span class="token punctuation">{</span>
+    <span class="token string">"currency_code"</span><span class="token builtin class-name">:</span> <span class="token string">"ETC"</span>,
+    <span class="token string">"amount"</span><span class="token builtin class-name">:</span> <span class="token number">0</span>,
+    <span class="token string">"available"</span><span class="token builtin class-name">:</span> <span class="token number">0</span>
+  <span class="token punctuation">}</span>,
+  <span class="token punctuation">{</span>
+    <span class="token string">"currency_code"</span><span class="token builtin class-name">:</span> <span class="token string">"LTC"</span>,
+    <span class="token string">"amount"</span><span class="token builtin class-name">:</span> <span class="token number">0</span>,
+    <span class="token string">"available"</span><span class="token builtin class-name">:</span> <span class="token number">0</span>
+  <span class="token punctuation">}</span>,
+  <span class="token punctuation">{</span>
+    <span class="token string">"currency_code"</span><span class="token builtin class-name">:</span> <span class="token string">"MONA"</span>,
+    <span class="token string">"amount"</span><span class="token builtin class-name">:</span> <span class="token number">0</span>,
+    <span class="token string">"available"</span><span class="token builtin class-name">:</span> <span class="token number">0</span>
+  <span class="token punctuation">}</span>,
+  <span class="token punctuation">{</span>
+    <span class="token string">"currency_code"</span><span class="token builtin class-name">:</span> <span class="token string">"LSK"</span>,
+    <span class="token string">"amount"</span><span class="token builtin class-name">:</span> <span class="token number">0</span>,
+    <span class="token string">"available"</span><span class="token builtin class-name">:</span> <span class="token number">0</span>
+  <span class="token punctuation">}</span>,
+  <span class="token punctuation">{</span>
+    <span class="token string">"currency_code"</span><span class="token builtin class-name">:</span> <span class="token string">"XRP"</span>,
+    <span class="token string">"amount"</span><span class="token builtin class-name">:</span> <span class="token number">0</span>,
+    <span class="token string">"available"</span><span class="token builtin class-name">:</span> <span class="token number">0</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">]</span>
+</code></pre>
+<p>こんな感じ。</p>
+<h2 id="pybitflyer-を使ってみる"><a class="header-link" href="#pybitflyer-を使ってみる"><span class="header-link-mark"></span></a>pybitflyer を使ってみる</h2>
+<p>公式で紹介している Node.js のサンプルコードは、リクエストヘッダなどを自分で組み立てていてなかなかしんどい。Node.js という言語自体の実行速度も気になるし、JavaScript は浮動小数点数の誤差が気になるので、<code>Decimal</code> を使った計算をするため Python で実装してみたい。</p>
+<p>そこで調べてみると、<em>pybitflyer</em> というライブラリが、BitFlyer Lightning API のラッパーになっていたので、コレを使うことにした。</p>
+<ul>
+  <li><a href="http://wolfin.hatenablog.com/entry/2016/08/29/010112">bitFlyer LightningのAPIをPythonから使えるパッケージ「pybitflyer」を作りました - おおかみ山</a></li>
+  <li><a href="https://github.com/yagays/pybitflyer">GitHub - yagays/pybitflyer: Python wrapper for bitFlyer's REST API.</a></li>
+</ul>
+<p>インストールは以下のように。</p>
+<pre class="language-bash"><code class="language-bash">$ pipenv <span class="token function">install</span> pybitflyer
+</code></pre>
+<p>コードは以下のように書いていく。</p>
+<ul>
+  <li><code>practice.py</code></li>
+</ul>
+<pre class="language-python"><code class="language-python"><span class="token keyword">import</span> pybitflyer
+
+<span class="token comment"># BitFlyer API を用意する</span>
+bit_flyer_api <span class="token operator">=</span> pybitflyer<span class="token punctuation">.</span>API<span class="token punctuation">(</span><span class="token punctuation">)</span>
+
+<span class="token comment"># Ticker を取得する</span>
+ticker <span class="token operator">=</span> bit_flyer_api<span class="token punctuation">.</span>ticker<span class="token punctuation">(</span>product_code <span class="token operator">=</span> <span class="token string">'BTC_JPY'</span><span class="token punctuation">)</span>
+
+<span class="token comment"># 取得した JSON から売り価格を取得する</span>
+bid <span class="token operator">=</span> ticker<span class="token punctuation">[</span><span class="token string">'best_bid'</span><span class="token punctuation">]</span>
+<span class="token keyword">print</span><span class="token punctuation">(</span>bid<span class="token punctuation">)</span>
+</code></pre>
+<p>とっても簡単だ。</p>
+<h3 id="api-キーを使用する場合は"><a class="header-link" href="#api-キーを使用する場合は"><span class="header-link-mark"></span></a>API キーを使用する場合は…</h3>
+<p>API キーを使用する場合は、次のように <code>API()</code> 関数の引数に API Key と API Secret を渡してやれば良い。</p>
+<pre class="language-python"><code class="language-python"><span class="token keyword">import</span> pybitflyer
+
+<span class="token comment"># BitFlyer API を用意する</span>
+bit_flyer_api <span class="token operator">=</span> pybitflyer<span class="token punctuation">.</span>API<span class="token punctuation">(</span>api_key <span class="token operator">=</span> <span class="token string">'【API Key】'</span><span class="token punctuation">,</span> api_secret <span class="token operator">=</span> <span class="token string">'【API Secret】'</span><span class="token punctuation">)</span>
+
+<span class="token comment"># 資産残高を取得する</span>
+balance <span class="token operator">=</span> bit_flyer_api<span class="token punctuation">.</span>getbalance<span class="token punctuation">(</span><span class="token punctuation">)</span>
+<span class="token keyword">print</span><span class="token punctuation">(</span>balance<span class="token punctuation">)</span>
+</code></pre>
+<p>楽ちん楽ちん。</p>
+<h2 id="以上"><a class="header-link" href="#以上"><span class="header-link-mark"></span></a>以上</h2>
+<p>今回紹介した pybitflyer を Flask 経由で実行し、フロントエンドに Vue.js を使用したサンプルプロジェクトを作った。</p>
+<ul>
+  <li><a href="https://github.com/Neos21/practice-flask-vue">Neos21/practice-flask-vue</a></li>
+</ul>
+<p>コレで仮想通貨の為替レートを確認したり、BitFlyer にある自分の資産を参照・操作できるだろう。</p>
+<ul>
+  <li>参考：<a href="https://futurismo.biz/archives/6401">pybitflyer をつかって Python で ビットコインレートを取得してみた | Futurismo</a></li>
+  <li>参考：<a href="https://qiita.com/ekzemplaro/items/bca5aeccbc60d3533f29">ビットコインと円のレートの取得 - Qiita</a></li>
+</ul>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2020-02-20</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2020-02-20</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

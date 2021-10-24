@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>Cordova アプリ内に SQLite でローカル DB を構築できる cordova-sqlite-storage - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2017/06/23-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2017/index.html">2017年</a></li>
+            <li><a href="/blog/2017/06/index.html">06月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2017-06-23</time></div>
+        <h1 id="page-title">Cordova アプリ内に SQLite でローカル DB を構築できる cordova-sqlite-storage</h1>
+
+<p>前回の記事で検証したとおり、Cordova で iOS アプリを作る時、大規模なデータをクライアントサイドで管理したければ「WebSQL およびその内部で使用している SQLite 一択」という結論に至った。</p>
+<ul>
+  <li><a href="/blog/2017/06/22-01.html">Cordova アプリでローカル DB を実現するには</a></li>
+</ul>
+<p>今回は、Cordova アプリ内に SQLite でローカル DB を構築できる、<strong>cordova-sqlite-storage</strong> というプラグインを紹介する。</p>
+<ul>
+  <li>参考：<a href="https://github.com/litehelpers/Cordova-sqlite-storage">GitHub - litehelpers/Cordova-sqlite-storage: A Cordova/PhoneGap plugin to open and use sqlite databases on Android, iOS and Windows with HTML5/Web SQL API</a></li>
+</ul>
+<p>今回は cordova-sqlite-storage プラグインを導入し、iOS シミュレータ上で動作させるところまでやってみようと思う。ローカル DB にテーブルを作り、データを書き込み、それを取得する、といった一連の処理をしてみようと思う。</p>
+<h2 id="前提と動作サンプル"><a class="header-link" href="#前提と動作サンプル"><span class="header-link-mark"></span></a>前提と動作サンプル</h2>
+<p>以下、Cordova アプリの雛形ができている前提で話を進めるので、まだの場合は以下の記事を参考に Cordova アプリのたたき台を作っておいて欲しい。</p>
+<ul>
+  <li><a href="/blog/2017/06/06-01.html">Apache Cordova を使ってフロントエンド技術だけで iOS アプリを作る</a></li>
+</ul>
+<p>上の記事に従って Cordova プロジェクトを作成すると、<em>以下のリポジトリの <code>feat/installCordovaProject</code> ブランチのようになるはず</em>だ。</p>
+<ul>
+  <li><a href="https://github.com/Neos21/example-cordova/tree/feat/installCordovaProject">GitHub - Neos21/CordovaExamples at feat/installCordovaProject</a></li>
+</ul>
+<p>また、<strong>今回の記事で紹介するコードを含む、実際に動作する Cordova プロジェクトは、以下のリポジトリの <code>feat/sqliteStorage</code> ブランチで確認できる</strong>。</p>
+<ul>
+  <li><a href="https://github.com/Neos21/example-cordova/tree/feat/sqliteStorage">GitHub - Neos21/CordovaExamples at feat/sqliteStorage</a></li>
+</ul>
+<h2 id="cordova-sqlite-storage-プラグインのインストール"><a class="header-link" href="#cordova-sqlite-storage-プラグインのインストール"><span class="header-link-mark"></span></a>cordova-sqlite-storage プラグインのインストール</h2>
+<p>ターミナルで Cordova プロジェクトに移動し、以下のコマンドを叩く。</p>
+<pre class="language-bash"><code class="language-bash">$ cordova plugin <span class="token function">add</span> cordova-sqlite-storage --save
+</code></pre>
+<p><code>--save</code> コマンドにより、この Cordova プロジェクトが cordova-sqlite-storage プラグインを使用している、という情報が <code>config.xml</code> に追記される。<code>config.xml</code> に以下のような情報が追記されているはずだ。</p>
+<pre class="language-xml"><code class="language-xml"><span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>plugin</span> <span class="token attr-name">name</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>cordova-sqlite-storage<span class="token punctuation">"</span></span> <span class="token attr-name">spec</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>~2.0.4<span class="token punctuation">"</span></span> <span class="token punctuation">/></span></span>
+</code></pre>
+<p>プラグインのインストール作業はコレだけ。</p>
+<h2 id="html-と-css-の実装"><a class="header-link" href="#html-と-css-の実装"><span class="header-link-mark"></span></a>HTML と CSS の実装</h2>
+<p>今回は <code>$ cordova create</code> コマンドで作成した直後のアプリをベースにする。既に</p>
+<ul>
+  <li><code>./www/index.html</code></li>
+  <li><code>./www/js/index.js</code></li>
+  <li><code>./www/css/index.css</code></li>
+</ul>
+<p>という3つのファイルができていると思うので、これらを編集していく。</p>
+<p>まず、<code>./www/css/index.css</code> は余計なスタイリングをしなくて良いので、中身を空にしてしまおう。</p>
+<p>次に、<code>./www/index.html</code> は <code>&#x3C;div class="app"></code> をまるっと除去して、以下のような HTML にしよう。</p>
+<ul>
+  <li><a href="https://github.com/Neos21/example-cordova/blob/feat/sqliteStorage/www/index.html">CordovaExamples/index.html at feat/sqliteStorage · Neos21/CordovaExamples · GitHub</a></li>
+</ul>
+<p>最終的には、「データ取得」ボタンを押すと、<code>&#x3C;ul id="results">&#x3C;/ul></code> の中にローカル DB から取得した情報を表示する、といった作りにしようと思う。</p>
+<h2 id="javascript-の実装"><a class="header-link" href="#javascript-の実装"><span class="header-link-mark"></span></a>JavaScript の実装</h2>
+<p>いよいよ JavaScript の実装だ。<code>./www/js/index.js</code> を一度空にし、以下のコードをまるっと貼り付ける。</p>
+<ul>
+  <li><a href="https://github.com/Neos21/example-cordova/blob/feat/sqliteStorage/www/js/index.js">CordovaExamples/index.js at feat/sqliteStorage · Neos21/CordovaExamples · GitHub</a></li>
+</ul>
+<p>コメントや <code>console.log()</code> が多いので行数がかさんでいるが、本質的なコードはさほど多くない。</p>
+<h2 id="動作確認"><a class="header-link" href="#動作確認"><span class="header-link-mark"></span></a>動作確認</h2>
+<p>解説は一旦抜きにして、動作確認をしてみよう。以下のコマンドでビルドと iOS シミュレータ起動を一気にやらせる。</p>
+<pre class="language-bash"><code class="language-bash">$ cordova emulate ios
+
+<span class="token comment"># replace が undefined なナンタラ…とエラーが出るようなら、内部で使用している ios-sim のせいと思われるので以下で回避</span>
+$ cordova emulate --target<span class="token operator">=</span>iPhone-7
+</code></pre>
+<p>iPhone シミュレータが起動したら、Safari を開いて「開発」メニュー → 「Simulator」 → 「(アプリ名)」と進み、Web インスペクタのコンソールタブを開く。動作ログが出力されるので、ココを見ながらアプリを操作してみよう。</p>
+<p>アプリ起動時に DB 接続はするようにしてあるので、「DB 接続処理」ボタンは押さなくても良い。「テーブル作成・データ投入」ボタンを押すと、画面には変化がないが、コンソールを見ると内部で SQLite にテーブルを作成し、データが登録されていることが分かる。</p>
+<p>「データ取得」ボタンを押すと、<code>SELECT</code> 文でローカル DB からデータを取得し、画面に表示する。Cordova アプリ内に SQLite が正しく構築され、動作していることが確認できる。</p>
+<p>「テーブル削除」ボタンを押すと、画面には変化がないが、作成したテーブルが削除されている。この直後に「データ取得」ボタンを押すと、エラーメッセージが画面に表示されるはずだ。</p>
+<h2 id="実装解説"><a class="header-link" href="#実装解説"><span class="header-link-mark"></span></a>実装解説</h2>
+<p>それでは実装解説をしていく。</p>
+<p><code>./www/js/index.js</code> は、全体的には、<code>app</code> という1つのグローバル変数が全ての処理を持っており、初期処理の <code>app.init()</code> を最終行で実行しているだけである。以下、メソッドごとに説明をしていく。</p>
+<h3 id="init"><a class="header-link" href="#init"><span class="header-link-mark"></span></a><code>init()</code></h3>
+<p><code>init()</code> では、画面上のボタンを押した時に対応する処理を呼ぶようイベント登録しているのと、<code>deviceready</code> という Cordova が用意したイベントに登録している。</p>
+<p><code>deviceready</code> イベントはその名の通り、アプリが起動し、端末の準備ができた時に発火する。だいたい <code>DOMContentLoaded</code> と <code>onload</code> の間ぐらいだ。ココで DB 接続する処理を呼んでいる。</p>
+<h3 id="opendb"><a class="header-link" href="#opendb"><span class="header-link-mark"></span></a><code>openDb()</code></h3>
+<p>DB 接続をする <code>openDb()</code> では、<code>window.sqlitePlugin.openDatabase()</code> メソッドを叩いて、DB インスタンスを取得している。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">db</span> <span class="token operator">=</span> <span class="token dom variable">window</span><span class="token punctuation">.</span><span class="token property-access">sqlitePlugin</span><span class="token punctuation">.</span><span class="token method function property-access">openDatabase</span><span class="token punctuation">(</span><span class="token punctuation">{</span>
+  name<span class="token operator">:</span> <span class="token string">'sample.db'</span><span class="token punctuation">,</span>
+  <span class="token dom variable">location</span><span class="token operator">:</span> <span class="token string">'default'</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p><em>SQLite は <code>.db</code> ファイル1つでデータベース全体を表現する作り</em>なので、このサンプルでは <code>name</code> プロパティに設定している、<code>sample.db</code> という DB ファイルを用意しようとしている。<code>sample.db</code> が未生成な場合は新たに生成し、既に生成済みであればそのファイルを読み込んで、DB インスタンスを返却している。</p>
+<p>オプションの <code>location: 'default'</code> は、iOS で SQLite を使用する場合は指定しないと動かなかった。</p>
+<ul>
+  <li>参考：<a href="http://qiita.com/rhikos/items/110221a9ab7b415112a8">【Cordova】cordova-sqlite-storageのlocationオプションと読み込み先のパスとの対応 - Qiita</a></li>
+  <li>参考：<a href="http://phonegapcmsworld.blogspot.jp/2016/06/iosDatabaseLocation-value-is-now-mandatory-in-openDatabase-call.html">PhoneGapCms World...: Error: Database location or iosDatabaseLocation value is now mandatory in openDatabase call</a> … 「iosDatabaseLocation」なるプロパティが出てきているがこちらは参考にせずとも動作した。</li>
+</ul>
+<p><code>window.sqlitePlugin.openDatabase()</code> を囲んでいる <code>window.sqlitePlugin.selfTest()</code> などはこの次に紹介する。</p>
+<h3 id="_openwebsqldb"><a class="header-link" href="#_openwebsqldb"><span class="header-link-mark"></span></a><code>_openWebSqlDb()</code></h3>
+<p>さて、先程の <code>openDb()</code> メソッドの本質は <code>window.sqlitePlugin.openDatabase()</code> メソッドによる DB ファイルの生成と DB インスタンスの取得であった。では、それ以外のところでは何をしているのか。</p>
+<p>これは、cordova-sqlite-storage プラグインが動作しない場合に <code>_openWebSqlDb()</code> メソッドに飛ばし、HTML5 標準 API である <code>window.openDatabase()</code> を使って DB インスタンスを取得しようと試みている。いわば例外ハンドリングの一種だ。</p>
+<p>まず <code>cordova-sqlite-storage</code> プラグインの存在チェックのため、<code>if(!window.sqlitePlugin)</code> という条件を入れている。プラグインがありそうであれば、次はプラグインが正常に動作しそうかどうか、<code>window.sqlitePlugin.selfTest()</code> というテストメソッドで検証する。このメソッドは DB インスタンスの生成や CRUD 操作を実際に行って、DB 操作が可能な状態かどうかを検証して OK or NG を返している。プラグインが正しく動作しなさそうであれば <code>_openWebSqlDb()</code> メソッドに飛ばしている。</p>
+<p>で、<code>_openWebSqlDb()</code> メソッドでは <code>window.openDatabase()</code> が存在しているかの検証と、<code>try catch</code> で DB 生成処理が完了したかチェックしたりしている。<code>window.openDatabase()</code> の引数は、「<code>.db</code> ファイル名」「バージョン番号 (普段意識しないので固定値決め打ちで良い)」「スキーマ名」「容量 (バイト単位・大きめにとっておく)」の順。大体上の設定そのままで良いはずだ。</p>
+<p>このメソッドの使い道はというと、Chrome や Safari など、Mac 上で動作確認する時、SQLite プラグインが動作しない中の代替処理として使用する。この辺の話は別途紹介する。</p>
+<h3 id="create"><a class="header-link" href="#create"><span class="header-link-mark"></span></a><code>create()</code></h3>
+<p><code>create()</code> がテーブル作成とデータ登録を行っている処理。</p>
+<p>冒頭で、念のため DB インスタンスが生成されていなければ生成処理を呼ぶようにしているが、まず問題ないだろう。</p>
+<h4 id="sql-実行処理の書き方"><a class="header-link" href="#sql-実行処理の書き方"><span class="header-link-mark"></span></a>SQL 実行処理の書き方</h4>
+<p>cordova-sqlite-storage で DB 操作する時の基本構文は以下のとおり。</p>
+<pre class="language-javascript"><code class="language-javascript">db<span class="token punctuation">.</span><span class="token method function property-access">transaction</span><span class="token punctuation">(</span>【<span class="token constant">SQL</span> を実行する関数】<span class="token punctuation">,</span> 【<span class="token constant">SQL</span> 実行失敗時のコールバック関数】<span class="token punctuation">,</span> 【<span class="token constant">SQL</span> 実行成功時のコールバック関数】<span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>「コールバックって何」というと、「手前の処理が終わったら次に呼ぶ関数」ということ。この場合、第1引数の「SQL を実行する関数」内でもしエラーがあったら、「SQL 実行失敗時のコールバック関数」が実行され、「SQL 実行成功時のコールバック関数」は実行されない、という動きになる。</p>
+<p>3つとも関数なので、別々に宣言しておいても良いが、大抵は中に直接関数を書くことになるだろう。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">db</span><span class="token punctuation">.</span><span class="token method function property-access">transaction</span><span class="token punctuation">(</span><span class="token keyword">function</span><span class="token punctuation">(</span><span class="token parameter">tx</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  tx<span class="token punctuation">.</span><span class="token method function property-access">executeSql</span><span class="token punctuation">(</span><span class="token string">'CREATE TABLE IF NOT EXISTS SampleTable (id INTEGER PRIMARY KEY, name TEXT, age INTEGER)'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  tx<span class="token punctuation">.</span><span class="token method function property-access">executeSql</span><span class="token punctuation">(</span><span class="token string">'REPLACE INTO SampleTable VALUES (?, ?, ?)'</span><span class="token punctuation">,</span> <span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">,</span> <span class="token string">'ほげ'</span><span class="token punctuation">,</span> <span class="token number">18</span><span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  tx<span class="token punctuation">.</span><span class="token method function property-access">executeSql</span><span class="token punctuation">(</span><span class="token string">'REPLACE INTO SampleTable VALUES (?, ?, ?)'</span><span class="token punctuation">,</span> <span class="token punctuation">[</span><span class="token number">2</span><span class="token punctuation">,</span> <span class="token string">'ぴよ'</span><span class="token punctuation">,</span> <span class="token number">20</span><span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">,</span> <span class="token keyword">function</span><span class="token punctuation">(</span><span class="token parameter">error</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'テーブル作成・データ投入 失敗 : '</span> <span class="token operator">+</span> error<span class="token punctuation">.</span><span class="token property-access">message</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">,</span> <span class="token keyword">function</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'テーブル作成・データ投入 成功'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>エラーハンドリングはした方が良いと思うが、特になければ、第2・第3引数にコールバック関数を渡さない、ということもできる。</p>
+<p>後述する <code>select()</code> では、<code>db.transaction()</code> にはコールバック関数を設定せず、<code>tx.executeSql()</code> にコールバック関数を指定している。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">db</span><span class="token punctuation">.</span><span class="token method function property-access">transaction</span><span class="token punctuation">(</span><span class="token keyword">function</span><span class="token punctuation">(</span><span class="token parameter">tx</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  tx<span class="token punctuation">.</span><span class="token method function property-access">executeSql</span><span class="token punctuation">(</span><span class="token string">'SELECT * FROM SampleTable'</span><span class="token punctuation">,</span> <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token punctuation">,</span> <span class="token keyword">function</span><span class="token punctuation">(</span><span class="token parameter">tx<span class="token punctuation">,</span> sqlResultSet</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'データ取得 成功'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token comment">// ココが成功時のコールバック関数</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span> <span class="token keyword">function</span><span class="token punctuation">(</span><span class="token parameter">tx<span class="token punctuation">,</span> error</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'データ取得 失敗 : '</span> <span class="token operator">+</span> error<span class="token punctuation">.</span><span class="token property-access">message</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token comment">// ココが失敗時のコールバック関数</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>もしくは、単一の SQL 文を実行するだけなら以下のようにも書ける。</p>
+<pre class="language-javascript"><code class="language-javascript">db<span class="token punctuation">.</span><span class="token method function property-access">executeSql</span><span class="token punctuation">(</span><span class="token string">'SELECT * FROM SampleTable'</span><span class="token punctuation">,</span> <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token punctuation">,</span> <span class="token keyword">function</span><span class="token punctuation">(</span><span class="token parameter">sqlResultSet</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'成功'</span> <span class="token operator">+</span> sqlResultSet<span class="token punctuation">.</span><span class="token property-access">rows</span><span class="token punctuation">.</span><span class="token property-access">length</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">,</span> <span class="token keyword">function</span><span class="token punctuation">(</span><span class="token parameter">error</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'失敗'</span> <span class="token operator">+</span> error<span class="token punctuation">.</span><span class="token property-access">message</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p><code>tx.executeSql()</code> および <code>db.executeSql()</code> はコールバック関数を「成功時 → 失敗時」の順で記述するが、<code>db.transaction()</code> は「失敗時 → 成功時」の順で記述するため、間違えないよう注意。また、別途紹介する「Chrome ブラウザでの実行時」は、<code>db.executeSql()</code> という関数がなくエラーになるため、基本は <code>db.transaction()</code> と <code>tx.executeSql()</code> を使う方式を取ると良いだろう。</p>
+<p>俗にいう「コールバック地獄」(コールバック関数が入れ子になりすぎて何がなんだか分からなくなる状態) に陥りやすいので注意されたし。</p>
+<h4 id="create-で書いた-sql-について"><a class="header-link" href="#create-で書いた-sql-について"><span class="header-link-mark"></span></a><code>create()</code> で書いた SQL について</h4>
+<p><code>create()</code> 内に書いた SQL は大きく2種類、<code>CREATE TABLE</code> と <code>REPLACE INTO</code> だ。これらは SQLite の文法が使えるので、確認しておきたい。</p>
+<p>まず <code>CREATE TABLE</code> から。</p>
+<pre class="language-sql"><code class="language-sql"><span class="token keyword">CREATE</span> <span class="token keyword">TABLE</span> <span class="token keyword">IF</span> <span class="token operator">NOT</span> <span class="token keyword">EXISTS</span> SampleTable <span class="token punctuation">(</span>
+  id <span class="token keyword">INTEGER</span> <span class="token keyword">PRIMARY</span> <span class="token keyword">KEY</span><span class="token punctuation">,</span>
+  name <span class="token keyword">TEXT</span><span class="token punctuation">,</span>
+  age <span class="token keyword">INTEGER</span>
+<span class="token punctuation">)</span>
+</code></pre>
+<p>何度実行しても大丈夫なように、<code>IF NOT EXISTS</code> を書いている。これにより、「テーブルがなければ作る、あれば何もしない」が可能になる。</p>
+<p><strong>SQLite には DATE 型がない</strong>ので、カラムの型は <code>INTEGER</code> と <code>TEXT</code> (VARCHAR 相当) が主になるだろう。<code>PRIMARY KEY</code> を指定したカラムが <code>INTEGER</code> 型の場合は、<code>INSERT</code> 時にオートインクリメントさせることができる。</p>
+<ul>
+  <li>参考：<a href="https://www.dbonline.jp/sqlite/table/index9.html">AUTOINCREMENTを設定する場合としない場合の違い - SQLite入門</a></li>
+</ul>
+<p>続いて <code>REPLACE</code> 文。これは他の DB だと <code>UPSERT</code> とか <code>MERGE</code> と云われるものと同じで、要するに「PK などでバッティングするデータがあれば <code>UPDATE</code> 扱い、なければ <code>INSERT</code> 扱い」が可能になる。今回はプライマリキー指定をした <code>id</code> カラムまでパラメータ指定しているので、初回は <code>INSERT</code>、2回目以降は <code>UPDATE</code> がかかることになる。<code>REPLACE</code> の構文は <code>INSERT</code> と同じ。</p>
+<pre class="language-javascript"><code class="language-javascript">tx<span class="token punctuation">.</span><span class="token method function property-access">executeSql</span><span class="token punctuation">(</span><span class="token string">'CREATE TABLE IF NOT EXISTS SampleTable (id INTEGER PRIMARY KEY, name TEXT, age INTEGER)'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+tx<span class="token punctuation">.</span><span class="token method function property-access">executeSql</span><span class="token punctuation">(</span><span class="token string">'REPLACE INTO SampleTable VALUES (?, ?, ?)'</span><span class="token punctuation">,</span> <span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">,</span> <span class="token string">'ほげ'</span><span class="token punctuation">,</span> <span class="token number">18</span><span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>SQL を書く時は、末尾にセミコロンは不要。前後や間にどれだけスペースを入れても無視してくれるので、SQL 文を適宜整形して記述しても問題ない。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token comment">// こんな風に整形して書いても OK</span>
+tx<span class="token punctuation">.</span><span class="token method function property-access">executeSql</span><span class="token punctuation">(</span><span class="token string">' CREATE TABLE IF NOT EXISTS SampleTable ( '</span>
+            <span class="token operator">+</span> <span class="token string">'     id   INTEGER  PRIMARY KEY '</span>
+            <span class="token operator">+</span> <span class="token string">'   , name TEXT '</span>
+            <span class="token operator">+</span> <span class="token string">'   , age  INTEGER '</span>
+            <span class="token operator">+</span> <span class="token string">' ) '</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p><code>executeSql()</code> の第2引数は、SQL 文中に <code>?</code> を書いた順に、配列でパラメータを指定する。Java の PreparedStatement と同じ作りだ。パラメータが特になければ第2引数は不要。第3・第4引数がコールバック関数の指定になるが、なければ未指定で良い。</p>
+<h3 id="select"><a class="header-link" href="#select"><span class="header-link-mark"></span></a><code>select()</code></h3>
+<p>データ取得処理。もう先ほど紹介してしまったが、以下のような構成で書いている。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">db</span><span class="token punctuation">.</span><span class="token method function property-access">transaction</span><span class="token punctuation">(</span><span class="token keyword">function</span><span class="token punctuation">(</span><span class="token parameter">tx</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  tx<span class="token punctuation">.</span><span class="token method function property-access">executeSql</span><span class="token punctuation">(</span><span class="token string">'SELECT * FROM SampleTable'</span><span class="token punctuation">,</span> <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token punctuation">,</span> <span class="token keyword">function</span><span class="token punctuation">(</span><span class="token parameter">tx<span class="token punctuation">,</span> sqlResultSet</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'データ取得 成功'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token comment">// ココで取得したデータをアレコレしている</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span> <span class="token keyword">function</span><span class="token punctuation">(</span><span class="token parameter">tx<span class="token punctuation">,</span> error</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'データ取得 失敗 : '</span> <span class="token operator">+</span> error<span class="token punctuation">.</span><span class="token property-access">message</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token comment">// 失敗時は画面にエラーメッセージを表示する</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p><code>SELECT</code> した結果は、コールバック関数の第2引数 <code>sqlResultSet</code> で受け取れる。この中の <code>rows</code> プロパティが <code>ResultSetRowList</code> オブジェクトになっており、配列チックに取得することができる (厳密には配列ではなく、<code>rows</code> オブジェクトの中に <code>length</code> プロパティと <code>item()</code> 関数が宣言されている、という作りのようなので、配列だと思って <code>forEach</code> 等で処理しようとするとコケる)。</p>
+<pre class="language-javascript"><code class="language-javascript">tx<span class="token punctuation">.</span><span class="token method function property-access">executeSql</span><span class="token punctuation">(</span><span class="token string">'SELECT id, name AS onamae FROM SampleTable'</span><span class="token punctuation">,</span> <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token punctuation">,</span> <span class="token keyword">function</span><span class="token punctuation">(</span><span class="token parameter">tx<span class="token punctuation">,</span> sqlResultSet</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token keyword">var</span> rows <span class="token operator">=</span> sqlResultSet<span class="token punctuation">.</span><span class="token property-access">rows</span><span class="token punctuation">;</span>
+  <span class="token comment">// 1行目のレコードを取得する</span>
+  <span class="token keyword">var</span> row <span class="token operator">=</span> rows<span class="token punctuation">.</span><span class="token method function property-access">item</span><span class="token punctuation">(</span><span class="token number">0</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token comment">// 1行目のレコードの「onamae」カラムの値を取得する</span>
+  <span class="token keyword">var</span> name <span class="token operator">=</span> row<span class="token punctuation">.</span><span class="token property-access">onamae</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>カラム名は、<code>SELECT</code> 文で <code>AS hoge</code> などと別名を付与すればそれがプロパティ名になって格納されるので、上のように実際のテーブル上は <code>name</code> カラムだが、取得結果としては <code>onamae</code> プロパティとなる。</p>
+<p>この SQLResultSet オブジェクト、実は <code>INSERT</code> などの場合もココに実行結果が格納されている。</p>
+<pre class="language-javascript"><code class="language-javascript">tx<span class="token punctuation">.</span><span class="token method function property-access">executeSql</span><span class="token punctuation">(</span><span class="token string">"INSERT INTO 【省略】"</span><span class="token punctuation">,</span> <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token punctuation">,</span> <span class="token keyword">function</span><span class="token punctuation">(</span><span class="token parameter">tx<span class="token punctuation">,</span> sqlResultSet</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token comment">// INSERT 成功時の行番号</span>
+  sqlResultSet<span class="token punctuation">.</span><span class="token property-access">insertId</span><span class="token punctuation">;</span>
+  <span class="token comment">// 当該 SQL 文で何行の INSERT・UPDATE・DELETE が行われたかの行数</span>
+  sqlResultSet<span class="token punctuation">.</span><span class="token property-access">rowsAffected</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<ul>
+  <li>参考：<a href="https://docs.monaca.io/ja/sampleapp/tips/storage/">https://docs.monaca.io/ja/sampleapp/tips/storage/</a></li>
+</ul>
+<p>取得結果を <code>li</code> 要素で囲んで、<code>ul#results</code> に <code>appendChild()</code> しているところは、単なる DOM 操作なので今回は説明を割愛。</p>
+<h3 id="drop"><a class="header-link" href="#drop"><span class="header-link-mark"></span></a><code>drop()</code></h3>
+<p>テーブルを削除する処理。書き方はこれまでどおり。<code>CREATE TABLE IF NOT EXISTS</code> の逆で、<code>DROP TABLE</code> の場合は対象のテーブルが存在しなくてもエラーにならないよう、<code>DROP TABLE IF EXISTS</code> と書くことができる。</p>
+<h2 id="以上"><a class="header-link" href="#以上"><span class="header-link-mark"></span></a>以上!</h2>
+<p>これで、cordova-sqlite-storage プラグインを使ったローカル DB の基本的な操作はできるようになったであろう。不明点や詳細は公式の README を熟読すればほとんどのことは書いてあるので、よく読んでいただきたい。</p>
+<ul>
+  <li>参考：<a href="https://github.com/litehelpers/Cordova-sqlite-storage">GitHub - litehelpers/Cordova-sqlite-storage: A Cordova/PhoneGap plugin to open and use sqlite databases on Android, iOS and Windows with HTML5/Web SQL API</a></li>
+</ul>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2017-06-23</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2017-06-23</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

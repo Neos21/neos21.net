@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>Vue + Axios + Express で非同期通信後にファイルダウンロードさせる - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2021/01/01-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2021/index.html">2021年</a></li>
+            <li><a href="/blog/2021/01/index.html">01月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2021-01-01</time></div>
+        <h1 id="page-title">Vue + Axios + Express で非同期通信後にファイルダウンロードさせる</h1>
+<div class="ad-amazon">
+  <div class="ad-amazon-image">
+    <a href="https://www.amazon.co.jp/dp/B07WVXRNH3?tag=neos21-22&amp;linkCode=osi&amp;th=1&amp;psc=1">
+      <img src="https://m.media-amazon.com/images/I/51bIiHhapVL._SL160_.jpg" width="125" height="160">
+    </a>
+  </div>
+  <div class="ad-amazon-info">
+    <div class="ad-amazon-title">
+      <a href="https://www.amazon.co.jp/dp/B07WVXRNH3?tag=neos21-22&amp;linkCode=osi&amp;th=1&amp;psc=1">これからはじめるVue.js実践入門</a>
+    </div>
+  </div>
+</div>
+<p>こんにちは2021年。一発目は Node.js と Web の話。</p>
+<p>ウェブページからサーバに対して非同期の POST 通信を行い、そのレスポンスとしてファイルを受け取り、ダウンロードする処理を作った。「CSV 出力」ボタンを押すと、サーバで CSV ファイルが作られて、ファイル保存のダイアログが表示される、みたいなアレだ。</p>
+<p>フロントエンドは Vue としたが、何の SPA フレームワークでも大してやり方は変わらない。axios を使う例で紹介しているが、ポイントさえ押さえておけば他のライブラリで非同期通信する場合でも同じ。</p>
+<p>バックエンドも Express を例にしているが、ポイントさえ押さえれば他のミドルウェアでも応用が効く。</p>
+<hr>
+<p>それでは早速コードを。</p>
+<ul>
+  <li>Vue コンポーネント … HTML 部分</li>
+</ul>
+<pre class="language-html"><code class="language-html"><span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>template</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>div</span> <span class="token attr-name">class</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>my-page<span class="token punctuation">"</span></span><span class="token punctuation">></span></span>
+    <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>a</span> <span class="token attr-name">id</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>download-link<span class="token punctuation">"</span></span> <span class="token attr-name"><span class="token namespace">v-bind:</span>href</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>downloadUrl<span class="token punctuation">"</span></span> <span class="token attr-name"><span class="token namespace">v-bind:</span>download</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>fileName<span class="token punctuation">"</span></span><span class="token punctuation">></span></span>Link<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>a</span><span class="token punctuation">></span></span>  <span class="token comment">&#x3C;!-- ファイルダウンロードのダイアログ表示のために配置しているが、画面上は非表示 --></span>
+    <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>button</span> <span class="token attr-name"><span class="token namespace">v-on:</span>click</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>downloadFile<span class="token punctuation">"</span></span><span class="token punctuation">></span></span>ダウンロードする<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>v-btn</span><span class="token punctuation">></span></span>  <span class="token comment">&#x3C;!-- ← 画面表示するボタン --></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>div</span><span class="token punctuation">></span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>template</span><span class="token punctuation">></span></span>
+</code></pre>
+<ul>
+  <li>Vue コンポーネント … CSS 部分 (SCSS でもなんでも。)</li>
+</ul>
+<pre class="language-css"><code class="language-css"><span class="token selector">&#x3C;style lang="scss" scoped<span class="token combinator">></span>
+  <span class="token id">#download-link</span></span> <span class="token punctuation">{</span>
+    <span class="token property">display</span><span class="token punctuation">:</span> none<span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+&#x3C;/style>
+</code></pre>
+<ul>
+  <li>Vue コンポーネント … TypeScript 部分</li>
+</ul>
+<pre class="language-typescript"><code class="language-typescript"><span class="token operator">&#x3C;</span>script<span class="token operator">></span>
+<span class="token keyword">import</span> <span class="token imports">axios</span> <span class="token keyword">from</span> <span class="token string">'axios'</span><span class="token punctuation">;</span>
+
+<span class="token keyword">export</span> <span class="token keyword">default</span> <span class="token punctuation">{</span>
+  name<span class="token operator">:</span> <span class="token string">'MyPage'</span><span class="token punctuation">,</span>
+  <span class="token function-variable function">data</span><span class="token operator">:</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">(</span><span class="token punctuation">{</span>
+    <span class="token comment">// ダウンロード URL (Blob)</span>
+    downloadUrl<span class="token operator">:</span> <span class="token keyword">null</span><span class="token punctuation">,</span>
+    <span class="token comment">// ファイル名</span>
+    fileName<span class="token operator">:</span> <span class="token string">''</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+  <span class="token keyword">async</span> <span class="token function">downloadFile</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token keyword">try</span> <span class="token punctuation">{</span>
+      <span class="token comment">// ファイルを取得するための POST リクエスト。レスポンスタイプを指定する</span>
+      <span class="token keyword">const</span> response <span class="token operator">=</span> <span class="token keyword">await</span> axios<span class="token punctuation">.</span><span class="token method function property-access">post</span><span class="token punctuation">(</span><span class="token string">'/api/download-file'</span><span class="token punctuation">,</span> requestBody<span class="token punctuation">,</span> <span class="token punctuation">{</span> responseType<span class="token operator">:</span> <span class="token string">'blob'</span> <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token comment">// 取得したファイルをダウンロードできるようにする</span>
+      <span class="token keyword">const</span> fileURL <span class="token operator">=</span> <span class="token dom variable">window</span><span class="token punctuation">.</span><span class="token constant">URL</span><span class="token punctuation">.</span><span class="token method function property-access">createObjectURL</span><span class="token punctuation">(</span><span class="token keyword">new</span> <span class="token class-name"><span class="token maybe-class-name">Blob</span></span><span class="token punctuation">(</span><span class="token punctuation">[</span>response<span class="token punctuation">.</span><span class="token property-access">data</span><span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">downloadUrl</span> <span class="token operator">=</span> fileURL<span class="token punctuation">;</span>
+      <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">fileName</span> <span class="token operator">=</span> response<span class="token punctuation">.</span><span class="token property-access">headers</span><span class="token punctuation">[</span><span class="token string">'content-disposition'</span><span class="token punctuation">]</span><span class="token punctuation">.</span><span class="token method function property-access">replace</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token regex"><span class="token regex-delimiter">/</span><span class="token regex-source language-regex">attachment; filename="(.*)"</span><span class="token regex-delimiter">/</span><span class="token regex-flags">u</span></span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token string">'$1'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token comment">// クリックイベントを発火させてファイルをダウンロードさせる</span>
+      <span class="token function">setTimeout</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+        <span class="token dom variable">window</span><span class="token punctuation">.</span><span class="token property-access">document</span><span class="token punctuation">.</span><span class="token method function property-access">getElementById</span><span class="token punctuation">(</span><span class="token string">'download-link'</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">click</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span> <span class="token number">10</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+    <span class="token keyword">catch</span><span class="token punctuation">(</span>error<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token comment">// リクエスト時に Blob 形式を指定しているので、レスポンスの Blob を変換して内容を取り出す</span>
+      <span class="token keyword">try</span> <span class="token punctuation">{</span>
+        <span class="token keyword">const</span> blob <span class="token operator">=</span> error<span class="token punctuation">.</span><span class="token property-access">response</span><span class="token punctuation">.</span><span class="token property-access">data</span><span class="token punctuation">;</span>
+        <span class="token keyword">const</span> text <span class="token operator">=</span> <span class="token keyword">await</span> blob<span class="token punctuation">.</span><span class="token method function property-access">text</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">const</span> json <span class="token operator">=</span> <span class="token known-class-name class-name">JSON</span><span class="token punctuation">.</span><span class="token method function property-access">parse</span><span class="token punctuation">(</span>text<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">error</span><span class="token punctuation">(</span><span class="token string">'Error Object : '</span><span class="token punctuation">,</span> json<span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span>
+      <span class="token keyword">catch</span><span class="token punctuation">(</span>innerError<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">error</span><span class="token punctuation">(</span><span class="token string">'Inner Error : '</span><span class="token punctuation">,</span> innerError<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">error</span><span class="token punctuation">(</span><span class="token string">'Error : '</span><span class="token punctuation">,</span> error<span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+<span class="token operator">&#x3C;</span><span class="token operator">/</span>script<span class="token operator">></span>
+</code></pre>
+<p>フロントエンドはこんな感じ。</p>
+<ul>
+  <li>axios で通信する際、<code>{ responseType: 'blob' }</code> を指定することで、ファイルをレスポンスで受け取れるようになる</li>
+  <li>受け取ったファイルの中身は <code>response.data</code> に入っているので、コレを <code>new Blob()</code> と <code>window.URL.createObjectURL()</code> でダウンロードできるようにする</li>
+  <li>ファイルをダウンロードするためには <code>a</code> 要素をクリックしてやる必要がある。<code>setTimeout()</code> で少し遅らせないと上手く発火してくれなかった</li>
+  <li><code>this.fileName</code> はレスポンスヘッダから切り取って取得したりしているが、面倒なら固定値でも良い</li>
+</ul>
+<p>続いて Exprees 側。TypeScript で書いている。Vue CLI で作ったプロジェクトの場合、<code>vue-cli-plugin-express</code> を使って Express サーバを立てると簡単だ。</p>
+<pre class="language-typescript"><code class="language-typescript"><span class="token keyword">import</span> <span class="token imports">express</span> <span class="token keyword">from</span> <span class="token string">'express'</span><span class="token punctuation">;</span>
+
+<span class="token keyword">const</span> router <span class="token operator">=</span> express<span class="token punctuation">.</span><span class="token method function property-access"><span class="token maybe-class-name">Router</span></span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+router<span class="token punctuation">.</span><span class="token method function property-access">post</span><span class="token punctuation">(</span><span class="token string">'/api/download-file'</span><span class="token punctuation">,</span> <span class="token punctuation">(</span>req<span class="token punctuation">,</span> res<span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token comment">// CSV ファイルの例。ココでは適当に。</span>
+  <span class="token keyword">const</span> csv <span class="token operator">=</span> <span class="token string">'Header 1,Header 2,Header 3'</span>
+     <span class="token operator">+</span> <span class="token string">'\n'</span> <span class="token operator">+</span> <span class="token string">'Row-1-Col-1,Row-1-Col-2,Row-1-Col-3'</span>
+     <span class="token operator">+</span> <span class="token string">'\n'</span> <span class="token operator">+</span> <span class="token string">'Row-2-Col-1,Row-2-Col-2,Row-2-Col-3'</span>
+     <span class="token operator">+</span> <span class="token string">'\n'</span> <span class="token operator">+</span> <span class="token string">'Row-3-Col-1,Row-3-Col-2,Row-3-Col-3'</span><span class="token punctuation">;</span>
+  
+  res<span class="token punctuation">.</span><span class="token method function property-access">setHeader</span><span class="token punctuation">(</span><span class="token string">'Content-Type'</span><span class="token punctuation">,</span> <span class="token string">'text/csv; charset=UTF-8'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  res<span class="token punctuation">.</span><span class="token method function property-access">attachment</span><span class="token punctuation">(</span><span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">example.csv</span><span class="token template-punctuation string">`</span></span><span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment">// Content-Disposition でファイル名を指定する (ダウンロード時のファイル名として利用する)</span>
+  res<span class="token punctuation">.</span><span class="token method function property-access">send</span><span class="token punctuation">(</span><span class="token known-class-name class-name">String</span><span class="token punctuation">.</span><span class="token method function property-access">fromCharCode</span><span class="token punctuation">(</span><span class="token number">0xFEFF</span><span class="token punctuation">)</span> <span class="token operator">+</span> csv<span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment">// UTF-16 U+FEFF は UTF-8 の BOM である EF BB BF に変換され、BOM 付き UTF-8 でレスポンスできる (BOM により Excel で直接開いても文字化けしなくなる)</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">export</span> <span class="token keyword">default</span> router<span class="token punctuation">;</span>
+</code></pre>
+<p>ココでは CSV ファイルを用意していて、UTF-8 の BOM を付けてレスポンスしている。コレは主に Excel で開いた時に文字化けしないようにするためだ。</p>
+<p>Angular アプリで、フロントエンドオンリーで CSV ファイルをダウンロードさせる時に、次のように書いたことがあった。</p>
+<ul>
+  <li><a href="https://github.com/Neos21/angular-utilities/blob/fccd9c44026c9c7423a1ec985bed3c5aba311fa9/src/app/pages/csv-file-to-table/csv-file-to-table/csv-file-to-table.component.ts">angular-utilities/csv-file-to-table.component.ts at fccd9c44026c9c7423a1ec985bed3c5aba311fa9 · Neos21/angular-utilities</a></li>
+</ul>
+<pre class="language-typescript"><code class="language-typescript">@<span class="token function"><span class="token maybe-class-name">Component</span></span><span class="token punctuation">(</span><span class="token punctuation">{</span> <span class="token spread operator">...</span> <span class="token punctuation">}</span><span class="token punctuation">)</span>
+<span class="token keyword">export</span> <span class="token keyword">class</span> <span class="token class-name"><span class="token maybe-class-name">CsvFileToTableComponent</span></span> <span class="token punctuation">{</span>
+  <span class="token keyword">public</span> <span class="token function">onDownloadExampleFile</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator">:</span> <span class="token keyword">void</span> <span class="token punctuation">{</span>
+    <span class="token comment">// tslint:disable-next-line:no-magic-numbers</span>
+    <span class="token keyword">const</span> bom <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name"><span class="token known-class-name class-name">Uint8Array</span></span><span class="token punctuation">(</span><span class="token punctuation">[</span><span class="token number">0xEF</span><span class="token punctuation">,</span> <span class="token number">0xBB</span><span class="token punctuation">,</span> <span class="token number">0xBF</span><span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">const</span> content <span class="token operator">=</span> <span class="token string">'見出しA,見出しB,見出しC\nデータA1,データB1,データC1\nデータA2,データB2,データC2'</span><span class="token punctuation">;</span>
+    <span class="token keyword">const</span> blob <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name"><span class="token maybe-class-name">Blob</span></span><span class="token punctuation">(</span><span class="token punctuation">[</span>bom<span class="token punctuation">,</span> content<span class="token punctuation">]</span><span class="token punctuation">,</span> <span class="token punctuation">{</span> <span class="token keyword">type</span><span class="token operator">:</span> <span class="token string">'text/csv'</span> <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token dom variable">window</span><span class="token punctuation">.</span><span class="token property-access">navigator</span><span class="token punctuation">.</span><span class="token property-access">msSaveBlob</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token dom variable">window</span><span class="token punctuation">.</span><span class="token property-access">navigator</span><span class="token punctuation">.</span><span class="token method function property-access">msSaveBlob</span><span class="token punctuation">(</span>blob<span class="token punctuation">,</span> <span class="token string">'example.csv'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+    <span class="token keyword">else</span> <span class="token punctuation">{</span>
+      <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">exampleFileUrl</span> <span class="token operator">=</span> <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">domSanitizer</span><span class="token punctuation">.</span><span class="token method function property-access">bypassSecurityTrustUrl</span><span class="token punctuation">(</span><span class="token dom variable">window</span><span class="token punctuation">.</span><span class="token constant">URL</span><span class="token punctuation">.</span><span class="token method function property-access">createObjectURL</span><span class="token punctuation">(</span>blob<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>UTF-8 の BOM を作るために <code>new Uint8Array([0xEF, 0xBB, 0xBF])</code> と書いていたが、<code>String.fromCharCode(0xFEFF)</code> で簡単に書けるらしいことが分かった。</p>
+<p>コレでイイカンジ。</p><div class="ad-rakuten">
+  <div class="ad-rakuten-image">
+    <a href="https://hb.afl.rakuten.co.jp/hgc/g00q0722.waxyc9ff.g00q0722.waxyd017/?pc=https%3A%2F%2Fitem.rakuten.co.jp%2Fbook%2F15937011%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Fbook%2Fi%2F19644847%2F">
+      <img src="https://thumbnail.image.rakuten.co.jp/@0_mall/book/cabinet/1829/9784815601829.jpg?_ex=128x128">
+    </a>
+  </div>
+  <div class="ad-rakuten-info">
+    <div class="ad-rakuten-title">
+      <a href="https://hb.afl.rakuten.co.jp/hgc/g00q0722.waxyc9ff.g00q0722.waxyd017/?pc=https%3A%2F%2Fitem.rakuten.co.jp%2Fbook%2F15937011%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Fbook%2Fi%2F19644847%2F">これからはじめるVue.js実践入門 [ 山田 祥寛 ]</a>
+    </div>
+    <div class="ad-rakuten-shop">
+      <a href="https://hb.afl.rakuten.co.jp/hgc/g00q0722.waxyc9ff.g00q0722.waxyd017/?pc=https%3A%2F%2Fwww.rakuten.co.jp%2Fbook%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Fbook%2F">楽天ブックス</a>
+    </div>
+    <div class="ad-rakuten-price">価格 : 3718円</div>
+  </div>
+</div>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2021-01-01</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2021-01-01</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

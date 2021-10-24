@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>IE 限定・ローカルにある UTF-8 の HTML ファイルから Shift-JIS 形式のファイルを文字化けさせずに読み込む方法 - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2016/06/23-02.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2016/index.html">2016年</a></li>
+            <li><a href="/blog/2016/06/index.html">06月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2016-06-23</time></div>
+        <h1 id="page-title">IE 限定・ローカルにある UTF-8 の HTML ファイルから Shift-JIS 形式のファイルを文字化けさせずに読み込む方法</h1>
+
+<ul>
+  <li>ローカルに HTML ファイルがある。エンコーディングは UTF-8 を指定している。</li>
+  <li>これとは別に、同じフォルダ内に Shift-JIS 形式の別の HTML ファイルがある。</li>
+</ul>
+<p>この UTF-8 の HTML ファイルから、Shift-JIS のファイルを読み込んで、インラインに展開させたい。jQuery の <code>load()</code> みたいなことをしたい。</p>
+<p>しかし、jQuery の <code>ajax()</code> やら <code>get()</code> やら <code>load()</code> やらは、いずれも UTF-8 のファイルを読み込むのがデフォルトになっているので、Shift-JIS のファイルを読もうとすると文字化けしてしまう。</p>
+<p>そんなワケで、ローカルの HTML ファイルから他の HTML ファイルを読み込む jQuery のメソッドを試してみつつ、読み込む対象のファイルのエンコード指定と文字化けの関係を調べてみた。</p>
+<ul>
+  <li>調査したブラウザ：
+    <ul>
+      <li>IE11</li>
+      <li>Firefox</li>
+      <li>Chrome</li>
+      <li>Edge (※ 2020-12-23 追記 : 当時の Legacy Edge のことです)</li>
+    </ul>
+  </li>
+  <li>呼び元の HTML ファイル：
+    <ul>
+      <li>ローカルにある UTF-8 のファイル</li>
+    </ul>
+  </li>
+  <li>読み込む HTML ファイル：
+    <ul>
+      <li>ローカルにある Shift-JIS のファイル (基本は文字化けするが、文字化けさせずに読み込みたいファイル)</li>
+      <li>ローカルにある UTF-8 のファイル (呼び元との組み合わせ的にも、基本的に文字化けしないファイル)</li>
+    </ul>
+  </li>
+  <li>読み込み方：
+    <ul>
+      <li>jQuery.load()</li>
+      <li>jQuery.ajax()</li>
+      <li>jQuery.get()</li>
+      <li>Scripting.FileSystemObject</li>
+    </ul>
+  </li>
+</ul>
+<h2 id="長くなりそうなので先に結論を"><a class="header-link" href="#長くなりそうなので先に結論を"><span class="header-link-mark"></span></a>長くなりそうなので先に結論を</h2>
+<p>呼び元が UTF-8 の HTML ファイルで、Shift-JIS の別ファイルを読み込みたい時は、<strong>Scripting.FileSystemObject</strong> を使って Shift-JIS のファイルを読み込み、<code>ReadAll()</code> などで拾った値を <code>jQuery.html()</code> の引数にでも与えてやれば、両ファイル間で文字コードが違っても文字化けせずに読み込める。</p>
+<p><strong>FileSystemObject が使えるのは ActiveXObject が使える IE11 だけで、かつローカルでしか使えないと思うので、「IE11 限定」「ローカルにある HTML ファイル限定」</strong>というワケ。</p>
+<p>では、以下、順に試してみる。</p>
+<h2 id="呼び元の-html-ファイル"><a class="header-link" href="#呼び元の-html-ファイル"><span class="header-link-mark"></span></a>呼び元の HTML ファイル</h2>
+<p>まずはテストするための、呼び元の HTML ファイルを作った。以下のような感じで、Shift-JIS の HTML と、UTF-8 の HTML とを、それぞれ4つの読み込み方で読み込もうとしている。</p>
+<ul>
+  <li><a href="https://gist.github.com/3d77a5eb0afb9020505ba41cb0311b89">ローカルの HTML ファイルから他の HTML ファイルを読み込むテスト</a></li>
+</ul>
+<p>既にコメントで色々記載しているが、ブラウザごとに色々引っかかったポイントがあった。</p>
+<ul>
+  <li>当然だが、Scripting.FileSystemObject は ActiveXObject が使える IE11 でのみ使える。Firefox や Chrome は勿論だが、Edge も ActiveXObject に対応していない。</li>
+  <li>Firefox は jQuery の <code>ajax()</code> と <code>get()</code> の引数で dataType を指定しないとエラーが出て読み込めない。</li>
+  <li>Chrome でローカルの HTML ファイルから <code>ajax()</code> などを動作させるには、<code>--allow-file-access-from-files</code> という引数を与えて Chrome を起動させる必要がある。
+    <ul>
+      <li>Windows なら「ファイル名を指定して実行」で以下のように起動する。</li>
+      <li><code>chrome –allow-file-access-from-files</code></li>
+      <li>参考：<a href="http://bashalog.c-brains.jp/11/02/16-212538.php">jQuery.load()をChromeで使う時にちょっとハマったこと | バシャログ。</a></li>
+    </ul>
+  </li>
+</ul>
+<h2 id="結果の画面キャプチャ"><a class="header-link" href="#結果の画面キャプチャ"><span class="header-link-mark"></span></a>結果の画面キャプチャ</h2>
+<p>順に表示結果を見てみる。</p>
+<h3 id="ie11"><a class="header-link" href="#ie11"><span class="header-link-mark"></span></a>IE11</h3>
+<p>
+  <img src="23-02-01.png" alt="IE11 での結果">
+</p>
+<p>画面左下の「Shift-JIS」：「FileSystemObject」部分。<em>UTF-8 の HTML ファイルであるにも関わらず、Shift-JIS の HTML ファイルを読み込んで文字化けせずに展開できている</em>。それ以外の jQuery を使った方法では文字化けしてしまっている。</p>
+<p>また、<em>UTF-8 のファイルを FileSystemObject で読み込んでも文字化けしてしまう</em>ことから、有効なのは「<strong>UTF-8 の HTML ファイルで Shift-JIS の HTML ファイルを読み込む場合</strong>」のみ。また、FileSystemObject の性質上、サーバを介して使用することはないだろうから、<em>ローカルの HTML ファイルでのみ使える技</em>、ということになる。</p>
+<h3 id="firefox"><a class="header-link" href="#firefox"><span class="header-link-mark"></span></a>Firefox</h3>
+<p>
+  <img src="23-02-02.png" alt="Firefox での結果">
+</p>
+<p>以降は同じソースを他のブラウザで見てみただけ。</p>
+<p>Firefox でも Shift-JIS の HTML ファイルは文字化けしているほか、ActiveXObject が使えないので FileSystemObject も当然使えない。</p>
+<p>Firefox は別の方法でローカルの HTML ファイルを読み書きできるみたいだけど、Components がもう使えない？らしく、うまくいかなかった。</p>
+<ul>
+  <li>参考：<a href="http://d.hatena.ne.jp/a_bicky/20110718/1311027391">JavaScriptからローカルファイルを作成する方法まとめ - あらびき日記</a></li>
+  <li>参考：<a href="http://www.the-workflow.com/home/sino-kai-fa-huan-jing/firefoxnojavascriptderokarufairuniakusesusuru-fang-famatome">Firefoxのjavascriptでローカルファイルにアクセスする方法まとめ - 開発者</a></li>
+  <li>参考：<a href="http://stackoverflow.com/questions/1309243/how-to-reset-netscape-security-privilegemanager-enableprivilege">javascript - How to reset netscape.security.PrivilegeManager.enablePrivilege? - Stack Overflow</a></li>
+</ul>
+<h3 id="chrome"><a class="header-link" href="#chrome"><span class="header-link-mark"></span></a>Chrome</h3>
+<p>
+  <img src="23-02-03.png" alt="Chrome での結果">
+</p>
+<p>Chrome も Firefox と同様の表示。</p>
+<p>Chrome でローカルファイルを操作するには File API が使えるらしい。試してない。</p>
+<h3 id="edge"><a class="header-link" href="#edge"><span class="header-link-mark"></span></a>Edge</h3>
+<p>
+  <img src="23-02-04.png" alt="Edge での結果">
+</p>
+<p>Windows10 にしたことだし、Edge でも見てみた。Edge は ActiveXObject がサポートされていない他、セキュリティ設定の問題か、ローカルで Ajax ができないみたい。</p>
+<h2 id="以上"><a class="header-link" href="#以上"><span class="header-link-mark"></span></a>以上</h2>
+<p>未だに IE しか使わせてもらえないレガシープログラマにとって、JScript・FileSystemObject はまだまだ現役。……泣ける話や……。</p>
+<p>それにしても、FileSystemObject で読み込むと文字化けしないのはなんで？</p>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2016-06-23</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2016-06-23</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

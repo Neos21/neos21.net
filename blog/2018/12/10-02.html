@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>Heroku + Node.js アプリの環境変数の管理に heroku-config と dotenv を使う - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2018/12/10-02.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2018/index.html">2018年</a></li>
+            <li><a href="/blog/2018/12/index.html">12月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2018-12-10</time></div>
+        <h1 id="page-title">Heroku + Node.js アプリの環境変数の管理に heroku-config と dotenv を使う</h1>
+
+<p>Heroku 上に Node.js 製のアプリを載せている時、ローカルと Heroku 上とで、どのように環境変数を管理すると良いか調べた。</p>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#heroku-%E3%81%AE%E7%92%B0%E5%A2%83%E5%A4%89%E6%95%B0%E7%AE%A1%E7%90%86%E3%81%AF-heroku-config-%E3%83%97%E3%83%A9%E3%82%B0%E3%82%A4%E3%83%B3%E3%82%92%E4%BD%BF%E3%81%86">Heroku の環境変数管理は heroku-config プラグインを使う</a></li>
+  <li><a href="#nodejs-%E3%82%B3%E3%83%BC%E3%83%89%E5%86%85%E3%81%A7-env-%E3%83%95%E3%82%A1%E3%82%A4%E3%83%AB%E3%81%AE%E7%92%B0%E5%A2%83%E5%A4%89%E6%95%B0%E3%82%92%E5%8F%82%E7%85%A7%E3%81%99%E3%82%8B%E3%81%AB%E3%81%AF-dotenv-%E3%83%91%E3%83%83%E3%82%B1%E3%83%BC%E3%82%B8%E3%82%92%E4%BD%BF%E3%81%86">Node.js コード内で <code>.env</code> ファイルの環境変数を参照するには <code>dotenv</code> パッケージを使う</a></li>
+  <li><a href="#%E4%BB%A5%E4%B8%8A">以上</a></li>
+</ul>
+<h2 id="heroku-の環境変数管理は-heroku-config-プラグインを使う"><a class="header-link" href="#heroku-の環境変数管理は-heroku-config-プラグインを使う"><span class="header-link-mark"></span></a>Heroku の環境変数管理は heroku-config プラグインを使う</h2>
+<p>Heroku の環境変数 (Config Vars) の管理には、<strong>heroku-config</strong> というプラグインを使うのが一番やりやすい。</p>
+<p>プラグインは以下のようにインストールする。</p>
+<pre class="language-bash"><code class="language-bash">$ heroku plugins:install heroku-config
+</code></pre>
+<p>そして、環境変数情報を <code>.env</code> というファイルに書いておく。例として以下のように記述できる。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># PostgreSQL の接続先文字列</span>
+<span class="token assign-left variable">DATABASE_URL</span><span class="token operator">=</span>postgres://hogehoge:fugafuga@ec0-00-00-00-000.compute-1.amazonaws.com:5432/useruser
+
+<span class="token comment"># PostgreSQL への SSL 接続設定</span>
+<span class="token assign-left variable">PGSSLMODE</span><span class="token operator">=</span>allow
+</code></pre>
+<p>シャープ <code>#</code> 始まりの行はコメントになるので、分かりやすく書いておける。</p>
+<p>当然ながら、この <strong><code>.env</code> ファイルはバージョン管理などに含めないこと。</strong></p>
+<p>記述した <code>.env</code> ファイルを Heroku アプリ上で使用したければ、</p>
+<pre class="language-bash"><code class="language-bash">$ heroku config:push
+</code></pre>
+<p>で Heroku に送ることができ、逆に Heroku 上で設定されている環境変数をダウンロードするには、</p>
+<pre class="language-bash"><code class="language-bash">$ heroku config:pull
+</code></pre>
+<p>で取得できる。</p>
+<ul>
+  <li>参考：<a href="https://dackdive.hateblo.jp/entry/2016/01/26/121900">Herokuで本番環境の環境変数(config vars)を.envファイルで設定する - dackdive's blog</a></li>
+</ul>
+<h2 id="nodejs-コード内で-env-ファイルの環境変数を参照するには-dotenv-パッケージを使う"><a class="header-link" href="#nodejs-コード内で-env-ファイルの環境変数を参照するには-dotenv-パッケージを使う"><span class="header-link-mark"></span></a>Node.js コード内で <code>.env</code> ファイルの環境変数を参照するには <code>dotenv</code> パッケージを使う</h2>
+<p>さて、Node.js スクリプト内で環境変数を参照するには、<code>process.env.DATABASE_URL</code> のように記述するワケだが、<code>.env</code> ファイルで管理している環境変数は勝手には読み込んでくれない。</p>
+<p>そこで、<strong><code>dotenv</code></strong> というパッケージを利用し、<code>.env</code> というファイルがあればそのファイルの内容を環境変数として定義させるように、Node.js スクリプトを書き直してみる。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">npm</span> <span class="token function">install</span> --save dotenv
+</code></pre>
+<p>例えば <code>pg</code> パッケージで PostgreSQL に接続するコードで、これまでどおり本当の環境変数しか見ない場合は、以下のように書いていた。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword">const</span> pg <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'pg'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// 接続先 URL</span>
+<span class="token keyword">const</span> connectionString <span class="token operator">=</span> process<span class="token punctuation">.</span><span class="token property-access">env</span><span class="token punctuation">.</span><span class="token constant">DATABASE_URL</span><span class="token punctuation">;</span> <span class="token comment">// || 'postgres://postgres:postgres@localhost:5432/my_local_db';</span>
+
+<span class="token comment">// 接続開始</span>
+<span class="token keyword">const</span> pool <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">pg<span class="token punctuation">.</span>Pool</span><span class="token punctuation">(</span><span class="token punctuation">{</span>
+  connectionString<span class="token operator">:</span> connectionString
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>ローカル開発環境で、もし <code>process.env.DATABASE_URL</code> を設定したくなった場合は、ターミナル内に環境変数を <code>export</code> したりしていたワケだ。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># このように叩けば process.env.DATABASE_URL の値が設定できる</span>
+$ <span class="token builtin class-name">export</span> <span class="token assign-left variable">DATABASE_URL</span><span class="token operator">=</span>postgres://hoge:fuga@localhost:5432/another_db
+$ node main.js
+</code></pre>
+<p>…が、毎度このように打つのは面倒だし、<code>.env</code> ファイルで管理している環境変数を直接参照できたら便利だよね、というのがこの <code>dotenv</code> の役割だ。</p>
+<p><code>dotenv</code> を使うには、先程のスクリプトの冒頭に、次のようなコードを追加する。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword">const</span> pg <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'pg'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// 設定をロードする</span>
+<span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'dotenv'</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">config</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// 接続先 URL (以降は同じ)</span>
+<span class="token keyword">const</span> connectionString <span class="token operator">=</span> process<span class="token punctuation">.</span><span class="token property-access">env</span><span class="token punctuation">.</span><span class="token constant">DATABASE_URL</span><span class="token punctuation">;</span> <span class="token comment">// || 'postgres://postgres:postgres@localhost:5432/my_local_db';</span>
+</code></pre>
+<p>あとは特に <code>export</code> コマンドなどは不要で、いきなり <code>$ node main.js</code> と呼び出してやれば、<code>.env</code> ファイルに書かれた環境変数情報を利用できる。</p>
+<h2 id="以上"><a class="header-link" href="#以上"><span class="header-link-mark"></span></a>以上</h2>
+<p><code>.env</code> というファイルに環境変数を逃がし、本番 (Heroku) 環境とローカル開発環境とで環境変数を容易に切り替えられるようになった。</p>
+<ul>
+  <li>参考：<a href="https://qiita.com/colorrabbit/items/18db3c97734f32ebdfde">heroku 環境変数の操作 - Qiita</a></li>
+  <li>参考：<a href="https://devcenter.heroku.com/articles/heroku-local">Running Apps Locally | Heroku Dev Center</a></li>
+  <li>参考：<a href="https://vavolab.com/article/2018/06/24/14/44/54/">| VavoLab</a></li>
+  <li>参考：<a href="http://blog.ruedap.com/entry/20110503/ruby_heroku_web_app_development_tips_5">http://blog.ruedap.com/entry/20110503/ruby_heroku_web_app_development_tips_5</a></li>
+  <li>参考：<a href="https://qiita.com/uma0317/items/e142661c004f68d858a5">API key等をgithubで公開しない方法(rails,heroku) - Qiita</a> … Ruby でのやり方</li>
+</ul>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2018-12-10</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2018-12-10</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

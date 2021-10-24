@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>1ファイルでコマンドとしても API としても使える npm モジュールを作る - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2018/01/13-03.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2018/index.html">2018年</a></li>
+            <li><a href="/blog/2018/01/index.html">01月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2018-01-13</time></div>
+        <h1 id="page-title">1ファイルでコマンドとしても API としても使える npm モジュールを作る</h1>
+
+<p>お遊びとして…。</p>
+<p>通常、npm モジュールを API として提供する場合は、<code>module.exports</code> で任意の関数等をエクスポートする。コレに対し、npm で CLI (コマンド) を提供する場合は、<code>#!/usr/bin/env node</code> という Shebang から始まるコマンド用の Node.js スクリプトを作る必要がある。</p>
+<p>そういうワケで、大抵は <code>lib.js</code> なんかに本体を書き、<code>module.exports</code> するだけの <code>index.js</code> と、CLI を提供する <code>bin.js</code> という合計3ファイルを用意することが多い。<code>package.json</code> の宣言で言えば以下のようになっている状態だ。</p>
+<pre class="language-json"><code class="language-json"><span class="token punctuation">{</span>
+  <span class="token property">"main"</span><span class="token operator">:</span> <span class="token string">"index.js"</span><span class="token punctuation">,</span>
+  <span class="token property">"bin"</span><span class="token operator">:</span> <span class="token string">"bin.js"</span><span class="token punctuation">,</span>
+  <span class="token comment">// 中略…</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>しかし、本質は <code>lib.js</code> にまとまっていて、<code>index.js</code> と <code>bin.js</code> は呼び出しだけの些細なファイルであるなら、なんとか3つまとめられないだろうか、というのが今回の主旨。実用性抜きのお遊びである。</p>
+<h2 id="こう書いたらできた"><a class="header-link" href="#こう書いたらできた"><span class="header-link-mark"></span></a>こう書いたらできた</h2>
+<p>いきなりだが結論。</p>
+<p>以下のようなコード構成にすれば、この1ファイルを <code>require()</code> もできるし、このファイルをコマンドとして実行もできた。</p>
+<pre class="language-javascript"><code class="language-javascript">#<span class="token operator">!</span><span class="token operator">/</span>usr<span class="token operator">/</span>bin<span class="token operator">/</span>env node
+<span class="token comment">// ↑1行目には Shebang を書いておく</span>
+
+<span class="token comment">// 本質となる関数</span>
+<span class="token keyword">function</span> <span class="token function">myFunc</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'my-func!'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+
+<span class="token comment">// npm-scripts よりコマンドで実行された時はココがコマンド名になる</span>
+<span class="token keyword control-flow">if</span><span class="token punctuation">(</span>process<span class="token punctuation">.</span><span class="token property-access">env</span><span class="token punctuation">.</span><span class="token property-access">npm_lifecycle_script</span> <span class="token operator">===</span> <span class="token string">'my-func'</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token comment">// コマンド実行時はコマンド関数を実行する</span>
+  <span class="token function">myFunc</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+<span class="token keyword control-flow">else</span> <span class="token punctuation">{</span>
+  <span class="token comment">// そうでない場合は別のスクリプトから require() された場合なので、必要な関数をエクスポートする</span>
+  module<span class="token punctuation">.</span><span class="token property-access">exports</span> <span class="token operator">=</span> myFunc<span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>コレを <code>index.js</code> として保存し、<code>package.json</code> は以下のようにする。</p>
+<ul>
+  <li><code>main</code> プロパティが、<code>require('my-func')</code> として読み込んだ時に参照されるファイル (エントリポイント) となる。</li>
+  <li><code>bin</code> プロパティにファイルを書くと、<code>name</code> プロパティがコマンド名になり、<code>bin</code> プロパティのファイルが実行されるようになる。</li>
+</ul>
+<p>今回は1ファイルで両方の用途に対応したので、どちらも <code>index.js</code> を指定する。</p>
+<pre class="language-json"><code class="language-json"><span class="token punctuation">{</span>
+  <span class="token property">"name"</span><span class="token operator">:</span> <span class="token string">"my-func"</span><span class="token punctuation">,</span>
+  <span class="token property">"version"</span><span class="token operator">:</span> <span class="token string">"1.0.0"</span><span class="token punctuation">,</span>
+  <span class="token property">"main"</span><span class="token operator">:</span> <span class="token string">"index.js"</span><span class="token punctuation">,</span>
+  <span class="token property">"bin"</span><span class="token operator">:</span> <span class="token string">"index.js"</span><span class="token punctuation">,</span>
+  <span class="token comment">// 後略…</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>あとはコレを <code>npm publish</code> で提供すれば良い。ローカルで試したい時は <code>npm link</code> でグローバル npm モジュールとしてシンボリックリンクを張れば良い。</p>
+<p>使用する側は、API として利用する際は以下のように使える。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token comment">// use.js とする : require() して実行できる</span>
+<span class="token keyword">const</span> myFunc <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'my-func'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token function">myFunc</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># このようにして実行可能</span>
+$ node use.js
+</code></pre>
+<p>CLI として使用する際は、ローカルインストールして <code>package.json</code> の npm-scripts でパスを通してやれば、コマンドとして使える。</p>
+<pre class="language-json"><code class="language-json"><span class="token punctuation">{</span>
+  <span class="token property">"name"</span><span class="token operator">:</span> <span class="token string">"use-my-func"</span><span class="token punctuation">,</span>
+  <span class="token property">"version"</span><span class="token operator">:</span> <span class="token string">"1.0.0"</span><span class="token punctuation">,</span>
+  <span class="token property">"scripts"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+    <span class="token property">"my-func"</span><span class="token operator">:</span> <span class="token string">"my-func"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token property">"dependencies"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+    <span class="token property">"my-func"</span><span class="token operator">:</span> <span class="token string">"1.0.0"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token comment">// 後略…</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">npm</span> run my-func
+<span class="token operator">></span> my-func
+
+my-func<span class="token operator">!</span>
+<span class="token comment"># コマンドとして実行できる</span>
+</code></pre>
+<p>こんな感じ。</p>
+<h2 id="ポイント"><a class="header-link" href="#ポイント"><span class="header-link-mark"></span></a>ポイント</h2>
+<p>1つのファイルの中で、「<code>require()</code> によって読み込まれたのか」「コマンドとして実行されているのか」を判別する必要があり、その方法を何とか探した。</p>
+<p>ポイントになったのは、<em><code>process.env.npm_lifecycle_script</code></em> というグローバル変数。コマンドとして対象のファイルを実行した場合は、このプロパティの値がコマンド名になるのだ。それ以外のファイルから <code>require()</code> した時は、ココが <code>node use.js</code> といった形で呼び出し時の名前になる。</p>
+<p>というワケで、<code>process.env.npm_lifecycle_script</code> の値がコマンド名なら、そのまま本体の関数を実行して終われば良い。一方、そうでなければ、関数はその場で実行せず、<code>module.exports</code> に本体の関数を渡すようにし、呼び出し元で使えるようにしてやる。</p>
+<p>1行目に Shebang がないとコマンドとしてうまく実行できなかったので書いておいた。<code>require()</code> した時は無視されるようなのでそのまま書いておいた。</p>
+<pre class="language-javascript"><code class="language-javascript">#<span class="token operator">!</span><span class="token operator">/</span>usr<span class="token operator">/</span>bin<span class="token operator">/</span>env node
+
+<span class="token keyword">function</span> <span class="token function">myFunc</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token comment">// 本体</span>
+<span class="token punctuation">}</span>
+
+<span class="token keyword control-flow">if</span><span class="token punctuation">(</span>process<span class="token punctuation">.</span><span class="token property-access">env</span><span class="token punctuation">.</span><span class="token property-access">npm_lifecycle_script</span> <span class="token operator">===</span> <span class="token string">'my-func'</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token function">myFunc</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+<span class="token keyword control-flow">else</span> <span class="token punctuation">{</span>
+  module<span class="token punctuation">.</span><span class="token property-access">exports</span> <span class="token operator">=</span> myFunc<span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>そういうワケで、コレが最小構成。他に「<code>require()</code> なのかコマンド実行なのか」を判別する良い判別方法があれば教えて欲しい。</p>
+<h2 id="実際にパッケージ公開してみた"><a class="header-link" href="#実際にパッケージ公開してみた"><span class="header-link-mark"></span></a>実際にパッケージ公開してみた</h2>
+<p>こうして作ったパッケージを実際に公開してみた。<strong><code>@neos21/req-cmd</code></strong> でインストールできるので、<code>require('@neos21/req-cmd')</code> してみたり、<code>req-cmd</code> コマンドとして利用してみたりして、試してみてほしい。</p>
+<ul>
+  <li><a href="https://www.npmjs.com/package/@neos21/req-cmd">@neos21/req-cmd</a></li>
+  <li><a href="https://github.com/Neos21/req-cmd">GitHub - Neos21/req-cmd: require() API and CLI in one JS.</a></li>
+</ul>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2018-01-13</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2018-01-13</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

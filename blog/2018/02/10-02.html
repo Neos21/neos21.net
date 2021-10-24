@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>Node.js でオレオレ証明書を利用した簡易 HTTPS サーバを立てる - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2018/02/10-02.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2018/index.html">2018年</a></li>
+            <li><a href="/blog/2018/02/index.html">02月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2018-02-10</time></div>
+        <h1 id="page-title">Node.js でオレオレ証明書を利用した簡易 HTTPS サーバを立てる</h1>
+
+<hr>
+<p>※2018年1月29日の記事の改善版 (というかソチラの記事が下書き版だったのに間違えてアップしていた) です。</p>
+<ul>
+  <li><a href="/blog/2018/01/29-02.html">オレオレ証明書を用意し Node.js で HTTPS サーバをサクッと立てる</a></li>
+</ul>
+<hr>
+<p>テストのために自己署名証明書を使用するサーバを立てることになった。</p>
+<p>そこで、MacOS に標準で入っている <code>openssl</code> コマンドを利用して自己署名証明書を用意し、Node.js で簡易的な HTTPS サーバを立ててみる。</p>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#%E3%82%AA%E3%83%AC%E3%82%AA%E3%83%AC%E8%A8%BC%E6%98%8E%E6%9B%B8%E3%82%92%E4%BD%9C%E3%82%8B">オレオレ証明書を作る</a></li>
+  <li><a href="#nodejs-%E3%81%A7%E7%B0%A1%E6%98%93-https-%E3%82%B5%E3%83%BC%E3%83%90%E3%82%92%E7%AB%8B%E3%81%A6%E3%82%8B">Node.js で簡易 HTTPS サーバを立てる</a></li>
+  <li><a href="#%E7%B5%82%E3%82%8F%E3%82%8A">終わり</a></li>
+</ul>
+<h2 id="オレオレ証明書を作る"><a class="header-link" href="#オレオレ証明書を作る"><span class="header-link-mark"></span></a>オレオレ証明書を作る</h2>
+<p>まずは自己署名証明書を作る。自己署名証明書とは要するに「認証局のお墨付きがない証明書」のことで、データが改竄されていないことの証明には使えない。今回はあくまで開発用に作るが、本来オレオレ証明書は使うべきでないシロモノなので、お忘れなきよう。</p>
+<ul>
+  <li>参考：<a href="https://ja.wikipedia.org/wiki/%E8%87%AA%E5%B7%B1%E7%BD%B2%E5%90%8D%E8%A8%BC%E6%98%8E%E6%9B%B8">自己署名証明書 - Wikipedia</a></li>
+</ul>
+<p>MacOS は最初から <code>openssl</code> コマンドが使用できたが、Linux などで <code>openssl</code> コマンドがない場合は別途インストールする。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># yum を使っている場合は以下で</span>
+$ yum <span class="token function">install</span> openssl
+
+<span class="token comment"># apt の場合は以下で</span>
+$ <span class="token function">apt-get</span> <span class="token function">install</span> openssl
+</code></pre>
+<p>Windows の場合は「Win32 OpenSSL」というツールをインストールすれば良いようだ (未検証)。</p>
+<ul>
+  <li>参考：<a href="https://rms-digicert.ne.jp/howto/basis/openssl_on_windows.html">サーバ証明書 : Windowsでopensslを使う | DigiCert</a></li>
+</ul>
+<p><code>openssl</code> コマンドを使って、秘密鍵 → 公開鍵 → デジタル証明書、の順に作る。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># 秘密鍵を作る → key.pem ができる</span>
+$ openssl genrsa -out key.pem <span class="token number">1024</span>
+
+<span class="token comment"># 公開鍵を作る : key.pem を指定する。csr.pem ができる</span>
+$ openssl req -new -key key.pem -out csr.pem
+  <span class="token comment"># 対話式で国だのなんだの聞かれるので、適当に入力したり、空欄で飛ばしたり</span>
+
+<span class="token comment"># デジタル証明書 : key.pem と csr.pem を指定する。cert.pem ができる</span>
+$ openssl x509 -req -in csr.pem -signkey key.pem -out cert.pem
+</code></pre>
+<p>これで <code>key.pem</code>・<code>csr.pem</code>・<code>cert.pem</code> という3つのファイルができる。</p>
+<h2 id="nodejs-で簡易-https-サーバを立てる"><a class="header-link" href="#nodejs-で簡易-https-サーバを立てる"><span class="header-link-mark"></span></a>Node.js で簡易 HTTPS サーバを立てる</h2>
+<p>次に、Node.js に組み込みの <code>https</code> モジュールを使って、簡易 HTTPS サーバを作る。今回は Node.js v6.11.0 にて検証。</p>
+<p>作業ディレクトリに <code>my-server.js</code> (名前は任意) という空ファイルを作成し、同じディレクトリに <code>key.pem</code>・<code>cert.pem</code> を格納しておく (<code>csr.pem</code> は今回使わない)。</p>
+<p><code>my-server.js</code> を開き、以下のように実装する。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword">const</span> fs    <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'fs'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">const</span> https <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'https'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// 秘密鍵とデジタル証明書ファイルを指定する</span>
+<span class="token keyword">const</span> options <span class="token operator">=</span> <span class="token punctuation">{</span> 
+  key <span class="token operator">:</span> fs<span class="token punctuation">.</span><span class="token method function property-access">readFileSync</span><span class="token punctuation">(</span><span class="token string">'key.pem'</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+  cert<span class="token operator">:</span> fs<span class="token punctuation">.</span><span class="token method function property-access">readFileSync</span><span class="token punctuation">(</span><span class="token string">'cert.pem'</span><span class="token punctuation">)</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+
+<span class="token comment">// サーバを起動する</span>
+https<span class="token punctuation">.</span><span class="token method function property-access">createServer</span><span class="token punctuation">(</span>options<span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token parameter">req<span class="token punctuation">,</span> res</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'リクエストを受信'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token comment">// レスポンスの設定</span>
+  res<span class="token punctuation">.</span><span class="token method function property-access">writeHead</span><span class="token punctuation">(</span><span class="token number">200</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  res<span class="token punctuation">.</span><span class="token method function property-access">end</span><span class="token punctuation">(</span><span class="token string">'Hello World'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">listen</span><span class="token punctuation">(</span><span class="token number">8443</span><span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment">// ポートを指定して待受スタート</span>
+
+<span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'自己署名証明書サーバを起動'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p><code>https.createServer()</code> の第2引数が、リクエストを受け取った時に実行される関数となる。今回は HTTP ステータスコード 200 を返し、画面に <code>Hello World</code> とだけ表示させることにする。ポートは <code>.listen(8443)</code> 部分で指定しているとおり、<code>8443</code> となる。</p>
+<p><code>my-server.js</code> が実装できたら、Node.js でファイルを実行する。すると HTTPS サーバが起動する。</p>
+<pre class="language-bash"><code class="language-bash">$ node my-server.js
+
+自己署名証明書サーバを起動
+</code></pre>
+<p>ターミナルはこのまま待機状態になるので放置。</p>
+<p>ブラウザを開き、<code>https://localhost:8443/</code> にアクセスすると、自己署名証明書を使用している旨の警告が表示されるかと思う。警告を無視してページを開くようにすると、画面に「Hello World」と表示されるはずだ。この際、ターミナルには「リクエストを受信」のログが出ているはず。</p>
+<h2 id="終わり"><a class="header-link" href="#終わり"><span class="header-link-mark"></span></a>終わり</h2>
+<p>コレにて完了。今回はとりあえず <code>https://localhost:8443/</code> にアクセスするとオレオレ証明書を利用したページが開ける、というだけの簡素なサーバを立ててみた。ベースは <code>http</code> モジュールと同様なようなので、カスタマイズも可能だ。</p>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2018-02-10</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2018-02-10</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

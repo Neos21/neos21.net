@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>proxyrequire で外部ライブラリをモック化してテストする - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2021/01/05-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2021/index.html">2021年</a></li>
+            <li><a href="/blog/2021/01/index.html">01月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2021-01-05</time></div>
+        <h1 id="page-title">proxyrequire で外部ライブラリをモック化してテストする</h1>
+<div class="ad-amazon">
+  <div class="ad-amazon-image">
+    <a href="https://www.amazon.co.jp/dp/B077D2L69C?tag=neos21-22&amp;linkCode=osi&amp;th=1&amp;psc=1">
+      <img src="https://m.media-amazon.com/images/I/51qh3suMX0L._SL160_.jpg" width="113" height="160">
+    </a>
+  </div>
+  <div class="ad-amazon-info">
+    <div class="ad-amazon-title">
+      <a href="https://www.amazon.co.jp/dp/B077D2L69C?tag=neos21-22&amp;linkCode=osi&amp;th=1&amp;psc=1">テスト駆動開発</a>
+    </div>
+  </div>
+</div>
+<p>Mocha・Chai・Sinon を使ってユニットテストを書いている時、<code>require()</code> で読み込んだ外部ライブラリをモック化する必要が出た。</p>
+<p>具体的にいうと、<code>aws-sdk</code> パッケージを使った Lambda 関数を UT するために、<code>aws-sdk</code> が実際には通信を行わないよう、モック化する必要があった。</p>
+<p>コード中で <code>require()</code> しているパッケージをモック化するには、<strong><code>proxyrequire</code></strong> というパッケージを使うと簡単だった。</p>
+<ul>
+  <li><a href="https://github.com/tomitrescak/proxyrequire">tomitrescak/proxyrequire: The easiest way to stub/proxy module references across most bundlers</a></li>
+</ul>
+<p>まず、テスト対象のコードはこんな感じ。</p>
+<ul>
+  <li><code>my-function.js</code>
+    <ul>
+      <li>AWS SDK を使い、SSM Parameter Store から SecureString を取得するだけ</li>
+    </ul>
+  </li>
+</ul>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword">const</span> awsSdk <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'aws-sdk'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token keyword">const</span> ssm <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">awsSdk<span class="token punctuation">.</span>SSM</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+exports<span class="token punctuation">.</span><span class="token method-variable function-variable method function property-access">handler</span> <span class="token operator">=</span> <span class="token keyword">async</span> <span class="token punctuation">(</span><span class="token parameter">event<span class="token punctuation">,</span> context</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token keyword">const</span> secret <span class="token operator">=</span> <span class="token keyword control-flow">await</span> ssm<span class="token punctuation">.</span><span class="token method function property-access">getParameter</span><span class="token punctuation">(</span><span class="token punctuation">{</span>
+    <span class="token maybe-class-name">Name</span><span class="token operator">:</span> <span class="token string">'my-param'</span><span class="token punctuation">,</span>
+    <span class="token maybe-class-name">WithDecryption</span><span class="token operator">:</span> <span class="token boolean">true</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">promise</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  
+  <span class="token keyword">const</span> secureString <span class="token operator">=</span> secret<span class="token punctuation">.</span><span class="token property-access"><span class="token maybe-class-name">Parameter</span></span><span class="token punctuation">.</span><span class="token property-access"><span class="token maybe-class-name">Value</span></span><span class="token punctuation">;</span>
+  
+  context<span class="token punctuation">.</span><span class="token method function property-access">succeed</span><span class="token punctuation">(</span><span class="token punctuation">{</span>
+    <span class="token string">'My Secure String'</span><span class="token operator">:</span> secureString
+  <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+</code></pre>
+<p>続いて、テストコードはこんな感じ。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword">const</span> chai <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'chai'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">const</span> proxyquire <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'proxyquire'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">const</span> sinon <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'sinon'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token keyword">const</span> expect <span class="token operator">=</span> chai<span class="token punctuation">.</span><span class="token property-access">expect</span><span class="token punctuation">;</span>
+
+<span class="token function">describe</span><span class="token punctuation">(</span><span class="token string">'ユニットテスト'</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token keyword">let</span> myFunction <span class="token operator">=</span> <span class="token keyword null nil">null</span><span class="token punctuation">;</span>
+  <span class="token keyword">let</span> event <span class="token operator">=</span> <span class="token keyword null nil">null</span><span class="token punctuation">;</span>
+  <span class="token keyword">let</span> context <span class="token operator">=</span> <span class="token keyword null nil">null</span><span class="token punctuation">;</span>
+  
+  <span class="token keyword">let</span> mockSsm <span class="token operator">=</span> <span class="token keyword null nil">null</span><span class="token punctuation">;</span>
+  <span class="token keyword">let</span> stubGetParameter <span class="token operator">=</span> <span class="token keyword null nil">null</span><span class="token punctuation">;</span>
+  
+  <span class="token function">beforeEach</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+    event <span class="token operator">=</span> <span class="token punctuation">{</span><span class="token punctuation">}</span><span class="token punctuation">;</span>  <span class="token comment">// 今回は適当に…</span>
+    
+    context <span class="token operator">=</span> <span class="token punctuation">{</span>
+      <span class="token function-variable function">succeed</span><span class="token operator">:</span> <span class="token punctuation">(</span><span class="token parameter">result</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token known-class-name class-name">Promise</span><span class="token punctuation">.</span><span class="token method function property-access">resolve</span><span class="token punctuation">(</span>result<span class="token punctuation">)</span>  <span class="token comment">// Lambda 関数終了時の値を Promise で返すようにしておく</span>
+    <span class="token punctuation">}</span><span class="token punctuation">;</span>
+    
+    <span class="token comment">// モッククラスを作っておく。処理は書かなくて良いが関数定義が必要</span>
+    mockSsm <span class="token operator">=</span> <span class="token keyword">class</span> <span class="token punctuation">{</span>
+      <span class="token function">getParameter</span><span class="token punctuation">(</span><span class="token parameter">_params</span><span class="token punctuation">)</span> <span class="token punctuation">{</span> <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span><span class="token punctuation">;</span>
+    
+    <span class="token comment">// ProxyRequire を使う</span>
+    myFunction <span class="token operator">=</span> <span class="token function">proxyquire</span><span class="token punctuation">(</span><span class="token string">'../src/my-function.js'</span><span class="token punctuation">,</span> <span class="token punctuation">{</span>
+      <span class="token string">'aws-sdk'</span><span class="token operator">:</span> <span class="token punctuation">{</span>  <span class="token comment">// require() で指定している文字列をそのまま指定する</span>
+        <span class="token constant">SSM</span><span class="token operator">:</span> mockSsm  <span class="token comment">// モッククラスを注入する</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  
+  <span class="token function">it</span><span class="token punctuation">(</span><span class="token string">'正常系確認'</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token parameter">done</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+    <span class="token keyword">const</span> testSecureString <span class="token operator">=</span> <span class="token string">'Test Value'</span><span class="token punctuation">;</span>
+    
+    <span class="token comment">// モッククラスの関数を指定してフェイク処理を定義する</span>
+    <span class="token comment">// 戻り値とかはモック化対象のライブラリの仕様に合わせて頑張って組み立てる</span>
+    stubGetParameter <span class="token operator">=</span> sinon<span class="token punctuation">.</span><span class="token method function property-access">stub</span><span class="token punctuation">(</span>mockSsm<span class="token punctuation">.</span><span class="token property-access">prototype</span><span class="token punctuation">,</span> <span class="token string">'getParameter'</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">callsFake</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token parameter">params</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+      <span class="token function">expect</span><span class="token punctuation">(</span>params<span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token property-access">to</span><span class="token punctuation">.</span><span class="token property-access">deep</span><span class="token punctuation">.</span><span class="token method function property-access">equal</span><span class="token punctuation">(</span><span class="token punctuation">{</span> <span class="token maybe-class-name">Name</span><span class="token operator">:</span> <span class="token string">'my-param'</span><span class="token punctuation">,</span> <span class="token maybe-class-name">WithDecryption</span><span class="token operator">:</span> <span class="token boolean">true</span> <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token keyword control-flow">return</span> <span class="token punctuation">{</span>
+        <span class="token function-variable function">promise</span><span class="token operator">:</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+          <span class="token keyword control-flow">return</span> <span class="token known-class-name class-name">Promise</span><span class="token punctuation">.</span><span class="token method function property-access">resolve</span><span class="token punctuation">(</span><span class="token punctuation">{</span>
+            <span class="token maybe-class-name">Parameter</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+              <span class="token maybe-class-name">Value</span><span class="token operator">:</span> testSecureString
+            <span class="token punctuation">}</span>
+          <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token punctuation">}</span>
+      <span class="token punctuation">}</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    
+    myFunction<span class="token punctuation">.</span><span class="token method function property-access">handler</span><span class="token punctuation">(</span>event<span class="token punctuation">,</span> context<span class="token punctuation">)</span>  <span class="token comment">// 関数を実行する</span>
+      <span class="token punctuation">.</span><span class="token method function property-access">then</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token parameter">result</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+        <span class="token function">expect</span><span class="token punctuation">(</span>stubGetParameter<span class="token punctuation">.</span><span class="token property-access">called</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token property-access">to</span><span class="token punctuation">.</span><span class="token property-access">be</span><span class="token punctuation">.</span><span class="token boolean">true</span><span class="token punctuation">;</span>
+        <span class="token function">expect</span><span class="token punctuation">(</span>result<span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token property-access">to</span><span class="token punctuation">.</span><span class="token property-access">deep</span><span class="token punctuation">.</span><span class="token method function property-access">equal</span><span class="token punctuation">(</span><span class="token punctuation">{</span>
+          <span class="token string">'My Secure String'</span><span class="token operator">:</span> testSecureString
+        <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token function">done</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span><span class="token punctuation">)</span>
+      <span class="token punctuation">.</span><span class="token keyword control-flow">catch</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token parameter">error</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+        <span class="token function">done</span><span class="token punctuation">(</span>error<span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>こんな感じ。</p>
+<p>ProxyRequire の使用箇所は以下。</p>
+<pre class="language-javascript"><code class="language-javascript">myFunction <span class="token operator">=</span> <span class="token function">proxyquire</span><span class="token punctuation">(</span><span class="token string">'../src/my-function.js'</span><span class="token punctuation">,</span> <span class="token punctuation">{</span>
+  <span class="token string">'aws-sdk'</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+    <span class="token constant">SSM</span><span class="token operator">:</span> mockSsm
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>内部実装を見てみると、<code>require()</code> 部分の実装を <code>prototype</code> から書き換えて、モック化した関数を注入しているようだ。</p>
+<p>というか <code>require()</code> の実装が <code>require('module')</code> で拾えるの知らなかった…。</p>
+<ul>
+  <li>参考：<a href="https://nodejs.org/api/modules.html">Modules: CommonJS modules | Node.js v15.5.0 Documentation</a>
+    <ul>
+      <li>
+        <blockquote>
+          <p>The module system is implemented in the <code>require('module')</code> module.</p>
+        </blockquote>
+      </li>
+    </ul>
+  </li>
+</ul>
+<p>非同期関数と <code>done()</code> を組み合わせる際、<code>it()</code> に <code>async</code> が使えなかったので、<code>expect()</code> と <code>done()</code> での検証部分を普通の Promise で書いている。</p>
+<p>こねこねするのがなかなか大変だったが、proxyrequire でちゃんとモックが注入できたのでよきよき。</p><div class="ad-rakuten">
+  <div class="ad-rakuten-image">
+    <a href="https://hb.afl.rakuten.co.jp/hgc/g00q0722.waxyc9ff.g00q0722.waxyd017/?pc=https%3A%2F%2Fitem.rakuten.co.jp%2Fbook%2F14869144%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Fbook%2Fi%2F18539692%2F">
+      <img src="https://thumbnail.image.rakuten.co.jp/@0_mall/book/cabinet/7883/9784274217883.jpg?_ex=128x128">
+    </a>
+  </div>
+  <div class="ad-rakuten-info">
+    <div class="ad-rakuten-title">
+      <a href="https://hb.afl.rakuten.co.jp/hgc/g00q0722.waxyc9ff.g00q0722.waxyd017/?pc=https%3A%2F%2Fitem.rakuten.co.jp%2Fbook%2F14869144%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Fbook%2Fi%2F18539692%2F">テスト駆動開発 [ Kent Beck ]</a>
+    </div>
+    <div class="ad-rakuten-shop">
+      <a href="https://hb.afl.rakuten.co.jp/hgc/g00q0722.waxyc9ff.g00q0722.waxyd017/?pc=https%3A%2F%2Fwww.rakuten.co.jp%2Fbook%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Fbook%2F">楽天ブックス</a>
+    </div>
+    <div class="ad-rakuten-price">価格 : 3080円</div>
+  </div>
+</div>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2021-01-05</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2021-01-05</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

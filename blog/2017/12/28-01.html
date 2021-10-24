@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>Angular ライブラリを AoT コンパイルした上で Uglify する方法は？ - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2017/12/28-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2017/index.html">2017年</a></li>
+            <li><a href="/blog/2017/12/index.html">12月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2017-12-28</time></div>
+        <h1 id="page-title">Angular ライブラリを AoT コンパイルした上で Uglify する方法は？</h1>
+
+<p>Angular4 以降のプロジェクトで NgModule にまとめた便利ライブラリを作り、npm で公開しようと思っていた。そこで、Angular ライブラリを AoT コンパイルして提供できたらいいかもな？と思ってたら結構ドツボにハマったのでメモ…。</p>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#aot-%E3%82%B3%E3%83%B3%E3%83%91%E3%82%A4%E3%83%AB">AoT コンパイル</a></li>
+  <li><a href="#angular-%E3%83%A9%E3%82%A4%E3%83%96%E3%83%A9%E3%83%AA">Angular ライブラリ</a></li>
+  <li><a href="#aot--uglify">AoT + Uglify</a></li>
+  <li><a href="#webpack-%E3%83%97%E3%83%A9%E3%82%B0%E3%82%A4%E3%83%B3%E3%82%92%E4%BD%BF%E3%81%86%E6%96%B9%E6%B3%95">Webpack プラグインを使う方法…</a></li>
+  <li><a href="#rollup-%E3%83%97%E3%83%A9%E3%82%B0%E3%82%A4%E3%83%B3%E3%82%92%E4%BD%BF%E3%81%86%E6%96%B9%E6%B3%95">Rollup プラグインを使う方法…</a></li>
+  <li><a href="#%E3%82%82%E3%81%97%E3%81%8B%E3%81%97%E3%81%A6--angular-%E3%83%A9%E3%82%A4%E3%83%96%E3%83%A9%E3%83%AA%E3%81%AF-uglify-%E3%81%A7%E3%81%8D%E3%81%AA%E3%81%84%EF%BC%9F">もしかして : Angular ライブラリは Uglify できない？</a></li>
+  <li><a href="#%E5%80%8B%E5%88%A5%E3%81%AB-js-%E3%83%95%E3%82%A1%E3%82%A4%E3%83%AB%E3%82%92-uglify-%E3%81%97%E3%81%9F%E3%82%89%EF%BC%9F">個別に <code>.js</code> ファイルを Uglify したら…？</a></li>
+  <li><a href="#%E5%80%8B%E5%88%A5%E3%81%AB-js-%E3%83%95%E3%82%A1%E3%82%A4%E3%83%AB%E3%82%92-uglify-%E3%81%99%E3%82%8B%E3%81%9F%E3%82%81%E3%81%AE%E3%82%B9%E3%82%AF%E3%83%AA%E3%83%97%E3%83%88">個別に <code>.js</code> ファイルを Uglify するためのスクリプト</a></li>
+  <li><a href="#%E4%BD%95%E3%81%A7%E3%81%93%E3%82%93%E3%81%AA%E3%81%AB%E6%83%85%E5%A0%B1%E3%81%8C%E3%81%AA%E3%81%84%E3%81%AE%E3%81%A0%E3%82%8D%E3%81%86%EF%BC%9F">何でこんなに情報がないのだろう？</a></li>
+  <li><a href="#%E3%82%84%E3%82%8A%E6%96%B9%E3%81%8C%E3%81%82%E3%81%A3%E3%81%9F%E3%82%89%E6%95%99%E3%81%88%E3%81%A6%E3%81%8F%E3%81%A0%E3%81%95%E3%81%84%EF%BC%81">やり方があったら教えてください！</a></li>
+  <li><a href="#%E3%81%9D%E3%81%AE%E4%BB%96">その他</a></li>
+</ul>
+<h2 id="aot-コンパイル"><a class="header-link" href="#aot-コンパイル"><span class="header-link-mark"></span></a>AoT コンパイル</h2>
+<p>Angular には <strong>AoT (Ahead-of-Time)</strong> というコンパイル方式がある。<code>@angular/compiler-cli</code> パッケージが提供する <em><code>ngc</code></em> というコマンドを利用して、Angular プロジェクトを事前にコンパイルしておくのだ。これにより動作速度が速くなったり、ファイルサイズを小さく抑えられたりする。</p>
+<h2 id="angular-ライブラリ"><a class="header-link" href="#angular-ライブラリ"><span class="header-link-mark"></span></a>Angular ライブラリ</h2>
+<p>Angular は NgModule のみを提供し、「Angular アプリ向けのライブラリ」を作ることができる。<em>Angular ライブラリ</em>を npm 等でインストールし、<code>AppModule</code> に <code>imports</code> してもらうものだ。</p>
+<p>この場合も、AoT コンパイルを行っておき、Angular ライブラリのファイルサイズを押さえておくことができる。</p>
+<h2 id="aot--uglify"><a class="header-link" href="#aot--uglify"><span class="header-link-mark"></span></a>AoT + Uglify</h2>
+<p>ところで、この <code>ngc</code> コマンドは、生成するソースファイルを Uglify (ソース圧縮・難読化) してくれない。難読化するオプションもないようなのだ。ソースが圧縮できれば、提供する Angular ライブラリのファイルサイズももう少し減らせそうなのだが…。</p>
+<p>そう思い、調べてみた。</p>
+<h2 id="webpack-プラグインを使う方法"><a class="header-link" href="#webpack-プラグインを使う方法"><span class="header-link-mark"></span></a>Webpack プラグインを使う方法…</h2>
+<p>Angular CLI の中で Webpack を使っている関係か、Webpack を使った Angular プロジェクトのビルドに関する文献は結構多かったので、色々調べてみた。</p>
+<ul>
+  <li>参考：<a href="https://medium.com/lacolaco-blog/aot-compilation-with-webpack-359ac9f4916f">Angular 2 AoT Compilation with webpack – lacolaco-blog – Medium</a></li>
+</ul>
+<p>日本人 Angular コントリビュータとして有名な <a href="https://lacolaco.net/">Laco さん</a>の記事。<code>@ngtools/webpack</code> が提供する <em>AotPlugin</em> と、<strong>UglifyJsPlugin</strong> を組み合わせてビルドする方法が紹介されていた。</p>
+<p>しかしこれは Angular アプリを AoT コンパイル + Uglify する方法で、Angular ライブラリをビルドする方法として応用できなかった。</p>
+<ul>
+  <li>参考：<a href="https://github.com/shlomiassaf/ngc-webpack">GitHub - shlomiassaf/ngc-webpack: Angular compiler-cli with webpack's loader chain.</a></li>
+</ul>
+<p>次に、<em>ngc-webpack</em> という npm パッケージがあったので試してみたが、どうもビルド時にエラーが発生してしまい使えなかった。</p>
+<p>というワケで Webpack を使う方法は断念。</p>
+<h2 id="rollup-プラグインを使う方法"><a class="header-link" href="#rollup-プラグインを使う方法"><span class="header-link-mark"></span></a>Rollup プラグインを使う方法…</h2>
+<p>Webpack の後にちょっと話題になってからあんまり話を聞かなくなった Rollup。</p>
+<ul>
+  <li>参考：<a href="http://postd.cc/webpack-and-rollup-the-same-but-different/">webpackとRollup：似て非なるもの | プログラミング | POSTD</a></li>
+</ul>
+<blockquote>
+  <p>アプリケーションにはwebpackを、ライブラリにはRollupを使おう</p>
+</blockquote>
+<p>なんて云われていたりするようなので、ちょっと調べてみた。</p>
+<p>すると、Rollup のプラグインに <strong>rollup-plugin-angular-aot</strong> というモノがあったので、これを使って AoT コンパイルを試みた。</p>
+<ul>
+  <li>参考：<a href="https://www.npmjs.com/package/rollup-plugin-angular-aot">rollup-plugin-angular-aot</a></li>
+</ul>
+<p>しかし、<code>import * as</code> という記法があるとビルドができなかったり、Import していいる外部 npm パッケージまでまとめてバンドルされてしまったりで、TypeScript のコンパイルを制御しきれず断念…。</p>
+<h2 id="もしかして--angular-ライブラリは-uglify-できない？"><a class="header-link" href="#もしかして--angular-ライブラリは-uglify-できない？"><span class="header-link-mark"></span></a>もしかして : Angular ライブラリは Uglify できない？</h2>
+<p><code>ngc</code> コマンドで Angular ライブラリを生成すると、ビルドされた <code>.js</code> ファイルの他に、<code>.metadata.json</code> と <code>.d.ts</code> というファイルを同時に生成してくる。</p>
+<p><code>.js.map</code> については単なるソースマップなので、利用者に配布しなくても問題はない。<code>tsconfig.json</code> で <code>"sourceMap": false</code> を指定して出力しないようにしても問題ない。</p>
+<p>しかし、<code>.metadata.json</code> と <code>.d.ts</code> についてはライブラリの利用者にも配布しなければならず、これらのファイルが欠けると「Error encountered resolving symbol…」といったエラーが発生してしまう。</p>
+<blockquote>
+  <p>All referenced libraries must include the <code>.metadata.json</code> file along side any <code>.d.ts</code> files they produce otherwise they will not work correctly with <code>ngc</code>.<br>The <code>.metadata.json</code> file contains the information we need that was in the original <code>.ts</code> file but was not included in the <code>.d.ts</code> file.<br>If we don't have that information we cannot generate the factories for the library.</p>
+</blockquote>
+<ul>
+  <li>参考：<a href="https://github.com/angular/angular/issues/11262#issuecomment-244472000">Angular2 AoT Compiler Errors · Issue #11262 · angular/angular · GitHub</a></li>
+  <li>参考：<a href="https://medium.com/@isaacplmann/getting-your-angular-2-library-ready-for-aot-90d1347bcad">Getting your Angular 2 library ready for AoT – Isaac Mann – Medium</a></li>
+</ul>
+<p>自分の拙い英語力で翻訳すると、</p>
+<p>「全ての参照されるライブラリ (Angular アプリから利用する Angular ライブラリ、ということだろう) には、<code>.metadata.json</code> と <code>.d.ts</code> ファイルが同梱されていないといけない。そうしないと <code>ngc</code> コマンドが正しく動作しない。<code>.metadata.json</code> は、<code>.d.ts</code> ファイルには含まれていない、元の <code>.ts</code> ファイルの情報が書かれている。この <code>.metadata.json</code> の情報がないと、ライブラリからファクトリを生成できない。」</p>
+<p>ということみたいだ。</p>
+<p>ということは、Uglify-JS によって複数の <code>.js</code> ファイルを一つに結合してしまうと、後で情報を復元できなくなりそうだ。</p>
+<h2 id="個別に-js-ファイルを-uglify-したら？"><a class="header-link" href="#個別に-js-ファイルを-uglify-したら？"><span class="header-link-mark"></span></a>個別に <code>.js</code> ファイルを Uglify したら…？</h2>
+<p><code>$ ng build --prod --aot</code> のような感じで、AoT コンパイルした結果を1つのファイルにまとめて難読化できたら最高だったが、<code>ngc</code> コマンドでビルドする Angular ライブラリの場合はこうした仕組みは用意されていないようだ。</p>
+<p>しかし、<strong><code>ngc</code> で生成した <code>.js</code> ファイルを一つずつ Uglify-JS で変換</strong>してみると、コレは上手く Angular アプリで利用できた。ひとまずこのやり方しかないだろうか。</p>
+<h2 id="個別に-js-ファイルを-uglify-するためのスクリプト"><a class="header-link" href="#個別に-js-ファイルを-uglify-するためのスクリプト"><span class="header-link-mark"></span></a>個別に <code>.js</code> ファイルを Uglify するためのスクリプト</h2>
+<p>ということで、<code>ngc</code> コマンドが生成したディレクトリを対象に、<code>.js</code> ファイルを見付けては個別に Uglify-JS を実行する Node.js スクリプトを書いてみた。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword">const</span> path <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'path'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">const</span> fs   <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'fs'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">const</span> uglifyJs  <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'uglify-js'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>          <span class="token comment">// Uglify-JS</span>
+<span class="token keyword">const</span> recursive <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'recursive-readdir'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment">// ディレクトリ配下のファイルを再帰的に取得する</span>
+
+<span class="token comment">// ngc でコンパイルしたファイルが dist/ ディレクトリ配下に置いてあるテイ</span>
+<span class="token comment">// .js 以外のファイルを予め避けておく</span>
+<span class="token function">recursive</span><span class="token punctuation">(</span>path<span class="token punctuation">.</span><span class="token method function property-access">resolve</span><span class="token punctuation">(</span>__dirname<span class="token punctuation">,</span> <span class="token string">'dist'</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token punctuation">[</span><span class="token string">'*.d.ts'</span><span class="token punctuation">,</span> <span class="token string">'*.metadata.json'</span><span class="token punctuation">]</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token parameter">error<span class="token punctuation">,</span> files</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token comment">// エラーがあった場合は異常終了</span>
+  <span class="token keyword control-flow">if</span> <span class="token punctuation">(</span>error<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">error</span><span class="token punctuation">(</span>error<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    process<span class="token punctuation">.</span><span class="token method function property-access">on</span><span class="token punctuation">(</span><span class="token string">'exit'</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+      process<span class="token punctuation">.</span><span class="token method function property-access">exit</span><span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword control-flow">return</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  
+  files<span class="token punctuation">.</span><span class="token method function property-access">forEach</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token parameter">file</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+    <span class="token comment">// .js 以外のファイルを処理しないようにする</span>
+    <span class="token keyword control-flow">if</span> <span class="token punctuation">(</span><span class="token operator">!</span>file<span class="token punctuation">.</span><span class="token method function property-access">endsWith</span><span class="token punctuation">(</span><span class="token string">'.js'</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token keyword control-flow">return</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+    
+    <span class="token comment">// Uglify したコードを取得しておく</span>
+    <span class="token keyword">const</span> resultCode <span class="token operator">=</span> uglifyJs<span class="token punctuation">.</span><span class="token method function property-access">minify</span><span class="token punctuation">(</span><span class="token punctuation">{</span>
+      file<span class="token operator">:</span> fs<span class="token punctuation">.</span><span class="token method function property-access">readFileSync</span><span class="token punctuation">(</span>file<span class="token punctuation">,</span> <span class="token string">'utf8'</span><span class="token punctuation">)</span>
+    <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token property-access">code</span><span class="token punctuation">;</span>
+    <span class="token comment">// 同ファイルに書き出す</span>
+    fs<span class="token punctuation">.</span><span class="token method function property-access">writeFileSync</span><span class="token punctuation">(</span>file<span class="token punctuation">,</span> resultCode<span class="token punctuation">,</span> <span class="token string">'utf8'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>雑だけどコレで一応難読化っぽいことはできた。ソース圧縮の観点でいえば、単一ファイルにまとめ、Tree Shaking とかできるといいのかもしれないけど…。</p>
+<h2 id="何でこんなに情報がないのだろう？"><a class="header-link" href="#何でこんなに情報がないのだろう？"><span class="header-link-mark"></span></a>何でこんなに情報がないのだろう？</h2>
+<p>Angular ライブラリを AoT コンパイルして Uglify する、という情報がこんなにも少ないのは何故？と思ったが、それは多分 <strong>Angular ライブラリを AoT コンパイルしてから Uglify するメリットがあまりないから</strong>かなと思った。</p>
+<ul>
+  <li>OSS としてソースを公開している場合が多く、難読化したコードのみを展開する機会がない。
+    <ul>
+      <li>npm パッケージとして提供し、GitHub で管理している場合が多いだろう。</li>
+      <li>そもそも JavaScript なので、ソースの盗用などは回避しきれない面もある。いくら難読化していても、盗用防止の面では限界がある。</li>
+    </ul>
+  </li>
+  <li>Angular ライブラリは Angular アプリに Import されて初めて使われるモノ。であれば、<em>ソース圧縮はライブラリを利用するアプリ側でまとめてやれば良いこと。</em>ライブラリ側で予め圧縮しておいて展開するメリットがあまりない。
+    <ul>
+      <li>だから <em>Angular アプリを</em> AoT コンパイルして Uglify するノウハウの方は出回っている。</li>
+    </ul>
+  </li>
+</ul>
+<p>…こんなところかな。元々、盗用を気にするプロダクト向けのノウハウが少ない言語・FW ということもあるし、「圧縮は利用するアプリでやれば結果いいじゃん」という至極もっともな考え方かな、と。</p>
+<h2 id="やり方があったら教えてください！"><a class="header-link" href="#やり方があったら教えてください！"><span class="header-link-mark"></span></a>やり方があったら教えてください！</h2>
+<p>とはいえ、できないことがあるのは、それだけでモヤモヤする。</p>
+<p><strong>Angular ライブラリを AoT コンパイル + Uglify するやり方があったら教えてください！</strong></p>
+<h2 id="その他"><a class="header-link" href="#その他"><span class="header-link-mark"></span></a>その他</h2>
+<p>以下試していないけど、AoT とか Uglify とかやれそうな感じのモノ。時間ができたら試す…。</p>
+<ul>
+  <li>参考：<a href="https://github.com/jvandemo/generator-angular2-library">GitHub - jvandemo/generator-angular2-library: Yeoman generator to create an Angular library</a></li>
+  <li>参考：<a href="https://github.com/shlomiassaf/angular-library-starter">GitHub - shlomiassaf/angular-library-starter: Your last library starter. A complete, @angular grade, library starter</a></li>
+</ul>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2017-12-28</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2017-12-28</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

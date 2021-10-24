@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>Kubernetes Secret に登録した情報を Base64 デコードして表示する - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2019/04/01-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2019/index.html">2019年</a></li>
+            <li><a href="/blog/2019/04/index.html">04月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2019-04-01</time></div>
+        <h1 id="page-title">Kubernetes Secret に登録した情報を Base64 デコードして表示する</h1>
+
+<p>Kubernetes の Secret に登録した情報は、Base64 エンコードされた状態で保持される。そのため、<code>kubectl get secret</code> で情報を表示させても、Base64 文字列しか見えず、内容が確認しづらい。</p>
+<p>勿論、登録された値を <code>base64 --decode</code> コマンドに流してやれば見えるものの、<code>--from-env-file</code> で一括登録したような環境変数たちを見る時は大変だ。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># 環境変数ファイルを登録した場合</span>
+$ kubectl create secret generic my-env-file-secret --from-env-file<span class="token operator">=</span>./.env
+</code></pre>
+<p>そこで、JSON パーサの <strong><code>jq</code></strong> を組み合わせて、登録されている Secret を Base64 デコードして表示してみる。</p>
+<p>まずは生の Secret の状態を確認。</p>
+<pre class="language-bash"><code class="language-bash">$ kubectl get secret my-env-file-secret -o json
+
+<span class="token punctuation">{</span>
+  <span class="token string">"apiVersion"</span><span class="token builtin class-name">:</span> <span class="token string">"v1"</span>,
+  <span class="token string">"data"</span><span class="token builtin class-name">:</span> <span class="token punctuation">{</span>
+    <span class="token string">"MY_ENV"</span><span class="token builtin class-name">:</span> <span class="token string">"Hzzzzz="</span>,
+    <span class="token string">"MY_API_KEY"</span><span class="token builtin class-name">:</span> <span class="token string">"Lyyyyy="</span>,
+    <span class="token string">"MY_TOKEN"</span><span class="token builtin class-name">:</span> <span class="token string">"Rxxxxx="</span>
+  <span class="token punctuation">}</span>,
+  <span class="token string">"kind"</span><span class="token builtin class-name">:</span> <span class="token string">"Secret"</span>,
+  <span class="token string">"type"</span><span class="token builtin class-name">:</span> <span class="token string">"Opaque"</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>こんな風に、<code>data</code> プロパティ配下に3つの環境変数が見えるが、値はいずれも Base64 エンコードされている。</p>
+<p>そこで、この出力結果をパイプで <code>jq</code> に渡して、以下のように処理する。</p>
+<pre class="language-bash"><code class="language-bash">$ kubectl get secret my-env-file-secret -o json <span class="token operator">|</span> jq -r <span class="token string">'.data | to_entries | map( .key + "=" + (.value|@base64d) )[]'</span>
+
+<span class="token assign-left variable">MY_ENV</span><span class="token operator">=</span>HelloWorld
+<span class="token assign-left variable">MY_API_KEY</span><span class="token operator">=</span>KeyHogeHoge
+<span class="token assign-left variable">MY_TOKEN</span><span class="token operator">=</span>TokenTokenToken
+</code></pre>
+<p>すると、こんな感じで表示される。</p>
+<p><code>data</code> プロパティに絞り込んだら、<code>to_entries</code> というパイプを使い、通常の連想配列を以下のような配列に変換する。</p>
+<pre class="language-json"><code class="language-json"><span class="token punctuation">[</span>
+  <span class="token punctuation">{</span>
+    <span class="token property">"key"</span><span class="token operator">:</span> <span class="token string">"MY_ENV"</span><span class="token punctuation">,</span>
+    <span class="token property">"value"</span><span class="token operator">:</span> <span class="token string">"Hzzzzz="</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token comment">// 以下略…</span>
+<span class="token punctuation">]</span>
+</code></pre>
+<p>そしたら <code>map()</code> にパイプして、<code>.key</code> と <code>.value</code> を連結させてやる。そして、<code>.value</code> の方は Base64 エンコードされた文字列なので、<code>jq</code> が持つ <strong><code>@base64d</code></strong> というパイプを適用してデコードする。</p>
+<p>ココまでやると、</p>
+<pre class="language-json"><code class="language-json"><span class="token punctuation">[</span>
+  <span class="token string">"MY_ENV=HelloWorld"</span><span class="token punctuation">,</span>
+  <span class="token string">"MY_API_KEY=KeyHogeHoge"</span><span class="token punctuation">,</span>
+  <span class="token comment">// 以下略</span>
+<span class="token punctuation">]</span>
+</code></pre>
+<p>といった出力形式になるので、末尾に <code>[]</code> を付与して配列内にフィルタして出力する、というワケ。</p>
+<p>コレでよきよき。</p>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2019-04-01</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2019-04-01</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

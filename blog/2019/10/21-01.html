@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>Node.js の Child Process 研究 : fork の使い方、子プロセスの切り方を検証 - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2019/10/21-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2019/index.html">2019年</a></li>
+            <li><a href="/blog/2019/10/index.html">10月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2019-10-21</time></div>
+        <h1 id="page-title">Node.js の Child Process 研究 : fork の使い方、子プロセスの切り方を検証</h1>
+
+<p>Node.js の組み込みモジュール <code>child_process</code> にある、<code>fork()</code> 関数。<code>require()</code> で他の JS ファイルを読み込むのと違って、指定の JS ファイルを別の <code>node</code> プロセスで起動できるのがこの関数の特徴だ。</p>
+<p>今回は、この関数の特徴、使いどころ、子プロセスの終了の仕方をまとめる。</p>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#fork-%E3%81%AE%E5%9F%BA%E6%9C%AC%E7%9A%84%E3%81%AA%E4%BD%BF%E3%81%84%E6%96%B9"><code>fork()</code> の基本的な使い方</a></li>
+  <li><a href="#fork-%E3%81%AE%E4%BD%BF%E3%81%84%E3%81%A9%E3%81%93%E3%82%8D"><code>fork()</code> の使いどころ</a></li>
+  <li><a href="#%E5%87%A6%E7%90%86%E3%81%8C%E7%B5%82%E3%82%8F%E3%81%A3%E3%81%9F%E5%AD%90%E3%83%97%E3%83%AD%E3%82%BB%E3%82%B9%E3%82%92%E7%B5%82%E4%BA%86%E3%81%95%E3%81%9B%E3%81%9F%E3%81%84">処理が終わった子プロセスを終了させたい</a></li>
+  <li><a href="#processonce-%E3%81%A71%E5%9B%9E%E3%81%A0%E3%81%91%E3%82%A4%E3%83%99%E3%83%B3%E3%83%88%E8%A8%AD%E5%AE%9A%E3%81%99%E3%82%8B"><code>process.once()</code> で1回だけイベント設定する</a></li>
+  <li><a href="#%E5%AD%90%E3%83%97%E3%83%AD%E3%82%BB%E3%82%B9%E3%81%A7-processremovealllisteners-%E3%82%92%E5%AE%9F%E8%A1%8C%E3%81%99%E3%82%8B">子プロセスで <code>process.removeAllListeners()</code> を実行する</a></li>
+  <li><a href="#%E8%A6%AA%E3%83%97%E3%83%AD%E3%82%BB%E3%82%B9%E3%81%A7-childprocessdisconnect-%E3%82%92%E5%AE%9F%E8%A1%8C%E3%81%99%E3%82%8B">親プロセスで <code>ChildProcess.disconnect()</code> を実行する</a></li>
+  <li><a href="#%E8%A6%AA%E3%83%97%E3%83%AD%E3%82%BB%E3%82%B9%E3%81%A7-childprocesskill-%E3%82%92%E5%AE%9F%E8%A1%8C%E3%81%99%E3%82%8B">親プロセスで <code>ChildProcess.kill()</code> を実行する</a></li>
+  <li><a href="#%E3%81%9D%E3%81%AE%E4%BB%96">その他</a></li>
+  <li><a href="#%E7%B5%90%E5%B1%80%E3%81%A9%E3%81%AE%E3%82%84%E3%82%8A%E6%96%B9%E3%81%A7%E5%AD%90%E3%83%97%E3%83%AD%E3%82%BB%E3%82%B9%E3%82%92%E7%B5%82%E4%BA%86%E3%81%95%E3%81%9B%E3%82%8B%E3%81%B9%E3%81%8D%E3%81%8B%EF%BC%9F">結局どのやり方で子プロセスを終了させるべきか？</a></li>
+</ul>
+<h2 id="fork-の基本的な使い方"><a class="header-link" href="#fork-の基本的な使い方"><span class="header-link-mark"></span></a><code>fork()</code> の基本的な使い方</h2>
+<p><code>child_process.fork()</code> は、<code>require()</code> に近い書式で JS ファイルを指定し、その JS ファイルを呼び出し元とは別の <code>node</code> プロセスで実行する。Node.js は基本的にシングルプロセス・シングルスレッドで動作するので、このように別プロセスに処理を分ければ、マルチプロセスで処理ができるというワケ。</p>
+<p>そして、呼び出し元である親プロセスと、呼び出された子プロセスとは、<em>IPC (Inter Process Communication) 通信</em>によって情報をやり取りできる。親プロセスから子プロセスにパラメータを渡し、子プロセスから親プロセスへ演算結果を返す、といったことが可能だ。</p>
+<p>基本的なコーディングの方法は以下のとおり。</p>
+<ul>
+  <li><code>my-parent.js</code> … 親プロセス</li>
+</ul>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword">const</span> childProcess <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'child_process'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// 本ファイルと同ディレクトリにある my-child.js のプロセスを生成する</span>
+<span class="token keyword">const</span> myChild <span class="token operator">=</span> childProcess<span class="token punctuation">.</span><span class="token method function property-access">fork</span><span class="token punctuation">(</span><span class="token string">'./my-child'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+myChild<span class="token punctuation">.</span><span class="token method function property-access">on</span><span class="token punctuation">(</span><span class="token string">'message'</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token parameter">message</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'子プロセスからメッセージを受信'</span><span class="token punctuation">,</span> message<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// 子プロセスにメッセージを送信</span>
+myChild<span class="token punctuation">.</span><span class="token method function property-access">send</span><span class="token punctuation">(</span><span class="token string">'message'</span><span class="token punctuation">,</span> <span class="token string">'From Parent'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<ul>
+  <li><code>my-child.js</code> … 子プロセス</li>
+</ul>
+<pre class="language-javascript"><code class="language-javascript">process<span class="token punctuation">.</span><span class="token method function property-access">on</span><span class="token punctuation">(</span><span class="token string">'message'</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token parameter">message</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'親プロセスからメッセージを受信'</span><span class="token punctuation">,</span> message<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// 親プロセスにメッセージを送信</span>
+process<span class="token punctuation">.</span><span class="token method function property-access">send</span><span class="token punctuation">(</span><span class="token string">'From Child'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>まず親プロセスのファイルから、子プロセスを <code>fork()</code> で生成する。<code>fork()</code> 関数の戻り値は <code>ChildProcess</code> クラスのインスタンスで、<code>EventEmitter</code> のようにイベントが設定できる。<code>on('message')</code> でメッセージ受信時の処理を指定し、<code>send()</code> でメッセージを送る。送る内容は裏で文字列化されるようだが、オブジェクトなどをそのまま指定して送ったりもできる。</p>
+<p>一方、子プロセスの方は、<code>process.on('message')</code> で親プロセスからメッセージを受信した時の処理を書いておき、<code>process.send()</code> を使って親プロセスにメッセージを送る。</p>
+<h2 id="fork-の使いどころ"><a class="header-link" href="#fork-の使いどころ"><span class="header-link-mark"></span></a><code>fork()</code> の使いどころ</h2>
+<p><code>child_process.fork()</code> を使えば、呼び出し元とは別の <code>node</code> プロセスで実行できるワケだが、どういう時に使うと良いか。</p>
+<p>例えば、HTTP 通信や Promise を使った非同期処理などは、シングルスレッドで動作する Node.js の中で<em>イベントループ</em>という仕組みによって制御されている。これらの処理によって他の処理が長時間ブロックされることはないワケで、であれば別プロセスに切り出す必要性はあまりない。</p>
+<ul>
+  <li>参考：<a href="https://postd.cc/understanding-the-nodejs-event-loop/">Node.jsのイベントループを理解する | POSTD</a></li>
+</ul>
+<p>じゃあ別プロセスに切り出した方が良い処理とは何かというと、<strong>CPU バウンド (CPU の処理能力を利用する) な同期処理</strong>を回避させる際に使うと良いだろう。</p>
+<p>例えば、<code>JSON.stringify()</code> や <code>JSON.parse()</code> などは、CPU とメモリに負荷のかかる、同期処理だ。通常の用途であれば気にならないが、大容量のテキストファイルから <code>JSON.parse()</code> したりしようとすると、処理が完了するまではこの関数がスレッドを専有し、他の処理がブロックされて動かなくなってしまう。</p>
+<p>コレを回避するには、CPU バウンドな処理を別のプロセスで実行し、実行結果を非同期に取得するやり方を取る。</p>
+<ul>
+  <li><code>my-parent.js</code> … 親プロセス</li>
+</ul>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword">const</span> childProcess <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'child_process'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// 重い処理を実行させる子プロセスを生成する</span>
+<span class="token keyword">const</span> myChild <span class="token operator">=</span> childProcess<span class="token punctuation">.</span><span class="token method function property-access">fork</span><span class="token punctuation">(</span><span class="token string">'./my-child'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+myChild<span class="token punctuation">.</span><span class="token method function property-access">on</span><span class="token punctuation">(</span><span class="token string">'message'</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token parameter">jsonObj</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'子プロセスから結果を受信'</span><span class="token punctuation">,</span> jsonObj<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// 子プロセスに処理対象のファイルパスを送ることにする</span>
+myChild<span class="token punctuation">.</span><span class="token method function property-access">send</span><span class="token punctuation">(</span><span class="token string">'message'</span><span class="token punctuation">,</span> <span class="token punctuation">{</span> filePath<span class="token operator">:</span> <span class="token string">'./large-file.json'</span> <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<ul>
+  <li><code>my-child.js</code> … 子プロセス</li>
+</ul>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword">const</span> fs <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'fs'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+process<span class="token punctuation">.</span><span class="token method function property-access">on</span><span class="token punctuation">(</span><span class="token string">'message'</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token parameter">message</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'このファイルを JSON パースして返す'</span><span class="token punctuation">,</span> message<span class="token punctuation">.</span><span class="token property-access">filePath</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">const</span> file <span class="token operator">=</span> fs<span class="token punctuation">.</span><span class="token method function property-access">readFileSync</span><span class="token punctuation">(</span>message<span class="token punctuation">.</span><span class="token property-access">filePath</span><span class="token punctuation">,</span> <span class="token string">'utf-8'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  
+  <span class="token comment">// 以下の同期処理に時間がかかる</span>
+  <span class="token keyword">const</span> jsonObj <span class="token operator">=</span> <span class="token known-class-name class-name">JSON</span><span class="token punctuation">.</span><span class="token method function property-access">parse</span><span class="token punctuation">(</span>file<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  
+  <span class="token comment">// 親プロセスに結果を送信する</span>
+  process<span class="token punctuation">.</span><span class="token method function property-access">send</span><span class="token punctuation">(</span>jsonObj<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>…こんな感じで、<code>JSON.parse()</code> 実行中も親プロセスでは他の処理ができるようになり、パース結果は子プロセスの処理を待って非同期に受け取るというワケだ。</p>
+<h2 id="処理が終わった子プロセスを終了させたい"><a class="header-link" href="#処理が終わった子プロセスを終了させたい"><span class="header-link-mark"></span></a>処理が終わった子プロセスを終了させたい</h2>
+<p>さて、このような実装をした時に、<strong>子プロセスは自然に終了してくれない。</strong>実装した人間の感覚からすると、「もう <code>JSON.parse()</code> は終わったし、親プロセスに結果を返したから、子プロセスはお役御免だよ」と思うのだが、<code>process.on()</code> で設定したイベントを解除していないので、「まだイベントが飛んでくるかも」と待機した状態になるのだ。</p>
+<p>つまり、親子間で通信が終わったことを示すための実装を追加しないと、子プロセスは生成されたまま残り続けてしまうワケだ。</p>
+<p>コレを解消する方法はいくつかあるので、それぞれ調べた結果を紹介する。</p>
+<h2 id="processonce-で1回だけイベント設定する"><a class="header-link" href="#processonce-で1回だけイベント設定する"><span class="header-link-mark"></span></a><code>process.once()</code> で1回だけイベント設定する</h2>
+<p>コレまで、子プロセスでは <code>process.on()</code> を使ってイベント設定していたが、コレを <strong><code>process.once()</code></strong> に変える、という方法。</p>
+<p><code>process.on()</code> を使うと、同じイベントが何度も飛んでくるかもしれない、と待機を続ける動きになるが、<code>process.once()</code> にした場合は、1回イベントを受信したら、イベント登録を解除する。そのため、子プロセスでやることがなくなり、子プロセスが終了するというワケだ。</p>
+<p>先程のサンプルコードでいうと、子プロセス側の実装をこのように直すだけ。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token comment">//      ↓ ココを on() ではなく once() にするだけ</span>
+process<span class="token punctuation">.</span><span class="token method function property-access">once</span><span class="token punctuation">(</span><span class="token string">'message'</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token parameter">message</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token comment">// 何か時間のかかる処理…</span>
+  
+  <span class="token comment">// 親プロセスに結果を送信する</span>
+  process<span class="token punctuation">.</span><span class="token method function property-access">send</span><span class="token punctuation">(</span><span class="token string">'From Child'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>このやり方は、親プロセス側、子プロセス側ともに、明示的にプロセスを終了させるコードが出てこないことになるので、シンプルかもしれない。</p>
+<p>ただ、子プロセスで設定したイベントが1回も呼ばれない場合は、そのプロセスが残り続けるので、呼び忘れに注意。</p>
+<h2 id="子プロセスで-processremovealllisteners-を実行する"><a class="header-link" href="#子プロセスで-processremovealllisteners-を実行する"><span class="header-link-mark"></span></a>子プロセスで <code>process.removeAllListeners()</code> を実行する</h2>
+<p>次は、子プロセス側から明示的にプロセスの終了を呼ぶ方法。</p>
+<p>子プロセスでは <code>process.on()</code> や <code>process.send()</code> など、<code>process</code> というグローバル変数を使うが、この変数は <code>node</code> プロセスが異なるので、親プロセス側のコードで使っている <code>process</code> とは別物になる。</p>
+<p>そこで、子プロセス内に定義されている全てのリスナを解除することで、子プロセスがやることをなくし、子プロセスを終了させる。</p>
+<pre class="language-javascript"><code class="language-javascript">process<span class="token punctuation">.</span><span class="token method function property-access">on</span><span class="token punctuation">(</span><span class="token string">'message'</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token parameter">message</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token comment">// 何か時間のかかる処理…</span>
+  
+  <span class="token comment">// 親プロセスに結果を送信する</span>
+  process<span class="token punctuation">.</span><span class="token method function property-access">send</span><span class="token punctuation">(</span><span class="token string">'From Child'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  
+  <span class="token comment">// 本プロセスのリスナを全解除し終了する</span>
+  process<span class="token punctuation">.</span><span class="token method function property-access">removeAllListeners</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// 以下のように、他にイベント処理があると removeAllListeners() では上手くプロセス終了できない</span>
+<span class="token comment">// setInterval(() => console.log('インターバル処理'), 1000);</span>
+</code></pre>
+<p>子プロセス内で <code>setInterval()</code> などを設定していると、<code>process.removeAllListeners()</code> では上手く終了させられなかったりする。実装に合わせて活用しよう。</p>
+<p>当然ながら、親プロセス側で <code>process.removeAllListeners()</code> を呼んでも意味がないので注意。</p>
+<h2 id="親プロセスで-childprocessdisconnect-を実行する"><a class="header-link" href="#親プロセスで-childprocessdisconnect-を実行する"><span class="header-link-mark"></span></a>親プロセスで <code>ChildProcess.disconnect()</code> を実行する</h2>
+<p>3つ目は、親プロセスから <em><code>ChildProcess.disconnect()</code></em> を呼んでやる方法。この関数は IPC 接続を切断するモノなので、IPC 切断によりやることがなくなった子プロセスが終了する、というワケ。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword">const</span> childProcess <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'child_process'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token keyword">const</span> myChild <span class="token operator">=</span> childProcess<span class="token punctuation">.</span><span class="token method function property-access">fork</span><span class="token punctuation">(</span><span class="token string">'./my-child'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+myChild<span class="token punctuation">.</span><span class="token method function property-access">on</span><span class="token punctuation">(</span><span class="token string">'message'</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token parameter">jsonObj</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'子プロセスから結果を受信'</span><span class="token punctuation">,</span> jsonObj<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  
+  <span class="token comment">// 子プロセスとの通信を切断する</span>
+  myChild<span class="token punctuation">.</span><span class="token method function property-access">disconnect</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// 切断・終了関連のイベントを定義しておく</span>
+myChild<span class="token punctuation">.</span><span class="token method function property-access">on</span><span class="token punctuation">(</span><span class="token string">'disconnect'</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span> <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'IPC 接続を終了'</span>  <span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+myChild<span class="token punctuation">.</span><span class="token method function property-access">on</span><span class="token punctuation">(</span><span class="token string">'exit'</span>      <span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span> <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'プロセス終了'</span>    <span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+myChild<span class="token punctuation">.</span><span class="token method function property-access">on</span><span class="token punctuation">(</span><span class="token string">'close'</span>     <span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span> <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'標準入出力を終了'</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// 子プロセスに処理を開始させる</span>
+myChild<span class="token punctuation">.</span><span class="token method function property-access">send</span><span class="token punctuation">(</span><span class="token string">'message'</span><span class="token punctuation">,</span> <span class="token punctuation">{</span> filePath<span class="token operator">:</span> <span class="token string">'./large-file.json'</span> <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>子プロセス側は <code>process.removeAllListeners()</code> などは不要。</p>
+<p>このように実装すると、子プロセスからメッセージを受け取った後、<code>myChild.on('disconnect')</code> → <code>myChild.on('exit')</code> が順に実行され、子プロジェクトが終了する。標準入出力を閉じる <code>myChild.on('close')</code> は実行されないようだった。</p>
+<h2 id="親プロセスで-childprocesskill-を実行する"><a class="header-link" href="#親プロセスで-childprocesskill-を実行する"><span class="header-link-mark"></span></a>親プロセスで <code>ChildProcess.kill()</code> を実行する</h2>
+<p>最後4つ目は、親プロセスから <strong><code>ChildProcess.kill()</code></strong> を呼ぶモノ。<code>disconnect()</code> に似ているが、コチラは <code>SIGTERM</code> シグナルが送信されるので、一番確実にプロセス終了させられると思われる。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword">const</span> childProcess <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'child_process'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token keyword">const</span> myChild <span class="token operator">=</span> childProcess<span class="token punctuation">.</span><span class="token method function property-access">fork</span><span class="token punctuation">(</span><span class="token string">'./my-child'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+myChild<span class="token punctuation">.</span><span class="token method function property-access">on</span><span class="token punctuation">(</span><span class="token string">'message'</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token parameter">jsonObj</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'子プロセスから結果を受信'</span><span class="token punctuation">,</span> jsonObj<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  
+  <span class="token comment">// 子プロセスを Kill する</span>
+  myChild<span class="token punctuation">.</span><span class="token method function property-access">kill</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// 切断・終了関連のイベントを定義しておく</span>
+myChild<span class="token punctuation">.</span><span class="token method function property-access">on</span><span class="token punctuation">(</span><span class="token string">'disconnect'</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span> <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'IPC 接続を終了'</span>  <span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+myChild<span class="token punctuation">.</span><span class="token method function property-access">on</span><span class="token punctuation">(</span><span class="token string">'exit'</span>      <span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span> <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'プロセス終了'</span>    <span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+myChild<span class="token punctuation">.</span><span class="token method function property-access">on</span><span class="token punctuation">(</span><span class="token string">'close'</span>     <span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span> <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'標準入出力を終了'</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// 子プロセスに処理を開始させる</span>
+myChild<span class="token punctuation">.</span><span class="token method function property-access">send</span><span class="token punctuation">(</span><span class="token string">'message'</span><span class="token punctuation">,</span> <span class="token punctuation">{</span> filePath<span class="token operator">:</span> <span class="token string">'./large-file.json'</span> <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>親プロセス側をこのように実装すると、<code>myChild.on('disconnect')</code> → <code>myChild.on('exit')</code> → <code>myChild.on('close')</code> が順に実行され、子プロジェクトが終了する。</p>
+<h2 id="その他"><a class="header-link" href="#その他"><span class="header-link-mark"></span></a>その他</h2>
+<p>その他、<code>ChildProcess</code> インスタンスが持つ <code>ChildProcess.pid</code> を使用し、</p>
+<pre class="language-javascript"><code class="language-javascript">child_process<span class="token punctuation">.</span><span class="token method function property-access">spawn</span><span class="token punctuation">(</span><span class="token string">'kill'</span><span class="token punctuation">,</span> <span class="token punctuation">[</span>myChild<span class="token punctuation">.</span><span class="token property-access">pid</span><span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>と実行して削除する方法もあった。</p>
+<ul>
+  <li>参考：<a href="https://codeday.me/jp/qa/20190131/187820.html">javascript – 子プロセスがNode.JSで強制終了されない - コードログ</a></li>
+</ul>
+<p>コレはガチで OS の <code>kill</code> コマンドを呼んでいるので、ちょっとやりすぎかなぁという気もする。</p>
+<h2 id="結局どのやり方で子プロセスを終了させるべきか？"><a class="header-link" href="#結局どのやり方で子プロセスを終了させるべきか？"><span class="header-link-mark"></span></a>結局どのやり方で子プロセスを終了させるべきか？</h2>
+<p>いくつか方法があって、いずれも上手く動くことは確認したが、どのやり方を採用すべきか。僕の考え方を書いておく。</p>
+<ol>
+  <li>子プロセスが1回の <code>fork()</code> につき1回だけ処理することが確実なら、<code>process.once()</code> でイベント登録することで終了させる。プロセス終了のための実装は要らない</li>
+  <li>大抵は子プロセスから親プロセスに対して演算結果を返したいだろうから、<code>ChildProcess.kill()</code> で指定の子プロセスを Kill するのが確実で良さそう
+    <ul>
+      <li><code>ChildProcess.disconnect()</code> はあまり使わないかも</li>
+    </ul>
+  </li>
+  <li>親プロセスが子プロセスを呼び出した後、子プロセスからの応答が必要ないような処理であれば、子プロセス内で処理を終え、<code>process.removeAllListeners()</code> で終了すると、親プロセスは子の終了タイミングを見極めなくて良くなる</li>
+</ol>
+<p>…と、こんな感じだろうか。</p>
+<p><code>child_process.fork()</code> を賢く使って、CPU バウンドな処理によるブロッキングを回避しよう。</p>
+<ul>
+  <li>参考：<a href="https://mag.osdn.jp/13/04/23/090000">はじめてのNode.js：マルチプロセスアプリケーションを作成する | OSDN Magazine</a></li>
+</ul>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2019-10-21</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2019-10-21</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>Protractor の動作をゆっくりにする - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2018/12/21-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2018/index.html">2018年</a></li>
+            <li><a href="/blog/2018/12/index.html">12月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2018-12-21</time></div>
+        <h1 id="page-title">Protractor の動作をゆっくりにする</h1>
+
+<p>主に Angular 向けの E2E テスト用ツール<strong>「Protractor」</strong>。コレに関して、書いていたつもりで書いていなかったネタがあったので書いておく。</p>
+<h2 id="protractor-の-control-flow"><a class="header-link" href="#protractor-の-control-flow"><span class="header-link-mark"></span></a>Protractor の Control Flow</h2>
+<p>Protractor は <em>Control Flow</em> という独自のキューを持っていて、コイツによって <strong>Promise を待って</strong>動作してくれたり、比較検証を行ったりしてくれる。</p>
+<p>この辺の仕様は以下の文献で詳しく紹介されている。</p>
+<ul>
+  <li>参考：<a href="https://qiita.com/shuhei/items/6973fe694d29a193f224">こわくない Protractor - Qiita</a></li>
+</ul>
+<p>なんだけど、どうもこの「Promise を待っての処理」が綺麗に行われないタイミングがあって、表面的に聞いただけだと</p>
+<pre class="language-javascript"><code class="language-javascript">browser<span class="token punctuation">.</span><span class="token method function property-access">wait</span><span class="token punctuation">(</span>protractor<span class="token punctuation">.</span><span class="token property-access"><span class="token maybe-class-name">ExpectedConditions</span></span><span class="token punctuation">.</span><span class="token method function property-access">visibilityOf</span><span class="token punctuation">(</span>myElement<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+myElement<span class="token punctuation">.</span><span class="token method function property-access">click</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>と書いても問題ないように聞こえるのだが、このように書くと時たまテストが失敗したりすることがある。</p>
+<p><code>browser.wait()</code> は Promise を返すので、</p>
+<pre class="language-javascript"><code class="language-javascript">browser<span class="token punctuation">.</span><span class="token method function property-access">wait</span><span class="token punctuation">(</span>protractor<span class="token punctuation">.</span><span class="token property-access"><span class="token maybe-class-name">ExpectedConditions</span></span><span class="token punctuation">.</span><span class="token method function property-access">visibilityOf</span><span class="token punctuation">(</span>myElement<span class="token punctuation">)</span><span class="token punctuation">)</span>
+  <span class="token punctuation">.</span><span class="token method function property-access">then</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+    myElement<span class="token punctuation">.</span><span class="token method function property-access">click</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>こんな風に書くと、テストが安定したりする。</p>
+<h2 id="protractor-の動作をゆっくりにする"><a class="header-link" href="#protractor-の動作をゆっくりにする"><span class="header-link-mark"></span></a>Protractor の動作をゆっくりにする</h2>
+<p>この Control Flow の動作を遅延させて、Protractor のテスト実行をゆっくりにさせる方法が紹介されていた。</p>
+<ul>
+  <li>参考：<a href="https://stackoverflow.com/questions/24960290/can-protractor-be-made-to-run-slowly">angularjs - Can protractor be made to run slowly? - Stack Overflow</a></li>
+  <li>参考：<a href="https://qiita.com/akiko-pusu/items/1cc7081c480630d240d7">Protractorのテストが早すぎて目が追いつかない... - Qiita</a></li>
+  <li>参考：<a href="https://qiita.com/okunokentaro/items/e2d750a817929454f053">AngularのE2Eテスト Protractorで遅延実行 - Qiita</a></li>
+</ul>
+<p>E2E テストコードを書いたファイルの先頭の方で、こんな実装をしてやる。</p>
+<pre class="language-typescript"><code class="language-typescript"><span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> browser <span class="token punctuation">}</span></span> <span class="token keyword">from</span> <span class="token string">'protractor'</span><span class="token punctuation">;</span>
+
+<span class="token keyword">const</span> origFn <span class="token operator">=</span> browser<span class="token punctuation">.</span><span class="token property-access">driver</span><span class="token punctuation">.</span><span class="token method function property-access">controlFlow</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token property-access">execute</span><span class="token punctuation">;</span>
+browser<span class="token punctuation">.</span><span class="token property-access">driver</span><span class="token punctuation">.</span><span class="token method function property-access">controlFlow</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method-variable function-variable method function property-access">execute</span> <span class="token operator">=</span> <span class="token keyword">function</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token keyword">const</span> args <span class="token operator">=</span> arguments<span class="token punctuation">;</span>
+  origFn<span class="token punctuation">.</span><span class="token method function property-access">call</span><span class="token punctuation">(</span>browser<span class="token punctuation">.</span><span class="token property-access">driver</span><span class="token punctuation">.</span><span class="token method function property-access">controlFlow</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token keyword">function</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token keyword">return</span> protractor<span class="token punctuation">.</span><span class="token property-access">promise</span><span class="token punctuation">.</span><span class="token method function property-access">delayed</span><span class="token punctuation">(</span><span class="token number">100</span><span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment">// 100ミリ秒待つ</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">return</span> origFn<span class="token punctuation">.</span><span class="token method function property-access">apply</span><span class="token punctuation">(</span>browser<span class="token punctuation">.</span><span class="token property-access">driver</span><span class="token punctuation">.</span><span class="token method function property-access">controlFlow</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> args<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+
+<span class="token function">describe</span><span class="token punctuation">(</span><span class="token string">'……'</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token comment">// 以降テスト…</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>コレで、Protractor の動作ごとに100ミリ秒待ってくれるようになる。<code>browser.sleep(1000)</code> みたいな不安定なコード書かなくて済むし、E2E テストコードを実装中に上手く動かせているか確認もしやすい。</p>
+<p><code>arguments</code> とか使ってるのでアロー関数への書き換えはしないでおこう。</p>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2018-12-21</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2018-12-21</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

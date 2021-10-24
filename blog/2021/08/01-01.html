@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>マイクロサービス・FaaS・NoSQL・Object Storage が作り放題な Deta.sh を試してみた - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2021/08/01-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2021/index.html">2021年</a></li>
+            <li><a href="/blog/2021/08/index.html">08月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2021-08-01</time></div>
+        <h1 id="page-title">マイクロサービス・FaaS・NoSQL・Object Storage が作り放題な Deta.sh を試してみた</h1>
+
+<p>少し前に Cloudflare Pages・Workers・Workers KV を活用して、FaaS と NoSQL を無料で試した。</p>
+<ul>
+  <li>過去記事：<a href="/blog/2021/07/16-01.html">Cloudflare Workers による FaaS・Cloudflare Workers KV による Key-Value Store を試してみた</a></li>
+  <li>過去記事：<a href="/blog/2021/07/17-01.html">Cloudflare Pages と Cloudflare Workers KV を組み合わせてウェブアプリを作ってみた</a></li>
+</ul>
+<p>同じく無料で、FaaS と NoSQL、さらには Object Storage も作れる、<strong>Deta.sh</strong> というサービスを見付けたので試してみた。</p>
+<ul>
+  <li><a href="https://www.deta.sh/">Deta – A Cloud for the next Billion Ideas.</a></li>
+</ul>
+<p>Deta Micros と Deta Base を使って実装したサンプルアプリは以下。</p>
+<ul>
+  <li><a href="https://neos21-practice-deta.deta.dev/">Practice Deta.sh</a></li>
+</ul>
+<p>コードは全て以下に置いた。</p>
+<ul>
+  <li><a href="https://github.com/Neos21/practice-deta">Neos21/practice-deta: Pracitce Deta.sh (Micros, Base, Drive)</a></li>
+</ul>
+<p>以下、詳細。</p>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#detash-%E3%81%A8%E3%81%AF">Deta.sh とは</a></li>
+  <li><a href="#micros-%E3%81%A8-base-%E3%82%92%E4%BD%BF%E3%81%A3%E3%81%A6%E3%81%BF%E3%81%9F">Micros と Base を使ってみた</a></li>
+  <li><a href="#deta-cli-%E3%82%92%E5%B0%8E%E5%85%A5%E3%81%99%E3%82%8B">Deta CLI を導入する</a></li>
+  <li><a href="#%E3%83%9E%E3%82%A4%E3%82%AF%E3%83%AD%E3%82%B5%E3%83%BC%E3%83%93%E3%82%B9%E3%82%92%E4%BD%9C%E6%88%90%E3%81%99%E3%82%8B">マイクロサービスを作成する</a></li>
+  <li><a href="#%E3%83%97%E3%83%AD%E3%82%B8%E3%82%A7%E3%82%AF%E3%83%88%E3%82%92%E3%83%87%E3%83%97%E3%83%AD%E3%82%A4%E3%81%99%E3%82%8B">プロジェクトをデプロイする</a></li>
+  <li><a href="#%E3%82%A8%E3%82%A4%E3%83%AA%E3%82%A2%E3%82%B9-url-%E3%82%92%E4%BD%9C%E3%82%8B">エイリアス URL を作る</a></li>
+  <li><a href="#%E4%BD%9C%E6%88%90%E3%81%97%E3%81%9F%E3%83%97%E3%83%AD%E3%82%B8%E3%82%A7%E3%82%AF%E3%83%88%E3%82%92%E3%83%AD%E3%83%BC%E3%82%AB%E3%83%AB%E3%81%AB%E3%82%B3%E3%83%94%E3%83%BC%E3%81%99%E3%82%8B">作成したプロジェクトをローカルにコピーする</a></li>
+  <li><a href="#%E3%81%9D%E3%81%AE%E4%BB%96%E3%81%AE-deta-%E3%82%B5%E3%83%96%E3%82%B3%E3%83%9E%E3%83%B3%E3%83%89">その他の <code>deta</code> サブコマンド</a></li>
+  <li><a href="#deta-base-%E3%82%92%E4%BD%BF%E3%81%A3%E3%81%A6%E3%81%BF%E3%82%8B">Deta Base を使ってみる</a></li>
+  <li><a href="#%E3%82%B5%E3%83%B3%E3%83%97%E3%83%AB%E3%82%A2%E3%83%97%E3%83%AA%E3%81%AE%E5%AE%9F%E8%A3%85">サンプルアプリの実装</a></li>
+  <li><a href="#%E3%81%B2%E3%81%A8%E3%81%BE%E3%81%9A%E4%BB%A5%E4%B8%8A">ひとまず以上</a></li>
+</ul>
+<h2 id="detash-とは"><a class="header-link" href="#detash-とは"><span class="header-link-mark"></span></a>Deta.sh とは</h2>
+<p>Deta.sh とは、以下のサービスが無料で利用できるクラウドサービスである。</p>
+<ul>
+  <li><strong>Deta Micros</strong>
+    <ul>
+      <li>FaaS というか、<em>マイクロサービス</em></li>
+      <li>実行基盤は Python v3.7 と Node.js v12。これらの言語・バージョンで実装ができる</li>
+      <li>Node.js の場合は Express.js で実装したウェブサーバが動作するので、関数単位で実行される FaaS というよりは、「マイクロサービス」という表現が適切か</li>
+      <li>実行時間は1回のリクエストあたり10秒まで。RAM は 128MB。といった制限がある</li>
+      <li><code>/tmp</code> 領域に 512MB まで書き込みができる</li>
+      <li>実行時間やスペックには制限があるものの、<strong>デプロイ出来る資材の量などには制約がないのが特徴</strong></li>
+      <li>参考：<a href="https://docs.deta.sh/docs/micros/about/">Introduction to Deta Micros | Deta Docs</a></li>
+    </ul>
+  </li>
+  <li><strong>Deta Base</strong>
+    <ul>
+      <li>NoSQL データベース</li>
+      <li><em>容量無制限でデータを格納できる</em></li>
+      <li>Node.js と Python の SDK があり、データ操作が容易</li>
+      <li>参考：<a href="https://docs.deta.sh/docs/base/about">About Deta Base | Deta Docs</a></li>
+    </ul>
+  </li>
+  <li><strong>Deta Drive</strong>
+    <ul>
+      <li>無料で 10GB までアップロードできるファイルストレージ</li>
+      <li>SDK からアップロードやダウンロードができるので、Object Storage として利用できる</li>
+      <li>参考：<a href="https://docs.deta.sh/docs/drive/about">About Deta Drive | Deta Docs</a></li>
+    </ul>
+  </li>
+</ul>
+<p>これらが無料なのってかなり太っ腹。データは暗号化された状態で AWS に保管されているとのこと。</p>
+<h2 id="micros-と-base-を使ってみた"><a class="header-link" href="#micros-と-base-を使ってみた"><span class="header-link-mark"></span></a>Micros と Base を使ってみた</h2>
+<p>容量的には Cloudflare Workers よりも沢山使えそうだったので、試しに Deta Micros (マイクロサービス) と Deta Base (NoSQL DB) を使って簡単なアプリを作ってみた。Deta Drive も使ってみたかったが、サンプルアプリを作るのが大変そうだったので断念。ｗ</p>
+<h2 id="deta-cli-を導入する"><a class="header-link" href="#deta-cli-を導入する"><span class="header-link-mark"></span></a>Deta CLI を導入する</h2>
+<p>開発には Deta CLI を使う。</p>
+<ul>
+  <li><a href="https://docs.deta.sh/docs/cli/install">Installing the Deta CLI | Deta Docs</a></li>
+</ul>
+<p>インストールコマンドがあるのでコレを使って <code>deta</code> コマンドをインストールしたら、<code>deta login</code> でログインする。</p>
+<pre class="language-bash"><code class="language-bash">$ deta version
+deta v1.1.4-beta x86_64-darwin
+
+$ deta login
+<span class="token comment"># ブラウザが起動するのでログインする</span>
+
+<span class="token comment"># 認証できるとこんな風にプロジェクトが確認できる</span>
+$ deta projects
+<span class="token punctuation">[</span>
+        <span class="token punctuation">{</span>
+                <span class="token string">"name"</span><span class="token builtin class-name">:</span> <span class="token string">"default"</span>,
+                <span class="token string">"description"</span><span class="token builtin class-name">:</span> <span class="token string">"Default project for neos21"</span>,
+                <span class="token string">"created"</span><span class="token builtin class-name">:</span> <span class="token string">"2021-07-07T05:14:30Z"</span>
+        <span class="token punctuation">}</span>
+<span class="token punctuation">]</span>
+</code></pre>
+<p>ログインしたユーザ情報は <code>~/.deta/</code> 配下に保存されている。</p>
+<h2 id="マイクロサービスを作成する"><a class="header-link" href="#マイクロサービスを作成する"><span class="header-link-mark"></span></a>マイクロサービスを作成する</h2>
+<p>適当に Node.js 製のアプリを作るため、<code>package.json</code> だけ配置したディレクトリで <code>$ deta new</code> を叩いてみる。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">npm</span> init -y
+$ <span class="token function">npm</span> <span class="token function">install</span> -S express
+
+<span class="token comment"># エンドポイント URL が発行されている</span>
+$ deta new
+Successfully created a new micro
+<span class="token punctuation">{</span>
+        <span class="token string">"name"</span><span class="token builtin class-name">:</span> <span class="token string">"practice-deta"</span>,
+        <span class="token string">"runtime"</span><span class="token builtin class-name">:</span> <span class="token string">"nodejs12.x"</span>,
+        <span class="token string">"endpoint"</span><span class="token builtin class-name">:</span> <span class="token string">"https://47tex5.deta.dev"</span>,
+        <span class="token string">"visor"</span><span class="token builtin class-name">:</span> <span class="token string">"enabled"</span>,
+        <span class="token string">"http_auth"</span><span class="token builtin class-name">:</span> <span class="token string">"disabled"</span>
+<span class="token punctuation">}</span>
+Adding dependencies<span class="token punctuation">..</span>.
+
++ express@4.17.1
+added <span class="token number">50</span> packages from <span class="token number">37</span> contributors and audited <span class="token number">50</span> packages <span class="token keyword">in</span> <span class="token number">2</span>.181s
+found <span class="token number">0</span> vulnerabilities
+
+<span class="token comment"># エンドポイント URL にパブリック・アクセスできるように以下を指定しておく</span>
+$ deta auth disable
+Successfully disabled http auth
+
+<span class="token comment"># プロジェクトの詳細確認</span>
+$ deta details
+<span class="token punctuation">{</span>
+        <span class="token string">"name"</span><span class="token builtin class-name">:</span> <span class="token string">"practice-deta"</span>,
+        <span class="token string">"runtime"</span><span class="token builtin class-name">:</span> <span class="token string">"nodejs12.x"</span>,
+        <span class="token string">"endpoint"</span><span class="token builtin class-name">:</span> <span class="token string">"https://47tex5.deta.dev"</span>,
+        <span class="token string">"dependencies"</span><span class="token builtin class-name">:</span> <span class="token punctuation">[</span>
+                <span class="token string">"express@4.17.1"</span>
+        <span class="token punctuation">]</span>,
+        <span class="token string">"visor"</span><span class="token builtin class-name">:</span> <span class="token string">"enabled"</span>,
+        <span class="token string">"http_auth"</span><span class="token builtin class-name">:</span> <span class="token string">"disabled"</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>そしたら、超簡単なアプリを作ってみる。</p>
+<ul>
+  <li><code>index.js</code></li>
+</ul>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword">const</span> express <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'express'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token keyword">const</span> app <span class="token operator">=</span> <span class="token function">express</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+app<span class="token punctuation">.</span><span class="token method function property-access">get</span><span class="token punctuation">(</span><span class="token string">'/'</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token parameter">_req<span class="token punctuation">,</span> res</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> res<span class="token punctuation">.</span><span class="token method function property-access">send</span><span class="token punctuation">(</span><span class="token string">'Hello World'</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// Express App をエクスポートする</span>
+module<span class="token punctuation">.</span><span class="token property-access">exports</span> <span class="token operator">=</span> app<span class="token punctuation">;</span>
+</code></pre>
+<p>トップページにアクセスすると「Hello World」と返すだけの、Express サーバだ。ココから先の実装は、Express.js で普通のウェブサーバを作る要領で好きに実装できるので、Deta.sh 特有の知識はほぼ必要ない。</p><div class="ad-amazon">
+  <div class="ad-amazon-image">
+    <a href="https://www.amazon.co.jp/dp/B07FGFYPH4?tag=neos21-22&amp;linkCode=osi&amp;th=1&amp;psc=1">
+      <img src="https://m.media-amazon.com/images/I/51efQK-cA0L._SL160_.jpg" width="113" height="160">
+    </a>
+  </div>
+  <div class="ad-amazon-info">
+    <div class="ad-amazon-title">
+      <a href="https://www.amazon.co.jp/dp/B07FGFYPH4?tag=neos21-22&amp;linkCode=osi&amp;th=1&amp;psc=1">Node.js + Express入門 - JavaScriptとコマンドラインがちょっとわかる人がNode.jsを使うサーバーサイド開発に入門するための本</a>
+    </div>
+  </div>
+</div>
+<div class="ad-amazon">
+  <div class="ad-amazon-image">
+    <a href="https://www.amazon.co.jp/dp/B07F3XT7DB?tag=neos21-22&amp;linkCode=osi&amp;th=1&amp;psc=1">
+      <img src="https://m.media-amazon.com/images/I/41zUcCUqd9L._SL160_.jpg" width="113" height="160">
+    </a>
+  </div>
+  <div class="ad-amazon-info">
+    <div class="ad-amazon-title">
+      <a href="https://www.amazon.co.jp/dp/B07F3XT7DB?tag=neos21-22&amp;linkCode=osi&amp;th=1&amp;psc=1">JavaScriptでのWeb開発 ~ Node.js + Express + MongoDB + ReactでWebアプリを開発しよう ~ その２（iOS対応版）</a>
+    </div>
+  </div>
+</div>
+<p>一点だけ注意すべきは、最終行で <code>module.exports</code> している点。Deta Micros では <code>app.listen()</code> はせず、<code>app</code> をエクスポートしてやる。</p>
+<ul>
+  <li>参考：<a href="https://docs.deta.sh/docs/micros/deploy/">Deploy your app or API on Deta Micros | Deta Docs</a></li>
+</ul>
+<h2 id="プロジェクトをデプロイする"><a class="header-link" href="#プロジェクトをデプロイする"><span class="header-link-mark"></span></a>プロジェクトをデプロイする</h2>
+<p>Deta.sh および Deta CLI には、<strong>ローカル開発環境を提供するモノがない。</strong>Deta.sh に直接デプロイして直接動作確認する流れで、ほぼタイムラグなしに開発ができるので、さほど問題ではないかな。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># 資材をデプロイする</span>
+$ deta deploy
+Deploying<span class="token punctuation">..</span>.
+Successfully deployed changes
+</code></pre>
+<p>デプロイ後、すぐに URL エンドポイントにアクセスしても、高速で変更が反映されていてストレスがない。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># ファイルの変更を検知してデプロイする</span>
+$ deta <span class="token function">watch</span>
+</code></pre>
+<p>↑ ファイルの変更を検知して、すぐ <code>$ deta deploy</code> するコマンドもあったりする。</p>
+<pre class="language-json"><code class="language-json"><span class="token punctuation">{</span>
+  <span class="token property">"scripts"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+    <span class="token property">"start"</span><span class="token operator">:</span> <span class="token string">"node -e \"require('./index').listen(3000, () => console.log('Server Started'));\""</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>↑ ローカルで開発したい場合は、<code>package.json</code> にこんな npm-scripts を書いておくと、ローカルサーバを起動して確認できるだろう。Deta Micros では、Heroku と違ってデプロイ後に <code>npm start</code> が実行されたりはしないので、コレで問題ない。</p>
+<p><code>$ deta deploy</code> を行うと、プロジェクトディレクトリに <code>.deta/</code> ディレクトリが生成されている。</p>
+<ul>
+  <li><code>.deta/prog_info</code> にはプロジェクト等の情報</li>
+  <li><code>.deta/state</code> にはデプロイされたファイルのハッシュ値</li>
+</ul>
+<p>などが記録されている。どちらも機密情報はないため、このまま Git コミットしても問題なさそう。</p>
+<h2 id="エイリアス-url-を作る"><a class="header-link" href="#エイリアス-url-を作る"><span class="header-link-mark"></span></a>エイリアス URL を作る</h2>
+<p>デフォルトで発行されるエンドポイント URL はランダムな文字列になっていて分かりづらい。ブラウザで Deta.sh の管理コンソールにアクセスし、プロジェクトの詳細を開くと、エイリアス URL を1つだけ作れる。</p>
+<p>自分の場合、</p>
+<ul>
+  <li><a href="https://47tex5.deta.dev/">https://47tex5.deta.dev/</a></li>
+</ul>
+<p>というデフォルトの URL に対して、</p>
+<ul>
+  <li><a href="https://neos21-practice-deta.deta.dev/">https://neos21-practice-deta.deta.dev/</a></li>
+</ul>
+<p>というエイリアス URL を作って指定してあげた。</p>
+<h2 id="作成したプロジェクトをローカルにコピーする"><a class="header-link" href="#作成したプロジェクトをローカルにコピーする"><span class="header-link-mark"></span></a>作成したプロジェクトをローカルにコピーする</h2>
+<p>ブラウザで管理コンソールを見ていたら、以下のようなコマンドを見付けた。</p>
+<ul>
+  <li><code>$ deta clone --name practice-deta --project default</code></li>
+</ul>
+<p>任意の作業ディレクトリに移動し、試しに叩いてみよう。</p>
+<pre class="language-bash"><code class="language-bash">$ deta clone --name practice-deta --project default
+Cloning<span class="token punctuation">..</span>.
+Successfully cloned deta micro to <span class="token string">'/PATH/TO/USER2/practice-deta'</span>
+
+$ tree
+<span class="token builtin class-name">.</span>
+└── practice-deta
+    ├── index.html
+    ├── index.js
+    └── package.json
+
+<span class="token number">1</span> directory, <span class="token number">3</span> files
+</code></pre>
+<p>デプロイされている資材をダウンロードできるようだ。資材を Git 管理していなくても、最新の資材を Deta.sh から直接落として来られるというワケだ。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># 最新の資材を落としてくる</span>
+$ deta pull
+Files already present may be overwritten. Continue? <span class="token punctuation">[</span>y/n<span class="token punctuation">]</span>
+y
+Successfully pulled latest deployed code
+</code></pre>
+<p>↑ こんな感じで、<code>git pull</code> に近いコマンドもあった。</p>
+<p>変更の過程で削除したファイルも、Deta.sh 上には残っているらしく、<code>$ deta clone</code> や <code>$ deta pull</code> で再取得ができてしまった。ちょっと気持ち悪い感じもするので、気になる人はプロジェクトを作り直してデプロイし直すなどしよう。</p>
+<h2 id="その他の-deta-サブコマンド"><a class="header-link" href="#その他の-deta-サブコマンド"><span class="header-link-mark"></span></a>その他の <code>deta</code> サブコマンド</h2>
+<p>開発で使う <code>deta</code> サブコマンドはこんなところだが、他にも以下のようなサブコマンドがあった。</p>
+<ul>
+  <li><code>deta run</code> : エンドポイントが JSON を返すような作りの場合、ローカルでリクエストを投げて動作確認できるようだ。HTML をレスポンスするような作りだとエラーになってしまい使い勝手が悪い</li>
+  <li><code>deta cron</code> : Cron 設定をする際に使う</li>
+  <li><code>deta logs</code> : 叩いても何も起こらない。以前はあったサブコマンドみたいだが、現在はドキュメントもなく、恐らく何かの名残りで今は使えないモノと思われる</li>
+  <li><code>update</code> : 環境変数を設定するためのサブコマンド</li>
+  <li><code>visor</code> : 管理コンソールの「Visor」タブを有効化・無効化するコマンド。Visor ではリクエスト別の <code>console.log</code> が参照できる</li>
+  <li>参考：<a href="https://docs.deta.sh/docs/cli/commands/">Deta CLI Reference | Deta Docs</a></li>
+</ul>
+<h2 id="deta-base-を使ってみる"><a class="header-link" href="#deta-base-を使ってみる"><span class="header-link-mark"></span></a>Deta Base を使ってみる</h2>
+<p>ココまでの実装では、Express を用いたウェブサーバをデプロイしただけなので、見ようによっては Heroku や Glitch のような、Node.js アプリが動く PaaS と変わらない感覚であろう。</p>
+<p>次は、Deta.sh が提供する NoSQL サービスである Deta Base を使ってみる。</p>
+<p>Deta Base や Deta Drive を操作するための SDK が提供されているので、Node.js の場合は以下のように npm でインストールしよう。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">npm</span> <span class="token function">install</span> --save deta
+</code></pre>
+<p>SDK の使い方は以下の公式ドキュメントで十分確認できる。</p>
+<ul>
+  <li>参考：<a href="https://docs.deta.sh/docs/base/sdk">Deta Base SDK | Deta Docs</a></li>
+</ul>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword">const</span> <span class="token punctuation">{</span> <span class="token maybe-class-name">Deta</span> <span class="token punctuation">}</span> <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'deta'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// Project Key を指定して初期化する</span>
+<span class="token keyword">const</span> deta <span class="token operator">=</span> <span class="token function"><span class="token maybe-class-name">Deta</span></span><span class="token punctuation">(</span>process<span class="token punctuation">.</span><span class="token property-access">env</span><span class="token punctuation">.</span><span class="token constant">DETA_PROJECT_KEY</span><span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment">// ← ココで入力するプロジェクトキーは Git コミットしないように！.env などを使って環境変数で注入してやろう</span>
+<span class="token comment">// Deta Base に接続 (初回は新規 DB 作成) する</span>
+<span class="token keyword">const</span> db <span class="token operator">=</span> deta<span class="token punctuation">.</span><span class="token method function property-access"><span class="token maybe-class-name">Base</span></span><span class="token punctuation">(</span><span class="token string">'posts'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment">// 任意の DB 名を付けられる</span>
+
+<span class="token comment">// レコードを Upsert する例</span>
+<span class="token keyword">const</span> createdSeq <span class="token operator">=</span> <span class="token keyword control-flow">await</span> db<span class="token punctuation">.</span><span class="token method function property-access">put</span><span class="token punctuation">(</span><span class="token punctuation">{</span>
+  type<span class="token operator">:</span> <span class="token string">'seq'</span><span class="token punctuation">,</span>
+  seq <span class="token operator">:</span> <span class="token number">1</span>
+<span class="token punctuation">}</span><span class="token punctuation">,</span> <span class="token string">'seq'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment">// ← 第2引数で Key 名を指定している</span>
+<span class="token keyword">const</span> createdPost <span class="token operator">=</span> <span class="token keyword control-flow">await</span> db<span class="token punctuation">.</span><span class="token method function property-access">put</span><span class="token punctuation">(</span><span class="token punctuation">{</span>
+  type<span class="token operator">:</span> <span class="token string">'post'</span><span class="token punctuation">,</span>
+  text<span class="token operator">:</span> <span class="token string">'Hello World'</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment">// ← 第2引数を指定しなかった場合は自動的にランダムな文字列で Key が生成される</span>
+
+<span class="token comment">// 条件指定して複数のレコードを取得する例</span>
+<span class="token keyword">const</span> query   <span class="token operator">=</span> <span class="token punctuation">{</span> type <span class="token operator">:</span> <span class="token string">'post'</span> <span class="token punctuation">}</span><span class="token punctuation">;</span>  <span class="token comment">// 条件として「type」カラムの値が「post」であるレコードを取得する</span>
+<span class="token keyword">const</span> options <span class="token operator">=</span> <span class="token punctuation">{</span> limit<span class="token operator">:</span> <span class="token number">10</span> <span class="token punctuation">}</span><span class="token punctuation">;</span>      <span class="token comment">// 最大10件取得するオプション</span>
+<span class="token keyword">const</span> result  <span class="token operator">=</span> <span class="token keyword control-flow">await</span> db<span class="token punctuation">.</span><span class="token method function property-access">fetch</span><span class="token punctuation">(</span>query<span class="token punctuation">,</span> options<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">const</span> count   <span class="token operator">=</span> result<span class="token punctuation">.</span><span class="token property-access">count</span><span class="token punctuation">;</span>  <span class="token comment">// 取得した件数</span>
+<span class="token keyword">const</span> items   <span class="token operator">=</span> result<span class="token punctuation">.</span><span class="token property-access">items</span><span class="token punctuation">;</span>  <span class="token comment">// 取得したデータの配列 (0件の時は空配列)</span>
+
+<span class="token comment">// Key を指定してレコードを1件削除する例</span>
+<span class="token keyword control-flow">await</span> db<span class="token punctuation">.</span><span class="token method function property-access">delete</span><span class="token punctuation">(</span><span class="token string">'my_key'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment">// 戻り値は常に `null`</span>
+</code></pre>
+<p>Deta Base SDK でよく使いそうなのはこんなところか。</p>
+<p>これらのメソッドを使って、Express で Web API を構築していけるだろう。</p>
+<h2 id="サンプルアプリの実装"><a class="header-link" href="#サンプルアプリの実装"><span class="header-link-mark"></span></a>サンプルアプリの実装</h2>
+<p>改めて、サンプルアプリは以下。1行の書き込みができる匿名掲示板、といった形で、1件あたり200文字まで、全100件を Deta Base に保持するよう制御している。</p>
+<ul>
+  <li><a href="https://neos21-practice-deta.deta.dev/">Practice Deta.sh</a></li>
+</ul>
+<p>コードは以下。</p>
+<ul>
+  <li><a href="https://github.com/Neos21/practice-deta">Neos21/practice-deta: Pracitce Deta.sh (Micros, Base, Drive)</a></li>
+</ul>
+<p><code>index.js</code> にて、<code>index.html</code> と <code>favicon.ico</code> をレスポンスする定義と、各種 API の実装をしている。<code>index.js</code> のルーティング定義なしでは、デプロイされている他の資材にはアクセスできないので、やはり「マイクロサービス」を作るつもりでいないと、ルーティング定義が大変になってくる。</p>
+<p>作成した API は2つのみ。</p>
+<ul>
+  <li>GET <code>/posts</code>
+    <ul>
+      <li>投稿データを取得する</li>
+      <li>一応「100件取得する」という <code>limit</code> オプションをかけているが、100件以上はデータを保持しないように実装しているので、あくまで保険</li>
+    </ul>
+  </li>
+  <li>PUT <code>/posts</code>
+    <ul>
+      <li>リクエストされた文字列を投稿データ1件として保存する</li>
+      <li>Deta Base に保存しておく投稿データの件数を100件に留めておくため、古いデータを削除する処理も入れている</li>
+      <li>シーケンス値を管理するレコードを用意しておき、100件以上前のシーケンス値のレコードを Delete するようにした</li>
+    </ul>
+  </li>
+</ul>
+<p>詳細は実装を見てもらえば分かると思う。</p>
+<h2 id="ひとまず以上"><a class="header-link" href="#ひとまず以上"><span class="header-link-mark"></span></a>ひとまず以上</h2>
+<p>コレ全部無料で使えるの？容量制限もないし凄いね。</p>
+<p>Deta Micros の実行速度はそこそこ速いが、Deta Base の実行速度はイマイチ。テキスト数件でも書き込みと取得でまぁまぁ時間がかかる。ラフなマイクロアプリを無料で作りたい時にはちょうど良いかな。</p>
+<ul>
+  <li>参考：<a href="https://itnews.org/news_contents/deta">軽量で安価なマネージド型のサーバーレスプラットフォーム「Deta」 - ITnews</a></li>
+</ul><div class="ad-rakuten">
+  <div class="ad-rakuten-image">
+    <a href="https://hb.afl.rakuten.co.jp/hgc/g00q0722.waxyc9ff.g00q0722.waxyd017/?pc=https%3A%2F%2Fitem.rakuten.co.jp%2Fbook%2F16239274%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Fbook%2Fi%2F19944084%2F">
+      <img src="https://thumbnail.image.rakuten.co.jp/@0_mall/book/cabinet/8583/9784295008583.jpg?_ex=128x128">
+    </a>
+  </div>
+  <div class="ad-rakuten-info">
+    <div class="ad-rakuten-title">
+      <a href="https://hb.afl.rakuten.co.jp/hgc/g00q0722.waxyc9ff.g00q0722.waxyd017/?pc=https%3A%2F%2Fitem.rakuten.co.jp%2Fbook%2F16239274%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Fbook%2Fi%2F19944084%2F">マイクロサービスパターン 実践的システムデザインのためのコード解説 （impress　top　gear） [ クリス・リチャードソン ]</a>
+    </div>
+    <div class="ad-rakuten-shop">
+      <a href="https://hb.afl.rakuten.co.jp/hgc/g00q0722.waxyc9ff.g00q0722.waxyd017/?pc=https%3A%2F%2Fwww.rakuten.co.jp%2Fbook%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Fbook%2F">楽天ブックス</a>
+    </div>
+    <div class="ad-rakuten-price">価格 : 5280円</div>
+  </div>
+</div>
+<div class="ad-amazon">
+  <div class="ad-amazon-image">
+    <a href="https://www.amazon.co.jp/dp/4873119316?tag=neos21-22&amp;linkCode=osi&amp;th=1&amp;psc=1">
+      <img src="https://m.media-amazon.com/images/I/51J5zsk3GTL._SL160_.jpg" width="125" height="160">
+    </a>
+  </div>
+  <div class="ad-amazon-info">
+    <div class="ad-amazon-title">
+      <a href="https://www.amazon.co.jp/dp/4873119316?tag=neos21-22&amp;linkCode=osi&amp;th=1&amp;psc=1">モノリスからマイクロサービスへ ―モノリスを進化させる実践移行ガイド</a>
+    </div>
+  </div>
+</div>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2021-08-01</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2021-08-01</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

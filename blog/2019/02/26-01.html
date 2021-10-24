@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>Express サーバでエラーハンドリングをミドルウェアに分ける - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2019/02/26-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2019/index.html">2019年</a></li>
+            <li><a href="/blog/2019/02/index.html">02月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2019-02-26</time></div>
+        <h1 id="page-title">Express サーバでエラーハンドリングをミドルウェアに分ける</h1>
+
+<p>Express サーバを作っていて、例外のハンドリングを簡単に実装できる方法を知ったのでまとめてみる。</p>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#express-%E9%96%A2%E9%80%A3%E7%94%A8%E8%AA%9E%E3%82%92%E3%81%BE%E3%81%A8%E3%82%81%E3%82%8B">Express 関連用語をまとめる</a>
+    <ul>
+      <li><a href="#expressrouter"><code>express.Router()</code></a></li>
+      <li><a href="#%E3%83%9F%E3%83%89%E3%83%AB%E3%82%A6%E3%82%A7%E3%82%A2">ミドルウェア</a></li>
+      <li><a href="#next"><code>next()</code></a></li>
+    </ul>
+  </li>
+  <li><a href="#%E3%83%9F%E3%83%89%E3%83%AB%E3%82%A6%E3%82%A7%E3%82%A2%E3%81%AF%E8%A8%98%E8%BF%B0%E3%81%95%E3%82%8C%E3%81%9F%E9%A0%86%E3%81%AB%E5%AE%9F%E8%A1%8C%E3%81%95%E3%82%8C%E3%82%8B">ミドルウェアは記述された順に実行される</a></li>
+  <li><a href="#%E3%82%A8%E3%83%A9%E3%83%BC%E3%83%8F%E3%83%B3%E3%83%89%E3%83%AA%E3%83%B3%E3%82%B0%E3%83%9F%E3%83%89%E3%83%AB%E3%82%A6%E3%82%A7%E3%82%A2">エラーハンドリングミドルウェア</a></li>
+  <li><a href="#%E4%BB%A5%E4%B8%8A">以上</a></li>
+</ul>
+<h2 id="express-関連用語をまとめる"><a class="header-link" href="#express-関連用語をまとめる"><span class="header-link-mark"></span></a>Express 関連用語をまとめる</h2>
+<p>今までなんとなく Express を使ってきてしまったので、用語とコードとの紐付けを整理して、理解を深めてみようと思う。</p>
+<h3 id="expressrouter"><a class="header-link" href="#expressrouter"><span class="header-link-mark"></span></a><code>express.Router()</code></h3>
+<p><code>express.Router()</code> で生成するモノは、<strong>ルータ・モジュール</strong>とかって呼ぶ。</p>
+<p><code>const app = express();</code> で定義した Express サーバアプリ本体と、<code>const router = express.Router();</code> で定義したルータ・モジュールは、ルーティングに関しては同じことができる。例えば <code>app.use()</code>、<code>app.get()</code> なんかは、トップレベルでの <code>router.use()</code>、<code>router.get()</code> と同じ意味だ。</p>
+<h3 id="ミドルウェア"><a class="header-link" href="#ミドルウェア"><span class="header-link-mark"></span></a>ミドルウェア</h3>
+<p>この言葉の意味することがよく分かっていなかった。コレは、<code>use()</code> の第1引数や、<code>get()</code>・<code>post()</code> の第2引数に与える<em>関数</em>のことを指している。</p>
+<blockquote>
+  <h4 id="expressにおけるミドルウェアとは"><a class="header-link" href="#expressにおけるミドルウェアとは"><span class="header-link-mark"></span></a>Expressにおけるミドルウェアとは</h4>
+  <p>リクエスト / レスポンスのサイクルにおいて任意の処理を行う関数</p>
+  <ul>
+    <li>参考：<a href="https://qiita.com/kamihork/items/9707461bcb2ec8346c9b">Expressにおけるミドルウェアとルーティング方法 - Qiita</a></li>
+  </ul>
+</blockquote>
+<p>リクエストを処理して、レスポンスを書く、っていう、当たり前にやってたあの部分を、Express では「ミドルウェア」(ミドルウェア関数) と表現する。</p>
+<h3 id="next"><a class="header-link" href="#next"><span class="header-link-mark"></span></a><code>next()</code></h3>
+<p>通常、<code>req, res, next</code> と、ミドルウェア関数の第3引数に指定されるアレ。コレは、<em>次に定義されている</em>ミドルウェア関数に制御を引き渡すための引数。</p>
+<p>…ふむ。はて、<em>「次に」</em>って、何？</p>
+<h2 id="ミドルウェアは記述された順に実行される"><a class="header-link" href="#ミドルウェアは記述された順に実行される"><span class="header-link-mark"></span></a>ミドルウェアは記述された順に実行される</h2>
+<p>今まで、</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword">const</span> router <span class="token operator">=</span> express<span class="token punctuation">.</span><span class="token method function property-access"><span class="token maybe-class-name">Router</span></span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+router<span class="token punctuation">.</span><span class="token method function property-access">get</span><span class="token punctuation">(</span><span class="token string">'/hoge'</span><span class="token punctuation">,</span> getHoge<span class="token punctuation">)</span><span class="token punctuation">;</span>
+router<span class="token punctuation">.</span><span class="token method function property-access">post</span><span class="token punctuation">(</span><span class="token string">'/fuga'</span><span class="token punctuation">,</span> postHuga<span class="token punctuation">)</span><span class="token punctuation">;</span>
+router<span class="token punctuation">.</span><span class="token method function property-access">get</span><span class="token punctuation">(</span><span class="token string">'/foo'</span><span class="token punctuation">,</span> getFoo<span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>というように、各ルーティング・パスの定義とそれに対応するミドルウェア関数を適当に書いてきていたので、それぞれの <code>get()</code>・<code>post()</code> などの関数が独立しているモノだと思っていたが、これは正確な理解ではないようだ。</p>
+<p><code>next()</code>、そのとおり「次」のミドルウェアを指定しているワケで、コレはつまり、<em>コードを上から下に、記述 (= 定義) した順</em>に、実行順序が決まるようだ。</p>
+<blockquote>
+  <h3 id="エラーハンドリングの処理を書く位置が悪かった。"><a class="header-link" href="#エラーハンドリングの処理を書く位置が悪かった。"><span class="header-link-mark"></span></a>エラーハンドリングの処理を書く位置が悪かった。</h3>
+  <p>どうやらRoutingの指定より後にエラーハンドリングを書いてるっぽい！</p>
+  <p>ということで、エラーハンドリングの記述をRoutingより後に移動させてみました。</p>
+  <ul>
+    <li>参考：<a href="https://chaika.hatenablog.com/entry/2015/10/07/135131">Express 4.x エラーハンドリングにハマる。 - かもメモ</a></li>
+  </ul>
+</blockquote>
+<h2 id="エラーハンドリングミドルウェア"><a class="header-link" href="#エラーハンドリングミドルウェア"><span class="header-link-mark"></span></a>エラーハンドリングミドルウェア</h2>
+<p>そこで本題。あるミドルウェア関数の処理中に例外が発生した場合に、その例外を検知して何かハンドリングしたい、という時に、<code>try</code>・<code>catch</code> で全体を囲んだりしなくても、Express が用意する<strong>エラーハンドリング・ミドルウェア</strong>機能を利用すれば、簡潔に書ける。</p>
+<ul>
+  <li><code>index.js</code> : メイン処理は <code>my-router.js</code> を設定するだけのシンプルな実装</li>
+</ul>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword">const</span> express <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'express'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">const</span> app <span class="token operator">=</span> <span class="token function">express</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// ルータを設定する</span>
+app<span class="token punctuation">.</span><span class="token method function property-access">use</span><span class="token punctuation">(</span><span class="token string">'/'</span><span class="token punctuation">,</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'./my-router'</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// サーバ起動</span>
+app<span class="token punctuation">.</span><span class="token method function property-access">listen</span><span class="token punctuation">(</span><span class="token number">8080</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'Server started'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<ul>
+  <li><code>my-router.js</code> : 事前処理を行うミドルウェアと、例外発生時の後続処理を行うエラーハンドリングミドルウェアを実装した</li>
+</ul>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword">const</span> express <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'express'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">const</span> router <span class="token operator">=</span> express<span class="token punctuation">.</span><span class="token method function property-access"><span class="token maybe-class-name">Router</span></span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// 事前処理するミドルウェア : 事前にやりたいことは「先 (= 上の方)」に書く</span>
+router<span class="token punctuation">.</span><span class="token method function property-access">use</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token parameter">req<span class="token punctuation">,</span> res<span class="token punctuation">,</span> next</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">[</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>req<span class="token punctuation">.</span><span class="token property-access">url</span><span class="token interpolation-punctuation punctuation">}</span></span><span class="token string">]</span><span class="token template-punctuation string">`</span></span><span class="token punctuation">,</span> <span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">[</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>req<span class="token punctuation">.</span><span class="token property-access">method</span><span class="token interpolation-punctuation punctuation">}</span></span><span class="token string">]</span><span class="token template-punctuation string">`</span></span><span class="token punctuation">,</span> <span class="token string">'リクエストを受信'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token comment">// 「次の」ミドルウェア関数を呼ぶ</span>
+  <span class="token function">next</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// 任意のルーティングを定義する : ココではランダムに例外が発生する処理を実装してみた</span>
+router<span class="token punctuation">.</span><span class="token method function property-access">get</span><span class="token punctuation">(</span><span class="token string">'/'</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token parameter">req<span class="token punctuation">,</span> res</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token keyword">const</span> random <span class="token operator">=</span> <span class="token known-class-name class-name">Math</span><span class="token punctuation">.</span><span class="token method function property-access">random</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword control-flow">if</span><span class="token punctuation">(</span>random <span class="token operator">></span> <span class="token number">.5</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    res<span class="token punctuation">.</span><span class="token method function property-access">status</span><span class="token punctuation">(</span><span class="token number">200</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">send</span><span class="token punctuation">(</span><span class="token string">'Success'</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">end</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'正常終了'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment">// `end()` を呼んでも実行はされる</span>
+  <span class="token punctuation">}</span>
+  <span class="token keyword control-flow">else</span> <span class="token punctuation">{</span>
+    <span class="token keyword control-flow">throw</span> <span class="token keyword">new</span> <span class="token class-name">Error</span><span class="token punctuation">(</span><span class="token string">'エラー'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// 他のルーティングを定義する際はこの位置に書くこと</span>
+<span class="token comment">// router.get('/hoge', (req, res) => { });</span>
+
+<span class="token comment">// エラーハンドリングミドルウェア : 何かが起こった「後」にやらせたいことなので、「下の方」に書く</span>
+router<span class="token punctuation">.</span><span class="token method function property-access">use</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token parameter">err<span class="token punctuation">,</span> req<span class="token punctuation">,</span> res<span class="token punctuation">,</span> next</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'エラー発生'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  res<span class="token punctuation">.</span><span class="token method function property-access">status</span><span class="token punctuation">(</span><span class="token number">500</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">send</span><span class="token punctuation">(</span><span class="token string">'Something Wrong'</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">end</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+module<span class="token punctuation">.</span><span class="token property-access">exports</span> <span class="token operator">=</span> router<span class="token punctuation">;</span>
+</code></pre>
+<p>事前処理するミドルウェア関数は、<code>router.use()</code> の中で <code>req, res, next</code> の3つの引数を取り、<code>next()</code> を呼んで次のミドルウェア関数を実行させている。</p>
+<p>このミドルウェア関数の定義の<strong>後</strong>に、<code>router.get()</code> だったり、<code>router.post()</code> だったりを書いて、各種ルーティングを定義してやる。こうすると、どのルート・パスにアクセスしても、必ず事前のミドルウェアが実行され、「リクエストを受信」というコンソールログが出力されるワケだ。</p>
+<p>そして、エラーハンドリングミドルウェアは、エラーが起きた後に処理させたいので、原則はファイルの最下部にて定義してやる。エラーハンドリングの場合は <code>err, req, res, next</code> と4つの引数を取るが、<code>req, res, next</code> の機能は同じなので、好きに処理してレスポンスを返してやれば良い。</p>
+<p>このように実装すると何が嬉しいかというと、<code>router.get()</code> 内に <code>try</code>・<code>catch</code> を書かなくて良くなること。エラーの内容別にレスポンスを調整するのはエラーハンドリングミドルウェアに任せて、各ミドルウェアはバンバン例外を発生させてやればよいのだ (違)。</p>
+<h2 id="以上"><a class="header-link" href="#以上"><span class="header-link-mark"></span></a>以上</h2>
+<p>というワケで、Express は<strong>記述順がメッチャ大事</strong>だよ、って話と、エラー処理はエラーハンドリングミドルウェアに委譲させられるよ、っていう話でした。</p>
+<ul>
+  <li>参考：<a href="https://expressjs.com/ja/guide/error-handling.html">Express でのエラー処理</a></li>
+  <li>参考：<a href="https://qiita.com/azujuuuuuun/items/f0be4a71aca2d92036aa">Expressの冗長なエラー処理を簡潔にする - Qiita</a></li>
+  <li>参考：<a href="https://tech-1natsu.hatenablog.com/entry/2018/06/30/165043">Node.js Expressのエラーハンドリング＆next()の知見 - ひと夏の技術</a></li>
+  <li>参考：<a href="https://expressjs.com/ja/guide/routing.html">Express でのルーティング</a></li>
+  <li>参考：<a href="https://expressjs.com/ja/guide/using-middleware.html">Express ミドルウェアの使用</a></li>
+</ul>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2019-02-26</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2019-02-26</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

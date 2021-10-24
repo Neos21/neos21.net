@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>Heroku に git push しようとしたらユーザ名とパスワードを問われ続ける問題の解決法 - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2019/02/14-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2019/index.html">2019年</a></li>
+            <li><a href="/blog/2019/02/index.html">02月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2019-02-14</time></div>
+        <h1 id="page-title">Heroku に git push しようとしたらユーザ名とパスワードを問われ続ける問題の解決法</h1>
+
+<p>Windows10 にて。</p>
+<p>ある日、いつものように Heroku に向けて <code>git push</code> しようとしたら、以下のように Username と Password を問われた。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">git</span> push heroku master
+Username <span class="token keyword">for</span> <span class="token string">'https://git.heroku.com'</span><span class="token builtin class-name">:</span>
+Password <span class="token keyword">for</span> <span class="token string">'https://git.heroku.com'</span><span class="token builtin class-name">:</span>
+remote: <span class="token operator">!</span>       WARNING:
+remote: <span class="token operator">!</span>       Do not authenticate with username and password using git.
+remote: <span class="token operator">!</span>       Run <span class="token variable"><span class="token variable">`</span>heroku login<span class="token variable">`</span></span> to update your credentials, <span class="token keyword">then</span> retry the <span class="token function">git</span> command.
+remote: <span class="token operator">!</span>       See documentation <span class="token keyword">for</span> details: https://devcenter.heroku.com/articles/git<span class="token comment">#http-git-authentication</span>
+fatal: Authentication failed <span class="token keyword">for</span> <span class="token string">'https://git.heroku.com/my-app.git/'</span>
+</code></pre>
+<p>ココで、Username と Password に何を入れても、入れなくても、上手く行かなかった。</p>
+<p>そういえば Heroku のパスワードを変えたんだった。と思い、<code>$ heroku login</code> をやり直してみたが、どうも変わらず。</p>
+<p>ググってみると、Username は空のまま、Password には <code>heroku auth:token</code> で取得したトークンを入力しろ、という文献がいくつか見つかったが、コレは上手く行かず。</p>
+<ul>
+  <li>参考：<a href="https://qiita.com/shiroux/items/f0e1844ff3ef301d88b9">git push heroku master がエラーを吐く - Qiita</a></li>
+  <li>参考：<a href="https://qiita.com/morishima0524/items/eeab6a683b57b36d3994">Herokuのチュートリアルでgit push heroku masterできずに困る - Qiita</a></li>
+</ul>
+<p>そもそも <code>$ heroku login</code> した時の認証情報はどのように保持されているのかと思ったら、ユーザホームディレクトリ直下に、<em><code>~/_netrc</code></em> というファイルが生成されて、ココに暗号化されて記述されているようだ。</p>
+<p>Heroku のパスワードを変更したタイミングで、この認証情報がどうにも更新できなくなったようだ。</p>
+<p>もう少し調べてみると、この <code>~/_netrc</code> (アンダースコア始まり) のファイルを <strong><code>~/.netrc</code> と、ピリオド始まりにリネームする</strong>と、このファイルが上手く作用するんだとか。</p>
+<ul>
+  <li>参考：<a href="https://code.i-harness.com/ja-jp/q/1a85a73">authentication できない - 'git push heroku master'は依然として認証を求めています - CODE Q&#x26;A 問題解決</a></li>
+</ul>
+<p>ということで、<em>以下の手順で問題が解消した。</em></p>
+<ol>
+  <li>既存の <code>~/_netrc</code> を消してしまう</li>
+  <li><code>$ heroku login</code> を改めて実行する (最近はブラウザが起動してソチラで認証するようになったみたい)</li>
+  <li><code>~/_netrc</code> が生成されているので、<code>~/.netrc</code> にリネームする</li>
+</ol>
+<p>コレで <code>$ git push heroku master</code> が成功するようになった。</p>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2019-02-14</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2019-02-14</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

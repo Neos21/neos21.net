@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>Kubernetes で Pod が再起動しまくった原因は、コンテナのプロセスが終了したから - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2019/04/23-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2019/index.html">2019年</a></li>
+            <li><a href="/blog/2019/04/index.html">04月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2019-04-23</time></div>
+        <h1 id="page-title">Kubernetes で Pod が再起動しまくった原因は、コンテナのプロセスが終了したから</h1>
+
+<p>Kubernetes で動かすコンテナを作ってデプロイしたところ、Docker コンテナとして単体で動かしていた時は上手く動いていたのに、Kubernetes Pod としては正常に起動しない問題に遭遇した。</p>
+<p><code>$ kubectl get pod</code> で Pod のステータスを見ると、<strong><code>CrashLoopBackOff</code></strong> とかいうステータスになっていた。</p>
+<p>調べていくと、<em>Kubernetes の初歩的な仕組みをド忘れ</em>した実装になっていることに気付いた、という話。</p>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#%E3%81%A9%E3%82%93%E3%81%AA%E5%AE%9F%E8%A3%85%E3%81%AB%E3%81%97%E3%81%A6%E3%81%84%E3%81%9F%E3%81%8B">どんな実装にしていたか</a></li>
+  <li><a href="#crashloopbackoff-%E3%81%A8%E3%81%AF%E4%BD%95%E3%81%AA%E3%81%AE%E3%81%8B"><code>CrashLoopBackOff</code> とは何なのか</a></li>
+</ul>
+<h2 id="どんな実装にしていたか"><a class="header-link" href="#どんな実装にしていたか"><span class="header-link-mark"></span></a>どんな実装にしていたか</h2>
+<p>そのコンテナは元々、コンテナ起動時にいくつかの常駐プロセスを立ち上げ、その後に Web サーバを起動する、という作りにしていた。</p>
+<p><code>Dockerfile</code> はこんな感じで、スタートアップ用のシェルスクリプトを呼んでいた。</p>
+<pre class="language-dockerfile"><code class="language-dockerfile"><span class="token keyword">CMD</span> <span class="token punctuation">[</span><span class="token string">"sh"</span><span class="token punctuation">,</span> <span class="token string">"/my-app/startup.sh"</span><span class="token punctuation">]</span>
+</code></pre>
+<p><code>startup.sh</code> の中ではこんな風に、常駐プロセスを立ち上げてから Web サーバを起動していた。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token shebang important">#!/bin/bash</span>
+
+<span class="token comment"># デーモンプロセスを立ち上げる…</span>
+/my-app/my-tools/start
+/my-app/my-another-tools/execute my-daemon
+
+<span class="token comment"># Web サーバを起動する</span>
+node /my-app/server.js
+</code></pre>
+<p>この常駐プロセスの起動処理には少々時間がかかるので、K8s Pod が生成された直後だと Web サーバがリクエストを受け取れない問題があった。</p>
+<p>そこで、<em><code>nohup</code> と <code>&#x26;</code></em> を使って Web サーバを<em>バックグラウンド実行</em>してみることにした。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token shebang important">#!/bin/bash</span>
+
+<span class="token comment"># Web サーバをバックグラウンドで起動する</span>
+<span class="token function">nohup</span> node /my-app/server.js <span class="token operator">&#x26;</span>
+
+<span class="token comment"># デーモンプロセスを立ち上げる…</span>
+/my-app/my-tools/start
+/my-app/my-another-tools/execute my-daemon
+</code></pre>
+<p>ついでに、開発環境ではデーモンプロセスを立ち上げなくて良いので、環境変数で分岐してみることにした。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token shebang important">#!/bin/bash</span>
+
+<span class="token comment"># Web サーバをバックグラウンドで起動する</span>
+<span class="token function">nohup</span> node /my-app/server.js <span class="token operator">&#x26;</span>
+
+<span class="token comment"># 開発環境ならデーモンプロセスを立ち上げない</span>
+<span class="token keyword">if</span> <span class="token punctuation">[</span> -z <span class="token string">"<span class="token variable">${PRODUCTION_ENV}</span>"</span> <span class="token punctuation">]</span><span class="token punctuation">;</span> <span class="token keyword">then</span>
+  <span class="token builtin class-name">echo</span> <span class="token string">'開発環境なのでデーモンプロセスを起動しません'</span>
+  <span class="token builtin class-name">exit</span>
+<span class="token keyword">fi</span>
+
+<span class="token comment"># デーモンプロセスを立ち上げる…</span>
+/my-app/my-tools/start
+/my-app/my-another-tools/execute my-daemon
+</code></pre>
+<p>この状態で Docker イメージをビルドし、<code>docker run</code> してみると、意図した動きになってくれたので安心していたのだが、いざ Kubernetes にデプロイしてみると、前述のように <em><code>CrashLoopBackOff</code></em> なるステータス異常が発生しており、Pod が正しく起動しなかった。</p>
+<h2 id="crashloopbackoff-とは何なのか"><a class="header-link" href="#crashloopbackoff-とは何なのか"><span class="header-link-mark"></span></a><code>CrashLoopBackOff</code> とは何なのか</h2>
+<p><code>CrashLoopBackOff</code> というステータスエラーについて調べてみると、以下の記事が見つかった。</p>
+<ul>
+  <li>参考：<a href="https://qiita.com/minodisk/items/547741b73763f2bab6b8">Kubernetesのポッドが起動しない原因と対策 - Qiita</a></li>
+</ul>
+<blockquote>
+  <h3 id="crashloopbackoff"><a class="header-link" href="#crashloopbackoff"><span class="header-link-mark"></span></a>CrashLoopBackOff</h3>
+  <h4 id="原因"><a class="header-link" href="#原因"><span class="header-link-mark"></span></a>原因</h4>
+  <p>コンテナ内のプロセスの終了を検知してコンテナの再起動を繰り返している。</p>
+  <h4 id="解決"><a class="header-link" href="#解決"><span class="header-link-mark"></span></a>解決</h4>
+  <p>コンテナで終了するプロセスを動かしていないだろうか？コンテナが正常に稼動しているかはプロセスが落ちていないかで判断するので、プロセスが正常終了した場合であっても「あっプロセスが落ちてる」となって再起動される。そのようなコンテナは再起動したところで再びプロセスが正常終了するだろう。つまり、無限に起動し続けるということになる。</p>
+</blockquote>
+<p>Web サーバの起動をバックグラウンドで行うようにしてしまったため、デーモンプロセスを起動する・しないに関わらず、この <code>startup.sh</code> を実行するプロセスは終了する作りになっていた。</p>
+<p>プロセスが落ちると、Kubernetes が自動的にそれを検知し、Pod の状態が異常であるとみなして Pod を再起動してしまう、というワケだ。</p>
+<p>Web サーバとして起動しっぱなしにしたいコンテナは、サーバの起動コマンド (ココでは <code>$ node /my-app/server.js</code>) をフォアグラウンド実行し、コレを最後に呼んでやる必要がある、ということだ。バックグラウンド実行すべきなのは、デーモンプロセスの起動処理部分だったのだ。</p>
+<p>というワケで以下のようにスクリプトを修正。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token shebang important">#!/bin/bash</span>
+
+<span class="token keyword">if</span> <span class="token punctuation">[</span> -z <span class="token string">"<span class="token variable">${PRODUCTION_ENV}</span>"</span> <span class="token punctuation">]</span><span class="token punctuation">;</span> <span class="token keyword">then</span>
+  <span class="token comment"># 開発環境ならデーモンプロセスを立ち上げない</span>
+  <span class="token builtin class-name">echo</span> <span class="token string">'開発環境なのでデーモンプロセスを起動しません'</span>
+<span class="token keyword">else</span>
+  <span class="token comment"># デーモンプロセスをバックグラウンドで起動する</span>
+  <span class="token function">nohup</span> /my-app/my-tools/start <span class="token operator">&#x26;</span>
+  <span class="token function">nohup</span> /my-app/my-another-tools/execute my-daemon <span class="token operator">&#x26;</span>
+<span class="token keyword">fi</span>
+
+<span class="token comment"># Web サーバをフォアグラウンド実行する</span>
+node /my-app/server.js
+</code></pre>
+<p>デーモンプロセスを起動する部分の処理は、別のシェルスクリプトに切り出しておいて、それをバックグラウンド呼び出ししてやるとスッキリするかも。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token shebang important">#!/bin/bash</span>
+
+<span class="token keyword">if</span> <span class="token punctuation">[</span> -z <span class="token string">"<span class="token variable">${PRODUCTION_ENV}</span>"</span> <span class="token punctuation">]</span><span class="token punctuation">;</span> <span class="token keyword">then</span>
+  <span class="token comment"># 開発環境ならデーモンプロセスを立ち上げない</span>
+  <span class="token builtin class-name">echo</span> <span class="token string">'開発環境なのでデーモンプロセスを起動しません'</span>
+<span class="token keyword">else</span>
+  <span class="token comment"># デーモンプロセスをバックグラウンドで起動する (別ファイルを呼び出す)</span>
+  <span class="token function">nohup</span> <span class="token function">sh</span> /my-app/startup_launch_daemons.sh <span class="token operator">&#x26;</span>
+<span class="token keyword">fi</span>
+
+<span class="token comment"># Web サーバをフォアグラウンド実行する</span>
+node /my-app/server.js
+</code></pre>
+<p>こんな感じ。重要なのはこのスクリプトの最後で Web サーバを起動し、それをずっとフォアグラウンド実行させっぱなしにすること。<code>startup.sh</code> の実行プロセスが落ちないようにしておかないと、Kubernetes Pod が無限に再起動してしまう、ということだ。</p>
+<p>今回はとりあえずコレで解決。ヒヤヒヤ…。</p>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2019-04-23</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2019-04-23</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

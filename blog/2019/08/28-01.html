@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>ProxyCommand を使って踏み台サーバ経由で SSH 接続するのをコマンド1発にする - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2019/08/28-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2019/index.html">2019年</a></li>
+            <li><a href="/blog/2019/08/index.html">08月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2019-08-28</time></div>
+        <h1 id="page-title">ProxyCommand を使って踏み台サーバ経由で SSH 接続するのをコマンド1発にする</h1>
+
+<p>「手元の PC → 踏み台サーバ → 目的のサーバ」と通信を経由して SSH 接続したい。</p>
+<p>以前、<code>nc</code> コマンドを「踏み台サーバ」にインストールしておき、<code>~/.ssh/config</code> ファイルを書くことで、コマンド1発で SSH 接続する方法を紹介した。</p>
+<ul>
+  <li><a href="/blog/2019/05/01-01.html">nc と ssh config ファイルを使って多段 SSH 接続する</a></li>
+</ul>
+<p>今回は、<code>nc</code> コマンドを踏み台サーバにインストールすることなく多段 SSH する方法を紹介する。</p>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#sshconfig-%E3%81%A7%E8%A8%AD%E5%AE%9A%E3%81%99%E3%82%8B%E6%96%B9%E6%B3%95"><code>~/.ssh/config</code> で設定する方法</a></li>
+  <li><a href="#%E3%82%B3%E3%83%9E%E3%83%B3%E3%83%891%E7%99%BA%E3%81%A7%E6%9B%B8%E3%81%84%E3%81%A6%E3%81%BF%E3%82%8B">コマンド1発で書いてみる</a></li>
+  <li><a href="#macos-%E3%81%A7-bad-stdio-forwarding-specification-hp-%E3%81%A8%E3%81%84%E3%81%86%E3%82%A8%E3%83%A9%E3%83%BC%E3%81%8C%E7%99%BA%E7%94%9F%E3%81%99%E3%82%8B">MacOS で <code>Bad stdio forwarding specification '%h:%p'</code> というエラーが発生する</a></li>
+</ul>
+<h2 id="sshconfig-で設定する方法"><a class="header-link" href="#sshconfig-で設定する方法"><span class="header-link-mark"></span></a><code>~/.ssh/config</code> で設定する方法</h2>
+<p>先に、<code>~/.ssh/config</code> に接続先情報を記述する方式から紹介する。</p>
+<pre><code>Host target
+  HostName      target-host
+  User          target_user
+  Port          22
+  IdentityFile  ~/.ssh/id_rsa
+  ProxyCommand  ssh -W %h:%p -i ~/.ssh/id_rsa -p 22 bastion_user@129.000.0.00
+</code></pre>
+<p><code>HostName</code>・<code>User</code>・<code>Port</code>・<code>IdentityFile</code> の4つの情報は、「目的のサーバ」に接続するための情報だ。</p>
+<p><code>ProxyCommand</code> に書かれている <strong><code>ssh -W %h:%p</code></strong> はお決まりのモノとして、<code>-i</code>・<code>-p</code>・<code>ユーザ名@ホスト名</code> の情報で、「踏み台サーバ」への接続情報を指定している。</p>
+<h2 id="コマンド1発で書いてみる"><a class="header-link" href="#コマンド1発で書いてみる"><span class="header-link-mark"></span></a>コマンド1発で書いてみる</h2>
+<p><code>~/.ssh/config</code> に接続先情報を書かず、コマンドラインで実現するなら次のとおり。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">ssh</span> -o <span class="token assign-left variable">ProxyCommand</span><span class="token operator">=</span><span class="token string">'ssh -W %h:%p -i ~/.ssh/id_rsa -p 22 bastion_user@129.000.0.00'</span> -i ~/.ssh/id_rsa -p <span class="token number">22</span> target_user@target-host
+</code></pre>
+<h2 id="macos-で-bad-stdio-forwarding-specification-hp-というエラーが発生する"><a class="header-link" href="#macos-で-bad-stdio-forwarding-specification-hp-というエラーが発生する"><span class="header-link-mark"></span></a>MacOS で <code>Bad stdio forwarding specification '%h:%p'</code> というエラーが発生する</h2>
+<p>自分がこのやり方に中々到達できなかったのは、<code>ssh -o ProxyCommand=''</code> コマンドを使った時に、</p>
+<pre><code>Bad stdio forwarding specification '%h:%p'
+</code></pre>
+<p>というエラーが発生して、動作しなかったためだ。</p>
+<p><code>~/.ssh/config</code> に設定を書いて実行すると上手く動いたので、何が原因なんだろうーと色々探していたのだが、原因は以前インストールした <strong><code>sshrc</code> のせい</strong>だった。</p>
+<ul>
+  <li><a href="/blog/2019/04/22-01.html">SSH 接続した先でもお気に入りのエイリアス設定とかを使いたい！「sshrc」のススメ</a></li>
+</ul>
+<p>自分は <code>~/.bashrc</code> で、</p>
+<pre class="language-bash"><code class="language-bash"><span class="token builtin class-name">alias</span> <span class="token assign-left variable">ssh</span><span class="token operator">=</span><span class="token string">'sshrc'</span>
+</code></pre>
+<p>というエイリアスを設定していたのだが、コレがどうも良くなかったみたいで、<em>このエイリアスを削除</em>してやると、コマンド一発でも上手く動くようになってくれた。<code>brew install openssh</code> とかなんとかやってグニグニしてたけど関係なかった。</p>
+<ul>
+  <li>参考：<a href="https://qiita.com/hkak03key/items/3b0c4752bfbcc52e676d">踏み台サーバを飛び越えて一発で目的のサーバへsshする方法 - Qiita</a></li>
+  <li>参考：<a href="https://www.dondari.com/Ssh%E3%83%9D%E3%83%BC%E3%83%88%E3%83%95%E3%82%A9%E3%83%AF%E3%83%BC%E3%83%89">Sshポートフォワード - dondari</a></li>
+</ul>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2019-08-28</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2019-08-28</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

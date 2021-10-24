@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>Amazon Product Advertising API v5.0 を Node.js で動かしてみた - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2020/11/05-02.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2020/index.html">2020年</a></li>
+            <li><a href="/blog/2020/11/index.html">11月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2020-11-05</time></div>
+        <h1 id="page-title">Amazon Product Advertising API v5.0 を Node.js で動かしてみた</h1>
+
+<p>「カエレバ」的な Amazon アソシエイトの広告コードを自分で作ってみたいと思い調べてみたところ、<strong>Amazon Product Advertising API v5.0</strong> という API で作れるらしいことが分かった。早速やってみる。</p>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#%E3%82%A2%E3%82%AF%E3%82%BB%E3%82%B9%E3%82%AD%E3%83%BC%E3%83%BB%E3%82%B7%E3%83%BC%E3%82%AF%E3%83%AC%E3%83%83%E3%83%88%E3%82%AD%E3%83%BC%E3%82%92%E7%99%BA%E8%A1%8C%E3%81%99%E3%82%8B">アクセスキー・シークレットキーを発行する</a></li>
+  <li><a href="#nodejs-sdk-%E3%82%92%E7%94%A8%E6%84%8F%E3%81%99%E3%82%8B">Node.js SDK を用意する</a></li>
+  <li><a href="#nodejs-%E3%82%B9%E3%82%AF%E3%83%AA%E3%83%97%E3%83%88%E3%82%92%E6%9B%B8%E3%81%84%E3%81%A6%E3%81%BF%E3%82%8B">Node.js スクリプトを書いてみる</a></li>
+  <li><a href="#429-toomanyrequests-%E3%82%A8%E3%83%A9%E3%83%BC%E3%81%8C%E7%99%BA%E7%94%9F%E3%81%99%E3%82%8B%E5%A0%B4%E5%90%88">429 TooManyRequests エラーが発生する場合</a></li>
+  <li><a href="#%E7%B4%A0%E3%81%AE-js-%E3%81%A8%E3%81%97%E3%81%A6%E3%81%AF%E5%8B%95%E3%81%8B%E3%81%9B%E3%81%AA%E3%81%84">素の JS としては動かせない</a></li>
+</ul>
+<h2 id="アクセスキー・シークレットキーを発行する"><a class="header-link" href="#アクセスキー・シークレットキーを発行する"><span class="header-link-mark"></span></a>アクセスキー・シークレットキーを発行する</h2>
+<p>まずは API を利用するためのアクセスキーとシークレットキーのペアを発行する。Amazon アソシエイトの管理画面 → ツール → Product Advertising API と進み、「認証情報を追加する」ボタンを押下すると発行できる。</p>
+<ul>
+  <li>参考：<a href="https://buyer.d1v1b.com/">Buyer@Amazon</a></li>
+</ul>
+<p>お試しで API を叩いてみたい場合は、公式の Scratchpad が使えるだろう。</p>
+<ul>
+  <li>参考：<a href="https://webservices.amazon.co.jp/paapi5/scratchpad/index.html">Product Advertising API 5.0 Scratchpad</a></li>
+</ul>
+<h2 id="nodejs-sdk-を用意する"><a class="header-link" href="#nodejs-sdk-を用意する"><span class="header-link-mark"></span></a>Node.js SDK を用意する</h2>
+<p>Amazon PA API を利用するには、リクエストパラメータをあれこれ組み立てたりする必要があり、スクラッチで開発するのはとても手間がかかる。そこで、公式が用意している SDK を利用する。</p>
+<ul>
+  <li>参考：<a href="https://webservices.amazon.com/paapi5/documentation/quick-start/using-sdk.html">Using SDK · Product Advertising API 5.0</a></li>
+  <li>参考：<a href="https://gurutaka-log.com/paapi-v5-amazon-product-advertising-api-nodejs">【PA-API 5.0】Amazon Product Advertising APIをNode.jsで動かす方法 | ぐるたかログ</a></li>
+</ul>
+<p>Node.js SDK は Zip 形式でしか配布されていないのだが、有志が npm パッケージとして配布しているモノがいくつかある。以下は自分が実際に使えた npm パッケージだ。</p>
+<ul>
+  <li><a href="https://github.com/wusoma/paapi5-nodejs-sdk">GitHub - wusoma/paapi5-nodejs-sdk: Product Advertising API 5.0 SDK for NodeJS</a>
+    <ul>
+      <li><code>paapi5-nodejs-sdk</code></li>
+      <li>公式 SDK に近い</li>
+    </ul>
+  </li>
+  <li><a href="https://github.com/jorgerosal/amazon-paapi">GitHub - jorgerosal/amazon-paapi: 🔥Amazon Product Advertising API for NodeJs. A PAAPI 5.0 sdk wrapper.</a>
+    <ul>
+      <li><code>amazon-paapi</code></li>
+      <li>公式 SDK の手前に薄いラッパーがある</li>
+    </ul>
+  </li>
+</ul>
+<p>いずれも、公式 SDK のソースコードを内部的に利用しており、やっていることは同じだ。</p>
+<p>自分は今回、<strong><code>amazon-paapi</code></strong> パッケージを利用することにした。</p>
+<h2 id="nodejs-スクリプトを書いてみる"><a class="header-link" href="#nodejs-スクリプトを書いてみる"><span class="header-link-mark"></span></a>Node.js スクリプトを書いてみる</h2>
+<p>練習用リポジトリを立ててみた。コード全量はコチラを参考にドウゾ。</p>
+<ul>
+  <li><a href="https://github.com/Neos21/practice-paapi">Neos21/practice-paapi : practice-amazon-product-advertising-api-5.0</a></li>
+</ul>
+<p>次のように作業ディレクトリを用意し、スクリプトを書いていく。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">npm</span> init -y
+$ <span class="token function">npm</span> <span class="token function">install</span> -S amazon-paapi
+$ <span class="token function">touch</span> index.js
+</code></pre>
+<ul>
+  <li><code>index.js</code></li>
+</ul>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword">const</span> amazonPaapi <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'amazon-paapi'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token punctuation">(</span><span class="token keyword">async</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token keyword control-flow">try</span> <span class="token punctuation">{</span>
+    <span class="token keyword">const</span> commonParameters <span class="token operator">=</span> <span class="token punctuation">{</span>
+      <span class="token maybe-class-name">AccessKey</span>  <span class="token operator">:</span> <span class="token string">'【アクセスキー】'</span><span class="token punctuation">,</span>
+      <span class="token maybe-class-name">SecretKey</span>  <span class="token operator">:</span> <span class="token string">'【シークレットキー】'</span><span class="token punctuation">,</span>
+      <span class="token maybe-class-name">PartnerTag</span> <span class="token operator">:</span> <span class="token string">'【アソシエイト ID or トラッキング ID】'</span><span class="token punctuation">,</span>
+      <span class="token maybe-class-name">PartnerType</span><span class="token operator">:</span> <span class="token string">'Associates'</span><span class="token punctuation">,</span>
+      <span class="token maybe-class-name">Marketplace</span><span class="token operator">:</span> <span class="token string">'www.amazon.co.jp'</span>
+    <span class="token punctuation">}</span><span class="token punctuation">;</span>
+    
+    <span class="token keyword">const</span> data <span class="token operator">=</span> <span class="token keyword control-flow">await</span> amazonPaapi<span class="token punctuation">.</span><span class="token method function property-access"><span class="token maybe-class-name">SearchItems</span></span><span class="token punctuation">(</span>commonParameters<span class="token punctuation">,</span> <span class="token punctuation">{</span>
+      <span class="token maybe-class-name">Keywords</span>   <span class="token operator">:</span> <span class="token string">'【任意のキーワード】'</span><span class="token punctuation">,</span>
+      <span class="token maybe-class-name">SearchIndex</span><span class="token operator">:</span> <span class="token string">'All'</span><span class="token punctuation">,</span>
+      <span class="token maybe-class-name">ItemCount</span>  <span class="token operator">:</span> <span class="token number">10</span><span class="token punctuation">,</span>
+      <span class="token maybe-class-name">Resources</span>  <span class="token operator">:</span> <span class="token punctuation">[</span>
+        <span class="token string">'ItemInfo.Title'</span><span class="token punctuation">,</span>
+        <span class="token string">'Images.Primary.Medium'</span><span class="token punctuation">,</span>
+        <span class="token string">'Offers.Listings.Price'</span>
+      <span class="token punctuation">]</span>
+    <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    
+    <span class="token keyword control-flow">if</span><span class="token punctuation">(</span><span class="token operator">!</span>data<span class="token punctuation">.</span><span class="token property-access"><span class="token maybe-class-name">SearchResult</span></span> <span class="token operator">||</span> <span class="token operator">!</span>data<span class="token punctuation">.</span><span class="token property-access"><span class="token maybe-class-name">SearchResult</span></span><span class="token punctuation">.</span><span class="token property-access"><span class="token maybe-class-name">Items</span></span><span class="token punctuation">)</span> <span class="token keyword control-flow">return</span> <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">warn</span><span class="token punctuation">(</span><span class="token string">'Error'</span><span class="token punctuation">,</span> data<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    
+    data<span class="token punctuation">.</span><span class="token property-access"><span class="token maybe-class-name">SearchResult</span></span><span class="token punctuation">.</span><span class="token property-access"><span class="token maybe-class-name">Items</span></span><span class="token punctuation">.</span><span class="token method function property-access">forEach</span><span class="token punctuation">(</span><span class="token parameter">item</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+      <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token punctuation">{</span>
+        asin         <span class="token operator">:</span> item<span class="token punctuation">.</span><span class="token constant">ASIN</span><span class="token punctuation">,</span>
+        detailPageUrl<span class="token operator">:</span> item<span class="token punctuation">.</span><span class="token property-access"><span class="token maybe-class-name">DetailPageURL</span></span><span class="token punctuation">,</span>
+        title        <span class="token operator">:</span> item<span class="token punctuation">.</span><span class="token property-access"><span class="token maybe-class-name">ItemInfo</span></span><span class="token punctuation">.</span><span class="token property-access"><span class="token maybe-class-name">Title</span></span><span class="token punctuation">.</span><span class="token property-access"><span class="token maybe-class-name">DisplayValue</span></span><span class="token punctuation">,</span>
+        imageUrl     <span class="token operator">:</span> item<span class="token punctuation">.</span><span class="token property-access"><span class="token maybe-class-name">Images</span></span><span class="token punctuation">.</span><span class="token property-access"><span class="token maybe-class-name">Primary</span></span><span class="token punctuation">.</span><span class="token property-access"><span class="token maybe-class-name">Medium</span></span><span class="token punctuation">.</span><span class="token constant">URL</span><span class="token punctuation">,</span>
+        imageWidth   <span class="token operator">:</span> item<span class="token punctuation">.</span><span class="token property-access"><span class="token maybe-class-name">Images</span></span><span class="token punctuation">.</span><span class="token property-access"><span class="token maybe-class-name">Primary</span></span><span class="token punctuation">.</span><span class="token property-access"><span class="token maybe-class-name">Medium</span></span><span class="token punctuation">.</span><span class="token property-access"><span class="token maybe-class-name">Width</span></span><span class="token punctuation">,</span>
+        imageHeight  <span class="token operator">:</span> item<span class="token punctuation">.</span><span class="token property-access"><span class="token maybe-class-name">Images</span></span><span class="token punctuation">.</span><span class="token property-access"><span class="token maybe-class-name">Primary</span></span><span class="token punctuation">.</span><span class="token property-access"><span class="token maybe-class-name">Medium</span></span><span class="token punctuation">.</span><span class="token property-access"><span class="token maybe-class-name">Height</span></span><span class="token punctuation">,</span>
+        price        <span class="token operator">:</span> item<span class="token punctuation">.</span><span class="token property-access"><span class="token maybe-class-name">Offers</span></span><span class="token punctuation">.</span><span class="token property-access"><span class="token maybe-class-name">Listings</span></span><span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">.</span><span class="token property-access"><span class="token maybe-class-name">Price</span></span><span class="token punctuation">.</span><span class="token property-access"><span class="token maybe-class-name">DisplayAmount</span></span>
+      <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  <span class="token keyword control-flow">catch</span><span class="token punctuation">(</span>error<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">error</span><span class="token punctuation">(</span><span class="token string">'Error'</span><span class="token punctuation">,</span> error<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token comment">// error.status が 429 (TooManyRequests) の場合はリトライしたい</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>かなりシンプルだが、最低限のことはできている。</p>
+<pre class="language-bash"><code class="language-bash">$ node index.js
+</code></pre>
+<p>で実行してみよう。</p>
+<p>オブジェクトがやたらとネストされているので、Lodash の <code>get()</code> 関数のように安全にオブジェクトを掘り下げられるヘルパー関数を用意しておくとよいだろう。</p>
+<ul>
+  <li><a href="/blog/2019/10/23-01.html">JavaScript のネストした連想配列に安全にアクセスするヘルパー関数を考える</a></li>
+</ul>
+<p>素の SDK を利用している場合は、以下のホスト・リージョン情報を指定することで、日本の Amazon での検索ができる。</p>
+<ul>
+  <li>Host : <code>webservices.amazon.co.jp</code></li>
+  <li>Region : <code>us-west-2</code></li>
+</ul>
+<p><code>item.DetailPageURL</code> がアソシエイトリンクになっているので、これらの情報を利用して HTML コードを組み立ててやれば、オリジナルの Amazon アソシエイトリンクが作れるだろう。</p>
+<h2 id="429-toomanyrequests-エラーが発生する場合"><a class="header-link" href="#429-toomanyrequests-エラーが発生する場合"><span class="header-link-mark"></span></a>429 TooManyRequests エラーが発生する場合</h2>
+<p>API をコールすると <em>429 TooManyRequests</em> エラーが発生する場合がある。コレはどうも、アソシエイトの売上に応じて API コールに制限がかかる仕組みらしい。それ以外にもどういうワケかこのエラーが発生する場合があり、何回かリトライしていると上手くデータが取れたりする。</p>
+<ul>
+  <li>参考：<a href="https://qiita.com/YKInoMT/items/667475a3746f9c107733">PA-API v5が429エラーにしかならない件 - Qiita</a></li>
+</ul>
+<p>なので、429 エラーが発生した場合は3回とか5回とか、適当に API コールをリトライしてみると良いだろう。</p>
+<h2 id="素の-js-としては動かせない"><a class="header-link" href="#素の-js-としては動かせない"><span class="header-link-mark"></span></a>素の JS としては動かせない</h2>
+<p>Node.js SDK が使用しているのは crypto-js と superagent なので、ブラウザ上でも動かせそうな気がするのだが、<code>host</code> や <code>user-agent</code> などの HTTP ヘッダを変更しようとしており、コレがブラウザ上では上手くいかないために API がコールできない。</p>
+<ul>
+  <li>参考：<a href="https://asnokaze.hatenablog.com/entry/20110530/1306720270">XMLHttpRequest でsetRequestHeader出来ないヘッダー リスト - ASnoKaze blog</a></li>
+</ul>
+<p>フロントエンドオンリーで動いてくれれば嬉しかったのだが、どうもダメそうなので、PA API をコールする部分だけ、サーバレス環境で実行することにしよう。Functions として実装するなら、AWS Lambda、Netlify Functions、Vercel Serverless Functions あたりが無料で使える。PaaS で良ければ Heroku や Glitch を使えば、無料で Node.js サーバを公開できるので、いかようにも実装できるだろう。</p>
+<p>とゆーワケで以上。</p>
+<ul>
+  <li>参考：<a href="https://webservices.amazon.com/paapi5/documentation/">Introduction · Product Advertising API 5.0</a></li>
+  <li>参考：<a href="https://images-na.ssl-images-amazon.com/images/G/09/associates/paapi/dg/index.html">Product Advertising API</a></li>
+  <li>参考：<a href="https://photo-tea.com/p/1803/amazon-how-to-itemlookup-nodejs/">Node.jsでAmazonアフィリエイトの商品URLコードを取得する方法|おちゃカメラ。</a></li>
+  <li>参考：<a href="https://kaereba.com/wind/">カエレバ風</a></li>
+  <li>参考：<a href="https://ja.wordpress.org/plugins/amazonjs/">Amazon JS – WordPress プラグイン | WordPress.org 日本語</a></li>
+  <li>参考：<a href="https://creazy.net/amazon_quick_affiliate">AmaQuick 公式ページ | Creazy!</a></li>
+  <li>参考：<a href="https://text.baldanders.info/release/2019/01/amazon-product-advertising-api/">しょうがないので Amazon アフィリエイト・リンク作成ツールを作ったですよ | text.Baldanders.info</a></li>
+  <li>参考：<a href="https://qiita.com/sakatech-jp/items/81ae452b979336c6e90d">Amazon Product Advertising API 5.0（PA-API v5）をexpressでREST API化する - Qiita</a></li>
+</ul>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2020-11-05</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2021-10-09</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

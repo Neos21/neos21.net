@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>サイトに CSS・JS が効いていない時にミラーの CSS・JS ファイルを読み込んでフォールバックさせるスクリプトを作った - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2018/12/23-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2018/index.html">2018年</a></li>
+            <li><a href="/blog/2018/12/index.html">12月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2018-12-23</time></div>
+        <h1 id="page-title">サイトに CSS・JS が効いていない時にミラーの CSS・JS ファイルを読み込んでフォールバックさせるスクリプトを作った</h1>
+
+<p>このブログ Corredor で、iPhone から閲覧している場合に時々発生していたのだが、ブログの CSS・JS ファイルが読み込めずにレイアウトが崩れていることがあった。</p>
+<p>このブログの CSS と JS ファイルは、GitHub Pages でホスティングしているモノを「はてなブログ」管理画面の「設定」にて、<code>head</code> 要素内で読み込むようにしている。</p>
+<pre class="language-html"><code class="language-html"><span class="token comment">&#x3C;!-- はてなブログ管理画面の「設定」→「詳細設定」タブ→「head に要素を追加」欄に、以下のように記載している --></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>link</span> <span class="token attr-name">rel</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>stylesheet<span class="token punctuation">"</span></span> <span class="token attr-name">href</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>https://neos21.github.io/HatenaBlogs/dist/styles/Corredor.css<span class="token punctuation">"</span></span><span class="token punctuation">></span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>script</span> <span class="token attr-name">src</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>https://neos21.github.io/HatenaBlogs/dist/scripts/Corredor.js<span class="token punctuation">"</span></span><span class="token punctuation">></span></span><span class="token script"></span><span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>script</span><span class="token punctuation">></span></span>
+</code></pre>
+<p>どういうワケか、iPhone Safari で見る時だけこのファイルが上手く読み込まれず、レイアウトが崩れることがあったので、試しに<strong>フォールバック処理</strong>を組み込んでみることにした。</p>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#css%E3%83%BBjs-%E3%83%95%E3%82%A1%E3%82%A4%E3%83%AB%E3%81%AE%E3%83%95%E3%82%A9%E3%83%BC%E3%83%AB%E3%83%90%E3%83%83%E3%82%AF%E5%87%A6%E7%90%86%E3%81%A8%E3%81%AF">CSS・JS ファイルのフォールバック処理とは</a></li>
+  <li><a href="#css%E3%83%BBjs-%E3%83%95%E3%82%A1%E3%82%A4%E3%83%AB%E3%82%92%E3%83%9B%E3%82%B9%E3%83%86%E3%82%A3%E3%83%B3%E3%82%B0%E3%81%99%E3%82%8B%E3%81%AA%E3%82%89-npm-%E3%81%AE-cdn-%E3%82%92%E4%BD%BF%E3%81%86%E3%81%AE%E3%81%8C%E6%89%8B%E3%81%A3%E5%8F%96%E3%82%8A%E6%97%A9%E3%81%84">CSS・JS ファイルをホスティングするなら npm の CDN を使うのが手っ取り早い</a></li>
+  <li><a href="#css-%E3%81%AE%E3%83%95%E3%82%A9%E3%83%BC%E3%83%AB%E3%83%90%E3%83%83%E3%82%AF%E5%87%A6%E7%90%86">CSS のフォールバック処理</a>
+    <ul>
+      <li><a href="#1-css-%E8%AA%AD%E3%81%BF%E8%BE%BC%E3%81%BF%E3%83%81%E3%82%A7%E3%83%83%E3%82%AF%E7%94%A8%E3%81%AE-html-%E8%A6%81%E7%B4%A0%E3%82%92%E7%BD%AE%E3%81%8F">1. CSS 読み込みチェック用の HTML 要素を置く</a></li>
+      <li><a href="#2-css-%E3%83%95%E3%82%A1%E3%82%A4%E3%83%AB%E3%81%AB%E3%81%A6%E8%AA%AD%E3%81%BF%E8%BE%BC%E3%81%BF%E3%83%81%E3%82%A7%E3%83%83%E3%82%AF%E7%94%A8%E3%81%AE%E8%A6%81%E7%B4%A0%E3%81%AB%E3%82%B9%E3%82%BF%E3%82%A4%E3%83%AB%E3%82%92%E5%BD%93%E3%81%A6%E3%82%8B">2. CSS ファイルにて読み込みチェック用の要素にスタイルを当てる</a></li>
+      <li><a href="#3-%E6%9C%80%E5%88%9D%E3%81%AB%E8%AA%AD%E3%81%BF%E8%BE%BC%E3%82%80-css-%E3%83%95%E3%82%A1%E3%82%A4%E3%83%AB%E3%81%AE-link-%E8%A6%81%E7%B4%A0%E3%81%AB-onload%E3%83%BBonerror-%E5%B1%9E%E6%80%A7%E3%82%92%E4%BB%98%E4%B8%8E%E3%81%99%E3%82%8B">3. 最初に読み込む CSS ファイルの <code>link</code> 要素に <code>onload</code>・<code>onerror</code> 属性を付与する</a></li>
+      <li><a href="#4-css-%E8%AA%AD%E3%81%BF%E8%BE%BC%E3%81%BF%E3%83%81%E3%82%A7%E3%83%83%E3%82%AF%E3%81%8A%E3%82%88%E3%81%B3%E3%83%95%E3%82%A9%E3%83%BC%E3%83%AB%E3%83%90%E3%83%83%E3%82%AF%E5%87%A6%E7%90%86%E7%94%A8%E3%81%AE%E3%82%B9%E3%82%AF%E3%83%AA%E3%83%97%E3%83%88%E3%82%92%E5%AE%9F%E8%A3%85%E3%81%99%E3%82%8B">4. CSS 読み込みチェックおよびフォールバック処理用のスクリプトを実装する</a></li>
+      <li><a href="#5-%E3%83%95%E3%82%A9%E3%83%BC%E3%83%AB%E3%83%90%E3%83%83%E3%82%AF%E7%94%A8%E3%82%B9%E3%82%AF%E3%83%AA%E3%83%97%E3%83%88%E3%82%92%E5%85%83%E3%81%AE-link-%E8%A6%81%E7%B4%A0%E3%82%88%E3%82%8A%E4%B8%8A%E3%81%AB%E3%83%99%E3%82%BF%E6%9B%B8%E3%81%8D%E3%81%99%E3%82%8B">5. フォールバック用スクリプトを元の <code>link</code> 要素より上にベタ書きする</a></li>
+    </ul>
+  </li>
+  <li><a href="#js-%E3%83%95%E3%82%A1%E3%82%A4%E3%83%AB%E3%81%AE%E3%83%95%E3%82%A9%E3%83%BC%E3%83%AB%E3%83%90%E3%83%83%E3%82%AF%E5%87%A6%E7%90%86">JS ファイルのフォールバック処理</a>
+    <ul>
+      <li><a href="#1-js-%E3%83%95%E3%82%A1%E3%82%A4%E3%83%AB%E3%81%AB%E3%81%A6%E8%AA%AD%E3%81%BF%E8%BE%BC%E3%81%BF%E3%83%81%E3%82%A7%E3%83%83%E3%82%AF%E7%94%A8%E3%81%AE%E3%82%B0%E3%83%AD%E3%83%BC%E3%83%90%E3%83%AB%E3%82%AA%E3%83%96%E3%82%B8%E3%82%A7%E3%82%AF%E3%83%88%E3%82%92%E5%AE%9A%E7%BE%A9%E3%81%99%E3%82%8B">1. JS ファイルにて読み込みチェック用のグローバルオブジェクトを定義する</a></li>
+      <li><a href="#2-%E6%9C%80%E5%88%9D%E3%81%AB%E8%AA%AD%E3%81%BF%E8%BE%BC%E3%82%80-js-%E3%83%95%E3%82%A1%E3%82%A4%E3%83%AB%E3%81%AE-script-%E8%A6%81%E7%B4%A0%E3%81%AB-onload%E3%83%BBonerror-%E5%B1%9E%E6%80%A7%E3%82%92%E8%A8%AD%E5%AE%9A%E3%81%99%E3%82%8B">2. 最初に読み込む JS ファイルの <code>script</code> 要素に <code>onload</code>・<code>onerror</code> 属性を設定する</a></li>
+      <li><a href="#3-js-%E8%AA%AD%E3%81%BF%E8%BE%BC%E3%81%BF%E3%83%81%E3%82%A7%E3%83%83%E3%82%AF%E3%81%8A%E3%82%88%E3%81%B3%E3%83%95%E3%82%A9%E3%83%BC%E3%83%AB%E3%83%90%E3%83%83%E3%82%AF%E5%87%A6%E7%90%86%E7%94%A8%E3%81%AE%E3%82%B9%E3%82%AF%E3%83%AA%E3%83%97%E3%83%88%E3%82%92%E5%AE%9F%E8%A3%85%E3%81%99%E3%82%8B">3. JS 読み込みチェックおよびフォールバック処理用のスクリプトを実装する</a></li>
+    </ul>
+  </li>
+  <li><a href="#%E6%9C%80%E5%BE%8C%E3%81%AB%E3%83%95%E3%82%A9%E3%83%BC%E3%83%AB%E3%83%90%E3%83%83%E3%82%AF%E7%94%A8%E3%82%B9%E3%82%AF%E3%83%AA%E3%83%97%E3%83%88%E3%81%AE%E5%85%A8%E9%87%8F">最後にフォールバック用スクリプトの全量</a></li>
+</ul>
+<h2 id="css・js-ファイルのフォールバック処理とは"><a class="header-link" href="#css・js-ファイルのフォールバック処理とは"><span class="header-link-mark"></span></a>CSS・JS ファイルのフォールバック処理とは</h2>
+<p>ココでいう「フォールバック」とは、上述の HTML ソースで読み込ませようとした CSS ファイルや JS ファイルが読み込めなかった時に、別サイトにホスティングしている同じファイルを読み込ませる、ということだ。</p>
+<p>当然ながら、CSS ファイル、JS ファイルを予めミラーサイトにホスティングしておく必要がある。</p>
+<h2 id="css・js-ファイルをホスティングするなら-npm-の-cdn-を使うのが手っ取り早い"><a class="header-link" href="#css・js-ファイルをホスティングするなら-npm-の-cdn-を使うのが手っ取り早い"><span class="header-link-mark"></span></a>CSS・JS ファイルをホスティングするなら npm の CDN を使うのが手っ取り早い</h2>
+<p>CSS や JS のような静的なファイルをホスティングするなら、npm パッケージとして <code>npm publish</code> し、<em>unpkg や jsdelivr</em> のような CDN サービスを利用して読み込むのが良いだろう。</p>
+<p>unpkg や jsdelivr に対しては特に登録の必要はない。ただ <code>npm publish</code> するだけで使えるようになるので、お手軽だ。</p>
+<p>その他、サービス終了がアナウンスされているが、「Raw Git」やその類似サービスなど、GitHub 上にあるファイルに Content-Type を付けて返してくれるサービスも使えるだろう。GitHub Pages として配布するのとは少し違って、GitHub リポジトリの Raw ファイルを直接参照するっぽいので、フォールバックとして使えるだろう。</p>
+<h2 id="css-のフォールバック処理"><a class="header-link" href="#css-のフォールバック処理"><span class="header-link-mark"></span></a>CSS のフォールバック処理</h2>
+<p>それではまず、CSS のフォールバック処理を用意してみる。</p>
+<h3 id="1-css-読み込みチェック用の-html-要素を置く"><a class="header-link" href="#1-css-読み込みチェック用の-html-要素を置く"><span class="header-link-mark"></span></a>1. CSS 読み込みチェック用の HTML 要素を置く</h3>
+<p>まず、サイト内に CSS 読み込みチェック用の HTML 要素を置く。自分の場合は、以下のような空の要素をページの最下部など邪魔にならないところに置いておく。</p>
+<pre class="language-html"><code class="language-html"><span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>span</span> <span class="token attr-name">id</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>n-check<span class="token punctuation">"</span></span><span class="token punctuation">></span></span><span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>span</span><span class="token punctuation">></span></span>
+</code></pre>
+<h3 id="2-css-ファイルにて読み込みチェック用の要素にスタイルを当てる"><a class="header-link" href="#2-css-ファイルにて読み込みチェック用の要素にスタイルを当てる"><span class="header-link-mark"></span></a>2. CSS ファイルにて読み込みチェック用の要素にスタイルを当てる</h3>
+<p>次に、CSS ファイルで、読み込みチェック用の要素にスタイルを当てる。</p>
+<pre class="language-css"><code class="language-css"><span class="token comment">/* CSS 読込が正常に行えているか確認するための検証用要素 */</span>
+<span class="token selector"><span class="token id">#n-check</span></span> <span class="token punctuation">{</span>
+  <span class="token property">display</span><span class="token punctuation">:</span> none<span class="token punctuation">;</span>
+  <span class="token property">font-size</span><span class="token punctuation">:</span> <span class="token number">0</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p><code>display: none</code> は念のため、要素を非表示にするために指定。ココでは <code>font-size: 0</code> と指定してある。</p>
+<h3 id="3-最初に読み込む-css-ファイルの-link-要素に-onload・onerror-属性を付与する"><a class="header-link" href="#3-最初に読み込む-css-ファイルの-link-要素に-onload・onerror-属性を付与する"><span class="header-link-mark"></span></a>3. 最初に読み込む CSS ファイルの <code>link</code> 要素に <code>onload</code>・<code>onerror</code> 属性を付与する</h3>
+<p>前述の <code>link</code> 要素を基に、<code>onload</code>・<code>onerror</code> 属性を追加する。</p>
+<pre class="language-html"><code class="language-html"><span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>link</span> <span class="token attr-name">rel</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>stylesheet<span class="token punctuation">"</span></span> <span class="token attr-name">href</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>https://neos21.github.io/HatenaBlogs/dist/styles/Corredor.css<span class="token punctuation">"</span></span> <span class="token attr-name">onload</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>Neos21.styles(-1);<span class="token punctuation">"</span></span> <span class="token attr-name">onerror</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>Neos21.styles(-1);<span class="token punctuation">"</span></span><span class="token punctuation">></span></span>
+</code></pre>
+<p>コレで、この CSS ファイルが読み込まれた時、もしくは読み込みに失敗した時、いずれの場合でも、<code>window.Neos21.styles()</code> という関数が実行されることになる。この関数の中身はコレから実装する。</p>
+<h3 id="4-css-読み込みチェックおよびフォールバック処理用のスクリプトを実装する"><a class="header-link" href="#4-css-読み込みチェックおよびフォールバック処理用のスクリプトを実装する"><span class="header-link-mark"></span></a>4. CSS 読み込みチェックおよびフォールバック処理用のスクリプトを実装する</h3>
+<p>CSS ファイルの読み込みチェックと、読み込めていなさそうだった時にミラーサイトから CSS ファイルを読み込み直す、一連のスクリプトを以下のように実装する。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token doc-comment comment">/**
+ * CSS・JS ファイルのフォールバック用グローバルオブジェクト
+ */</span>
+<span class="token maybe-class-name">Neos21</span> <span class="token operator">=</span> <span class="token punctuation">{</span>
+  <span class="token doc-comment comment">/**
+   * link 要素または script 要素を head 要素に追加する
+   * 
+   * <span class="token keyword">@param</span> <span class="token parameter">isLink</span> true なら link 要素・false なら script 要素を生成する
+   * <span class="token keyword">@param</span> <span class="token parameter">nextIndex</span> 添字
+   * <span class="token keyword">@param</span> <span class="token parameter">nextUrl</span> 読み込むファイル URL
+   */</span>
+  <span class="token function-variable function">append</span><span class="token operator">:</span> <span class="token keyword">function</span><span class="token punctuation">(</span><span class="token parameter">isLink<span class="token punctuation">,</span> nextIndex<span class="token punctuation">,</span> nextUrl</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token keyword">var</span> d <span class="token operator">=</span> <span class="token dom variable">document</span><span class="token punctuation">;</span>
+    <span class="token keyword">var</span> s <span class="token operator">=</span> <span class="token string">'setAttribute'</span><span class="token punctuation">;</span>
+    <span class="token keyword">var</span> eventValue <span class="token operator">=</span> <span class="token string">'Neos21.'</span> <span class="token operator">+</span> <span class="token punctuation">(</span>isLink <span class="token operator">?</span> <span class="token string">'styles'</span> <span class="token operator">:</span> <span class="token string">'scripts'</span><span class="token punctuation">)</span> <span class="token operator">+</span> <span class="token string">'('</span> <span class="token operator">+</span> nextIndex <span class="token operator">+</span> <span class="token string">');'</span><span class="token punctuation">;</span>
+    
+    <span class="token keyword">var</span> elem <span class="token operator">=</span> d<span class="token punctuation">.</span><span class="token method function property-access">createElement</span><span class="token punctuation">(</span>isLink <span class="token operator">?</span> <span class="token string">'link'</span> <span class="token operator">:</span> <span class="token string">'script'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword control-flow">if</span><span class="token punctuation">(</span>isLink<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      elem<span class="token punctuation">[</span>s<span class="token punctuation">]</span><span class="token punctuation">(</span><span class="token string">'rel'</span><span class="token punctuation">,</span> <span class="token string">'stylesheet'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+    elem<span class="token punctuation">[</span>s<span class="token punctuation">]</span><span class="token punctuation">(</span>isLink <span class="token operator">?</span> <span class="token string">'href'</span> <span class="token operator">:</span> <span class="token string">'src'</span><span class="token punctuation">,</span> nextUrl<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    elem<span class="token punctuation">[</span>s<span class="token punctuation">]</span><span class="token punctuation">(</span><span class="token string">'onload'</span> <span class="token punctuation">,</span> eventValue<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    elem<span class="token punctuation">[</span>s<span class="token punctuation">]</span><span class="token punctuation">(</span><span class="token string">'onerror'</span><span class="token punctuation">,</span> eventValue<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    d<span class="token punctuation">.</span><span class="token method function property-access">querySelector</span><span class="token punctuation">(</span><span class="token string">'head'</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">appendChild</span><span class="token punctuation">(</span>elem<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  
+  <span class="token doc-comment comment">/**
+   * CSS ファイルが読み込めているか検証し、必要に応じてフォールバック処理を行う
+   * 
+   * <span class="token keyword">@param</span> <span class="token parameter">index</span> フォールバック URL の添字
+   */</span>
+  <span class="token function-variable function">styles</span><span class="token operator">:</span> <span class="token keyword">function</span><span class="token punctuation">(</span><span class="token parameter">index</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token comment">// 第1引数が number 型で指定されていなければ中止する</span>
+    <span class="token keyword control-flow">if</span><span class="token punctuation">(</span><span class="token keyword">typeof</span> index <span class="token operator">!==</span> <span class="token string">'number'</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token keyword control-flow">return</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+    
+    <span class="token keyword">var</span> w <span class="token operator">=</span> <span class="token dom variable">window</span><span class="token punctuation">;</span>
+    <span class="token keyword">var</span> d <span class="token operator">=</span> <span class="token dom variable">document</span><span class="token punctuation">;</span>
+    
+    <span class="token comment">// 検証用要素の読み込みを待つため再呼び出しして終了する</span>
+    <span class="token keyword control-flow">if</span><span class="token punctuation">(</span><span class="token operator">!</span>d<span class="token punctuation">.</span><span class="token property-access">readyState</span> <span class="token operator">||</span> d<span class="token punctuation">.</span><span class="token property-access">readyState</span> <span class="token operator">===</span> <span class="token string">'interactive'</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      w<span class="token punctuation">.</span><span class="token method function property-access">addEventListener</span><span class="token punctuation">(</span><span class="token string">'load'</span><span class="token punctuation">,</span> <span class="token keyword">function</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        <span class="token maybe-class-name">Neos21</span><span class="token punctuation">.</span><span class="token method function property-access">styles</span><span class="token punctuation">(</span>index<span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token keyword control-flow">return</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+    <span class="token keyword control-flow">else</span> <span class="token keyword control-flow">if</span><span class="token punctuation">(</span>d<span class="token punctuation">.</span><span class="token property-access">readyState</span> <span class="token operator">===</span> <span class="token string">'loading'</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      d<span class="token punctuation">.</span><span class="token method function property-access">addEventListener</span><span class="token punctuation">(</span><span class="token string">'DOMContentLoaded'</span><span class="token punctuation">,</span> <span class="token keyword">function</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        <span class="token maybe-class-name">Neos21</span><span class="token punctuation">.</span><span class="token method function property-access">styles</span><span class="token punctuation">(</span>index<span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token keyword control-flow">return</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+    
+    <span class="token comment">// フォールバック URL の定義</span>
+    <span class="token keyword">var</span> urls <span class="token operator">=</span> <span class="token punctuation">[</span>
+      <span class="token comment">// unpkg ホスティングのミラーファイル</span>
+      <span class="token string">'https://unpkg.com/@neos21/hatena-blogs@1.0.4/dist/styles/Corredor.css'</span><span class="token punctuation">,</span>
+      <span class="token comment">// jsdelivr</span>
+      <span class="token string">'https://cdn.jsdelivr.net/npm/@neos21/hatena-blogs@1.0.4/dist/styles/Corredor.css'</span><span class="token punctuation">,</span>
+      <span class="token comment">// GitHack</span>
+      <span class="token string">'https://raw.githack.com/Neos21/HatenaBlogs/master/dist/styles/Corredor.css'</span><span class="token punctuation">,</span>
+      <span class="token string">'https://rawcdn.githack.com/Neos21/HatenaBlogs/a9a8c7d78b940f1d90a8b07e40f04418f407c469/dist/styles/Corredor.css'</span><span class="token punctuation">,</span>
+      <span class="token comment">// Raw GitHub</span>
+      <span class="token string">'https://raw.githubusercontent.com/Neos21/HatenaBlogs/master/dist/styles/Corredor.css'</span>
+    <span class="token punctuation">]</span><span class="token punctuation">;</span>
+    
+    <span class="token comment">// 検証用要素</span>
+    <span class="token keyword">var</span> check <span class="token operator">=</span> d<span class="token punctuation">.</span><span class="token method function property-access">getElementById</span><span class="token punctuation">(</span><span class="token string">'n-check'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword control-flow">if</span><span class="token punctuation">(</span><span class="token operator">!</span>check<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token comment">// 検証用要素なし・中止</span>
+      <span class="token keyword control-flow">return</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+    
+    <span class="token comment">// 検証用要素にスタイルが適用されているか確認する</span>
+    <span class="token keyword">var</span> checkStyle <span class="token operator">=</span> <span class="token function">parseInt</span><span class="token punctuation">(</span>w<span class="token punctuation">.</span><span class="token method function property-access">getComputedStyle</span><span class="token punctuation">(</span>check<span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token property-access">fontSize</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword control-flow">if</span><span class="token punctuation">(</span>checkStyle <span class="token operator">===</span> <span class="token number">0</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token comment">// スタイル適用済なら正常・何もしない</span>
+      <span class="token keyword control-flow">return</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+    
+    <span class="token comment">// フォールバックが必要</span>
+    
+    <span class="token comment">// 次の Index 値</span>
+    <span class="token keyword">var</span> nextIndex <span class="token operator">=</span> index <span class="token operator">+</span> <span class="token number">1</span><span class="token punctuation">;</span>
+    
+    <span class="token comment">// フォールバック用 URL がなかったら対応不可・終了</span>
+    <span class="token keyword control-flow">if</span><span class="token punctuation">(</span>nextIndex <span class="token operator">>=</span> urls<span class="token punctuation">.</span><span class="token property-access">length</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token keyword control-flow">return</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+    
+    <span class="token comment">// link 要素を生成し挿入する</span>
+    <span class="token maybe-class-name">Neos21</span><span class="token punctuation">.</span><span class="token method function property-access">append</span><span class="token punctuation">(</span><span class="token boolean">true</span><span class="token punctuation">,</span> nextIndex<span class="token punctuation">,</span> urls<span class="token punctuation">[</span>nextIndex<span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+</code></pre>
+<p>このフォールバック処理は <code>window.Neos21</code> というグローバルオブジェクト内に <code>styles()</code> という関数で定義している。</p>
+<p>最初のブロックでは引数のチェックをしている。引数 <code>index</code> は、このあと定義しているフォールバック用 CSS ファイルの URL を定義した配列の添字をズラすためのモノ。<code>link</code> 要素の <code>onload</code>・<code>onerror</code> 属性で <code>Neos21.styles(-1)</code> と指定したとおり、最初の CSS が読み込まれた時は <code>-1</code> が指定されており、フォールバックが必要な場合はインクリメントして配列の <code>0</code> 番目の URL からファイルを再読込しようとする。</p>
+<p>次のブロックで、ページの読み込み状況を確認し、読み込みが終わっていなければ <code>DOMContentLoaded</code> なり <code>load</code> なりに自身を再呼び出しするイベントを追加して終了している。ページの読み込みが完了していない段階で実行すると、上手く CSS の読み込み状況が拾えないことがあるからだ。</p>
+<p>そのあと、<code>var urls</code> でフォールバック用の URL を定義している。<code>link</code> 要素で直接指定した CSS ファイルと同じ内容のモノを、ミラーサイト (CDN) に置いておき、その URL を配列に控えておく。要は<em>これらの URL から CSS ファイルを順に読み込んでいけば、どれかしら正常に読み込めるんじゃね？</em>という魂胆だ。</p>
+<p>さて、CSS ファイルが正常に読み込めているかどうかの検証だが、<strong><code>window.getComputedStyle()</code></strong> という関数を使う。この関数は CSS が適用されて実際にどんなスタイルが当たっているのかを返してくれるモノで、この関数を使って検証用の HTML 要素 <code>document.getElementById('n-check')</code> の <code>font-size</code> をチェックすればよかろう、というワケだ。結果は <code>'0px'</code> という文字列で返ってくるはずで、それを <code>parseInt()</code> すれば <code>0</code> が取れるはず。もし CSS ファイルが当たっていなければ、デフォルトスタイルで <code>'16px'</code> などの値が返ってくるはずなので、ココで読み込みチェックができる、ということ。必ずしも <code>font-size</code> 値で検証しないといけないワケではないが、<code>display: none</code> にしていても影響がなく、<code>color</code> のように期待値が分かりづらくなるプロパティを避けただけ。</p>
+<p>検証用の関数に CSS が適用されていないようであれば、変数 <code>urls</code> から次のフォールバック用 URL を取得し、<code>link</code> 要素を生成して <code>head</code> 要素に埋め込んでいる。この時も <code>onload</code>・<code>onerror</code> 属性を付与しているので、続けざまにフォールバックが可能になっている。</p>
+<h3 id="5-フォールバック用スクリプトを元の-link-要素より上にベタ書きする"><a class="header-link" href="#5-フォールバック用スクリプトを元の-link-要素より上にベタ書きする"><span class="header-link-mark"></span></a>5. フォールバック用スクリプトを元の <code>link</code> 要素より上にベタ書きする</h3>
+<p>このようなスクリプトを、<code>link</code> 要素より上にベタ書きする。</p>
+<pre class="language-html"><code class="language-html"><span class="token comment">&#x3C;!-- 先程のスクリプトを Uglify したもの --></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>script</span><span class="token punctuation">></span></span><span class="token script"><span class="token language-javascript">
+<span class="token maybe-class-name">Neos21</span><span class="token operator">=</span><span class="token punctuation">{</span><span class="token function-variable function">append</span><span class="token operator">:</span><span class="token keyword">function</span><span class="token punctuation">(</span><span class="token parameter">e<span class="token punctuation">,</span>t<span class="token punctuation">,</span>s</span><span class="token punctuation">)</span><span class="token punctuation">{</span><span class="token keyword">var</span> o<span class="token operator">=</span><span class="token dom variable">document</span><span class="token punctuation">,</span>r<span class="token operator">=</span><span class="token string">"setAttribute"</span><span class="token punctuation">,</span>a<span class="token operator">=</span><span class="token string">"Neos21."</span><span class="token operator">+</span><span class="token punctuation">(</span>e<span class="token operator">?</span><span class="token string">"styles"</span><span class="token operator">:</span><span class="token string">"scripts"</span><span class="token punctuation">)</span><span class="token operator">+</span><span class="token string">"("</span><span class="token operator">+</span>t<span class="token operator">+</span><span class="token string">");"</span><span class="token punctuation">,</span>n<span class="token operator">=</span>o<span class="token punctuation">.</span><span class="token method function property-access">createElement</span><span class="token punctuation">(</span>e<span class="token operator">?</span><span class="token string">"link"</span><span class="token operator">:</span><span class="token string">"script"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>e<span class="token operator">&#x26;&#x26;</span>n<span class="token punctuation">[</span>r<span class="token punctuation">]</span><span class="token punctuation">(</span><span class="token string">"rel"</span><span class="token punctuation">,</span><span class="token string">"stylesheet"</span><span class="token punctuation">)</span><span class="token punctuation">,</span>n<span class="token punctuation">[</span>r<span class="token punctuation">]</span><span class="token punctuation">(</span>e<span class="token operator">?</span><span class="token string">"href"</span><span class="token operator">:</span><span class="token string">"src"</span><span class="token punctuation">,</span>s<span class="token punctuation">)</span><span class="token punctuation">,</span>n<span class="token punctuation">[</span>r<span class="token punctuation">]</span><span class="token punctuation">(</span><span class="token string">"onload"</span><span class="token punctuation">,</span>a<span class="token punctuation">)</span><span class="token punctuation">,</span>n<span class="token punctuation">[</span>r<span class="token punctuation">]</span><span class="token punctuation">(</span><span class="token string">"onerror"</span><span class="token punctuation">,</span>a<span class="token punctuation">)</span><span class="token punctuation">,</span>o<span class="token punctuation">.</span><span class="token method function property-access">querySelector</span><span class="token punctuation">(</span><span class="token string">"head"</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">appendChild</span><span class="token punctuation">(</span>n<span class="token punctuation">)</span><span class="token punctuation">}</span><span class="token punctuation">,</span><span class="token function-variable function">styles</span><span class="token operator">:</span><span class="token keyword">function</span><span class="token punctuation">(</span><span class="token parameter">e</span><span class="token punctuation">)</span><span class="token punctuation">{</span><span class="token keyword control-flow">if</span><span class="token punctuation">(</span><span class="token string">"number"</span><span class="token operator">==</span><span class="token keyword">typeof</span> e<span class="token punctuation">)</span><span class="token punctuation">{</span><span class="token keyword">var</span> t<span class="token operator">=</span><span class="token dom variable">window</span><span class="token punctuation">,</span>s<span class="token operator">=</span><span class="token dom variable">document</span><span class="token punctuation">;</span><span class="token keyword control-flow">if</span><span class="token punctuation">(</span>s<span class="token punctuation">.</span><span class="token property-access">readyState</span><span class="token operator">&#x26;&#x26;</span><span class="token string">"interactive"</span><span class="token operator">!==</span>s<span class="token punctuation">.</span><span class="token property-access">readyState</span><span class="token punctuation">)</span><span class="token keyword control-flow">if</span><span class="token punctuation">(</span><span class="token string">"loading"</span><span class="token operator">!==</span>s<span class="token punctuation">.</span><span class="token property-access">readyState</span><span class="token punctuation">)</span><span class="token punctuation">{</span><span class="token keyword">var</span> o<span class="token operator">=</span><span class="token punctuation">[</span><span class="token string">"https://unpkg.com/@neos21/hatena-blogs@1.0.4/dist/styles/Corredor.css"</span><span class="token punctuation">,</span><span class="token string">"https://cdn.jsdelivr.net/npm/@neos21/hatena-blogs@1.0.4/dist/styles/Corredor.css"</span><span class="token punctuation">,</span><span class="token string">"https://raw.githack.com/Neos21/HatenaBlogs/master/dist/styles/Corredor.css"</span><span class="token punctuation">,</span><span class="token string">"https://rawcdn.githack.com/Neos21/HatenaBlogs/a9a8c7d78b940f1d90a8b07e40f04418f407c469/dist/styles/Corredor.css"</span><span class="token punctuation">,</span><span class="token string">"https://raw.githubusercontent.com/Neos21/HatenaBlogs/master/dist/styles/Corredor.css"</span><span class="token punctuation">]</span><span class="token punctuation">,</span>r<span class="token operator">=</span>s<span class="token punctuation">.</span><span class="token method function property-access">getElementById</span><span class="token punctuation">(</span><span class="token string">"n-check"</span><span class="token punctuation">)</span><span class="token punctuation">;</span><span class="token keyword control-flow">if</span><span class="token punctuation">(</span>r<span class="token punctuation">)</span><span class="token keyword control-flow">if</span><span class="token punctuation">(</span><span class="token number">0</span><span class="token operator">!==</span><span class="token function">parseInt</span><span class="token punctuation">(</span>t<span class="token punctuation">.</span><span class="token method function property-access">getComputedStyle</span><span class="token punctuation">(</span>r<span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token property-access">fontSize</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">{</span><span class="token keyword">var</span> a<span class="token operator">=</span>e<span class="token operator">+</span><span class="token number">1</span><span class="token punctuation">;</span>o<span class="token punctuation">.</span><span class="token property-access">length</span><span class="token operator">&#x3C;=</span>a<span class="token operator">||</span><span class="token maybe-class-name">Neos21</span><span class="token punctuation">.</span><span class="token method function property-access">append</span><span class="token punctuation">(</span><span class="token operator">!</span><span class="token number">0</span><span class="token punctuation">,</span>a<span class="token punctuation">,</span>o<span class="token punctuation">[</span>a<span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">}</span><span class="token punctuation">}</span><span class="token keyword control-flow">else</span> s<span class="token punctuation">.</span><span class="token method function property-access">addEventListener</span><span class="token punctuation">(</span><span class="token string">"DOMContentLoaded"</span><span class="token punctuation">,</span><span class="token keyword">function</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">{</span><span class="token maybe-class-name">Neos21</span><span class="token punctuation">.</span><span class="token method function property-access">styles</span><span class="token punctuation">(</span>e<span class="token punctuation">)</span><span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span><span class="token keyword control-flow">else</span> t<span class="token punctuation">.</span><span class="token method function property-access">addEventListener</span><span class="token punctuation">(</span><span class="token string">"load"</span><span class="token punctuation">,</span><span class="token keyword">function</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">{</span><span class="token maybe-class-name">Neos21</span><span class="token punctuation">.</span><span class="token method function property-access">styles</span><span class="token punctuation">(</span>e<span class="token punctuation">)</span><span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">}</span><span class="token punctuation">}</span><span class="token punctuation">}</span><span class="token punctuation">;</span>
+</span></span><span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>script</span><span class="token punctuation">></span></span>
+
+<span class="token comment">&#x3C;!-- 最初に読み込ませる CSS ファイル --></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>link</span> <span class="token attr-name">rel</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>stylesheet<span class="token punctuation">"</span></span> <span class="token attr-name">href</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>https://neos21.github.io/HatenaBlogs/dist/styles/Corredor.css<span class="token punctuation">"</span></span> <span class="token attr-name">onload</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>Neos21.styles(-1);<span class="token punctuation">"</span></span> <span class="token attr-name">onerror</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>Neos21.styles(-1);<span class="token punctuation">"</span></span><span class="token punctuation">></span></span>
+</code></pre>
+<p>フォールバック用スクリプトを外部ファイル読み込みにしてしまうと、そのスクリプトファイルが読み込めなかった時に対応しきれない。また、<code>link</code> 要素より先に書いておかないと、<code>onload</code>・<code>onerror</code> が先に発火してしまった時にグローバルオブジェクト <code>window.Neos21</code> がまだ存在しなくてエラーになってしまう恐れがある。</p>
+<p>以上で、CSS ファイルのフォールバック処理は完了だ。</p>
+<h2 id="js-ファイルのフォールバック処理"><a class="header-link" href="#js-ファイルのフォールバック処理"><span class="header-link-mark"></span></a>JS ファイルのフォールバック処理</h2>
+<p>続いて JS ファイルも同様にフォールバック処理を用意していこう。</p>
+<h3 id="1-js-ファイルにて読み込みチェック用のグローバルオブジェクトを定義する"><a class="header-link" href="#1-js-ファイルにて読み込みチェック用のグローバルオブジェクトを定義する"><span class="header-link-mark"></span></a>1. JS ファイルにて読み込みチェック用のグローバルオブジェクトを定義する</h3>
+<p>読み込む JS ファイル内で、グローバルオブジェクト <code>window.Neos21</code> 内に、JS ファイルが正常に読み込めていることを知らせるフラグ変数を用意する。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token comment">// JS ファイル内</span>
+
+<span class="token comment">// 本来の処理……省略……</span>
+
+<span class="token comment">// 検証用オブジェクト・プロパティを定義しておく</span>
+<span class="token keyword control-flow">if</span><span class="token punctuation">(</span><span class="token operator">!</span><span class="token dom variable">window</span><span class="token punctuation">.</span><span class="token property-access"><span class="token maybe-class-name">Neos21</span></span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token dom variable">window</span><span class="token punctuation">.</span><span class="token property-access"><span class="token maybe-class-name">Neos21</span></span> <span class="token operator">=</span> <span class="token punctuation">{</span><span class="token punctuation">}</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+
+<span class="token comment">// スクリプトが読み込めたことを知らせるフラグ変数を設定する</span>
+<span class="token dom variable">window</span><span class="token punctuation">.</span><span class="token property-access"><span class="token maybe-class-name">Neos21</span></span><span class="token punctuation">.</span><span class="token property-access">scriptLoaded</span> <span class="token operator">=</span> <span class="token boolean">true</span><span class="token punctuation">;</span>
+</code></pre>
+<h3 id="2-最初に読み込む-js-ファイルの-script-要素に-onload・onerror-属性を設定する"><a class="header-link" href="#2-最初に読み込む-js-ファイルの-script-要素に-onload・onerror-属性を設定する"><span class="header-link-mark"></span></a>2. 最初に読み込む JS ファイルの <code>script</code> 要素に <code>onload</code>・<code>onerror</code> 属性を設定する</h3>
+<p>前述の <code>script</code> 要素に、CSS ファイルの時に書いたような要領で <code>onload</code>・<code>onerror</code> 属性を付与する。</p>
+<pre class="language-html"><code class="language-html"><span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>script</span> <span class="token attr-name">src</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>https://neos21.github.io/HatenaBlogs/dist/scripts/Corredor.js<span class="token punctuation">"</span></span> <span class="token attr-name">onload</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>Neos21.scripts(-1);<span class="token punctuation">"</span></span> <span class="token attr-name">onerror</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>Neos21.scripts(-1);<span class="token punctuation">"</span></span><span class="token punctuation">></span></span><span class="token script"></span><span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>script</span><span class="token punctuation">></span></span>
+</code></pre>
+<p>コレで、この JS ファイルが読み込めた時も、読み込めなかった時も、<code>window.Neos21.scripts()</code> 関数が実行される、というワケ。</p>
+<h3 id="3-js-読み込みチェックおよびフォールバック処理用のスクリプトを実装する"><a class="header-link" href="#3-js-読み込みチェックおよびフォールバック処理用のスクリプトを実装する"><span class="header-link-mark"></span></a>3. JS 読み込みチェックおよびフォールバック処理用のスクリプトを実装する</h3>
+<p>JS ファイルの読み込みチェックも、CSS ファイルの場合と似たような関数を用意して実現する。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token doc-comment comment">/**
+ * CSS・JS ファイルのフォールバック用グローバルオブジェクト
+ */</span>
+<span class="token maybe-class-name">Neos21</span> <span class="token operator">=</span> <span class="token punctuation">{</span>
+  <span class="token doc-comment comment">/**
+   * link 要素または script 要素を head 要素に追加する
+   * 
+   * <span class="token keyword">@param</span> <span class="token parameter">isLink</span> true なら link 要素・false なら script 要素を生成する
+   * <span class="token keyword">@param</span> <span class="token parameter">nextIndex</span> 添字
+   * <span class="token keyword">@param</span> <span class="token parameter">nextUrl</span> 読み込むファイル URL
+   */</span>
+  <span class="token function-variable function">append</span><span class="token operator">:</span> <span class="token keyword">function</span><span class="token punctuation">(</span><span class="token parameter">isLink<span class="token punctuation">,</span> nextIndex<span class="token punctuation">,</span> nextUrl</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token keyword">var</span> d <span class="token operator">=</span> <span class="token dom variable">document</span><span class="token punctuation">;</span>
+    <span class="token keyword">var</span> s <span class="token operator">=</span> <span class="token string">'setAttribute'</span><span class="token punctuation">;</span>
+    <span class="token keyword">var</span> eventValue <span class="token operator">=</span> <span class="token string">'Neos21.'</span> <span class="token operator">+</span> <span class="token punctuation">(</span>isLink <span class="token operator">?</span> <span class="token string">'styles'</span> <span class="token operator">:</span> <span class="token string">'scripts'</span><span class="token punctuation">)</span> <span class="token operator">+</span> <span class="token string">'('</span> <span class="token operator">+</span> nextIndex <span class="token operator">+</span> <span class="token string">');'</span><span class="token punctuation">;</span>
+    
+    <span class="token keyword">var</span> elem <span class="token operator">=</span> d<span class="token punctuation">.</span><span class="token method function property-access">createElement</span><span class="token punctuation">(</span>isLink <span class="token operator">?</span> <span class="token string">'link'</span> <span class="token operator">:</span> <span class="token string">'script'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword control-flow">if</span><span class="token punctuation">(</span>isLink<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      elem<span class="token punctuation">[</span>s<span class="token punctuation">]</span><span class="token punctuation">(</span><span class="token string">'rel'</span><span class="token punctuation">,</span> <span class="token string">'stylesheet'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+    elem<span class="token punctuation">[</span>s<span class="token punctuation">]</span><span class="token punctuation">(</span>isLink <span class="token operator">?</span> <span class="token string">'href'</span> <span class="token operator">:</span> <span class="token string">'src'</span><span class="token punctuation">,</span> nextUrl<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    elem<span class="token punctuation">[</span>s<span class="token punctuation">]</span><span class="token punctuation">(</span><span class="token string">'onload'</span> <span class="token punctuation">,</span> eventValue<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    elem<span class="token punctuation">[</span>s<span class="token punctuation">]</span><span class="token punctuation">(</span><span class="token string">'onerror'</span><span class="token punctuation">,</span> eventValue<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    d<span class="token punctuation">.</span><span class="token method function property-access">querySelector</span><span class="token punctuation">(</span><span class="token string">'head'</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">appendChild</span><span class="token punctuation">(</span>elem<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  
+  <span class="token doc-comment comment">/**
+   * JS ファイルが読み込めているか検証し、必要に応じてフォールバック処理を行う
+   * 
+   * <span class="token keyword">@param</span> <span class="token parameter">index</span> フォールバック URL の添字
+   */</span>
+  <span class="token function-variable function">scripts</span><span class="token operator">:</span> <span class="token keyword">function</span><span class="token punctuation">(</span><span class="token parameter">index</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token comment">// 第1引数が number 型で指定されていること</span>
+    <span class="token keyword control-flow">if</span><span class="token punctuation">(</span><span class="token keyword">typeof</span> index <span class="token operator">!==</span> <span class="token string">'number'</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token keyword control-flow">return</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+    
+    <span class="token comment">// フォールバック URL の定義</span>
+    <span class="token keyword">var</span> urls <span class="token operator">=</span> <span class="token punctuation">[</span>
+      <span class="token comment">// https://unpkg.com/@neos21/hatena-blogs/</span>
+      <span class="token string">'https://unpkg.com/@neos21/hatena-blogs@1.0.4/dist/scripts/Corredor.js'</span><span class="token punctuation">,</span>
+      <span class="token comment">// https://www.jsdelivr.com/package/npm/@neos21/hatena-blogs</span>
+      <span class="token string">'https://cdn.jsdelivr.net/npm/@neos21/hatena-blogs@1.0.4/dist/scripts/Corredor.js'</span><span class="token punctuation">,</span>
+      <span class="token comment">// http://raw.githack.com/</span>
+      <span class="token string">'https://raw.githack.com/Neos21/HatenaBlogs/master/dist/scripts/Corredor.js'</span><span class="token punctuation">,</span>
+      <span class="token string">'https://rawcdn.githack.com/Neos21/HatenaBlogs/a9a8c7d78b940f1d90a8b07e40f04418f407c469/dist/scripts/Corredor.js'</span><span class="token punctuation">,</span>
+      <span class="token comment">// Raw GitHub</span>
+      <span class="token string">'https://raw.githubusercontent.com/Neos21/HatenaBlogs/master/dist/scripts/Corredor.js'</span>
+    <span class="token punctuation">]</span><span class="token punctuation">;</span>
+    
+    <span class="token comment">// 検証用プロパティが存在しているか確認する</span>
+    <span class="token keyword control-flow">if</span><span class="token punctuation">(</span><span class="token maybe-class-name">Neos21</span><span class="token punctuation">.</span><span class="token property-access">scriptLoaded</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token comment">// プロパティがあれば読込済・何もしない</span>
+      <span class="token keyword control-flow">return</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+    
+    <span class="token comment">// フォールバックが必要</span>
+    
+    <span class="token comment">// 次の Index 値</span>
+    <span class="token keyword">var</span> nextIndex <span class="token operator">=</span> index <span class="token operator">+</span> <span class="token number">1</span><span class="token punctuation">;</span>
+    
+    <span class="token comment">// フォールバック用 URL がなかったら対応不可・終了</span>
+    <span class="token keyword control-flow">if</span><span class="token punctuation">(</span>nextIndex <span class="token operator">>=</span> urls<span class="token punctuation">.</span><span class="token property-access">length</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token keyword control-flow">return</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+    
+    <span class="token comment">// script 要素を生成し挿入する</span>
+    <span class="token maybe-class-name">Neos21</span><span class="token punctuation">.</span><span class="token method function property-access">append</span><span class="token punctuation">(</span><span class="token boolean">false</span><span class="token punctuation">,</span> nextIndex<span class="token punctuation">,</span> urls<span class="token punctuation">[</span>nextIndex<span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+</code></pre>
+<p>結局は <code>window.Neos21.scriptLoaded</code> が <code>true</code> かどうかをチェックして、<code>true</code> でなければ別の URL から JS ファイルを読み込むよう、<code>script</code> 要素を生成して <code>head</code> 要素に追加しているだけ。</p>
+<p>以上で JS ファイルもフォールバック処理させることができた。</p>
+<h2 id="最後にフォールバック用スクリプトの全量"><a class="header-link" href="#最後にフォールバック用スクリプトの全量"><span class="header-link-mark"></span></a>最後にフォールバック用スクリプトの全量</h2>
+<p>最後に、掲載したフォールバック用スクリプトの全量を再掲載して終了する。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token doc-comment comment">/**
+ * CSS・JS ファイルのフォールバック用グローバルオブジェクト
+ */</span>
+<span class="token maybe-class-name">Neos21</span> <span class="token operator">=</span> <span class="token punctuation">{</span>
+  <span class="token doc-comment comment">/**
+   * link 要素または script 要素を head 要素に追加する
+   * 
+   * <span class="token keyword">@param</span> <span class="token parameter">isLink</span> true なら link 要素・false なら script 要素を生成する
+   * <span class="token keyword">@param</span> <span class="token parameter">nextIndex</span> 添字
+   * <span class="token keyword">@param</span> <span class="token parameter">nextUrl</span> 読み込むファイル URL
+   */</span>
+  <span class="token function-variable function">append</span><span class="token operator">:</span> <span class="token keyword">function</span><span class="token punctuation">(</span><span class="token parameter">isLink<span class="token punctuation">,</span> nextIndex<span class="token punctuation">,</span> nextUrl</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token keyword">var</span> d <span class="token operator">=</span> <span class="token dom variable">document</span><span class="token punctuation">;</span>
+    <span class="token keyword">var</span> s <span class="token operator">=</span> <span class="token string">'setAttribute'</span><span class="token punctuation">;</span>
+    <span class="token keyword">var</span> eventValue <span class="token operator">=</span> <span class="token string">'Neos21.'</span> <span class="token operator">+</span> <span class="token punctuation">(</span>isLink <span class="token operator">?</span> <span class="token string">'styles'</span> <span class="token operator">:</span> <span class="token string">'scripts'</span><span class="token punctuation">)</span> <span class="token operator">+</span> <span class="token string">'('</span> <span class="token operator">+</span> nextIndex <span class="token operator">+</span> <span class="token string">');'</span><span class="token punctuation">;</span>
+    
+    <span class="token keyword">var</span> elem <span class="token operator">=</span> d<span class="token punctuation">.</span><span class="token method function property-access">createElement</span><span class="token punctuation">(</span>isLink <span class="token operator">?</span> <span class="token string">'link'</span> <span class="token operator">:</span> <span class="token string">'script'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword control-flow">if</span><span class="token punctuation">(</span>isLink<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      elem<span class="token punctuation">[</span>s<span class="token punctuation">]</span><span class="token punctuation">(</span><span class="token string">'rel'</span><span class="token punctuation">,</span> <span class="token string">'stylesheet'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+    elem<span class="token punctuation">[</span>s<span class="token punctuation">]</span><span class="token punctuation">(</span>isLink <span class="token operator">?</span> <span class="token string">'href'</span> <span class="token operator">:</span> <span class="token string">'src'</span><span class="token punctuation">,</span> nextUrl<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    elem<span class="token punctuation">[</span>s<span class="token punctuation">]</span><span class="token punctuation">(</span><span class="token string">'onload'</span> <span class="token punctuation">,</span> eventValue<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    elem<span class="token punctuation">[</span>s<span class="token punctuation">]</span><span class="token punctuation">(</span><span class="token string">'onerror'</span><span class="token punctuation">,</span> eventValue<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    d<span class="token punctuation">.</span><span class="token method function property-access">querySelector</span><span class="token punctuation">(</span><span class="token string">'head'</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">appendChild</span><span class="token punctuation">(</span>elem<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  
+  <span class="token doc-comment comment">/**
+   * CSS ファイルが読み込めているか検証し、必要に応じてフォールバック処理を行う
+   * 
+   * <span class="token keyword">@param</span> <span class="token parameter">index</span> フォールバック URL の添字
+   */</span>
+  <span class="token function-variable function">styles</span><span class="token operator">:</span> <span class="token keyword">function</span><span class="token punctuation">(</span><span class="token parameter">index</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token comment">// 第1引数が number 型で指定されていなければ中止する</span>
+    <span class="token keyword control-flow">if</span><span class="token punctuation">(</span><span class="token keyword">typeof</span> index <span class="token operator">!==</span> <span class="token string">'number'</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token keyword control-flow">return</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+    
+    <span class="token keyword">var</span> w <span class="token operator">=</span> <span class="token dom variable">window</span><span class="token punctuation">;</span>
+    <span class="token keyword">var</span> d <span class="token operator">=</span> <span class="token dom variable">document</span><span class="token punctuation">;</span>
+    
+    <span class="token comment">// 検証用要素の読み込みを待つため再呼び出しして終了する</span>
+    <span class="token keyword control-flow">if</span><span class="token punctuation">(</span><span class="token operator">!</span>d<span class="token punctuation">.</span><span class="token property-access">readyState</span> <span class="token operator">||</span> d<span class="token punctuation">.</span><span class="token property-access">readyState</span> <span class="token operator">===</span> <span class="token string">'interactive'</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      w<span class="token punctuation">.</span><span class="token method function property-access">addEventListener</span><span class="token punctuation">(</span><span class="token string">'load'</span><span class="token punctuation">,</span> <span class="token keyword">function</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        <span class="token maybe-class-name">Neos21</span><span class="token punctuation">.</span><span class="token method function property-access">styles</span><span class="token punctuation">(</span>index<span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token keyword control-flow">return</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+    <span class="token keyword control-flow">else</span> <span class="token keyword control-flow">if</span><span class="token punctuation">(</span>d<span class="token punctuation">.</span><span class="token property-access">readyState</span> <span class="token operator">===</span> <span class="token string">'loading'</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      d<span class="token punctuation">.</span><span class="token method function property-access">addEventListener</span><span class="token punctuation">(</span><span class="token string">'DOMContentLoaded'</span><span class="token punctuation">,</span> <span class="token keyword">function</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        <span class="token maybe-class-name">Neos21</span><span class="token punctuation">.</span><span class="token method function property-access">styles</span><span class="token punctuation">(</span>index<span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token keyword control-flow">return</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+    
+    <span class="token comment">// フォールバック URL の定義</span>
+    <span class="token keyword">var</span> urls <span class="token operator">=</span> <span class="token punctuation">[</span>
+      <span class="token comment">// https://unpkg.com/@neos21/hatena-blogs/</span>
+      <span class="token string">'https://unpkg.com/@neos21/hatena-blogs@1.0.4/dist/styles/Corredor.css'</span><span class="token punctuation">,</span>
+      <span class="token comment">// https://www.jsdelivr.com/package/npm/@neos21/hatena-blogs</span>
+      <span class="token string">'https://cdn.jsdelivr.net/npm/@neos21/hatena-blogs@1.0.4/dist/styles/Corredor.css'</span><span class="token punctuation">,</span>
+      <span class="token comment">// http://raw.githack.com/</span>
+      <span class="token string">'https://raw.githack.com/Neos21/HatenaBlogs/master/dist/styles/Corredor.css'</span><span class="token punctuation">,</span>
+      <span class="token string">'https://rawcdn.githack.com/Neos21/HatenaBlogs/a9a8c7d78b940f1d90a8b07e40f04418f407c469/dist/styles/Corredor.css'</span><span class="token punctuation">,</span>
+      <span class="token comment">// Raw GitHub</span>
+      <span class="token string">'https://raw.githubusercontent.com/Neos21/HatenaBlogs/master/dist/styles/Corredor.css'</span>
+    <span class="token punctuation">]</span><span class="token punctuation">;</span>
+    
+    <span class="token comment">// 検証用要素</span>
+    <span class="token keyword">var</span> check <span class="token operator">=</span> d<span class="token punctuation">.</span><span class="token method function property-access">getElementById</span><span class="token punctuation">(</span><span class="token string">'n-check'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword control-flow">if</span><span class="token punctuation">(</span><span class="token operator">!</span>check<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token comment">// 検証用要素なし・中止</span>
+      <span class="token keyword control-flow">return</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+    
+    <span class="token comment">// 検証用要素にスタイルが適用されているか確認する</span>
+    <span class="token keyword">var</span> checkStyle <span class="token operator">=</span> <span class="token function">parseInt</span><span class="token punctuation">(</span>w<span class="token punctuation">.</span><span class="token method function property-access">getComputedStyle</span><span class="token punctuation">(</span>check<span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token property-access">fontSize</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword control-flow">if</span><span class="token punctuation">(</span>checkStyle <span class="token operator">===</span> <span class="token number">0</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token comment">// スタイル適用済なら正常・何もしない</span>
+      <span class="token keyword control-flow">return</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+    
+    <span class="token comment">// フォールバックが必要</span>
+    
+    <span class="token comment">// 次の Index 値</span>
+    <span class="token keyword">var</span> nextIndex <span class="token operator">=</span> index <span class="token operator">+</span> <span class="token number">1</span><span class="token punctuation">;</span>
+    
+    <span class="token comment">// フォールバック用 URL がなかったら対応不可・終了</span>
+    <span class="token keyword control-flow">if</span><span class="token punctuation">(</span>nextIndex <span class="token operator">>=</span> urls<span class="token punctuation">.</span><span class="token property-access">length</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token keyword control-flow">return</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+    
+    <span class="token comment">// link 要素を生成し挿入する</span>
+    <span class="token maybe-class-name">Neos21</span><span class="token punctuation">.</span><span class="token method function property-access">append</span><span class="token punctuation">(</span><span class="token boolean">true</span><span class="token punctuation">,</span> nextIndex<span class="token punctuation">,</span> urls<span class="token punctuation">[</span>nextIndex<span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  
+  <span class="token doc-comment comment">/**
+   * JS ファイルが読み込めているか検証し、必要に応じてフォールバック処理を行う
+   * 
+   * <span class="token keyword">@param</span> <span class="token parameter">index</span> フォールバック URL の添字
+   */</span>
+  <span class="token function-variable function">scripts</span><span class="token operator">:</span> <span class="token keyword">function</span><span class="token punctuation">(</span><span class="token parameter">index</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token comment">// 第1引数が number 型で指定されていること</span>
+    <span class="token keyword control-flow">if</span><span class="token punctuation">(</span><span class="token keyword">typeof</span> index <span class="token operator">!==</span> <span class="token string">'number'</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token keyword control-flow">return</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+    
+    <span class="token comment">// フォールバック URL の定義</span>
+    <span class="token keyword">var</span> urls <span class="token operator">=</span> <span class="token punctuation">[</span>
+      <span class="token comment">// https://unpkg.com/@neos21/hatena-blogs/</span>
+      <span class="token string">'https://unpkg.com/@neos21/hatena-blogs@1.0.4/dist/scripts/Corredor.js'</span><span class="token punctuation">,</span>
+      <span class="token comment">// https://www.jsdelivr.com/package/npm/@neos21/hatena-blogs</span>
+      <span class="token string">'https://cdn.jsdelivr.net/npm/@neos21/hatena-blogs@1.0.4/dist/scripts/Corredor.js'</span><span class="token punctuation">,</span>
+      <span class="token comment">// http://raw.githack.com/</span>
+      <span class="token string">'https://raw.githack.com/Neos21/HatenaBlogs/master/dist/scripts/Corredor.js'</span><span class="token punctuation">,</span>
+      <span class="token string">'https://rawcdn.githack.com/Neos21/HatenaBlogs/a9a8c7d78b940f1d90a8b07e40f04418f407c469/dist/scripts/Corredor.js'</span><span class="token punctuation">,</span>
+      <span class="token comment">// Raw GitHub</span>
+      <span class="token string">'https://raw.githubusercontent.com/Neos21/HatenaBlogs/master/dist/scripts/Corredor.js'</span>
+    <span class="token punctuation">]</span><span class="token punctuation">;</span>
+    
+    <span class="token comment">// 検証用プロパティが存在しているか確認する</span>
+    <span class="token keyword control-flow">if</span><span class="token punctuation">(</span><span class="token maybe-class-name">Neos21</span><span class="token punctuation">.</span><span class="token property-access">scriptLoaded</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token comment">// プロパティがあれば読込済・何もしない</span>
+      <span class="token keyword control-flow">return</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+    
+    <span class="token comment">// フォールバックが必要</span>
+    
+    <span class="token comment">// 次の Index 値</span>
+    <span class="token keyword">var</span> nextIndex <span class="token operator">=</span> index <span class="token operator">+</span> <span class="token number">1</span><span class="token punctuation">;</span>
+    
+    <span class="token comment">// フォールバック用 URL がなかったら対応不可・終了</span>
+    <span class="token keyword control-flow">if</span><span class="token punctuation">(</span>nextIndex <span class="token operator">>=</span> urls<span class="token punctuation">.</span><span class="token property-access">length</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token keyword control-flow">return</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+    
+    <span class="token comment">// script 要素を生成し挿入する</span>
+    <span class="token maybe-class-name">Neos21</span><span class="token punctuation">.</span><span class="token method function property-access">append</span><span class="token punctuation">(</span><span class="token boolean">false</span><span class="token punctuation">,</span> nextIndex<span class="token punctuation">,</span> urls<span class="token punctuation">[</span>nextIndex<span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+</code></pre>
+<p>もう少しコードとしては削れそうなところがあるが、とりあえずやりたいことはできたので良き良き。</p>
+<p>改変して利用いただく場合は、グローバルオブジェクト名 <code>Neos21</code> を任意のモノに変えていただいたり、フォールバック用 URL 定義を忘れずに変更していただくぐらいだろうか。検証用のプロパティや要素の設定もコード量を削れそうな感はあるので、短い名称を使うなどして検証できればいいかしら。</p>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2018-12-23</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2018-12-23</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>Xcode10 にアップデートしてから Cordova ビルドが失敗する - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2018/11/21-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2018/index.html">2018年</a></li>
+            <li><a href="/blog/2018/11/index.html">11月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2018-11-21</time></div>
+        <h1 id="page-title">Xcode10 にアップデートしてから Cordova ビルドが失敗する</h1>
+
+<p>iOS12 に対応するため Xcode10 にアップデートしたら、<code>cordova build</code> (および <code>cordova emulate</code>・<code>cordova run</code>) が失敗するようになった。</p>
+<pre><code>error: archive not found at path '/Users/Neo/example/platforms/ios/example.xcarchive'
+** EXPORT FAILED **
+
+(node:5225) UnhandledPromiseRejectionWarning: Error code 65 for command: xcodebuild with args: -exportArchive,-archivePath,example.xcarchive,-exportOptionsPlist,/Users/Neo/example/platforms/ios/exportOptions.plist,-exportPath,/Users/Neo/example/platforms/ios/build/device
+(node:5225) UnhandledPromiseRejectionWarning: Unhandled promise rejection. This error originated either by throwing inside of an async function without a catch block, or by rejecting a promise which was not handled with .catch(). (rejection id: 1)
+(node:5225) [DEP0018] DeprecationWarning: Unhandled promise rejections are deprecated. In the future, promise rejections that are not handled will terminate the Node.js process witha non-zero exit code.
+</code></pre>
+<p>試しに Xcode を開いてコチラからビルドしてみると、以下のエラーメッセージが出た。</p>
+<pre><code>The executable was signed with invalid entitlements.
+
+The entitlements specifid in your application's Code Signing Entitlements file are invalid, not permitted, or do not match those specified in your provisioning profile. (0xE8008016).
+</code></pre>
+<p>調べてみると、どうやらプロビジョニングプロファイルが iPhone 端末の方にインストールされていないせいでエラーが出ているようだ。</p>
+<p>Xcode のメニューバーより、Window → Devices and Simulators → 【iPhone 端末名】 で右クリックして <code>Show Provisioning Profiles...</code> → インストールされているプロビジョニングプロファイルを見てみると、インストールしたいアプリのプロビジョニングプロファイルがない。そこで、「+」ボタンを押し、<em>手動でプロビジョニングプロファイルをインストールする。</em></p>
+<p>オートサイニングで生成されたプロビジョニングプロファイルは <code>~/Library/MobileDevice/"Provisioning Profiles/"</code> 配下にランダムなファイル名で格納されているのだが、Finder 風のダイアログにはなぜか <code>~/Library/</code> が表示されず、普通には遷移できない。仕方がないので、予め <code>~/Library/MobileDevice/"Provisioning Profiles/"</code> ディレクトリをサイドバーに入れておき、そこから辿るようにした。ファイル名では目的のプロビジョニングプロファイルが探しづらいが、更新日時とかでチェックする (プレビューで App ID とかが分かる)。</p>
+<hr>
+<p>一度こうやって iPhone にプロビジョニングプロファイルをインストールしてやれば、Xcode からはビルドとインストールができるようになった。しかし、相変わらず <code>$ cordova run ios</code> コマンドなどが失敗してしまう。</p>
+<p>もう少し調べてみたところ、<strong>cordova-ios がまだ Xcode 10 に対応していないために出ているエラーのようだ。</strong></p>
+<ul>
+  <li>参考：<a href="https://stackoverflow.com/questions/52385600/ionic-ios-build-fails-error-archive-not-found/52388081">cordova - Ionic ios build fails, error archive not found - Stack Overflow</a></li>
+  <li>参考：<a href="https://github.com/apache/cordova-ios/issues/407">ANNOUNCEMENT Status of Xcode 10 support · Issue #407 · apache/cordova-ios · GitHub</a></li>
+</ul>
+<p>Xcode10 からデフォルトのビルドシステムが変わり、cordova-ios がまだそれに追随できていないので、エラーになるようである。</p>
+<p>一旦の回避方法は、<strong><code>--buildFlag="-UseModernBuildSystem=0"</code></strong> というオプション引数を渡す、というモノ。</p>
+<pre class="language-bash"><code class="language-bash">$ cordova build ios --buildFlag<span class="token operator">=</span><span class="token string">"-UseModernBuildSystem=0"</span>
+</code></pre>
+<p>このようにすれば、ビルドは通るようになる。</p>
+<p>しかし、<code>$ cordova run ios --buildFlag="-UseModernBuildSystem=0"</code> とした場合、実機へのインストールまでは上手く行くものの、その後アプリが起動せず。</p>
+<p>Xcode のバージョンアップに追随しきれておらず、Cordova はなかなか厳しいなぁ…。</p>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2018-11-21</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2018-11-21</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>promise-ftp を使って FTP 接続先のファイル一覧を取得してみる - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2017/12/16-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2017/index.html">2017年</a></li>
+            <li><a href="/blog/2017/12/index.html">12月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2017-12-16</time></div>
+        <h1 id="page-title">promise-ftp を使って FTP 接続先のファイル一覧を取得してみる</h1>
+
+<p>Node.js・npm でも FTP 通信ができるのじゃ。</p>
+<p><em><code>node-ftp</code></em> というパッケージで、FTP 通信ができる。このパッケージをラップして Promise 化したのが <strong><code>promise-ftp</code></strong> だ。</p>
+<ul>
+  <li><a href="https://www.npmjs.com/package/promise-ftp">promise-ftp - npm</a></li>
+</ul>
+<p><code>node-ftp</code> および <code>promise-ftp</code> は FTP コマンドがひととおり使えるので、今回は接続先のディレクトリ配下のファイル一覧を取得してみようと思う。</p>
+<p><code>promise-ftp</code> のインストールは以下のとおり。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">npm</span> i -D promise-ftp
+</code></pre>
+<p>以下のように <code>ftp.js</code> を実装する。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token comment">// FTP 接続先情報</span>
+<span class="token keyword">const</span> user     <span class="token operator">=</span> <span class="token string">'user'</span><span class="token punctuation">;</span>
+<span class="token keyword">const</span> password <span class="token operator">=</span> <span class="token string">'password'</span><span class="token punctuation">;</span>
+<span class="token keyword">const</span> host     <span class="token operator">=</span> <span class="token string">'example.com'</span><span class="token punctuation">;</span>
+
+<span class="token keyword">const</span> <span class="token maybe-class-name">PromiseFtp</span> <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'promise-ftp'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">const</span> promiseFtp <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">PromiseFtp</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+promiseFtp<span class="token punctuation">.</span><span class="token method function property-access">connect</span><span class="token punctuation">(</span><span class="token punctuation">{</span>
+  user    <span class="token operator">:</span> user<span class="token punctuation">,</span>
+  password<span class="token operator">:</span> password<span class="token punctuation">,</span>
+  host    <span class="token operator">:</span> host
+<span class="token punctuation">}</span><span class="token punctuation">)</span>
+  <span class="token punctuation">.</span><span class="token method function property-access">then</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token parameter">serverMessage</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+    <span class="token comment">// serverMessage は応答するサーバの場合にのみ返される</span>
+    <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'Connected'</span><span class="token punctuation">,</span> serverMessage<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token comment">// 「html-dir/」ディレクトリに移動する</span>
+    <span class="token keyword control-flow">return</span> promiseFtp<span class="token punctuation">.</span><span class="token method function property-access">cwd</span><span class="token punctuation">(</span><span class="token string">'html-dir'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span>
+  <span class="token punctuation">.</span><span class="token method function property-access">then</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token parameter">currentDir</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+    <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'Change Working Directory'</span><span class="token punctuation">,</span> currentDir<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token comment">// カレントディレクトリのファイル一覧を取得する</span>
+    <span class="token keyword control-flow">return</span> promiseFtp<span class="token punctuation">.</span><span class="token method function property-access">list</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span>
+  <span class="token punctuation">.</span><span class="token method function property-access">then</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token parameter">list</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+    <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'Directory Listing'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token comment">// 一覧表示</span>
+    <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">dir</span><span class="token punctuation">(</span>list<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token comment">// 切断</span>
+    <span class="token keyword control-flow">return</span> promiseFtp<span class="token punctuation">.</span><span class="token method function property-access">end</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span>
+  <span class="token punctuation">.</span><span class="token method function property-access">then</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token parameter">endResult</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+    <span class="token comment">// endResult は false なら正常終了</span>
+    <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'End'</span><span class="token punctuation">,</span> endResult<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span>
+  <span class="token punctuation">.</span><span class="token keyword control-flow">catch</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token parameter">error</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+    <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'Error'</span><span class="token punctuation">,</span> error<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>Promise で書けるのでコールバック地獄に陥らず、見通しが良い。</p>
+<p>ファイル一覧となる変数 <code>list</code> は、オブジェクトの配列が返されるので、<code>console.dir()</code> を使用して表示させた。この辺はお好みで整形すれば良いかと。</p>
+<p>実行する際は</p>
+<pre class="language-bash"><code class="language-bash">$ node ftp.js
+</code></pre>
+<p>とすれば良い。<code>package.json</code> の <code>"scripts"</code> にこのまま書けば <code>npm run</code> で呼び出せる。</p>
+<p>本パッケージを利用してアップロードなんかもできるが、アップロードに関してはより簡潔に行えるパッケージがあるので、次回と次々回に解説する。</p>
+<ul>
+  <li><a href="/blog/2017/12/18-01.html">ftp-client で指定のファイルを FTP アップロードする</a></li>
+</ul>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2017-12-16</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2017-12-16</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

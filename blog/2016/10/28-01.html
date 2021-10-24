@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>Windows バッチに JScript・VBScript・Oracle SQL スクリプトを混在させてバッチ処理の中で実行する - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2016/10/28-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2016/index.html">2016年</a></li>
+            <li><a href="/blog/2016/10/index.html">10月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2016-10-28</time></div>
+        <h1 id="page-title">Windows バッチに JScript・VBScript・Oracle SQL スクリプトを混在させてバッチ処理の中で実行する</h1>
+
+<p>2016年も終わりに近付いている昨今、今更ですが Windows バッチの黒魔術的な挙動にハマっていて、レガシーな職場で培ったレガシーな知識の総決算をしておこうかなと思うなど。</p>
+<p>Windows バッチスクリプトを置いておく GitHub リポジトリを作っていますので、よかったらご覧ください。</p>
+<ul>
+  <li>GitHub - Neos21/windows-batch-scripts: ちょいと便利な Windows バッチ製のスクリプトやスニペット集 (<code>https://github.com/Neos21/windows-batch-scripts</code>)
+    <ul>
+      <li>2021-01-01 : 現在は <a href="https://github.com/Neos21/shell-scripts">shell-scripts</a> というリポジトリに移動</li>
+    </ul>
+  </li>
+</ul>
+<p>今日はその中から、<strong>Windows バッチファイル1つの中に、別の言語のスクリプトを混在させて実行する</strong>手法をいくつか紹介する。</p>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#jscript-%E3%82%92%E6%B7%B7%E5%9C%A8%E3%81%95%E3%81%9B%E3%82%8B-shebang">JScript を混在させる Shebang</a></li>
+  <li><a href="#vbscript-%E3%82%92%E6%B7%B7%E5%9C%A8%E3%81%95%E3%81%9B%E3%82%8B%E6%8A%80">VBScript を混在させる技</a></li>
+  <li><a href="#oracle-db-%E3%81%AB%E6%B8%A1%E3%81%99-sql-%E3%83%95%E3%82%A1%E3%82%A4%E3%83%AB%E3%82%92%E6%B7%B7%E5%9C%A8%E3%81%95%E3%81%9B-sqlplus-%E3%82%92%E8%B5%B7%E5%8B%95%E3%81%99%E3%82%8B">Oracle DB に渡す SQL ファイルを混在させ <code>SQL*Plus</code> を起動する</a>
+    <ul>
+      <li><a href="#%E5%88%A5%E3%81%AE%E6%9B%B8%E3%81%8D%E6%96%B9">別の書き方</a></li>
+      <li><a href="#%E3%82%88%E3%82%8A%E5%AE%9F%E8%B7%B5%E7%9A%84%E3%81%AA%E4%BD%BF%E3%81%84%E6%96%B9">より実践的な使い方</a></li>
+    </ul>
+  </li>
+  <li><a href="#wsh-jscript%E3%83%BBvbscript-%E3%82%92%E6%B7%B7%E5%9C%A8%E3%81%95%E3%81%9B%E3%82%8B%E6%96%B9%E6%B3%95-%E3%81%9D%E3%81%AE%E4%BB%96%E3%81%AE%E3%83%95%E3%82%A1%E3%82%A4%E3%83%AB%E3%81%AB%E3%82%82%E4%BD%BF%E3%81%88%E3%82%8B%E6%89%8B%E6%B3%95">WSH (JScript・VBScript) を混在させる方法 (その他のファイルにも使える手法)</a></li>
+  <li><a href="#%E4%BB%A5%E4%B8%8A">以上</a></li>
+</ul>
+<h2 id="jscript-を混在させる-shebang"><a class="header-link" href="#jscript-を混在させる-shebang"><span class="header-link-mark"></span></a>JScript を混在させる Shebang</h2>
+<p>「<em>@if・@elif・@else・@end ステートメント</em>」という JScript 独自の構文を利用した手法が有名。</p>
+<pre class="language-batch"><code class="language-batch"><span class="token operator">@</span><span class="token command"><span class="token keyword">if</span>(<span class="token number">0</span></span><span class="token punctuation">)</span>==<span class="token punctuation">(</span><span class="token command"><span class="token keyword">0</span></span><span class="token punctuation">)</span> Echo Off
+
+<span class="token command"><span class="token keyword">Echo</span> Windows バッチによる前処理</span>
+
+<span class="token comment">Rem JScript の呼び出し</span>
+<span class="token command"><span class="token keyword">CScript</span> /<span class="token parameter attr-name">/NoLogo</span> /<span class="token parameter attr-name">/E<span class="token punctuation">:</span></span>JScript <span class="token string">"%~f0"</span> %*</span>
+
+<span class="token command"><span class="token keyword">Echo</span> Windows バッチによる後処理</span>
+
+<span class="token command"><span class="token keyword">Pause</span></span>
+<span class="token command"><span class="token keyword">Exit</span> <span class="token parameter attr-name">/b</span></span>
+
+<span class="token operator">@</span><span class="token command"><span class="token keyword">end</span></span>
+
+// ココから JScript
+
+<span class="token command"><span class="token keyword">WScript</span>.echo(<span class="token string">"WSH JScript による処理"</span></span><span class="token punctuation">)</span>;
+</code></pre>
+<p>このファイルはWindows バッチファイル (<code>.bat</code>) として保存するので、起動時はまずは Windows バッチとして1行目が評価される。<code>@</code> でコンソール出力はされず、<code>0 == 0</code> は当然 true なので <code>Echo Off</code> が実行される。<br>そこから <code>@end</code> という行の直前までは Windows バッチとして動作する。<code>Exit /b</code> なり <code>Goto :EOF</code> なりでバッチファイルは終了させれば、それ以降の行は読み込まれない。そのため、それ以降の行のコードが Windows バッチとして正しくない内容でも影響がない。</p>
+<p>途中で <code>CScript</code> で自分自身を JScript として実行させている。</p>
+<p>JScript としてこのファイルを1行目から評価していくと、<code>@if</code> から <code>@end</code> までは「@if・@elif・@else・@end ステートメント」という JScript 独自の構文として解釈される。<br>1行目の <code>@if(0)==(0)</code> は <code>@if</code> ステートメントで <code>if(0)</code> とみなされる。<code>0</code> は JScript では false 扱いなので、条件に一致せず、<code>@end</code> までの中身は評価・実行されなくなる。そのため、この中のコードが JScript として正しくない内容でも影響がない。</p>
+<p>Windows バッチはコマンドを大文字小文字どちらで書いても良いが、JScript は <code>if</code> は小文字でないと予約語として認識しないため、<code>@if</code>・<code>@end</code> は小文字で記述する必要がある。</p>
+<ul>
+  <li>参考：<a href="http://d.hatena.ne.jp/miya2000/20090823/p0">JScript でハマる日々 - m2</a></li>
+  <li>参考：<a href="http://computer-technology.hateblo.jp/entry/20131025/p1">BATとWSHのコードを1ファイルに混在させるためのshebang記法（複雑なバッチを１ファイルで実現） - モバイル通信とIT技術をコツコツ勉強するブログ</a></li>
+  <li>参考：<a href="https://msdn.microsoft.com/ja-jp/library/ct27x3xa.aspx">@if...@elif...@else...@end ステートメント | Microsoft Docs</a></li>
+  <li>参考：<a href="http://www.odin.hyork.net/write/write0028.html">Studio ODIN - blog風小ネタ集 > MS-DOSのバッチファイルに、WSH(JScript)のコードを記述する</a><br>こちらは <code>@if(1==1)</code> で JScript にも true 判定させるが、直後からブロックコメントとして囲む書き方。</li>
+</ul>
+<h2 id="vbscript-を混在させる技"><a class="header-link" href="#vbscript-を混在させる技"><span class="header-link-mark"></span></a>VBScript を混在させる技</h2>
+<p><code>.vbs</code> ファイルを起動させたときに、常に CScript で起動させる手法としては、以下のようなコードをスクリプトの最初の方に書くやり方がある。起動しているプロセスが WScript だったら、自身を CScript で開き直し、WScript で開かれた自分は終了させてしまうというものだ。</p>
+<pre class="language-vb"><code class="language-vb"><span class="token keyword">If</span> Instr<span class="token punctuation">(</span>LCase<span class="token punctuation">(</span>WScript<span class="token punctuation">.</span>FullName<span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token string">"wscript"</span><span class="token punctuation">)</span> <span class="token operator">></span> <span class="token number">0</span> <span class="token keyword">Then</span>
+  WScript<span class="token punctuation">.</span>CreateObject<span class="token punctuation">(</span><span class="token string">"WScript.Shell"</span><span class="token punctuation">)</span><span class="token punctuation">.</span>Run<span class="token punctuation">(</span><span class="token string">"CScript //NoLogo """</span> <span class="token operator">&#x26;</span> WScript<span class="token punctuation">.</span>ScriptFullName <span class="token operator">&#x26;</span> <span class="token string">""""</span><span class="token punctuation">)</span>
+  WScript<span class="token punctuation">.</span>Quit
+<span class="token keyword">End</span> <span class="token keyword">If</span>
+</code></pre>
+<p>そうではなく、Windows バッチファイル (<code>.bat</code>) として保存したときに、Windows コマンドと VBScript をそれぞれ実行させる方法として、こんなやり方がある。</p>
+<pre class="language-vb"><code class="language-vb"><span class="token comment">' 2> Nul &#x26; @Cls &#x26; @Cscript //NoLogo //E:VBScript "%~f0" %* &#x26; @Goto :EOF</span>
+
+WScript<span class="token punctuation">.</span>Echo <span class="token string">"VBScript で標準出力。2秒後に終了します。"</span>
+WScript<span class="token punctuation">.</span>Sleep<span class="token punctuation">(</span><span class="token number">2000</span><span class="token punctuation">)</span>
+WScript<span class="token punctuation">.</span>Quit
+</code></pre>
+<p>先頭の <code>' 2> Nul</code> は、Windows バッチとしてはエラーを表示させないようにさせつつ、これが VBScript として実行させるときはコメントアウト <code>'</code> として扱うためのもの。<br>この文字列がどうしてもプロンプトに出てしまうので、直後に <code>@Cls</code> でコンソールをクリアしている。</p>
+<p>あとは「<code>&#x26;</code>」で Windows コマンドを繋いでいく。<code>CScript</code> で実行させるファイルは <code>.bat</code> ファイルなので、<code>//E:VBScript</code> の指定がないと正しく VBScript エンジンで起動させられない。</p>
+<p>複数行に渡って Windows コマンドを書きたい場合は、以下のようにするとそれらしく見えるかもしれない。</p>
+<pre class="language-batch"><code class="language-batch"><span class="token punctuation">'</span> 2> Nul <span class="token operator">&#x26;</span> <span class="token operator">@</span><span class="token command"><span class="token keyword">Echo</span> Off </span><span class="token operator">&#x26;</span> <span class="token command"><span class="token keyword">Cls</span></span>
+<span class="token punctuation">'</span> 2> Nul <span class="token operator">&#x26;</span> <span class="token command"><span class="token keyword">Pause</span></span>
+<span class="token punctuation">'</span> 2> Nul <span class="token operator">&#x26;</span> <span class="token command"><span class="token keyword">Cscript</span> /<span class="token parameter attr-name">/NoLogo</span> /<span class="token parameter attr-name">/E<span class="token punctuation">:</span></span>VBScript <span class="token string">"%~f0"</span> %*</span>
+<span class="token punctuation">'</span> 2> Nul <span class="token operator">&#x26;</span> <span class="token command"><span class="token keyword">Goto</span> <span class="token label property">:EOF</span></span>
+</code></pre>
+<p>VBScript は言語仕様上、複数行コメントを書く方法がないので、VBScript として実行させた時に影響を与えないようにするには、どうしても行頭に「シングルクォート <code>'</code>」を置いて、コメントアウト行に見せかけないといけない。しかし、シングルクォートで始まって問題ない Windows コマンドはないため、エラーを無視するために <code>' 2> Nul</code> までは必須。</p>
+<p>1行目で <code>@Echo Off</code> したらすぐに <code>Cls</code> することで、以降は余計なコマンドは表示させずに Windows コマンドを記述できる。<code>If</code> 文などのブロックは1行に収めないとおかしくなるので注意。</p>
+<ul>
+  <li>参考：<a href="http://detail.chiebukuro.yahoo.co.jp/qa/question_detail/q11118013486">WindowsにてCMDとWSHのスクリプトを同じBATの中に書くshebang記法というも... - Yahoo!知恵袋</a></li>
+</ul>
+<h2 id="oracle-db-に渡す-sql-ファイルを混在させ-sqlplus-を起動する"><a class="header-link" href="#oracle-db-に渡す-sql-ファイルを混在させ-sqlplus-を起動する"><span class="header-link-mark"></span></a>Oracle DB に渡す SQL ファイルを混在させ <code>SQL*Plus</code> を起動する</h2>
+<p>次は、Oracle DB において、Sqlplus コマンドに SQL ファイルを指定し、DB 接続と同時に SQL を実行する処理を、Windows バッチファイル1つでやってしまおうというモノ。</p>
+<pre class="language-batch"><code class="language-batch"><span class="token comment">Rem ^
+/*</span>
+<span class="token operator">@</span><span class="token command"><span class="token keyword">Echo</span> Off</span>
+<span class="token command"><span class="token keyword">Cls</span></span>
+
+<span class="token command"><span class="token keyword">Sqlplus</span> USER/PASS@ORCL @<span class="token string">"%~f0"</span></span>
+
+<span class="token command"><span class="token keyword">Pause</span></span>
+<span class="token command"><span class="token keyword">Exit</span> <span class="token parameter attr-name">/b</span></span>
+*/
+
+-- ここから SQL*Plus で読み込む SQL
+
+<span class="token command"><span class="token keyword">Set</span> lines <span class="token number">32767</span></span>
+<span class="token command"><span class="token keyword">Set</span> pages <span class="token number">50000</span></span>
+
+<span class="token command"><span class="token keyword">SELECT</span> <span class="token number">1</span> FROM DUAL;</span>
+</code></pre>
+<p>1～2行目の <code>Rem ^</code> <code>/*</code> と、<code>*/</code> の行がミソ。</p>
+<p>Windows バッチとして起動すると、1～2行目は <code>^</code> で改行をエスケープし、<code>Rem /*</code> として処理される。この <code>Rem</code> がコンソールに表示されるため、直後に <code>@Echo Off</code> と <code>Cls</code> を行っておく。この行は SQL*Plus でも <code>Rem</code> コマンドと認識させるため、<code>@Rem</code> と書くことはできない。<br>任意の処理を挟んで <code>Sqlplus</code> コマンドで DB 接続し、<code>@</code> で自分自身を SQL スクリプトとして実行させる。</p>
+<p>SQL ファイルとしては、1行目は SQL<em>Plus の <code>Rem</code> コマンドとして無視、2行目からはブロックコメント `/</em> */` として無視される。<br>ブロックコメントの終了以降に SQL を記述しておけば、それが実行される。</p>
+<p><code>Sqlplus</code> コマンドが終了すると、<code>Exit /b</code> でバッチファイルを終了する。次の行の <code>*/</code> は読み込まれないため無視される。</p>
+<h3 id="別の書き方"><a class="header-link" href="#別の書き方"><span class="header-link-mark"></span></a>別の書き方</h3>
+<p>Windows コマンド部分を1行に集約して、以下のように書くことも可能。</p>
+<pre class="language-batch"><code class="language-batch"><span class="token comment">Rem /? > Nul </span><span class="token operator">&#x26;</span> <span class="token operator">@</span><span class="token command"><span class="token keyword">Cls</span> </span><span class="token operator">&#x26;</span> <span class="token operator">@</span><span class="token command"><span class="token keyword">Sqlplus</span> USER/PASS@ORCL @<span class="token string">"%~0"</span> </span><span class="token operator">&#x26;</span> <span class="token operator">@</span><span class="token command"><span class="token keyword">Pause</span> </span><span class="token operator">&#x26;</span> <span class="token operator">@</span><span class="token command"><span class="token keyword">Goto</span> <span class="token label property">:EOF</span></span>
+</code></pre>
+<p>1行にする場合、Windows バッチに <code>Rem</code> 以降をコマンドとして解釈させるために <code>Rem /?</code> でヘルプを表示させ、<code>Nul</code> にリダイレクトしている。あとは <code>&#x26;</code> でコマンドを繋いでいくだけ。これで2行目以降に SQL を記述すれば良い。</p>
+<h3 id="より実践的な使い方"><a class="header-link" href="#より実践的な使い方"><span class="header-link-mark"></span></a>より実践的な使い方</h3>
+<p><code>Sqlplus</code> コマンドでファイルを実行するときには、パラメータを引数として渡せるので、Windows コマンド部分で <code>Set /p</code> 構文でユーザから何か文字列を入力してもらい、その値を検索するようなバッチファイルを作ったりできる。</p>
+<pre class="language-batch"><code class="language-batch"><span class="token comment">Rem ^
+/*</span>
+<span class="token operator">@</span><span class="token command"><span class="token keyword">Echo</span> Off</span>
+
+<span class="token label property">:LOOP</span>
+<span class="token command"><span class="token keyword">Cls</span></span>
+<span class="token command"><span class="token keyword">Set</span> <span class="token parameter attr-name">/p</span> <span class="token variable">NAME</span><span class="token operator">=</span>検索したいユーザ名を入力してください <span class="token punctuation">(</span>やめるときは q と入力</span><span class="token punctuation">)</span> :
+<span class="token command"><span class="token keyword">If</span> <span class="token string">"%NAME%"</span> == <span class="token string">"q"</span> Goto :EOF</span>
+
+<span class="token command"><span class="token keyword">Sqlplus</span> USER/PASS@ORCL @<span class="token string">"%~f0"</span> <span class="token string">"%NAME%"</span></span>
+
+<span class="token comment">Rem 変数の初期化・ループ処理</span>
+<span class="token command"><span class="token keyword">Set</span> <span class="token variable">NAME</span><span class="token operator">=</span></span>
+<span class="token command"><span class="token keyword">Pause</span></span>
+<span class="token command"><span class="token keyword">Goto</span> <span class="token label property">:LOOP</span></span>
+
+<span class="token command"><span class="token keyword">Exit</span> <span class="token parameter attr-name">/b</span></span>
+*/
+
+-- 変数の置換前後を表示させない
+<span class="token command"><span class="token keyword">Set</span> verify off</span>
+
+<span class="token command"><span class="token keyword">SELECT</span> NAME, AGE FROM MY_USERS WHERE NAME = '</span><span class="token operator">&#x26;</span><span class="token command"><span class="token keyword">1</span>';</span>
+</code></pre>
+<p>こんなスクリプトを作れば、ユーザ情報を検索したりできる。開発環境でデータの存在や内容を簡易チェックする機会が頻繁にあるのであれば、このようなバッチファイルがあると、DB 接続が楽になるかも。</p>
+<h2 id="wsh-jscript・vbscript-を混在させる方法-その他のファイルにも使える手法"><a class="header-link" href="#wsh-jscript・vbscript-を混在させる方法-その他のファイルにも使える手法"><span class="header-link-mark"></span></a>WSH (JScript・VBScript) を混在させる方法 (その他のファイルにも使える手法)</h2>
+<p>外部ファイルを指定して実行できるコマンドがある言語であれば、Windows バッチ内にスクリプトを記述しておき、その場でスクリプトファイルを生成して実行し、使い終わったらファイルを削除する、というやり方で1ファイルに収めることができる。</p>
+<p>今回の例では、WSH のスクリプトファイルをその場で生成して CScript を呼んでいる。</p>
+<pre class="language-batch"><code class="language-batch"><span class="token operator">@</span><span class="token command"><span class="token keyword">Echo</span> Off</span>
+
+<span class="token command"><span class="token keyword">Echo</span> VBScript ファイルの生成と実行</span>
+<span class="token command"><span class="token keyword">Set</span> <span class="token variable">VBS</span><span class="token operator">=</span>TempVBScript.vbs</span>
+
+<span class="token command"><span class="token keyword">Setlocal</span> EnableDelayedExpansion</span>
+<span class="token punctuation">(</span>
+  <span class="token command"><span class="token keyword">For</span> <span class="token parameter attr-name">/f</span> <span class="token string">"delims=:, tokens=1*"</span> <span class="token variable">%%a</span> <span class="token keyword">In</span> <span class="token punctuation">(</span><span class="token punctuation">'</span>Type <span class="token string">"%~f0"</span> ^| Findstr <span class="token string">"^VBS:"</span><span class="token punctuation">'</span><span class="token punctuation">)</span> <span class="token keyword">Do</span></span> <span class="token punctuation">(</span>
+    <span class="token command"><span class="token keyword">Set</span> <span class="token variable">LINE</span><span class="token operator">=</span><span class="token variable">%%b</span></span>
+    <span class="token command"><span class="token keyword">Echo</span>.<span class="token variable">!LINE:~1!</span></span>
+  <span class="token punctuation">)</span>
+<span class="token punctuation">)</span> > "%VBS%"
+<span class="token command"><span class="token keyword">Endlocal</span></span>
+
+<span class="token command"><span class="token keyword">Cscript</span> /<span class="token parameter attr-name">/NoLogo</span> <span class="token string">"%VBS%"</span></span>
+<span class="token command"><span class="token keyword">Del</span> <span class="token parameter attr-name">/q</span> <span class="token parameter attr-name">/f</span> <span class="token string">"%VBS%"</span> > Nul <span class="token number">2</span>></span><span class="token operator">&#x26;</span><span class="token command"><span class="token keyword">1</span></span>
+
+<span class="token command"><span class="token keyword">Echo</span> JScript ファイルの生成と実行</span>
+<span class="token command"><span class="token keyword">Set</span> <span class="token variable">JS</span><span class="token operator">=</span>TempJScript.vbs</span>
+
+<span class="token command"><span class="token keyword">Setlocal</span> EnableDelayedExpansion</span>
+<span class="token punctuation">(</span>
+  <span class="token command"><span class="token keyword">For</span> <span class="token parameter attr-name">/f</span> <span class="token string">"delims=:, tokens=1*"</span> <span class="token variable">%%a</span> <span class="token keyword">In</span> <span class="token punctuation">(</span><span class="token punctuation">'</span>Type <span class="token string">"%~f0"</span> ^| Findstr <span class="token string">"^JS:"</span><span class="token punctuation">'</span><span class="token punctuation">)</span> <span class="token keyword">Do</span></span> <span class="token punctuation">(</span>
+    <span class="token command"><span class="token keyword">Set</span> <span class="token variable">LINE</span><span class="token operator">=</span><span class="token variable">%%b</span></span>
+    <span class="token command"><span class="token keyword">Echo</span>.<span class="token variable">!LINE:~1!</span></span>
+  <span class="token punctuation">)</span>
+<span class="token punctuation">)</span> > "%JS%"
+<span class="token command"><span class="token keyword">Endlocal</span></span>
+
+<span class="token command"><span class="token keyword">Cscript</span> /<span class="token parameter attr-name">/NoLogo</span> /<span class="token parameter attr-name">/E<span class="token punctuation">:</span></span>JScript <span class="token string">"%JS%"</span></span>
+<span class="token command"><span class="token keyword">Del</span> <span class="token parameter attr-name">/q</span> <span class="token parameter attr-name">/f</span> <span class="token string">"%JS%"</span> > Nul <span class="token number">2</span>></span><span class="token operator">&#x26;</span><span class="token command"><span class="token keyword">1</span></span>
+
+<span class="token comment">Rem Windows バッチの終了</span>
+<span class="token command"><span class="token keyword">Pause</span></span>
+<span class="token command"><span class="token keyword">Exit</span> <span class="token parameter attr-name">/b</span></span>
+
+<span class="token comment">Rem ココから VBScript</span>
+<span class="token comment">Rem 各行、VBScript のコードの手前に「VBS: 」と書いておく (空行も半角スペースを付与する</span><span class="token punctuation">)</span>。
+
+<span class="token command"><span class="token keyword">VBS</span>: Option Explicit</span>
+<span class="token command"><span class="token keyword">VBS</span>: </span>
+<span class="token command"><span class="token keyword">VBS</span>: Sub test(</span><span class="token punctuation">)</span>
+<span class="token command"><span class="token keyword">VBS</span>:   WScript.Echo <span class="token string">"VBScript による処理"</span></span>
+<span class="token command"><span class="token keyword">VBS</span>: End Sub</span>
+<span class="token command"><span class="token keyword">VBS</span>: test(</span><span class="token punctuation">)</span>
+
+<span class="token comment">Rem ココから JScript</span>
+<span class="token comment">Rem 各行、JScript のコードの手前に「JS: 」と書いておく (空行も半角スペースを付与する</span><span class="token punctuation">)</span>。
+
+<span class="token command"><span class="token keyword">JS</span>: var test = function(</span><span class="token punctuation">)</span> {
+<span class="token command"><span class="token keyword">JS</span>:   WScript.Echo(<span class="token string">"JScript による処理"</span></span><span class="token punctuation">)</span>;
+<span class="token command"><span class="token keyword">JS</span>: }</span>
+<span class="token command"><span class="token keyword">JS</span>: </span>
+<span class="token command"><span class="token keyword">JS</span>: test(</span><span class="token punctuation">)</span>;
+</code></pre>
+<p>外部ファイルとして一時的に生成したいコードは、各行頭に決まった接頭文字列を書いておく。例で言えば「<code>VBS:</code>」や「<code>JS:</code>」がそれに当たる。<br><code>Setlocal</code> と <code>Endlocal</code> の間のファイル生成処理がミソ。</p>
+<ul>
+  <li><code>Find</code> や <code>Findstr</code> コマンドは最終行を解釈しないバグがあり、このバッチファイルの最終行が空行でないと処理が完了しなくなってしまう。そこで、<code>Type</code> を使ってバッチファイル自身をパイプで渡して <code>Findstr</code> するようにしている。こうして、<em>バッチファイル自身の中から、行頭が「<code>VBS:</code>」や「<code>JS:</code>」で始まる行を返し</em>、<code>For</code> 文に使われている。</li>
+  <li><code>delims=:</code> によって、「<code>VBS: [コード]</code>」や「<code>JS: [コード]</code>」のコロン部分で区切れる。</li>
+  <li><code>tokens=1*</code> とアスタリスクを使うと、指定していた最後のトークン = <code>1</code> = <code>%%a</code> が解析された後で、行に含まれる残りのテキストがその次のトークン = <code>%%b</code> に全て設定される。<br><code>%%b</code> の中に <code>delims</code> と同じ文字列が含まれていても、それは分割されない。<br>これにより、<code>%%a</code> が行頭の「<code>VBS</code>」や「<code>JS</code>」という文字列を取得し、<code>delims</code> によって「<code>:</code>」が除去される。<br><code>%%b</code> には残りのテキスト、つまりコードが設定される。</li>
+  <li>このままだと <code>%%b</code> の先頭には「<code>VBS:</code>」や「<code>JS:</code>」の末尾の<em>半角スペースが含まれてしまっている。</em><br>そこで、遅延展開を使って <code>%%b</code> をいったん遅延環境変数 <code>!LINE!</code> に入れ、<code>!LINE:~1!</code> とすることで1文字目 = 半角スペースを除去している。</li>
+  <li><code>Echo.</code> のドットは、<code>!LINE:~1!</code> が空になった時に空行として出力させるためのもの。<code>Echo</code> コマンドの直後は「<code>.,:;(</code>」あたりの文字を繋げて置いても無視して解釈される。</li>
+  <li>遅延展開を使わないようにするのであれば、「<code>VBS:[コード]</code>」のように、接頭文字列に半角スペースを入れないルールにしておけば、<code>%%b</code> の文字列をちぎる処理が不要になる。</li>
+</ul>
+<p>その場でファイルを生成して、直後に <code>CScript</code> コマンドにそのファイルを渡したりしているので、ファイルが正しく生成できているかの存在チェックとかした方が親切かも。<code>Del</code> コマンドは色々指定して強制的に一時ファイルを削除し、削除に失敗しても無視するようにしている。</p>
+<ul>
+  <li>参考：<a href="http://www.dostips.com/forum/viewtopic.php?t=4285">Positioning CMD Window - DosTips.com</a></li>
+</ul>
+<h2 id="以上"><a class="header-link" href="#以上"><span class="header-link-mark"></span></a>以上</h2>
+<p>Windows バッチコマンドの言語仕様も相まって、可読性の低い地雷みたいなコードになりがちで、やってることもかなり乱暴なんだけど、<strong>開発者が自分の環境だけでうまく動けばいい</strong>というスクリプトはよくある。予期せぬエラーを引き起こしてしまっても、Windows バッチや WSH は強制終了するだけで影響は少ないし、これでいいのだ感満載。</p>
+<p>可読性を向上させるのであれば、積極的に罫線コメントを付与するなどすれば良いのではないだろうか (個人的には <code>=========</code> みたいな区切り線コメントを入れるのは好きじゃないけど)。<br>保守性を向上させるのであれば、スクリプトの意図や「変更されると困る箇所」をコメントに残しておけば良い。<br>信頼性・堅牢性を高めるために、引数チェックや例外処理などを盛り込んでおけたらなお良い。</p>
+<p>それらはそのスクリプトを使う人たちのスキルに合わせて作れば良い。「実行するスクリプトは全部読んでおいてから使うのが当たり前」という真っ当なエンジニアもいれば、「ぼく英語とかよくわかんないんでコードも読めないっす (ヘラヘラ」みたいな偽エンジニアもいるので、誰を対象にして、どこまで親切にするかによって、決めれば良いと思う。</p>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2016-10-28</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2016-10-28</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

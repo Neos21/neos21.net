@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>Windows GitBash で Python・Node.js・Docker が上手く動かない場合は winpty を設定する - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2019/05/24-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2019/index.html">2019年</a></li>
+            <li><a href="/blog/2019/05/index.html">05月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2019-05-24</time></div>
+        <h1 id="page-title">Windows GitBash で Python・Node.js・Docker が上手く動かない場合は winpty を設定する</h1>
+
+<p>Windows GitBash にて、<code>$ python</code> や <code>$ node</code> コマンドを叩いて、プロンプト上で簡単なコードを動かしてみたかったのだが、どうもプロンプトの応答が戻ってこない。</p>
+<p>また、<code>$ docker</code> 関連のコマンドを使うと、以下のようなエラーメッセージが返ってきた。</p>
+<pre class="language-bash"><code class="language-bash">$ docker <span class="token builtin class-name">exec</span> -it my-container <span class="token function">bash</span>
+the input device is not a TTY.
+If you are using mintty, try prefixing the <span class="token builtin class-name">command</span> with <span class="token string">'winpty'</span>
+</code></pre>
+<p>調べてみると、GitBash では、一部の<strong>対話式プロンプトを伴うコマンドは <code>winpty</code> というコマンドを経由して実行</strong>してやらないと、上手くプロンプトが表示されないようだ。</p>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#%E3%81%BE%E3%81%9A%E3%81%AF%E8%A7%A3%E6%B1%BA%E6%B3%95%E3%81%A0%E3%81%91">まずは解決法だけ</a></li>
+  <li><a href="#winpty-%E3%82%92%E8%A8%AD%E5%AE%9A%E3%81%97%E3%81%A6%E3%81%84%E3%82%8B-etcprofiledaliasessh"><code>winpty</code> を設定している <code>/etc/profile.d/aliases.sh</code></a></li>
+  <li><a href="#%E4%BB%A5%E9%99%8D%E3%81%AF%E8%A3%9C%E8%B6%B3">以降は補足…</a></li>
+  <li><a href="#winpty-%E3%81%A3%E3%81%A6%E4%BD%95%EF%BC%9F"><code>winpty</code> って何？</a>
+    <ul>
+      <li><a href="#tty%E3%83%BBpts%E3%83%BBpty-%E3%81%A8%E3%81%AF">TTY・PTS・PTY とは</a></li>
+      <li><a href="#gitbash-%E3%81%AE%E3%83%99%E3%83%BC%E3%82%B9%E3%81%A8%E3%81%AA%E3%82%8B-mintty">GitBash のベースとなる mintty</a></li>
+      <li><a href="#mintty-%E3%81%AE%E3%83%90%E3%82%B0%EF%BC%9F">mintty のバグ？</a></li>
+      <li><a href="#%E6%9C%AC%E9%A1%8C%E3%83%BBwinpty-%E3%81%AF%E4%BD%95%E3%81%AA%E3%81%AE%E3%81%8B">本題・<code>winpty</code> は何なのか</a></li>
+    </ul>
+  </li>
+  <li><a href="#%E3%81%98%E3%82%83%E3%81%82%E5%85%A8%E9%83%A8%E3%81%AE%E3%82%B3%E3%83%9E%E3%83%B3%E3%83%89%E3%82%92-winpty-%E7%B5%8C%E7%94%B1%E3%81%A7%E5%AE%9F%E8%A1%8C%E3%81%97%E3%81%9F%E3%82%89%EF%BC%9F">じゃあ全部のコマンドを <code>winpty</code> 経由で実行したら？</a></li>
+  <li><a href="#%E5%8F%82%E8%80%83%E6%96%87%E7%8C%AE">参考文献</a>
+    <ul>
+      <li><a href="#winpty-%E3%82%92%E4%BB%98%E4%B8%8E%E3%81%99%E3%82%8B%E4%BB%B6%E3%81%AB%E3%81%A4%E3%81%84%E3%81%A6"><code>winpty</code> を付与する件について</a></li>
+      <li><a href="#tty%E3%83%BBpts%E3%83%BBpty">TTY・PTS・PTY</a></li>
+      <li><a href="#winpty">WinPTY</a></li>
+    </ul>
+  </li>
+</ul>
+<h2 id="まずは解決法だけ"><a class="header-link" href="#まずは解決法だけ"><span class="header-link-mark"></span></a>まずは解決法だけ</h2>
+<p>ということで、</p>
+<pre class="language-bash"><code class="language-bash">$ winpty python
+$ winpty node
+$ winpty docker <span class="token builtin class-name">exec</span> -it my-container <span class="token function">bash</span>
+</code></pre>
+<p>という風に叩けば、正常に動いた。</p>
+<h2 id="winpty-を設定している-etcprofiledaliasessh"><a class="header-link" href="#winpty-を設定している-etcprofiledaliasessh"><span class="header-link-mark"></span></a><code>winpty</code> を設定している <code>/etc/profile.d/aliases.sh</code></h2>
+<p>でも、<code>node</code> なんかはこんなことしなくても以前は使えていた気がするんだけどな…？と思い、もう少し調べてみると、原因が分かった。</p>
+<p>以前、GitSDK および GitBash の起動速度を高速化するため、<code>/etc/profile</code> をゴリゴリ書き換えたことがあった。</p>
+<ul>
+  <li><a href="/blog/2019/02/06-02.html">Git For Windows・Git SDK の起動を爆速にする</a></li>
+</ul>
+<p>この中で、<em>「特に呼び出す必要ねえだろ」と独断で省いてしまった <code>/etc/profile.d/aliases.sh</code> の中で、<code>winpty</code> を使うエイリアスを設定していた</em>ことが分かった。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token keyword">case</span> <span class="token string">"<span class="token environment constant">$TERM</span>"</span> <span class="token keyword">in</span>
+xterm*<span class="token punctuation">)</span>
+  <span class="token comment"># The following programs are known to require a Win32 Console</span>
+  <span class="token comment"># for interactive usage, therefore let's launch them through winpty</span>
+  <span class="token comment"># when run inside `mintty`.</span>
+  <span class="token keyword">for</span> <span class="token for-or-select variable">name</span> <span class="token keyword">in</span> node ipython php php5 psql python2.7
+  <span class="token keyword">do</span>
+    <span class="token keyword">case</span> <span class="token string">"<span class="token variable"><span class="token variable">$(</span><span class="token builtin class-name">type</span> -p <span class="token string">"<span class="token variable">$name</span>"</span>.exe <span class="token operator"><span class="token file-descriptor important">2</span>></span>/dev/null<span class="token variable">)</span></span>"</span> <span class="token keyword">in</span>
+    <span class="token string">''</span><span class="token operator">|</span>/usr/bin/*<span class="token punctuation">)</span> <span class="token builtin class-name">continue</span><span class="token punctuation">;</span><span class="token punctuation">;</span>
+    <span class="token keyword">esac</span>
+    <span class="token builtin class-name">alias</span> <span class="token variable">$name</span><span class="token operator">=</span><span class="token string">"winpty <span class="token variable">$name</span>.exe"</span>
+  <span class="token keyword">done</span>
+  <span class="token punctuation">;</span><span class="token punctuation">;</span>
+<span class="token keyword">esac</span>
+</code></pre>
+<p>こんな感じのコードが見えるかと思う。</p>
+<p><code>for name in</code> の行を観ると、<code>node</code> や <code>python</code>、PostgreSQL の <code>psql</code> などのコマンドが並んでおり、<code>alias $name="winpty $name.exe"</code> と、<code>winpty</code> を組み込んだエイリアスを定義しているのが分かるかと。</p>
+<p>通常どおり <code>/etc/profile.d/aliases.sh</code> を読み込んでいる環境なら、このファイルを編集し、<code>for name in</code> の行の末尾に <code>docker</code> を追加してやれば、<code>docker</code> コマンドが正常に動くようになる。必要に応じて <code>docker-compose</code> や <code>docker-machine</code> なども入れておこう。</p>
+<p>このファイルは使わない場合であれば、以下のような<em>エイリアス定義を <code>~/.bashrc</code> にでも入れておけば良い。</em>やっていることは同じだ。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token builtin class-name">alias</span> <span class="token assign-left variable">docker</span><span class="token operator">=</span><span class="token string">'winpty docker'</span>
+
+<span class="token comment"># Python や Node.js の場合</span>
+<span class="token builtin class-name">alias</span> <span class="token assign-left variable">python</span><span class="token operator">=</span><span class="token string">'winpty python'</span>
+<span class="token builtin class-name">alias</span> <span class="token assign-left variable">node</span><span class="token operator">=</span><span class="token string">'winpty node.exe'</span>
+</code></pre>
+<p>自分の環境であればコレだけで事足りた。</p>
+<hr>
+<h2 id="以降は補足"><a class="header-link" href="#以降は補足"><span class="header-link-mark"></span></a>以降は補足…</h2>
+<p>問題の直接的な解決はココまで。以降はココで使用した <code>winpty</code> に関する調査記録。</p>
+<hr>
+<h2 id="winpty-って何？"><a class="header-link" href="#winpty-って何？"><span class="header-link-mark"></span></a><code>winpty</code> って何？</h2>
+<p>ところで、ココで使っている <code>winpty</code> とは何なのか。どうしてコレが一部のコマンドだけ必要で、最初から組み込んでおいてくれないのかを調べた。</p>
+<h3 id="tty・pts・pty-とは"><a class="header-link" href="#tty・pts・pty-とは"><span class="header-link-mark"></span></a>TTY・PTS・PTY とは</h3>
+<p><code>winpty</code> を理解する前に、まず <strong>TTY (TeleTYpewriter)</strong> と <em>PTS (Pseudo Terminal Slave)</em>、<strong>PTY (Pseudo Terminal)</strong> を知っておく必要がありそうだ。</p>
+<p>tty は、あるマシンの標準出力の接続先デバイスを示す。</p>
+<p>例えば1つのサーバに2人が同時に <code>ssh</code> している状態で、<code>w</code> コマンドを叩くと、<code>pts/0</code>、<code>pts/1</code> といった <code>TTY</code> 列が見えるだろう。</p>
+<p>この状態で SSH 接続しているそれぞれのユーザが <code>tty</code> コマンドを叩くと、自分の TTY の仮想ファイルが <code>/dev/pts/0</code>・<code>/dev/pts/1</code> というように返ってくる。</p>
+<p><code>tty</code> コマンドの結果が <code>/dev/pts/0</code> なユーザのセッションにおいて、</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token builtin class-name">echo</span> <span class="token string">'TEST'</span> <span class="token operator">></span> /dev/pts/0
+</code></pre>
+<p>と実行すると、自身のプロンプトに <code>TEST</code> という文字列が出力される。さらに、ココで別の TTY を指定すると、</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token builtin class-name">echo</span> <span class="token string">'TEST'</span> <span class="token operator">></span> /dev/pts/1
+</code></pre>
+<p><strong>今度は <code>/dev/pts/1</code> のユーザのプロンプトに、突然 <code>TEST</code> の文字が出力される。</strong></p>
+<p>このように、<em>TTY</em> は <code>/dev/pts/</code> 配下の仮想ファイルで入出力を扱えるデバイスということになる。ココで登場する <em>PTS</em> は、仮想端末 (ターミナル) のスレーブ (接続先) ということ。接続先のサーバがマスターで、繋ぎに来ている2人のユーザのターミナルがスレーブという扱いになる。</p>
+<p>ココまで来れば、PTY が「仮想端末」と呼ばれ、それが何を意味しているかも分かるだろう。今は「ターミナル」と呼ぶので「PTY は Pseudo Terminal の略」と表現するが、「じゃあその<em>『Y』</em>はどこから来たの？」というと、TTY にある「TYpewriter」の名残と同じで、「Pseudo (tele) TYpewriter」からの発展だと分かる。</p>
+<blockquote>
+  <p>pty stands for Pseudo-Terminal. Has anyone wondered, if tty is for Tele-Typewriter, why pty is not Pseudo-Typewriter?</p>
+  <ul>
+    <li><a href="https://unadventure.wordpress.com/category/openmoko/">OpenMoko | Account of my unadventures</a></li>
+  </ul>
+</blockquote>
+<ul>
+  <li>参考：<a href="https://en.wikipedia.org/wiki/Pseudoterminal">Pseudoterminal - Wikipedia</a>
+    <ul>
+      <li>英 Wikipedia では「Pseudoterminal」「Pseudotty」とも記載されている。</li>
+    </ul>
+  </li>
+</ul>
+<h3 id="gitbash-のベースとなる-mintty"><a class="header-link" href="#gitbash-のベースとなる-mintty"><span class="header-link-mark"></span></a>GitBash のベースとなる mintty</h3>
+<p>GitBash のベースとなる mintty (MinTTY) は、<em>ターミナルエミュレータ</em>と呼ばれるソフトになる。いわゆる「黒い画面」を作るインターフェースでしかなく、コマンド群は Cygwin や MSYS が提供するという関係だ。GitSDK や GitBash インストーラは、MSYS と mintty、そして <code>git</code> コマンドを統合した環境を構築・インストールしているワケである。</p>
+<h3 id="mintty-のバグ？"><a class="header-link" href="#mintty-のバグ？"><span class="header-link-mark"></span></a>mintty のバグ？</h3>
+<p>というワケで、普段我々は、GitBash や GitSDK のフロントエンドとして、mintty というターミナルエミュレータを使っているのだが、この mintty のバグ (仕様？) により、一部のプロセスで対話モードのプロンプトが正常に表示できないようだ。</p>
+<ul>
+  <li><a href="https://qiita.com/magichan/items/81fc400a9bf2c94c135b">WindowsにMSYS2を導入して、Node.js を動作させるまでの手順 - Qiita</a></li>
+</ul>
+<blockquote>
+  <p>minttyはとても使い勝手が良い環境なのですが、「一部のアプリで対話モードが動作しない」といった問題点が存在します。</p>
+</blockquote>
+<ul>
+  <li><a href="https://qiita.com/iiou16/items/d4b6ddb03e06f527759b">cygwinからanacondaのpythonコマンドをたたく - Qiita</a></li>
+</ul>
+<blockquote>
+  <p>cygwinのterminalであるminttyっていうexeがネイティブのpython以外のpythonをたたくと固まるという既知のバグなんだそうです。</p>
+  <p>なので、mintty.exeの代わりにwinpty.exeというものを入れて、cygwinのterminalをラップしてやる必要がある。</p>
+</blockquote>
+<h3 id="本題・winpty-は何なのか"><a class="header-link" href="#本題・winpty-は何なのか"><span class="header-link-mark"></span></a>本題・<code>winpty</code> は何なのか</h3>
+<p><code>winpty</code> のリポジトリは以下にある。</p>
+<ul>
+  <li><a href="https://github.com/rprichard/winpty">GitHub - rprichard/winpty: A Windows software package providing an interface similar to a Unix pty-master for communicating with Windows console programs.</a></li>
+</ul>
+<p>ココを見ると、<strong>mintty と、そこから呼ばれた Windows 向けのプログラムとの間を仲介し、別プロセスとして立ち上がった <code>winpty</code> が出力を上手く処理</strong>してくれるようだ。</p>
+<p>mintty の対話プロンプトに関する既知の不具合に対し、橋渡しを行う仲介プログラムというワケだ。</p>
+<h2 id="じゃあ全部のコマンドを-winpty-経由で実行したら？"><a class="header-link" href="#じゃあ全部のコマンドを-winpty-経由で実行したら？"><span class="header-link-mark"></span></a>じゃあ全部のコマンドを <code>winpty</code> 経由で実行したら？</h2>
+<p><code>winpty</code> を経由しないと、Python などのプログラムが動かないという問題は、いくつか Issues が挙げられている。</p>
+<p>一番最初に挙げられた Issue はコレっぽい。</p>
+<ul>
+  <li><a href="https://github.com/git-for-windows/build-extra/pull/78">git-extra: add aliases to support interactive consoles in mintty by dscho · Pull Request #78 · git-for-windows/build-extra · GitHub</a></li>
+</ul>
+<p>次に紹介する Issue の中で、「全部のプログラムを <code>winpty</code> 経由で実行させたらこんな問題起こらなくね？」と言われているが、次のような回答が付いている。</p>
+<ul>
+  <li><a href="https://github.com/git-for-windows/git/issues/491">Weird issue with python input prompt after upgrading to 2.6.1 · Issue #491 · git-for-windows/git · GitHub</a></li>
+</ul>
+<blockquote>
+  <p>Why not just run everything through winpty?</p>
+  <p>@fletchowns measure it. No, seriously, measure the difference in startup time.</p>
+</blockquote>
+<p>単純な話だが、全てのプロセスを <code>winpty</code> に中継されると、それだけプロセス数が増加し、処理時間が余計にかかってしまうから、一部の有名なコマンドだけ抜き出して設定しているようだ。</p>
+<p>また、以下の記事では次のように書かれている。</p>
+<ul>
+  <li><a href="https://github.com/git-for-windows/git/issues/399">(Some) interactive commands unusable with git-bash.exe · Issue #399 · git-for-windows/git · GitHub</a></li>
+</ul>
+<blockquote>
+  <p>Otherwise, and probably even with such notice, there's going to be these kind of issues popping in continuously :).</p>
+  <p>I agree. It is of no use pointing out that we try to support Git here, and not a bazillion of interactive consoles for other software.</p>
+</blockquote>
+<p><code>/etc/aliases.sh</code> でエイリアスを付与するやり方は問題を解決はできたが、<em>今後似たような問題が起こるプログラムを見つけたらどんどん追記していかないといけなくなるよね？</em>という問いに対し、<strong>「そうだけど、GitBash は Git をサポートするためのモノで、他のソフトを総合的にサポートするモノではない」</strong>という回答。</p>
+<p>つまり、mintty 由来のバグの影響を受けるソフトがあるのは分かるが、<strong>Git For Windows はその全てに上手く対応するつもりはない</strong>よ、ということみたい。</p>
+<p>そんなワケで、我々は GitBash を使う限りは、問題が起こるプログラムを見つけ次第、<strong>必要に応じて <code>winpty</code> を挟む</strong>しかないということになる。とりあえず納得。</p>
+<h2 id="参考文献"><a class="header-link" href="#参考文献"><span class="header-link-mark"></span></a>参考文献</h2>
+<h3 id="winpty-を付与する件について"><a class="header-link" href="#winpty-を付与する件について"><span class="header-link-mark"></span></a><code>winpty</code> を付与する件について</h3>
+<ul>
+  <li><a href="https://qiita.com/yKanazawa/items/866c1e4ef024bee03e34">Git for Windowsでdocker execをwinptyなしで実行する - Qiita</a></li>
+  <li><a href="https://qiita.com/sixpetals/items/a0784fa3933956463609">git-bash for windows を快適にするためのいろいろ - Qiita</a></li>
+  <li><a href="https://qiita.com/hidekuro/items/aa83583b20db5a6857d8">WindowsでDocker Toolboxを使うために最低限やっておくこと - Qiita</a></li>
+  <li><a href="https://oki2a24.com/2019/02/20/edit-bashrc-to-launch-docker-docker-compose-in-windows-git-bash/">Windows の Git Bash から Docker や Docker Compose をうまく動かすための .bashrc – oki2a24</a></li>
+</ul>
+<h3 id="tty・pts・pty"><a class="header-link" href="#tty・pts・pty"><span class="header-link-mark"></span></a>TTY・PTS・PTY</h3>
+<ul>
+  <li><a href="https://blog.takanabe.tokyo/2013/06/09/1017/">ttyとptsとは – PAYFORWARD</a></li>
+  <li><a href="http://takuya-1st.hatenablog.jp/entry/20101024/1287947368">ttyについて ttyやptsってなんぞ？ - それマグで！</a></li>
+  <li><a href="https://qiita.com/toshihirock/items/22de12f99b5c40365369">ttyとかptsとかについて確認してみる - Qiita</a></li>
+  <li><a href="https://ja.wikipedia.org/wiki/Tty">tty - Wikipedia</a></li>
+  <li><a href="https://ja.wikipedia.org/wiki/%E6%93%AC%E4%BC%BC%E7%AB%AF%E6%9C%AB">擬似端末 - Wikipedia</a></li>
+</ul>
+<h3 id="winpty"><a class="header-link" href="#winpty"><span class="header-link-mark"></span></a>WinPTY</h3>
+<ul>
+  <li><a href="https://en.wikipedia.org/wiki/Mintty">mintty - Wikipedia</a></li>
+</ul>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2019-05-24</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2019-05-24</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

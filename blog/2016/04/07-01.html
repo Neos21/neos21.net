@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>PreparedStatement を close しないとカーソルが close されない？：PreparedStatement と ResultSet の関係 - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2016/04/07-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2016/index.html">2016年</a></li>
+            <li><a href="/blog/2016/04/index.html">04月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2016-04-07</time></div>
+        <h1 id="page-title">PreparedStatement を close しないとカーソルが close されない？：PreparedStatement と ResultSet の関係</h1>
+
+<p>前回の続き。</p>
+<ul>
+  <li><a href="06-01.html">PreparedStatement を close しないとカーソルが close されない？：まずは PreparedStatement とカーソルをおさらい</a></li>
+</ul>
+<p><em>Java プログラムで PreparedStatement を使って SQL を発行した時も、Oracle DB 側では内部的にカーソルオブジェクトが生成されている</em>ことは分かった。</p>
+<p>ではどうして、「ORA-01000 最大オープン・カーソル数を超えました」というエラーが出てしまったのだろうか。</p>
+<h2 id="preparedstatement-が-close-されるまではカーソルもオープンなまま残る"><a class="header-link" href="#preparedstatement-が-close-されるまではカーソルもオープンなまま残る"><span class="header-link-mark"></span></a>PreparedStatement が close されるまではカーソルもオープンなまま残る</h2>
+<p>…これが答え。<strong><code>close()</code> メソッドを呼ぶまでは、JDBC のリソースを掴みっぱなしになる</strong>らしい。</p>
+<ul>
+  <li><a href="http://otn.oracle.co.jp/forum/message.jspa?messageID=11001497">OTN Japan - 404 Error</a></li>
+</ul>
+<p>ということは、問題のコードは PreparedStatement を閉じていなかったものと思われる。次にそのコードのイメージを再現してみたので、詳しく見てみよう。</p>
+<h2 id="問題となったコードのイメージ"><a class="header-link" href="#問題となったコードのイメージ"><span class="header-link-mark"></span></a>問題となったコードのイメージ</h2>
+<p>とてつもないクソコードで、自分だったら絶対こんな作りにしねぇぞっていうコードの山なのだが、それを少し再現。まず呼び出し側の処理。</p>
+<pre class="language-java"><code class="language-java"><span class="token comment">// 結果を詰めるリスト</span>
+<span class="token class-name">List</span><span class="token generics"><span class="token punctuation">&#x3C;</span><span class="token class-name">MyDTO</span><span class="token punctuation">></span></span> resultList <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">ArrayList</span><span class="token generics"><span class="token punctuation">&#x3C;</span><span class="token class-name">MyDTO</span><span class="token punctuation">></span></span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// なぜか1件ずつ SELECT して resutList にデータを詰めていく処理がある</span>
+<span class="token keyword">for</span><span class="token punctuation">(</span><span class="token keyword">int</span> i <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span> i <span class="token operator">&#x3C;</span> <span class="token number">1500</span><span class="token punctuation">;</span> i<span class="token operator">++</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token keyword">try</span> <span class="token punctuation">{</span>
+    <span class="token comment">// SQL 文の用意</span>
+    <span class="token class-name">String</span> sql <span class="token operator">=</span> <span class="token string">"SELECT hoge FROM my_table WHERE id = ?"</span><span class="token punctuation">;</span>
+    <span class="token comment">// パラメータの準備</span>
+    <span class="token class-name">List</span><span class="token generics"><span class="token punctuation">&#x3C;</span><span class="token class-name">String</span><span class="token punctuation">></span></span> param <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">ArrayList</span><span class="token generics"><span class="token punctuation">&#x3C;</span><span class="token class-name">String</span><span class="token punctuation">></span></span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    param<span class="token punctuation">.</span><span class="token function">add</span><span class="token punctuation">(</span>i<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    
+    <span class="token comment">// SQL の実行 (ResultSet の独自拡張クラスと DB 接続を隠蔽した独自クラスがある)</span>
+    <span class="token class-name">MyResultSet</span> rs <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">MyResultSet</span><span class="token punctuation">(</span><span class="token class-name">MyDbUtil</span><span class="token punctuation">.</span><span class="token function">execute</span><span class="token punctuation">(</span>sql<span class="token punctuation">,</span> param<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    
+    <span class="token comment">// ResultSet の値を MyDTO に詰め替えている</span>
+    <span class="token keyword">while</span><span class="token punctuation">(</span>rs<span class="token punctuation">.</span><span class="token function">next</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token class-name">MyDTO</span> result <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">MyDTO</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      result<span class="token punctuation">.</span><span class="token function">setId</span><span class="token punctuation">(</span> rs<span class="token punctuation">.</span><span class="token function">getString</span><span class="token punctuation">(</span><span class="token string">"ID"</span><span class="token punctuation">)</span> <span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token comment">/* 中略 */</span>
+      <span class="token comment">// 結果リストに追加する</span>
+      resultList<span class="token punctuation">.</span><span class="token function">add</span><span class="token punctuation">(</span>result<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+    
+    <span class="token comment">// なんで全部 try 句の中でやるんですかね…</span>
+    <span class="token keyword">if</span><span class="token punctuation">(</span>rs <span class="token operator">!=</span> <span class="token keyword">null</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      rs<span class="token punctuation">.</span><span class="token function">close</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span>
+  <span class="token keyword">catch</span><span class="token punctuation">(</span><span class="token class-name">Exception</span> e<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token comment">// でました! Pokemon Exception Handling です!! Eclipse に怒られるから書いただけのセミコロン!!!</span>
+    <span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+
+<span class="token comment">// 1画面全体の処理が終わると Connection を close (コネクションプールへの返却) する処理を呼ぼうとする</span>
+<span class="token class-name">MyDbUtil</span><span class="token punctuation">.</span><span class="token function">closeConnection</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<ul>
+  <li>参考：<a href="https://tech.a-listers.jp/2012/07/25/new-programming-jargon/">Stack Overflow発 プログラミングの隠語(ジャーゴン)30選 | A-Listers</a> - Pokemon Exception Handling について…</li>
+</ul>
+<p>独自のユーティリティクラスがあちこちに登場してキモさ倍増。あくまでも再現なので、細かなところは無視してくだしあ〜。</p>
+<p>少なくとも、上のクラスの中では <em>ResultSet はクローズし (ようとし) ているが PreparedStatement や Connection に関しては触れていない</em>、というところだけ押さえておいてほしい。</p>
+<p>ココでミソになるのは <code>MyResultSet</code> に SQL の実行結果を渡す <code>MyDbUtil</code> の処理だろう。</p>
+<pre class="language-java"><code class="language-java"><span class="token comment">/* MyDbUtil クラスの #execute() メソッド */</span>
+<span class="token keyword">public</span> <span class="token keyword">static</span> <span class="token class-name">MyResultSet</span> <span class="token function">execute</span><span class="token punctuation">(</span><span class="token class-name">String</span> sql<span class="token punctuation">,</span> <span class="token class-name">List</span><span class="token generics"><span class="token punctuation">&#x3C;</span><span class="token class-name">String</span><span class="token punctuation">></span></span> param<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token comment">// データソースから1つの Connection を取得するメソッドを呼び出す</span>
+  <span class="token class-name">Connection</span> con <span class="token operator">=</span> <span class="token function">getConnection</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  
+  <span class="token comment">// PreparedStatement の生成</span>
+  <span class="token class-name">PreparedStatement</span> pstmt <span class="token operator">=</span> con<span class="token punctuation">.</span><span class="token function">prepareStatement</span><span class="token punctuation">(</span>sql<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  
+  <span class="token comment">/* 細かな書き方忘れたが setString() とかもやってるテイで… */</span>
+  <span class="token keyword">return</span> pstmt<span class="token punctuation">.</span><span class="token function">executeQuery</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>実物を見ずにクソコードを再現で書くの難しい…。とりあえず、このメソッドでは PreparedStatement を作って ResultSet を返すだけしかしていない。つまり<em>ここでも PreparedStatement を close していない。</em></p>
+<p>このような作りにすると、for 文でループした数だけ PreparedStatement が作られ、それらがクローズされないまま蓄積する。それにより、Connection を close するための処理を呼ぶより前に、for ループの最中にオープン・カーソル数の最大数を超えてしまい、エラーになってしまっていた。</p>
+<h2 id="なんで-preparedstatement-を閉じなかったのだろう？preparedstatement-と-resultset-の関係"><a class="header-link" href="#なんで-preparedstatement-を閉じなかったのだろう？preparedstatement-と-resultset-の関係"><span class="header-link-mark"></span></a>なんで PreparedStatement を閉じなかったのだろう？PreparedStatement と ResultSet の関係</h2>
+<p>PreparedStatement を閉じないことでカーソルも閉じられないことは分かった。</p>
+<p>では、<code>MyDbUtil#execute()</code> の中で <code>pstmt.executeQuery();</code> と書いた後、<code>pstmt.close();</code> を呼んで PreparedStatement を close してあげたらどうなるか。</p>
+<p>答えは、<em>PreparedStatement を閉じると ResultSet も同時に閉じられてしまい、結果を受け取ることができない。</em></p>
+<p>これは JDBC API の仕様でそのように決まっているらしく、<strong><code>PreparedStatement#close()</code> を呼ぶと連鎖的に <code>ResultSet#close()</code> も呼びに行く</strong>ようだ (古い JDBC だとやってくれないこともあるとか)。</p>
+<p>ちなみに、GC (ガベージコレクション) でオブジェクトが整理される時も、それぞれの <code>close()</code> メソッドを自動的に呼んでくれるらしい。JVM や JDBC がそれぞれのオブジェクトを操作するときは不正な close 漏れが発生しないように考慮してくれてるのね。</p>
+<p>ただし、GC はオブジェクトに null を代入したからといって即座に行われるわけではないので、やっぱりきちんと自分で <code>ResultSet#close()</code> → <code>PreparedStatement#close()</code> の順に close させてあげるのがベスト。</p>
+<ul>
+  <li><a href="http://d.hatena.ne.jp/yohei-a/20090428/1240911788">カーソルが解放されるタイミング (2) - ablog</a></li>
+  <li><a href="http://qa.atmarkit.co.jp/q/373">ResultSet／Statementのクローズについて。 - QA@IT</a></li>
+</ul>
+<h2 id="connectionclose-も連鎖的に-preparedstatement-や-resultset-を-close-する"><a class="header-link" href="#connectionclose-も連鎖的に-preparedstatement-や-resultset-を-close-する"><span class="header-link-mark"></span></a><code>Connection#close()</code> も連鎖的に PreparedStatement や ResultSet を close する</h2>
+<p>上述のクソコードの中に <code>// 1画面全体の処理が終わると Connection を close (コネクションプールへの返却) する処理を呼ぼうとする</code> という処理がある。これは1つの画面繊維が終了する直前に必ず呼ばれるように記述されており、ラッパーメソッドの中では <code>Connection#close()</code> を呼んでいる。Connection をクローズすると、一度コネクションプールに接続が返されるのだが、この時にも PreparedStatement と ResultSet の <code>close()</code> メソッドを同時に呼んできちんと閉じてくれているようだ。</p>
+<p>クソコードの山を覗いていると、同様に PreparedStatement を close しないで使っているコードが散見されるのだが、そこでは for ループで回していないため、最大オープン・カーソル数に達する前に1画面の処理が全て終わり、<code>Connection#close()</code> のタイミングでうまいこと PreparedStatement も close されることで、エラーには至っていないようであった。かなりギリギリセーフな作りだったのだ。怖い怖い。それでも「動いていて問題がないなら直さないこと」と言ってのけるチームリーダはもっと怖い怖い。</p>
+<ul>
+  <li><a href="https://ja.wikipedia.org/wiki/%E3%82%AB%E3%83%BC%E3%82%BD%E3%83%AB_%28%E3%83%87%E3%83%BC%E3%82%BF%E3%83%99%E3%83%BC%E3%82%B9%29">カーソル (データベース) - Wikipedia</a></li>
+</ul>
+<blockquote>
+  <p>標準SQL規格では、トランザクションを終了するとカーソルは破棄される仕様である。</p>
+</blockquote>
+<h2 id="どう書いたらカーソルを適切にクローズできるか"><a class="header-link" href="#どう書いたらカーソルを適切にクローズできるか"><span class="header-link-mark"></span></a>どう書いたらカーソルを適切にクローズできるか</h2>
+<p>こういうクソコードな状態があちこちに蔓延していて修正箇所が膨大な量になる。なのに「動いているコードはなるべく変えるな」の一点張りな、コードが書けない読めない無能なリーダからの指示で、今回の問題が起こる箇所だけ何とかすることになった。</p>
+<p>結論からいくと、for ループの中の <code>rs.close()</code> を行ったあとに、独自の DB 接続クラス <code>MyDbUtil</code> が持っていた、PreparedStatement を close するラッパーメソッドを呼び出してあげることで直せた。ResultSet を扱い終わってから、呼び出し側から PreparedStatement の close を要求するのだ。</p>
+<p>ちなみに、その他の画面でも似たような、for ループで SELECT 文を発行しまくる処理があるのだが、そこでは上述の close 処理が正しく書かれていたので、PreparedStatement はループごとに解放され、カーソルも一緒に閉じられていた。ホントにベタベタに JDBC 接続の基本コードを書いている感じで、それなのに中途半端にラッパークラスがあるせいでややこしいことになっていた。</p>
+<h2 id="dbutils-だと-preparedstatement-を意識しなくて良い"><a class="header-link" href="#dbutils-だと-preparedstatement-を意識しなくて良い"><span class="header-link-mark"></span></a>DBUtils だと PreparedStatement を意識しなくて良い</h2>
+<p>前回の冒頭に「Update の時は DBUtils を使っている」といったことを書いた。<strong>DBUtils</strong> というのは Apache Commons のライブラリの1つで、PreparedStatement や Connection などを隠蔽し、DB 接続をしやすくしてくれるためのもの。</p>
+<p>DBUtils のメソッドを通して Execute (SELECT 文の発行) などをやってやると、DBUtils 内部で PreparedStatement を適切に close してから結果を渡してくれる作りになっている。これは、生の ResultSet を返すのではなく、ResultSetHandler という別のオブジェクトを生成し、それを返すようにしているから、PreparedStatement と ResultSet を close できる作りになっている。</p>
+<p>DBUtils は気軽に使えて分かりやすいので、またいつか紹介しようと思っている。</p>
+<p>本当は上述のようなクソコードも DBUtils を使った SELECT 処理にすればよかったんだろうけど、多分最初に作った人たちが DBUtils の ResultSetHandler が上手く扱えなかったから、SELECT の時だけは生の PreparedStatement を使うように書き直していたのかなと思う。マジでクソコードだ。</p>
+<h2 id="その他参考"><a class="header-link" href="#その他参考"><span class="header-link-mark"></span></a>その他参考</h2>
+<ul>
+  <li><a href="https://www.postgresql.jp/document/7.4/html/jdbc-query.html">https://www.postgresql.jp/document/7.4/html/jdbc-query.html</a></li>
+  <li><a href="http://www.javadrive.jp/servlet/database/index6.html">データの取得(SELECT) - データベース接続 - サーブレット入門</a></li>
+  <li><a href="http://d.hatena.ne.jp/mokimokisan/20120411/1334155085">ResultSetをcloseする時はNULL判定すべし - serenska's diary</a></li>
+</ul>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2016-04-07</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2016-04-07</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

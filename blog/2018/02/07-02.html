@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>Jenkins の Declarative Pipeline を触ってみた - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2018/02/07-02.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2018/index.html">2018年</a></li>
+            <li><a href="/blog/2018/02/index.html">02月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2018-02-07</time></div>
+        <h1 id="page-title">Jenkins の Declarative Pipeline を触ってみた</h1>
+
+<p><strong>Jenkins (ジェンキンス)</strong> とは、継続的インテグレーション (CI : Continuous Integration) を実現するためのツール。Git リポジトリへの Push などをトリガーに、自動的にビルドやリリース作業を行ってくれるツールだ。</p>
+<p>Jenkins におけるジョブ (ビルド処理だとか、自動的にやらせたいタスク) は、これまでブラウザ上で GUI 操作によって作成していたが、ジョブ定義をバージョン管理できないことなどが欠点だった。</p>
+<p>そこで、Jenkins バージョン2から <em>Pipeline</em> (パイプライン) という仕組みが登場し、ジョブを定義した専用のスクリプトファイルを書けるようになった。最初に登場したスクリプトの記法は <em>Scripted Pipeline</em> と呼ばれる。テキストファイルならバージョン管理もしやすい、ということで広まったが、記法が難解だったため、新たに <strong>Declarative Pipeline</strong> という別の記法が登場した。</p>
+<p>2018年現在、Jenkins では <em>Declarative Pipeline v1.2</em> という記法をベースに、必要があればその中に Scripted Pipeline の記法を混ぜ込んで記述してもらう、という手法を推奨しているようである。もちろん、素の Scripted Pipeline の記法でもまだ書けるし、両者にやれることの違いはそんなにないが、できれば新しい・優れた記法を知っておきたい。</p>
+<p>今回はこの Declarative Pipeline を触ってみよう、というワケである。</p>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#%E5%89%8D%E6%8F%90%E7%92%B0%E5%A2%83">前提環境</a></li>
+  <li><a href="#%E3%83%8D%E3%83%83%E3%83%88%E4%B8%8A%E3%81%A7%E3%83%91%E3%82%A4%E3%83%97%E3%83%A9%E3%82%A4%E3%83%B3%E3%81%AE%E8%A8%98%E6%B3%95%E3%82%92%E3%82%B0%E3%82%B0%E3%82%8A%E3%81%A5%E3%82%89%E3%81%84">ネット上でパイプラインの記法をググりづらい</a></li>
+  <li><a href="#declarative-pipeline-%E3%81%A7%E3%82%B8%E3%83%A7%E3%83%96%E3%82%92%E4%BD%9C%E3%81%A3%E3%81%A6%E3%81%BF%E3%82%8B">Declarative Pipeline でジョブを作ってみる</a>
+    <ul>
+      <li><a href="#windows-server-%E4%B8%8A%E3%81%AE-jenkins-%E3%81%AF-sh-%E3%81%8C%E4%BD%BF%E3%81%88%E3%81%AA%E3%81%84%EF%BC%9F">Windows Server 上の Jenkins は <code>sh</code> が使えない？</a></li>
+      <li><a href="#%E5%BC%B7%E5%BC%95%E3%81%AB-git-bash-%E3%82%92%E5%AE%9F%E8%A1%8C%E3%81%99%E3%82%8B%E3%81%AB%E3%81%AF">強引に Git Bash を実行するには</a></li>
+      <li><a href="#%E3%82%B8%E3%83%A7%E3%83%96%E5%90%8D%E3%81%AB%E6%97%A5%E6%9C%AC%E8%AA%9E%E3%81%8C%E5%90%AB%E3%81%BE%E3%82%8C%E3%81%A6%E3%81%84%E3%82%8B%E3%81%A8-bat-%E3%81%A7%E6%AD%A2%E3%81%BE%E3%82%8B">ジョブ名に日本語が含まれていると <code>bat</code> で止まる</a></li>
+    </ul>
+  </li>
+  <li><a href="#%E3%82%B8%E3%83%A7%E3%83%96%E3%82%92%E5%AE%9F%E8%A1%8C%E3%81%99%E3%82%8B">ジョブを実行する</a></li>
+</ul>
+<h2 id="前提環境"><a class="header-link" href="#前提環境"><span class="header-link-mark"></span></a>前提環境</h2>
+<p>今回は、Windows Server 上に構築済みだった Jenkins を利用している。サーバが Linux ではなく Windows Server だったことにより、後々困る事態になった…。インストールとか環境設定の話は割愛。Pipeline プラグインが導入済みの環境とする。</p>
+<p>BitBucket リポジトリとの連携をベースにしているので、GitHub との連携設定は適宜別の設定が必要と思われる。</p>
+<h2 id="ネット上でパイプラインの記法をググりづらい"><a class="header-link" href="#ネット上でパイプラインの記法をググりづらい"><span class="header-link-mark"></span></a>ネット上でパイプラインの記法をググりづらい</h2>
+<p>イマイチパイプラインの記法がまとまっているサイトが少なく、記事が書かれた時期によって、どの記法を対象に解説しているのかバラバラだ。記法の種類は大きく以下の3種類ある。</p>
+<ul>
+  <li>Scripted Pipeline : <code>node {}</code> がトップレベルにある記法</li>
+  <li>Declarative Pipeline (v1.2 未満) : <code>pipeline {}</code> がトップレベルにある記法</li>
+  <li>Declarative Pipeline (v1.2 以降) : <code>pipeline {}</code> がトップレベルにあるのは変わらず。<code>parallel</code> など一部で v1.2 未満の記法と互換性がない。</li>
+</ul>
+<p>これら3種類は、いずれも互換性がないので、自分がどの記法で書きたいのか、その記事の情報をそのまま適用できるのか、は逐一確認したい。</p>
+<h2 id="declarative-pipeline-でジョブを作ってみる"><a class="header-link" href="#declarative-pipeline-でジョブを作ってみる"><span class="header-link-mark"></span></a>Declarative Pipeline でジョブを作ってみる</h2>
+<p>まずは Declarative Pipeline でジョブを作ってみるとする。</p>
+<p>Jenkins の管理画面で「新規ジョブ作成」を選ぶ。ジョブの種類として「Pipeline」を選択し、「OK」ボタンでジョブを作成する。</p>
+<p>次に設定画面。</p>
+<ul>
+  <li>「General」
+    <ul>
+      <li>お好みで「古いビルドの破棄」あたりを入れておけばよいかと。</li>
+    </ul>
+  </li>
+  <li>「Build Triggers」
+    <ul>
+      <li>Git リポジトリからのプッシュ時に自動実行する場合は、「Build when a changes is pushed to ...」と「SCM をポーリング」にチェックを入れる。</li>
+      <li>自分は BitBucket 連携を試したが、GitHub との連携時はまたちょっと違うかも。</li>
+    </ul>
+  </li>
+  <li>「Advanced Project Options」
+    <ul>
+      <li>特になし。</li>
+    </ul>
+  </li>
+  <li>「Pipeline」
+    <ul>
+      <li>まずは「Pipeline script」を選んでおくと、エディタ領域が表示される。ココに直接 Pipeline スクリプトを記述できる。</li>
+      <li>「Pipeline Syntax」のリンクから、Pipeline を記述するためのスニペットが出力できる。</li>
+    </ul>
+  </li>
+</ul>
+<p>今回は、Git リポジトリからチェックアウトを行い、<code>npm install</code> 後に <code>npm test</code> コマンドを流してみようと思う。</p>
+<pre class="language-groovy"><code class="language-groovy"><span class="token comment">// Declarative Pipeline 記法。コメントはスラッシュ2つで単一行</span>
+<span class="token comment">/* これで複数行コメントも可能 */</span>
+pipeline <span class="token punctuation">{</span>
+  <span class="token comment">// ジョブを実行するエージェントを指定 : 特になければ any で</span>
+  agent any
+  stages <span class="token punctuation">{</span>
+    <span class="token function">stage</span><span class="token punctuation">(</span><span class="token string">'Git チェックアウト'</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      steps <span class="token punctuation">{</span>
+        <span class="token comment">// Credentials ID は「Pipeline Syntax」より作成すると自動的に生成してくれる</span>
+        <span class="token comment">// master ブランチ以外を指定する際は「branch:」オプションを付けて書く</span>
+        git credentialsId<span class="token punctuation">:</span> <span class="token string">'★'</span><span class="token punctuation">,</span> url<span class="token punctuation">:</span> <span class="token string">'ssh://git@example.com/example.git'</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span>
+    <span class="token function">stage</span><span class="token punctuation">(</span><span class="token string">'npm install'</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      steps <span class="token punctuation">{</span>
+        <span class="token comment">// Node.js を使用する際は別途環境定義しておき、それを指定する</span>
+        <span class="token comment">// これも「Pipeline Syntax」から生成すると良い</span>
+        <span class="token function">nodejs</span><span class="token punctuation">(</span>configId<span class="token punctuation">:</span> <span class="token string">'★'</span><span class="token punctuation">,</span> nodeJSInstallationName<span class="token punctuation">:</span> <span class="token string">'my nodejs'</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+          <span class="token comment">// Jenkins を Windows Server に立てている場合、Git Bash を入れてあっても「sh」が上手く動作しなかった</span>
+          <span class="token comment">// 仕方がないので「bat」で動かしている</span>
+          bat <span class="token string">'npm install'</span>
+          <span class="token comment">// Linux サーバ上に立てている場合は「sh」で良い</span>
+          <span class="token comment">// sh 'npm install'</span>
+        <span class="token punctuation">}</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span>
+    <span class="token function">stage</span><span class="token punctuation">(</span><span class="token string">'UT 実行'</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      steps <span class="token punctuation">{</span>
+        <span class="token function">nodejs</span><span class="token punctuation">(</span>configId<span class="token punctuation">:</span> <span class="token string">'★'</span><span class="token punctuation">,</span> nodeJSInstallationName<span class="token punctuation">:</span> <span class="token string">'my nodejs'</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+          bat <span class="token string">'npm test'</span>
+        <span class="token punctuation">}</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>ざっとこんな感じ。今回はカバレッジレポート生成とかはナシ。<code>★</code> 部分は環境によって変わる ID の類なので、「Pipeline Syntax」より設定して自動生成させるとよろし。</p>
+<h3 id="windows-server-上の-jenkins-は-sh-が使えない？"><a class="header-link" href="#windows-server-上の-jenkins-は-sh-が使えない？"><span class="header-link-mark"></span></a>Windows Server 上の Jenkins は <code>sh</code> が使えない？</h3>
+<p>Windows Server 上に構築した Jenkins の場合、通常のジョブの中では Git Bash を利用した「sh」スクリプトを書くことができたのに、Declarative Pipeline だと何故か以下のようなエラーが出てしまった。</p>
+<pre class="language-batch"><code class="language-batch">[C:\Program Files <span class="token punctuation">(</span><span class="token command"><span class="token keyword">x86</span></span><span class="token punctuation">)</span>\Jenkins\workspace\Test] Running shell script
+<span class="token command"><span class="token keyword">sh</span>: echo <span class="token number">2376</span> > 'C:\Program Files (x86</span><span class="token punctuation">)</span>\Jenkins\workspace\Test<span class="token operator">@</span>tmp\durable-e59db720\pid<span class="token punctuation">'</span>; jsc=durable-00618ac21868df95957d278393c845d5; JENKINS_SERVER_COOKIE= <span class="token punctuation">'</span>C:/Program Files <span class="token punctuation">(</span><span class="token command"><span class="token keyword">x86</span></span><span class="token punctuation">)</span>/Jenkins/workspace/Test<span class="token operator">@</span>tmp/durable-e59db720/script.sh<span class="token punctuation">'</span> > <span class="token punctuation">'</span>C:\Program Files <span class="token punctuation">(</span><span class="token command"><span class="token keyword">x86</span></span><span class="token punctuation">)</span>\Jenkins\workspace\Test<span class="token operator">@</span>tmp\durable-e59db720\jenkins-log.txt<span class="token punctuation">'</span> 2><span class="token operator">&#x26;</span><span class="token command"><span class="token keyword">1</span>; echo <span class="token number">0</span> > 'C:\Program Files (x86</span><span class="token punctuation">)</span>\Jenkins\workspace\Test<span class="token operator">@</span>tmp\durable-e59db720\jenkins-result.txt<span class="token punctuation">'</span>: No such file or directory
+
+# 整形してみた
+[C:\Program Files <span class="token punctuation">(</span><span class="token command"><span class="token keyword">x86</span></span><span class="token punctuation">)</span>\Jenkins\workspace\Test] Running shell script
+<span class="token command"><span class="token keyword">sh</span>: echo <span class="token number">2376</span></span>
+  > <span class="token punctuation">'</span>C:\Program Files <span class="token punctuation">(</span><span class="token command"><span class="token keyword">x86</span></span><span class="token punctuation">)</span>\Jenkins\workspace\Test<span class="token operator">@</span>tmp\durable-e59db720\pid<span class="token punctuation">'</span>;
+    <span class="token command"><span class="token keyword">jsc</span>=durable-00618ac21868df95957d278393c845d5;</span>
+    <span class="token command"><span class="token keyword">JENKINS_SERVER_COOKIE</span>= 'C:<span class="token parameter attr-name">/Program</span> Files (x86</span><span class="token punctuation">)</span>/Jenkins/workspace/Test<span class="token operator">@</span>tmp/durable-e59db720/script.sh<span class="token punctuation">'</span>
+      > <span class="token punctuation">'</span>C:\Program Files <span class="token punctuation">(</span><span class="token command"><span class="token keyword">x86</span></span><span class="token punctuation">)</span>\Jenkins\workspace\Test<span class="token operator">@</span>tmp\durable-e59db720\jenkins-log.txt<span class="token punctuation">'</span> 2><span class="token operator">&#x26;</span><span class="token command"><span class="token keyword">1</span>;</span>
+        <span class="token command"><span class="token keyword">echo</span> <span class="token number">0</span></span>
+          > <span class="token punctuation">'</span>C:\Program Files <span class="token punctuation">(</span><span class="token command"><span class="token keyword">x86</span></span><span class="token punctuation">)</span>\Jenkins\workspace\Test<span class="token operator">@</span>tmp\durable-e59db720\jenkins-result.txt<span class="token punctuation">'</span>: No such file or directory
+
+# もしくは以下のようなエラー
+[C:\Program Files <span class="token punctuation">(</span><span class="token command"><span class="token keyword">x86</span></span><span class="token punctuation">)</span>\Jenkins\workspace\Test] Running shell script
+<span class="token command"><span class="token keyword">sh</span>: C:<span class="token parameter attr-name">/Program</span> Files (x86</span><span class="token punctuation">)</span>/Jenkins/workspace/Test<span class="token operator">@</span>tmp/durable-c677b5ca/script.sh: C:\Program: bad interpreter: No such file or directory
+</code></pre>
+<p>「<code>No such file or directory</code>」とか「<code>bad interpreter</code>」とか言われる。</p>
+<p>どうも、Git Bash 内で、Windows のディレクトリの区切り文字バックスラッシュ「<code>\</code>」がエスケープ文字と誤解されるらしい。もしくは、<code>Program Files</code> というディレクトリ名のスペースがコマンドの区切りだと思われたり、セミコロン <code>;</code> が Git Bash だと解釈できなかったりするのかな？ともかく、正常に動作しなかった。</p>
+<p>仕方なく「<code>bat</code>」を使うことにした。幸い <code>node</code> や <code>npm</code> は OS に依存していないので大丈夫だった。</p>
+<h3 id="強引に-git-bash-を実行するには"><a class="header-link" href="#強引に-git-bash-を実行するには"><span class="header-link-mark"></span></a>強引に Git Bash を実行するには</h3>
+<p>それでも Windows Server 上の Jenkins でにおける Declarative Pipeline で強引に Git Bash を実行するには、以下のようにすれば実行はできた。しかし、<em>結果がコンソール出力されない</em>のでイマイチかと。</p>
+<pre class="language-groovy"><code class="language-groovy"><span class="token function">bat</span><span class="token punctuation">(</span>returnStdout<span class="token punctuation">:</span> <span class="token boolean">true</span><span class="token punctuation">,</span> script<span class="token punctuation">:</span> <span class="token string">'"C:/Program Files/Git/bin/bash.exe" -xec "ls"'</span><span class="token punctuation">)</span>
+</code></pre>
+<p><code>bat</code> 内で Git Bash のフルパスを指定して引数から <code>ls</code> コマンドを実行させている。オプションは以下のとおり。</p>
+<ul>
+  <li><code>-x</code> : シェルスクリプト内で処理されたコマンドを表示する</li>
+  <li><code>-e</code> : 実行したコマンドが 0 でない終了コードを返した時点でスクリプトが <code>exit</code> する</li>
+  <li><code>-c</code> : 引数のコマンドを実行する</li>
+</ul>
+<h3 id="ジョブ名に日本語が含まれていると-bat-で止まる"><a class="header-link" href="#ジョブ名に日本語が含まれていると-bat-で止まる"><span class="header-link-mark"></span></a>ジョブ名に日本語が含まれていると <code>bat</code> で止まる</h3>
+<p>ジョブ名はワークスペースのディレクトリ名として使われる。この兼ね合いで、ジョブ名 = ディレクトリ名に日本語が含まれると、「<code>bat</code>」コマンドが実行されたままになり、結果を返してくれない。</p>
+<ul>
+  <li>参考：<a href="http://kazuhito-m.github.io/tech/2016/12/05/jenkins-jobstop-by-japanesename">NBM2 - Jenkinsで「パイプラインスクリプトでWindowsのコマンド叩く」時ジョブが延々と止まる感じになる場合</a></li>
+</ul>
+<p>ジョブ名には日本語を使わないようにするのが簡単な回避策。</p>
+<h2 id="ジョブを実行する"><a class="header-link" href="#ジョブを実行する"><span class="header-link-mark"></span></a>ジョブを実行する</h2>
+<p>BitBucket の場合、リポジトリの「設定」→「フック」→「ポストレシーブ」より、「Bitbucket Server Webhook to Jenkins」を有効化しておく必要がある。GitHub の場合は別の設定が必要だろうか？試していない。</p>
+<p>設定ができていれば、Jenkins 管理画面での「ジョブ実行」からの手動実行はもちろんのこと、Git リポジトリへの Push や、プルリクのマージ時などに自動的にジョブが実行される。</p>
+<p>これは良い感じ。</p>
+<ul>
+  <li>参考：<a href="http://www.karakaram.com/jenkins2-jenkinsfile-multibranch-pipeline">Jenkins2のPipelineとJenkinsfileの使い方 | karakaram-blog</a>
+    <ul>
+      <li>Jenkins 管理画面の操作手順が分かりやすい。Jenkinsfile は Scripted Pipeline 記法。</li>
+    </ul>
+  </li>
+  <li>参考：<a href="https://gist.github.com/abayer/925c68132b67254147efd8b86255fd76">An example Declarative Pipeline Jenkinsfile for Feb 15 2017 demo · GitHub</a></li>
+  <li>参考：<a href="https://qiita.com/Takumon/items/e266146c225d07b82c13">Declarative PipelineでJenkinsfileを書いてみた(Checkstyle,Findbugs,PMD,CPDとか) - Qiita</a>
+    <ul>
+      <li>Declarative Pipeline (v1.2 未満) の記法サンプル集。</li>
+    </ul>
+  </li>
+  <li>参考：<a href="https://stackoverflow.com/questions/46669535/how-to-define-parallel-stages-in-a-declarative-jenkinsfile">jenkins - How to define parallel stages in a declarative Jenkinsfile? - Stack Overflow</a>
+    <ul>
+      <li>Declarative Pipeline v1.2 以降の記法が混在してエラーに至った例。</li>
+    </ul>
+  </li>
+</ul>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2018-02-07</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2018-02-07</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

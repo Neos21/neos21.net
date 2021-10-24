@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>GCP に中国からのアクセスがあり課金されたのでブロックする - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2020/09/09-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2020/index.html">2020年</a></li>
+            <li><a href="/blog/2020/09/index.html">09月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2020-09-09</time></div>
+        <h1 id="page-title">GCP に中国からのアクセスがあり課金されたのでブロックする</h1>
+
+<p>中国のせいで金を取られた！(乱暴な言い方)</p>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#%E7%B5%8C%E7%B7%AF">経緯</a></li>
+  <li><a href="#%E4%B8%AD%E5%9B%BD%E3%81%AE-ip-%E3%82%92%E3%83%95%E3%82%A1%E3%82%A4%E3%82%A2%E3%82%A6%E3%82%A9%E3%83%BC%E3%83%AB%E3%81%A7%E3%83%96%E3%83%AD%E3%83%83%E3%82%AF%E3%81%99%E3%82%8B">中国の IP をファイアウォールでブロックする</a></li>
+  <li><a href="#%E4%B8%AD%E5%9B%BD%E3%81%AE-public-ip-%E4%B8%80%E8%A6%A7%E3%83%95%E3%82%A1%E3%82%A4%E3%83%AB%E3%82%92%E5%8F%96%E5%BE%97%E3%81%99%E3%82%8B">中国の Public IP 一覧ファイルを取得する</a></li>
+  <li><a href="#public-ip-%E4%B8%80%E8%A6%A7%E3%83%95%E3%82%A1%E3%82%A4%E3%83%AB%E3%82%92-json-%E5%BD%A2%E5%BC%8F%E3%81%AB%E5%8A%A0%E5%B7%A5%E3%81%99%E3%82%8B">Public IP 一覧ファイルを JSON 形式に加工する</a></li>
+  <li><a href="#gcp-%E3%81%AE-api-key-%E3%82%92%E7%99%BA%E8%A1%8C%E3%81%99%E3%82%8B">GCP の API Key を発行する</a></li>
+  <li><a href="#gcp-%E3%81%AE-access-token-%E3%82%92%E7%99%BA%E8%A1%8C%E3%81%99%E3%82%8B">GCP の Access Token を発行する</a>
+    <ul>
+      <li><a href="#oauth-%E3%82%AF%E3%83%A9%E3%82%A4%E3%82%A2%E3%83%B3%E3%83%88-id-%E3%82%92%E4%BD%9C%E6%88%90%E3%81%99%E3%82%8B">OAuth クライアント ID を作成する</a></li>
+    </ul>
+  </li>
+  <li><a href="#%E3%82%B9%E3%82%B3%E3%83%BC%E3%83%97%E6%83%85%E5%A0%B1%E3%82%92%E5%8F%96%E5%BE%97%E3%81%99%E3%82%8B">スコープ情報を取得する</a>
+    <ul>
+      <li><a href="#authorization-code-%E3%82%92%E7%99%BA%E8%A1%8C%E3%81%99%E3%82%8B">Authorization Code を発行する</a></li>
+      <li><a href="#authorization-code-%E3%82%92%E5%88%A9%E7%94%A8%E3%81%97-access-token-%E3%82%92%E5%8F%96%E5%BE%97%E3%81%99%E3%82%8B">Authorization Code を利用し Access Token を取得する</a></li>
+    </ul>
+  </li>
+  <li><a href="#%E3%83%97%E3%83%AD%E3%82%B8%E3%82%A7%E3%82%AF%E3%83%88-id-%E3%82%92%E7%A2%BA%E8%AA%8D%E3%81%99%E3%82%8B">プロジェクト ID を確認する</a></li>
+  <li><a href="#rest-api-%E3%82%92%E3%82%B3%E3%83%BC%E3%83%AB%E3%81%99%E3%82%8B%E3%82%B3%E3%83%9E%E3%83%B3%E3%83%89%E3%82%92%E6%A7%8B%E7%AF%89%E3%81%97%E3%81%A6%E3%81%84%E3%81%8F">REST API をコールするコマンドを構築していく</a></li>
+  <li><a href="#rest-api-%E3%82%92%E3%82%B3%E3%83%BC%E3%83%AB%E3%81%99%E3%82%8B">REST API をコールする</a></li>
+  <li><a href="#%E4%BB%A5%E4%B8%8A">以上</a></li>
+</ul>
+<h2 id="経緯"><a class="header-link" href="#経緯"><span class="header-link-mark"></span></a>経緯</h2>
+<p>GCP で Always Free な IaaS (GCE) を立てて遊んでいる。無料だ無料だーと喜んでいたら、先月なぜか<strong>1円課金</strong>されていた。</p>
+<p>請求書を見てみると、</p>
+<ul>
+  <li><strong>Network Internet Egress from Americas to China</strong></li>
+</ul>
+<p>という項目で 0.021 ギガバイトの通信が発生していたようである。</p>
+<p>調べてみると、Compute Engine の Always Free 制限にこう書かれていた。</p>
+<ul>
+  <li>参考：<a href="https://cloud.google.com/free/docs/gcp-free-tier">Google Cloud Free Tier  |  Google Cloud Platform Free Tier</a></li>
+</ul>
+<blockquote>
+  <p>1 GB の北米から全リージョン宛ての下り（外向き）ネットワーク（1 か月あたり、<strong>中国とオーストラリアを除く</strong>）</p>
+</blockquote>
+<p>ふむ、どうも中国からのアクセスに対してレスポンスしてしまったために、中国への下り通信が発生したようである。</p>
+<p>今回は1円の課金で済んだし、設定していた請求アラートで1円課金された時点で気付けたから良いものの、コレ以上の意図しない課金は防ぎたい。そこで、<em>中国との通信をブロックして、今後課金されないようにする。</em></p>
+<h2 id="中国の-ip-をファイアウォールでブロックする"><a class="header-link" href="#中国の-ip-をファイアウォールでブロックする"><span class="header-link-mark"></span></a>中国の IP をファイアウォールでブロックする</h2>
+<ul>
+  <li>参考：<a href="https://aoboshi.org/?p=829">GCP課金対象国からのアクセスを抑止する | 青星総合研究所</a></li>
+</ul>
+<p>今回の作業は、上のサイトを参考に行った。</p>
+<p>GCP のファイアウォール設定で、中国の Public IP からのアクセスを全部ブロックしてやれば、下りのアクセスも発生しなくて課金されないだろう、ということである。まぁまぁ手順が多いので覚悟せよ。ｗ</p>
+<h2 id="中国の-public-ip-一覧ファイルを取得する"><a class="header-link" href="#中国の-public-ip-一覧ファイルを取得する"><span class="header-link-mark"></span></a>中国の Public IP 一覧ファイルを取得する</h2>
+<ul>
+  <li><a href="https://ipv4.fetus.jp/cn">中華人民共和国cnに割り当てられたIPアドレスの一覧 : ipv4.fetus.jp</a></li>
+</ul>
+<p>まずは上のサイトにアクセスし、右側の「Download」から「アクセス制御用ひな形」を押下する。プルダウンから「Nginx」を選択し、<code>cn.nginx.txt</code> をダウンロードする。</p>
+<ul>
+  <li><a href="https://ipv4.fetus.jp/cn.nginx.txt">https://ipv4.fetus.jp/cn.nginx.txt</a></li>
+</ul>
+<p>本稿執筆時点で、5351件分の CIDR ブロックが記述されていると思う。これらは全て、中国からの Public IP を封じるための設定である。</p>
+<h2 id="public-ip-一覧ファイルを-json-形式に加工する"><a class="header-link" href="#public-ip-一覧ファイルを-json-形式に加工する"><span class="header-link-mark"></span></a>Public IP 一覧ファイルを JSON 形式に加工する</h2>
+<p>ダウンロードしたテキストファイルを開くと、次のような形式で記述されていると思う。</p>
+<pre><code>deny 1.0.1.0/24;
+deny 1.0.2.0/23;
+</code></pre>
+<p>コレをテキストエディタで一括置換して、次のように書き換えていく。</p>
+<pre class="language-json"><code class="language-json"><span class="token punctuation">[</span>
+  <span class="token string">"1.0.1.0/24"</span><span class="token punctuation">,</span>
+  <span class="token string">"1.0.2.0/23"</span><span class="token punctuation">,</span>
+    … (中略、以下は最終行を示す)
+  <span class="token string">"223.255.252.0/23"</span>
+<span class="token punctuation">]</span>
+</code></pre>
+<p>トップレベルが配列の JSON ファイルとしてパースできるようにするワケだ。このようなテキストを <em><code>china-ip.json</code></em> というファイル名で保存したとする。</p>
+<p>そしたら、この5351件の配列を<strong>256件分ずつの配列</strong>に分割する。</p>
+<p>GCP のファイアウォールルールは、1ルールにつき CIDR ブロックを256件までしか設定できない。5351件分の CIDR をブロックするには、複数のルールを作らないといけないため、その下準備として配列を256件ずつに分解しようとしているのである。</p>
+<p>今回は Node.js スクリプトを書いて、分割した JSON を吐いてやる。</p>
+<ul>
+  <li><code>script-chunk.js</code></li>
+</ul>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword">const</span> fs <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'fs'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// 元の JSON ファイルを require で読み込む</span>
+<span class="token keyword">const</span> chinaIp <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'./china-ip.json'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token keyword">const</span> <span class="token function-variable function">arrayChunk</span> <span class="token operator">=</span> <span class="token punctuation">(</span><span class="token parameter"><span class="token punctuation">[</span><span class="token spread operator">...</span>array<span class="token punctuation">]</span><span class="token punctuation">,</span> size</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token keyword control-flow">return</span> array<span class="token punctuation">.</span><span class="token method function property-access">reduce</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token parameter">acc<span class="token punctuation">,</span> value<span class="token punctuation">,</span> index</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> index <span class="token operator">%</span> size <span class="token operator">?</span> acc <span class="token operator">:</span> <span class="token punctuation">[</span><span class="token spread operator">...</span>acc<span class="token punctuation">,</span> array<span class="token punctuation">.</span><span class="token method function property-access">slice</span><span class="token punctuation">(</span>index<span class="token punctuation">,</span> index <span class="token operator">+</span> size<span class="token punctuation">)</span><span class="token punctuation">]</span><span class="token punctuation">,</span> <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+
+<span class="token comment">// 256件ずつに分割する</span>
+<span class="token keyword">const</span> chunks <span class="token operator">=</span> <span class="token function">arrayChunk</span><span class="token punctuation">(</span>chinaIp<span class="token punctuation">,</span> <span class="token number">256</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token comment">// ファイルに書き出す</span>
+fs<span class="token punctuation">.</span><span class="token method function property-access">writeFileSync</span><span class="token punctuation">(</span><span class="token string">'./china-ip-chunk.json'</span><span class="token punctuation">,</span> <span class="token known-class-name class-name">JSON</span><span class="token punctuation">.</span><span class="token method function property-access">stringify</span><span class="token punctuation">(</span>chunks<span class="token punctuation">,</span> <span class="token keyword null nil">null</span><span class="token punctuation">,</span> <span class="token string">'  '</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token string">'utf-8'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>このようなスクリプトを</p>
+<pre class="language-bash"><code class="language-bash">$ node script-chunk.js
+</code></pre>
+<p>と実行してやると、<code>china-ip-chunk.json</code> が生成され、中身が次のようになっているはずである。</p>
+<pre class="language-json"><code class="language-json"><span class="token punctuation">[</span>
+  <span class="token punctuation">[</span>
+    <span class="token string">"1.0.1.0/24"</span><span class="token punctuation">,</span>
+    <span class="token string">"1.0.2.0/23"</span><span class="token punctuation">,</span>
+      … (中略)
+    <span class="token string">"43.225.224.0/20"</span>
+  <span class="token punctuation">]</span><span class="token punctuation">,</span>
+  <span class="token punctuation">[</span>
+    <span class="token string">"43.225.240.0/21"</span><span class="token punctuation">,</span>
+      … (以下略)
+  <span class="token punctuation">]</span>
+<span class="token punctuation">]</span>
+</code></pre>
+<p>配列の配列になっている。子の配列には CIDR ブロックが256件ずつ格納されている状態だ。</p>
+<h2 id="gcp-の-api-key-を発行する"><a class="header-link" href="#gcp-の-api-key-を発行する"><span class="header-link-mark"></span></a>GCP の API Key を発行する</h2>
+<p>薄々気付いていると思うが、5351件もの CIDR を手作業でファイアウォールルールに追加していくのは大変だ。そこで、GCP の REST API を使って、一括登録してやろうと思う。</p>
+<p>GCP の REST API を叩くには <em>API Key</em> と <strong>Access Token</strong> が必要になる。API Key はすぐに発行できるのだが、Access Token の発行には OAuth Client ID というのをコネコネしてやらないといけなくて、若干面倒である。</p>
+<p>とりあえず、まずは簡単に発行できる API Key を発行してしまおう。</p>
+<ul>
+  <li><a href="https://console.developers.google.com/">Google Cloud Platform</a></li>
+</ul>
+<p>Google APIs Console にログインし、画面上部で対象プロジェクトを選択する。続いて左メニューから「認証情報」を開く。</p>
+<p>画面上部の「+ 認証情報を作成」を押下し、「API キー」を選択する。</p>
+<p>「API キーを作成しました」ダイアログが表示されたら、発行された API キーをコピーしておく。</p>
+<h2 id="gcp-の-access-token-を発行する"><a class="header-link" href="#gcp-の-access-token-を発行する"><span class="header-link-mark"></span></a>GCP の Access Token を発行する</h2>
+<p>続いて Access Token を発行するが、コレがちょっと分かりづらい。</p>
+<ul>
+  <li>参考：<a href="https://qiita.com/shin1ogawa/items/49a076f62e5f17f18fe5">Google APIのAccess Tokenをお手軽に取得する - Qiita</a></li>
+</ul>
+<p>上のサイトを参考に、「OAuth クライアント ID」と「スコープ」を取得しておき、これらを元にして Access Token を作成する。</p>
+<h3 id="oauth-クライアント-id-を作成する"><a class="header-link" href="#oauth-クライアント-id-を作成する"><span class="header-link-mark"></span></a>OAuth クライアント ID を作成する</h3>
+<ul>
+  <li><a href="https://console.developers.google.com/">Google Cloud Platform</a></li>
+</ul>
+<p>Google APIs Console にログインし、画面上部で対象プロジェクトを選択する。続いて左メニューから「認証情報」を開く。</p>
+<p>画面上部の「+ 認証情報を作成」を押下し、「OAuth クライアント ID」を選択する。</p>
+<p>
+  <img src="09-01-01.png" alt="認証情報を作成">
+</p>
+<p>初回だと「OAuth クライアント ID を作成するには、まず同意画面でプロダクト名を設定する必要があります」と表示されていると思う。そこで「同意画面を設定」ボタンを押下する。</p>
+<p>
+  <img src="09-01-02.png" alt="同意画面を設定">
+</p>
+<p>「OAuth 同意画面」に移動したら、「User Type」は「外部」を選択して「作成」ボタンを押下する。</p>
+<p>
+  <img src="09-01-03.png" alt="外部">
+</p>
+<p>次の画面はとりあえず「アプリケーション名」だけ適当に入れておけば良い。画面下部の「保存」ボタンを押下する。</p>
+<p>
+  <img src="09-01-04.png" alt="アプリ名くらい">
+</p>
+<p>次のように「同意画面」が作れたと思う。</p>
+<p>
+  <img src="09-01-05.png" alt="同意画面を作成した">
+</p>
+<p>そしたらまた「+ 認証情報を作成」に戻る。今度は「OAuth クライアント ID の作成」画面でクライアント ID が作成できるようになっているはずだ。適当な名前を入力して「作成」ボタンを押下する。</p>
+<p>
+  <img src="09-01-06.png" alt="作成">
+</p>
+<p>「OAuth クライアントを作成しました」ダイアログが表示されたら、クライアント ID とクライアントシークレットをコピーしておく。</p>
+<p>
+  <img src="09-01-07.png" alt="作成した">
+</p>
+<h2 id="スコープ情報を取得する"><a class="header-link" href="#スコープ情報を取得する"><span class="header-link-mark"></span></a>スコープ情報を取得する</h2>
+<p>スコープというのは、作成する Access Token が操作できる Google Cloud のサービスを指定するモノみたい。一度作った Access Token で、あれもこれも設定変更できたりしないようにするようだ。</p>
+<p>今回行いたい操作は、GCP における VPC のファイアウォール登録だ。リファレンスを探すと、次の REST API リファレンスが見つかる。</p>
+<ul>
+  <li><a href="https://cloud.google.com/compute/docs/reference/rest/v1/firewalls/insert">Method: firewalls.insert  |  Compute Engine Documentation  |  Google Cloud</a></li>
+</ul>
+<p>この画面の右側に「Try this API」というペインがあり、その下部に「Google OAuth 2.0」という項目がある。ココの<em>「Show scopes」</em>を押下すると、</p>
+<ul>
+  <li><code>https://www.googleapis.com/auth/cloud-platform</code></li>
+  <li><code>https://www.googleapis.com/auth/compute</code></li>
+</ul>
+<p>という2つの URL が表示される。この2つの URL をスコープとして定義してやれば良いようだ。</p>
+<p>2つの URL をスペースで区切り、URI エンコードしてやることで、スコープ指定文字列として使えるようになる。今回はブラウザの開発者コンソールとかを使って、JavaScript で加工してやる。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token comment">// 次のようにスペース区切りにする</span>
+<span class="token keyword">const</span> scopeUrls <span class="token operator">=</span> <span class="token string">'https://www.googleapis.com/auth/cloud-platform https://www.googleapis.com/auth/compute'</span><span class="token punctuation">;</span>
+
+<span class="token comment">// URI エンコードする</span>
+<span class="token keyword">const</span> scope <span class="token operator">=</span> <span class="token function">encodeURIComponent</span><span class="token punctuation">(</span>scopeUrls<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// → https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fcloud-platform%20https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fcompute</span>
+<span class="token comment">// このような文字列が出力されるので、コレをコピーしておく</span>
+</code></pre>
+<h3 id="authorization-code-を発行する"><a class="header-link" href="#authorization-code-を発行する"><span class="header-link-mark"></span></a>Authorization Code を発行する</h3>
+<p>OAuth クライアント ID を発行したら、まずは Authorization Code というモノを発行する。ターミナルで次のようなコマンドを組み立てていく。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token assign-left variable">CLIENT_ID</span><span class="token operator">=</span><span class="token string">'【クライアント ID】'</span>
+<span class="token assign-left variable">CLIENT_SECRET</span><span class="token operator">=</span><span class="token string">'【クライアントシークレット】'</span>
+<span class="token assign-left variable">REDIRECT_URI</span><span class="token operator">=</span><span class="token string">'urn:ietf:wg:oauth:2.0:oob'</span>
+<span class="token assign-left variable">SCOPE</span><span class="token operator">=</span><span class="token string">'【さきほど作成した URI エンコードしたスコープの URL 文字列】'</span>
+
+<span class="token builtin class-name">echo</span> <span class="token string">"https://accounts.google.com/o/oauth2/v2/auth?response_type=code&#x26;client_id=<span class="token variable">${CLIENT_ID}</span>&#x26;redirect_uri=<span class="token variable">${REDIRECT_URI}</span>&#x26;scope=<span class="token variable">${SCOPE}</span>&#x26;access_type=offline"</span>
+</code></pre>
+<p>最後の <code>echo</code> で、URL が組み立てられて出力されるので、コレをコピーしてブラウザで開く。</p>
+<p>すると次のような画面が表示されるので、「許可」を選んでいく。</p>
+<p>
+  <img src="09-01-08.png" alt="許可">
+</p>
+<p>
+  <img src="09-01-09.png" alt="許可する">
+</p>
+<p>最後に Authorization Code が表示されるので、コピーしておく。</p>
+<p>
+  <img src="09-01-10.png" alt="コードを取得する">
+</p>
+<h3 id="authorization-code-を利用し-access-token-を取得する"><a class="header-link" href="#authorization-code-を利用し-access-token-を取得する"><span class="header-link-mark"></span></a>Authorization Code を利用し Access Token を取得する</h3>
+<p>Authorization Code を発行したら、先程のターミナルに戻り、次のようにコマンドを流していく。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token assign-left variable">AUTHORIZATION_CODE</span><span class="token operator">=</span><span class="token string">'【Authorization Code】'</span>
+<span class="token function">curl</span> <span class="token punctuation">\</span>
+  <span class="token string">'https://www.googleapis.com/oauth2/v4/token'</span> <span class="token punctuation">\</span>
+  --data <span class="token string">"code=<span class="token variable">${AUTHORIZATION_CODE}</span>"</span> <span class="token punctuation">\</span>
+  --data <span class="token string">"client_id=<span class="token variable">${CLIENT_ID}</span>"</span> <span class="token punctuation">\</span>
+  --data <span class="token string">"client_secret=<span class="token variable">${CLIENT_SECRET}</span>"</span> <span class="token punctuation">\</span>
+  --data <span class="token string">"redirect_uri=<span class="token variable">${REDIRECT_URI}</span>"</span> <span class="token punctuation">\</span>
+  --data <span class="token string">"grant_type=authorization_code"</span> <span class="token punctuation">\</span>
+  --data <span class="token string">"access_type=offline"</span>
+</code></pre>
+<p>
+  <img src="09-01-11.png" alt="叩けた">
+</p>
+<p><code>curl</code> のレスポンスとして JSON が表示され、<code>access_token</code> および <code>refresh_token</code> が取得できるのでコピーしておく。</p>
+<p>コレでようやく Access Token が取得できた。</p>
+<h2 id="プロジェクト-id-を確認する"><a class="header-link" href="#プロジェクト-id-を確認する"><span class="header-link-mark"></span></a>プロジェクト ID を確認する</h2>
+<p>最後にプロジェクト ID の確認。GCP 管理コンソールに移動して、プロジェクト選択欄でプロジェクト ID をコピーしておく。</p>
+<ul>
+  <li>参考：<a href="https://www.apps-gcp.com/gcp-startup/">初心者のためのGCPプロジェクト始め方入門 | apps-gcp.com</a></li>
+</ul>
+<h2 id="rest-api-をコールするコマンドを構築していく"><a class="header-link" href="#rest-api-をコールするコマンドを構築していく"><span class="header-link-mark"></span></a>REST API をコールするコマンドを構築していく</h2>
+<p>コレで API Key と Access Token が用意できた。GCP の REST API は <code>curl</code> でコールできるが、リクエストヘッダやパラメータを渡してやる必要があるので、<code>curl</code> コマンド一式を Node.js スクリプトで組み立ててやることにする。</p>
+<ul>
+  <li><code>script-generate-curl.js</code></li>
+</ul>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword">const</span> fs <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'fs'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// 256件ずつに分解した CIDR ブロック一覧の JSON ファイルを読み込む</span>
+<span class="token keyword">const</span> chinaIpChunk <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'./china-ip-chunk.json'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token keyword">const</span> projectId   <span class="token operator">=</span> <span class="token string">'【プロジェクト ID】'</span><span class="token punctuation">;</span>
+<span class="token keyword">const</span> apiKey      <span class="token operator">=</span> <span class="token string">'【API Key】'</span><span class="token punctuation">;</span>
+<span class="token keyword">const</span> accessToken <span class="token operator">=</span> <span class="token string">'【Access Token】'</span><span class="token punctuation">;</span>
+
+<span class="token comment">// curl コマンド1つ分のテンプレート</span>
+<span class="token keyword">const</span> <span class="token function-variable function">template</span> <span class="token operator">=</span> <span class="token punctuation">(</span><span class="token parameter">projectId<span class="token punctuation">,</span> apiKey<span class="token punctuation">,</span> accessToken<span class="token punctuation">,</span> firewallRuleName<span class="token punctuation">,</span> ips</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">curl --request POST \
+  "https://compute.googleapis.com/compute/v1/projects/</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>projectId<span class="token interpolation-punctuation punctuation">}</span></span><span class="token string">/global/firewalls?key=</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>apiKey<span class="token interpolation-punctuation punctuation">}</span></span><span class="token string">" \
+  --header 'Authorization: Bearer </span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>accessToken<span class="token interpolation-punctuation punctuation">}</span></span><span class="token string">' \
+  --header 'Accept: application/json' \
+  --header 'Content-Type: application/json' \
+  --data '{"name":"</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>firewallRuleName<span class="token interpolation-punctuation punctuation">}</span></span><span class="token string">","denied":[{"IPProtocol":"all"}],"description":"","direction":"INGRESS","disabled":false,"enableLogging":false,"kind":"compute#firewall","logConfig":{"enable":false},"network":"projects/</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>projectId<span class="token interpolation-punctuation punctuation">}</span></span><span class="token string">/global/networks/default","priority":100,"selfLink":"projects/</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>projectId<span class="token interpolation-punctuation punctuation">}</span></span><span class="token string">/global/firewalls/</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>firewallRuleName<span class="token interpolation-punctuation punctuation">}</span></span><span class="token string">","sourceRanges":</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>ips<span class="token interpolation-punctuation punctuation">}</span></span><span class="token string">}' \
+  --compressed
+</span><span class="token template-punctuation string">`</span></span><span class="token punctuation">;</span>
+
+<span class="token comment">// curl コマンドを複数個組み立てていく</span>
+<span class="token keyword">const</span> script <span class="token operator">=</span> chinaIpChunk<span class="token punctuation">.</span><span class="token method function property-access">reduce</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token parameter">acc<span class="token punctuation">,</span> ips<span class="token punctuation">,</span> index</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token keyword">const</span> num <span class="token operator">=</span> <span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">0</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>index <span class="token operator">+</span> <span class="token number">1</span><span class="token interpolation-punctuation punctuation">}</span></span><span class="token template-punctuation string">`</span></span><span class="token punctuation">.</span><span class="token method function property-access">slice</span><span class="token punctuation">(</span><span class="token operator">-</span><span class="token number">2</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">const</span> firewallRuleName <span class="token operator">=</span> <span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">china-</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>num<span class="token interpolation-punctuation punctuation">}</span></span><span class="token template-punctuation string">`</span></span><span class="token punctuation">;</span>  <span class="token comment">// ファイアウォールのルール名は「china-00」(連番) とする</span>
+  <span class="token keyword">const</span> curl <span class="token operator">=</span> <span class="token function">template</span><span class="token punctuation">(</span>projectId<span class="token punctuation">,</span> apiKey<span class="token punctuation">,</span> accessToken<span class="token punctuation">,</span> firewallRuleName<span class="token punctuation">,</span> <span class="token known-class-name class-name">JSON</span><span class="token punctuation">.</span><span class="token method function property-access">stringify</span><span class="token punctuation">(</span>ips<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword control-flow">return</span> acc <span class="token operator">+</span> curl <span class="token operator">+</span> <span class="token string">'\n'</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">,</span> <span class="token string">''</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// 組み立てた curl コマンドをファイルに書き出す</span>
+fs<span class="token punctuation">.</span><span class="token method function property-access">writeFileSync</span><span class="token punctuation">(</span><span class="token string">'./exec.sh'</span><span class="token punctuation">,</span> script<span class="token punctuation">,</span> <span class="token string">'utf-8'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>コレを</p>
+<pre class="language-bash"><code class="language-bash">$ node script-generate-curl.js
+</code></pre>
+<p>と実行すると、次のようなファイルが生成されるはずだ。</p>
+<ul>
+  <li><code>exec.sh</code></li>
+</ul>
+<pre class="language-bash"><code class="language-bash"><span class="token function">curl</span> --request POST <span class="token punctuation">\</span>
+  <span class="token string">"https://compute.googleapis.com/compute/v1/projects/【プロジェクト ID】/global/firewalls?key=【API Key】"</span> <span class="token punctuation">\</span>
+  --header <span class="token string">'Authorization: Bearer 【Access Token】'</span> <span class="token punctuation">\</span>
+  --header <span class="token string">'Accept: application/json'</span> <span class="token punctuation">\</span>
+  --header <span class="token string">'Content-Type: application/json'</span> <span class="token punctuation">\</span>
+  --data <span class="token string">'{"name":"china-01","denied":[{"IPProtocol":"all"}],"description":"","direction":"INGRESS","disabled":false,"enableLogging":false,"kind":"compute#firewall","logConfig":{"enable":false},"network":"projects/【プロジェクト ID】/global/networks/default","priority":100,"selfLink":"projects/【プロジェクト ID】/global/firewalls/china-01","sourceRanges":["1.0.1.0/24",【…中略…】,"43.225.224.0/20"]}'</span> <span class="token punctuation">\</span>
+  --compressed
+
+<span class="token function">curl</span> --request POST <span class="token punctuation">\</span>
+  <span class="token string">"https://compute.googleapis.com/compute/v1/projects/【プロジェクト ID】/global/firewalls?key=【API Key】"</span> <span class="token punctuation">\</span>
+  --header <span class="token string">'Authorization: Bearer 【Access Token】'</span> <span class="token punctuation">\</span>
+  --header <span class="token string">'Accept: application/json'</span> <span class="token punctuation">\</span>
+  --header <span class="token string">'Content-Type: application/json'</span> <span class="token punctuation">\</span>
+  --data <span class="token string">'{"name":"china-02","denied":[{"IPProtocol":"all"}],"description":"","direction":"INGRESS","disabled":false,"enableLogging":false,"kind":"compute#firewall","logConfig":{"enable":false},"network":"projects/【プロジェクト ID】/global/networks/default","priority":100,"selfLink":"projects/【プロジェクト ID】/global/firewalls/china-02","sourceRanges":["43.225.240.0/21",【…中略…】,"43.255.232.0/22"]}'</span> <span class="token punctuation">\</span>
+  --compressed
+
+<span class="token comment"># 全部で curl コマンドが21個分できているはず (5351件 / 256件 = 20.9 ≒ 21)</span>
+</code></pre>
+<p>分かりづらいが、<code>--data</code> 内の <code>sourceRanges</code> 部分で、CIDR ブロックを256件ずつ指定している。ルールの優先度は <code>"priority":100</code> で指定しているので、変更したい場合は <code>script-generate-curl.js</code> に記載のテンプレート部分を調整してやる。</p>
+<h2 id="rest-api-をコールする"><a class="header-link" href="#rest-api-をコールする"><span class="header-link-mark"></span></a>REST API をコールする</h2>
+<p>こうして <code>exec.sh</code> が生成できたら、</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">sh</span> ./exec.sh
+</code></pre>
+<p>で実行してやろう。ファイアウォールルールが生成されるはずだ。</p>
+<p>スクリプトを流し終えたら、GCP 管理コンソールでもファイアウォールルールを見てみよう。ルールの優先度などが問題なければコレで完了。</p>
+<h2 id="以上"><a class="header-link" href="#以上"><span class="header-link-mark"></span></a>以上</h2>
+<p>このルール設定によって本当に課金されなくなるのか、しばらく様子見してみる。</p><ins class="ins-block">
+<p>2021-07-30：シドニーからの通信も課金されたので対応。</p>
+<ul>
+  <li><a href="/blog/2021/07/30-01.html">続・GCE 絶対無課金</a></li>
+</ul>
+<p>2021-09-14：CPU バーストでも課金されたので GCE 自体使うの止めた。</p>
+<ul>
+  <li><a href="/blog/2021/09/14-01.html">Always Free なはずの GCE にどうしても金がかかるから停止した</a></li>
+</ul></ins>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2020-09-09</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2020-09-09</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

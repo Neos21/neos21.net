@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>Node.js で Git 操作。simple-git を使ってみた - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2020/07/24-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2020/index.html">2020年</a></li>
+            <li><a href="/blog/2020/07/index.html">07月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2020-07-24</time></div>
+        <h1 id="page-title">Node.js で Git 操作。simple-git を使ってみた</h1>
+
+<p>Node.js プログラムの中で Git 操作をする必要が出た。そのようなライブラリはいくつかあるようだが、<strong>simple-git</strong> というライブラリが手っ取り早そうだったので紹介する。</p>
+<ul>
+  <li><a href="https://www.npmjs.com/package/simple-git">simple-git - npm</a></li>
+  <li><a href="https://github.com/steveukx/git-js">GitHub - steveukx/git-js: A light weight interface for running git commands in any node.js application.</a></li>
+</ul>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#%E5%89%8D%E6%8F%90%E6%9D%A1%E4%BB%B6">前提条件</a></li>
+  <li><a href="#%E3%81%A8%E3%82%8A%E3%81%82%E3%81%88%E3%81%9A%E8%A9%A6%E3%81%97%E3%81%A6%E3%81%BF%E3%82%8B">とりあえず試してみる</a></li>
+  <li><a href="#%E3%82%AF%E3%83%AC%E3%83%87%E3%83%B3%E3%82%B7%E3%83%A3%E3%83%AB%E6%83%85%E5%A0%B1%E3%81%AE%E6%B8%A1%E3%81%97%E6%96%B9">クレデンシャル情報の渡し方</a></li>
+  <li><a href="#%E4%BB%A5%E4%B8%8A">以上</a></li>
+</ul>
+<h2 id="前提条件"><a class="header-link" href="#前提条件"><span class="header-link-mark"></span></a>前提条件</h2>
+<p>simple-git は内部的に <code>child_process.spawn()</code> を使って実際の <em><code>git</code> コマンド</em>を実行する、ラッパーライブラリに過ぎない。</p>
+<p>つまり、simple-git 含めた Node.js プログラムを動かす環境に、<code>git</code> コマンドがインストールされている必要がある。</p>
+<p>グローバルな Git Config なども影響するので、動作環境に注意が必要だ。</p>
+<h2 id="とりあえず試してみる"><a class="header-link" href="#とりあえず試してみる"><span class="header-link-mark"></span></a>とりあえず試してみる</h2>
+<p>それではとりあえず書いてみるとしよう。TypeScript ベースで書いてみるので、最低限のパッケージ類を用意する。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># 適当な作業ディレクトリを作成する</span>
+$ <span class="token function">npm</span> init -y
+
+<span class="token comment"># tsconfig.json を準備する</span>
+<span class="token function">cat</span> <span class="token operator">&#x3C;&#x3C;</span><span class="token string">EOL<span class="token bash punctuation"> <span class="token operator">></span> tsconfig.json</span>
+{
+  "compilerOptions": {
+    "target": "esnext",
+    "module": "commonjs"
+  }
+}
+EOL</span>
+
+$ <span class="token function">npm</span> i -S simple-git
+$ <span class="token function">npm</span> i -D typescript ts-node @types/node
+
+<span class="token comment"># コーディングするファイルを作っておく</span>
+$ <span class="token function">touch</span> index.ts
+</code></pre>
+<p>コレで準備 OK。一応、本稿執筆時点でのパッケージバージョンは次のとおり。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">npm</span> <span class="token function">ls</span> --depth<span class="token operator">=</span><span class="token number">0</span>
+practice-simple-git@0.0.0 /Users/Neo/practice-simple-git
+├── @types/node@14.0.14
+├── simple-git@2.11.0
+├── ts-node@8.10.2
+└── typescript@3.9.6
+</code></pre>
+<p><code>index.ts</code> を次のように実装していく。</p>
+<pre class="language-typescript"><code class="language-typescript"><span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> promises <span class="token keyword">as</span> fs <span class="token punctuation">}</span></span> <span class="token keyword">from</span> <span class="token string">'fs'</span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token imports">simpleGit</span> <span class="token keyword">from</span> <span class="token string">'simple-git'</span><span class="token punctuation">;</span>
+
+<span class="token punctuation">(</span><span class="token keyword">async</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token comment">// Git リポジトリを配置するローカルのパス。フルパス指定</span>
+  <span class="token keyword">const</span> workingDirectory <span class="token operator">=</span> <span class="token template-string"><span class="token template-punctuation string">`</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>__dirname<span class="token interpolation-punctuation punctuation">}</span></span><span class="token string">/my-pepo</span><span class="token template-punctuation string">`</span></span><span class="token punctuation">;</span>
+  <span class="token comment">// 操作したい Git リポジトリの URL。必要に応じてユーザ名やパスワードを指定したりする</span>
+  <span class="token keyword">const</span> repositoryUrl <span class="token operator">=</span> <span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">https://github.com/Neos21/Neos21.git</span><span class="token template-punctuation string">`</span></span><span class="token punctuation">;</span>
+  
+  <span class="token keyword">try</span> <span class="token punctuation">{</span>
+    <span class="token comment">// 対象のディレクトリがなければ git clone する</span>
+    <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token operator">!</span><span class="token keyword">await</span> fs<span class="token punctuation">.</span><span class="token method function property-access">access</span><span class="token punctuation">(</span>workingDirectory<span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">then</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token boolean">true</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token keyword">catch</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token boolean">false</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token keyword">await</span> <span class="token function">simpleGit</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">clone</span><span class="token punctuation">(</span>repositoryUrl<span class="token punctuation">,</span> workingDirectory<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+    
+    <span class="token keyword">const</span> git <span class="token operator">=</span> <span class="token function">simpleGit</span><span class="token punctuation">(</span>workingDirectory<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    
+    <span class="token comment">// 指定のブランチに切り替える (以下はリモートブランチがない場合はエラーとなる書き方)</span>
+    <span class="token keyword">await</span> git<span class="token punctuation">.</span><span class="token method function property-access">checkout</span><span class="token punctuation">(</span><span class="token string">'feat/example'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">await</span> git<span class="token punctuation">.</span><span class="token method function property-access">pull</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    
+    <span class="token comment">// ファイルを保存したり〜</span>
+    <span class="token keyword">const</span> newFilePath <span class="token operator">=</span> <span class="token template-string"><span class="token template-punctuation string">`</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>workingDirectory<span class="token interpolation-punctuation punctuation">}</span></span><span class="token string">/NEW-FILE.txt</span><span class="token template-punctuation string">`</span></span><span class="token punctuation">;</span>
+    <span class="token keyword">await</span> fs<span class="token punctuation">.</span><span class="token method function property-access">writeFile</span><span class="token punctuation">(</span>newFilePath<span class="token punctuation">,</span> <span class="token string">'New File Text'</span><span class="token punctuation">,</span> <span class="token string">'utf-8'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    
+    <span class="token comment">// コミット・プッシュするなど</span>
+    <span class="token keyword">await</span> git<span class="token punctuation">.</span><span class="token method function property-access">add</span><span class="token punctuation">(</span>newFilePath<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">await</span> git<span class="token punctuation">.</span><span class="token method function property-access">commit</span><span class="token punctuation">(</span><span class="token string">'Example Commit'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">await</span> git<span class="token punctuation">.</span><span class="token method function property-access">push</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  <span class="token keyword">catch</span><span class="token punctuation">(</span>error<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">error</span><span class="token punctuation">(</span><span class="token string">'エラー'</span><span class="token punctuation">,</span> error<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>こんな感じ。</p>
+<p>最近知ったのだが、Node.js の <code>fs</code> モジュールに、Promise 化済のモジュールが存在していた。<code>fs.promises</code> というヤツで、生 Node.js だと</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword">const</span> fs <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'fs'</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token property-access">promises</span><span class="token punctuation">;</span>
+</code></pre>
+<p>なんて読み込んでも良い。もう <code>util.promisify</code> って使わなくて良いのね…。</p>
+<p>んで、<code>fs.exists()</code> および <code>fs.existsSync()</code> は非推奨になっているので、存在チェックのために <code>fs.access()</code> を使用した。コレは <code>Promise&#x3C;void></code> なメソッドなので、Boolean に扱うために <code>if</code> 文の中でちょっとした工夫をしている。<code>await</code> した関数の Boolean を反転させる時は <em><code>!await</code> (<code>! await</code>)</em> で良い。<code>git clone</code> については後述する。</p>
+<p>Git 用のディレクトリが用意できたら、<code>simpleGit(path)</code> でインスタンスを作っておく。後はコレを使って <code>git</code> コマンド1つにつき <code>async</code>・<code>await</code> で処理してやれば良い。当然 Promise で書いても良い。</p>
+<p>今回の例では、指定のブランチに切り替え → Pull で最新化 → 適当なファイルを作成する (ココは <code>fs</code> で普通に作業) → Add して Commit して Push、という流れ。こんなことが Node.js 上で出来てしまうのだ。</p>
+<h2 id="クレデンシャル情報の渡し方"><a class="header-link" href="#クレデンシャル情報の渡し方"><span class="header-link-mark"></span></a>クレデンシャル情報の渡し方</h2>
+<p><code>simpleGit().clone()</code> で <code>git clone</code> を行うのだが、コレはターミナルで</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">git</span> clone 【Git URL】
+</code></pre>
+<p>コマンドが実行されるのと同じことになる。つまり、<code>~/.gitconfig</code> などでクレデンシャル情報が辿れないと、そのリポジトリをクローンできないのだ。</p>
+<p>GitHub なんかでもっとも手っ取り早いのは、URL にユーザ名とパスワード (or トークン) を混ぜ込んでしまう例。</p>
+<pre class="language-typescript"><code class="language-typescript"><span class="token keyword">const</span> userName <span class="token operator">=</span> <span class="token string">'Neos21'</span><span class="token punctuation">;</span>
+<span class="token keyword">const</span> password <span class="token operator">=</span> <span class="token string">'MY_PASSWORD'</span><span class="token punctuation">;</span>
+<span class="token keyword">await</span> <span class="token function">simpleGit</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">clone</span><span class="token punctuation">(</span><span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">https://</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>userName<span class="token interpolation-punctuation punctuation">}</span></span><span class="token string">:</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>password<span class="token interpolation-punctuation punctuation">}</span></span><span class="token string">@github.com/USER_NAME/REPOSITORY_NAME.git</span><span class="token template-punctuation string">`</span></span><span class="token punctuation">,</span> workingDirectory<span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>環境変数なんかで注入できれば、コレが楽かもしれない。</p>
+<p>Docker コンテナに閉じた環境であれば、<code>~/.gitconfig</code> および <code>~/.gitconfig-credential</code> を用意して、</p>
+<pre class="language-bash"><code class="language-bash"><span class="token punctuation">[</span>credential<span class="token punctuation">]</span>
+    helper <span class="token operator">=</span> store --file ~/.gitconfig-credential
+</code></pre>
+<p>みたいなグローバルコンフィグを用意しても良いだろう。</p>
+<p>また、<strong><code>~/.netrc</code></strong> ファイルを用意して、</p>
+<pre><code>machine github.com
+login 【ユーザ名】
+password 【パスワード】
+</code></pre>
+<p>と記述して配置すれば、<code>git clone</code> 時の URL にユーザ名やパスワードを書かなくても処理できたりする。</p>
+<p>いずれにおいても、生の <code>git</code> コマンドがそのマシン環境で実行されていることを見越して、Docker コンテナに閉じる際はどうやってクレデンシャル情報を渡しておこうか、といったことを考えておく必要がある。</p>
+<h2 id="以上"><a class="header-link" href="#以上"><span class="header-link-mark"></span></a>以上</h2>
+<p>手軽に Git 操作ができて良き良き。</p>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2020-07-24</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2020-07-24</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

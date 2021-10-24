@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>Oracle Application Container Cloud を使って Node.js アプリをデプロイしてみた - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2019/03/21-02.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2019/index.html">2019年</a></li>
+            <li><a href="/blog/2019/03/index.html">03月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2019-03-21</time></div>
+        <h1 id="page-title">Oracle Application Container Cloud を使って Node.js アプリをデプロイしてみた</h1>
+
+<p>Oracle Cloud Service の一つ、<strong>Oracle Application Container Cloud (ACC)</strong> というモノを使ってみた。簡単にいえば、Heroku みたいに Web アプリケーションがデプロイできるサービスなのだが、Oracle Cloud 製品群の中では「第1世代」に属される古いサービス。今後はあまりアップデートされないと思うので、ガッツリ使うつもりはないが、サクッと Web アプリをデプロイできる手軽さが良い。</p>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#%E7%AE%A1%E7%90%86%E7%94%BB%E9%9D%A2%E3%81%A8%E3%82%A2%E3%83%97%E3%83%AA%E3%82%B1%E3%83%BC%E3%82%B7%E3%83%A7%E3%83%B3%E3%81%AE%E4%BD%9C%E6%88%90">管理画面とアプリケーションの作成</a></li>
+  <li><a href="#%E3%82%A2%E3%83%97%E3%83%AA%E3%82%B1%E3%83%BC%E3%82%B7%E3%83%A7%E3%83%B3%E3%81%AE%E4%BD%9C%E6%88%90">アプリケーションの作成</a></li>
+  <li><a href="#%E3%82%A2%E3%83%97%E3%83%AA%E3%82%B1%E3%83%BC%E3%82%B7%E3%83%A7%E3%83%B3%E3%83%BB%E3%83%9E%E3%83%8B%E3%83%95%E3%82%A7%E3%82%B9%E3%83%88%E3%81%AE%E5%AE%9A%E7%BE%A9">アプリケーション・マニフェストの定義</a></li>
+  <li><a href="#%E3%82%A2%E3%83%97%E3%83%AA%E3%82%B1%E3%83%BC%E3%82%B7%E3%83%A7%E3%83%B3%E3%83%BB%E3%82%A2%E3%83%BC%E3%82%AB%E3%82%A4%E3%83%96%E3%81%AE%E4%BD%9C%E6%88%90">アプリケーション・アーカイブの作成</a></li>
+  <li><a href="#%E3%82%A2%E3%83%97%E3%83%AA%E3%82%92%E3%83%87%E3%83%97%E3%83%AD%E3%82%A4%E3%81%99%E3%82%8B">アプリをデプロイする</a></li>
+  <li><a href="#%E5%8B%95%E4%BD%9C%E3%83%AD%E3%82%B0%E3%82%92%E8%A6%8B%E3%82%8B%E3%81%AB%E3%81%AF">動作ログを見るには</a></li>
+  <li><a href="#%E5%8F%82%E8%80%83%E8%B3%87%E6%96%99">参考資料</a></li>
+</ul>
+<h2 id="管理画面とアプリケーションの作成"><a class="header-link" href="#管理画面とアプリケーションの作成"><span class="header-link-mark"></span></a>管理画面とアプリケーションの作成</h2>
+<p>Oracle Cloud にログイン → Oracle Cloud My Services ダッシュボードに移動 → ハンバーガーメニューより「サービス」→「Application Container」と移動する。</p>
+<p>ACC の管理画面に移動するので、初回は「Create Application」ボタンを押下する。</p>
+<p>「アプリケーションの作成」ダイアログが表示されたら、今回は Node.js アプリをデプロイしてみるため、「Node」を選択する。</p>
+<p>次のダイアログで、早速アプリケーションをアップロードできるのだが、まずは動作確認も兼ねて、サンプルアプリをデプロイさせてみる。</p>
+<ul>
+  <li>「アプリケーション:」セレクトボックスが「アーカイブのアップロード」になっていると思うので、「サンプルのデプロイ」を選択する。
+    <ul>
+      <li>「インスタンス:」は「1」、「メモリー (GB):」も「1 (GB)」で良い</li>
+      <li>「Nodeバージョン:」欄で確認できるが、使用できる Node.js のバージョンは本稿執筆時点で <em>v8</em> 系が最新。ちょっと遅いか。</li>
+    </ul>
+  </li>
+</ul>
+<p>「作成」ボタンを押下すると、インスタンスの生成が開始される。インスタンス一覧から対象のインスタンスを選択し、インスタンス詳細画面に移動すると、デプロイ状況が確認できる。</p>
+<p>5〜10分くらいすると、インスタンスの生成とサンプルアプリのデプロイが完了する。インスタンス詳細画面にて、次のような書式の URL が確認できると思うので、コレにアクセスしてみよう。</p>
+<ul>
+  <li><code>https://【アプリ名】-【テナント名】.【リージョン名】.oraclecloud.com:443</code></li>
+</ul>
+<p>サンプルアプリは「Oracle Application Container Cloud Service」という見出しのペライチサイトが表示されるのみだが、内部的には <code>ejs</code> パッケージを利用して実装されており、Node.js アプリが動作している。</p>
+<h2 id="アプリケーションの作成"><a class="header-link" href="#アプリケーションの作成"><span class="header-link-mark"></span></a>アプリケーションの作成</h2>
+<p>続いて、デプロイするアプリケーションを作成する。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">mkdir</span> practice-acc <span class="token operator">&#x26;&#x26;</span> <span class="token builtin class-name">cd</span> <span class="token variable">$_</span>
+$ <span class="token function">npm</span> init -y
+
+<span class="token comment"># サンプルとして Express をインストールする</span>
+$ <span class="token function">npm</span> <span class="token function">install</span> -S express
+
+<span class="token comment"># エントリポイントの生成</span>
+$ <span class="token function">touch</span> index.js
+</code></pre>
+<ul>
+  <li><code>index.js</code></li>
+</ul>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword">const</span> express <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'express'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">const</span> app <span class="token operator">=</span> <span class="token function">express</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+app<span class="token punctuation">.</span><span class="token method function property-access">use</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token parameter">req<span class="token punctuation">,</span> _res<span class="token punctuation">,</span> next</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token template-string"><span class="token template-punctuation string">`</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>req<span class="token punctuation">.</span><span class="token property-access">url</span><span class="token interpolation-punctuation punctuation">}</span></span><span class="token string"> [</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>req<span class="token punctuation">.</span><span class="token property-access">method</span><span class="token interpolation-punctuation punctuation">}</span></span><span class="token string">] : </span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span><span class="token known-class-name class-name">JSON</span><span class="token punctuation">.</span><span class="token method function property-access">stringify</span><span class="token punctuation">(</span>req<span class="token punctuation">.</span><span class="token property-access">body</span><span class="token punctuation">)</span><span class="token interpolation-punctuation punctuation">}</span></span><span class="token template-punctuation string">`</span></span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token function">next</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// 「/」ページ</span>
+app<span class="token punctuation">.</span><span class="token method function property-access">get</span><span class="token punctuation">(</span><span class="token string">'/'</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token parameter">_req<span class="token punctuation">,</span> res</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  res<span class="token punctuation">.</span><span class="token method function property-access">send</span><span class="token punctuation">(</span><span class="token string">'Hello World'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// 「/test」ページ</span>
+app<span class="token punctuation">.</span><span class="token method function property-access">get</span><span class="token punctuation">(</span><span class="token string">'/test'</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token parameter">_req<span class="token punctuation">,</span> res</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  res<span class="token punctuation">.</span><span class="token method function property-access">send</span><span class="token punctuation">(</span><span class="token string">'Hello World Test'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// サーバ起動</span>
+<span class="token keyword">const</span> port <span class="token operator">=</span> process<span class="token punctuation">.</span><span class="token property-access">env</span><span class="token punctuation">.</span><span class="token constant">PORT</span> <span class="token operator">||</span> <span class="token number">8080</span><span class="token punctuation">;</span>
+app<span class="token punctuation">.</span><span class="token method function property-access">listen</span><span class="token punctuation">(</span>port<span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">Listen : </span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>port<span class="token interpolation-punctuation punctuation">}</span></span><span class="token template-punctuation string">`</span></span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<h2 id="アプリケーション・マニフェストの定義"><a class="header-link" href="#アプリケーション・マニフェストの定義"><span class="header-link-mark"></span></a>アプリケーション・マニフェストの定義</h2>
+<p>Heroku の場合、資材をデプロイすると <code>npm start</code> コマンドが自動的に実行されるので、コレを利用して Node.js サーバを起動させたりするワケだが、Oracle ACC の場合は<em>アプリケーション・マニフェスト</em>と呼ばれるファイルで起動コマンドを定義する必要がある。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">touch</span> manifest.json
+</code></pre>
+<ul>
+  <li><code>manifest.json</code></li>
+</ul>
+<pre class="language-json"><code class="language-json"><span class="token punctuation">{</span>
+  <span class="token property">"runtime"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+    <span class="token property">"majorVersion"</span><span class="token operator">:</span> <span class="token string">"8"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token property">"command"</span><span class="token operator">:</span> <span class="token string">"node ./index.js"</span><span class="token punctuation">,</span>
+  <span class="token property">"release"</span><span class="token operator">:</span> <span class="token punctuation">{</span><span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token property">"notes"</span><span class="token operator">:</span> <span class="token string">"Practice ACC"</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p><code>runtime</code> が Node.js のバージョン、<code>command</code> に起動用コマンドを指定する。<code>"command": "npm start"</code> と書きたいところだが、ACC の VM (仮想環境) 内で、ディレクトリパスが上手く解決できないことがあるので、<code>npm start</code> スクリプトとして記述した内容をそのまま書いてしまうのが安全だと思われる。</p>
+<h2 id="アプリケーション・アーカイブの作成"><a class="header-link" href="#アプリケーション・アーカイブの作成"><span class="header-link-mark"></span></a>アプリケーション・アーカイブの作成</h2>
+<p>資材の準備ができたら、これらを Zip ファイルにまとめる。</p>
+<p>Heroku と違って、<strong>Oracle ACC はデプロイ時に <code>npm install</code> などを実行してくれないので、アップロードする資材に <code>node_modules/</code> ディレクトリを含めておく必要がある。</strong>また、ココでは MacOS に同梱の <code>zip</code> コマンドを使っているが、<em>解凍時にトップレベルにディレクトリが出来ないように</em>圧縮する必要があるので注意。</p>
+<p>デプロイ時に <code>Cannot find module '/u01/index.js'</code> などのようなエラーが発生する場合は、圧縮時のディレクトリ階層が正しくないか、<code>node_modules/</code> の準備が出来ていないことが主な原因である。直前に <code>npm install</code> を実行したか、<code>zip</code> コマンドによる圧縮時の階層構造は正しいか確認すること。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># 作業用ディレクトリのプロジェクトディレクトリ直下に移動すること</span>
+$ <span class="token builtin class-name">cd</span> practice-acc/
+
+<span class="token comment"># 資材を圧縮する</span>
+$ <span class="token function">zip</span> -r my-project.zip package.json index.js node_modules/
+
+<span class="token comment"># 以下のようにプロジェクトルート直下のファイルが直接格納されていること</span>
+  adding: package.json <span class="token punctuation">(</span>deflated <span class="token number">34</span>%<span class="token punctuation">)</span>
+  adding: index.js <span class="token punctuation">(</span>deflated <span class="token number">34</span>%<span class="token punctuation">)</span>
+  <span class="token comment"># 以下略</span>
+</code></pre>
+<h2 id="アプリをデプロイする"><a class="header-link" href="#アプリをデプロイする"><span class="header-link-mark"></span></a>アプリをデプロイする</h2>
+<p>Oracle ACC のインスタンス詳細画面に異動し、「デプロイメント」メニューを選ぶ。「デプロイ済アプリケーション」欄の右側にある「更新」ボタンを押下すると、アップロード欄が表示される。</p>
+<ul>
+  <li>「アーカイブ:」欄に、前述の圧縮した Zip ファイル</li>
+  <li>「マニフェスト構成:」に、前述の <code>manifest.json</code> ファイル</li>
+</ul>
+<p>を指定する。</p>
+<p><code>manifest.json</code> が正しく読み込まれれると、「ランタイム」欄の「起動コマンド:」が変化するはずなので、コレを確認して「編集の適用」ボタンを押下する。</p>
+<p>あとは4・5分待つとデプロイが完了するので、<code>index.js</code> で定義した以下の URL パスにアクセスしてみよう。</p>
+<ul>
+  <li><code>https://【アプリ名】-【テナント名】.【リージョン名】.oraclecloud.com:443/</code> → <code>Hello World</code> と表示されるはず</li>
+  <li><code>https://【アプリ名】-【テナント名】.【リージョン名】.oraclecloud.com:443/test</code> → <code>Hello World Test</code> と表示されるはず</li>
+</ul>
+<p>なお、デプロイしたファイルに問題があった場合は、自動的に直前の資材にロールバックされる。</p>
+<h2 id="動作ログを見るには"><a class="header-link" href="#動作ログを見るには"><span class="header-link-mark"></span></a>動作ログを見るには</h2>
+<p>アプリ中で <code>console.log()</code> で標準出力に出力した内容は、アプリログとして参照できる。</p>
+<p>インスタンス詳細画面の「管理」項目を押下し、「ログ」タブを押下すると、ログファイルの Zip ファイルがダウンロードできる。</p>
+<p><em>…コレが物凄く使いづらい。</em>ログファイルは適当な間隔で1つの Zip ファイルにまとまっていて、コレをダウンロードすることでしか、動作ログを確認できない。リアルタイムに <code>tail -f</code> するような仕組みはないので、諦めよう。</p>
+<h2 id="参考資料"><a class="header-link" href="#参考資料"><span class="header-link-mark"></span></a>参考資料</h2>
+<ul>
+  <li><a href="https://www.oracle.com/webfolder/technetwork/tutorials/obe/cloud/apaas/node/node-employee-service/node-employee-service.html">Oracle Application Container Cloud Service: Building a RESTful API with Node.js and Express</a></li>
+  <li><a href="https://learncodeshare.net/2017/12/06/deploy-a-node-js-application-to-oracle-application-container-cloud-service/">Deploy a Node.js application to Oracle Application Container Cloud Service | Learn Code Share</a>
+    <ul>
+      <li><code>zip -x "node_modules/oracledb/*"</code></li>
+    </ul>
+  </li>
+  <li><a href="https://www.oracle.com/webfolder/technetwork/tutorials/obe/cloud/apaas/node/getting-started-node-accs/getting-started-node-accs.html">Deploy a Node.js Application to Oracle Cloud</a></li>
+  <li><a href="https://qiita.com/shinyay/items/0cef960aa435a72a56f8">Oracle Application Container Cloud Service を使ってみた - Qiita</a></li>
+  <li><a href="https://docs.oracle.com/en/cloud/paas/app-container-cloud/dvcjv/create-manifest-json-file.html">Create the manifest.json File</a></li>
+  <li><a href="https://www.oracle.com/webfolder/technetwork/tutorials/obe/cloud/apaas/deployment/deployment.html">Deploying an Application to Oracle Application Container Cloud Service</a></li>
+  <li><a href="https://docs.oracle.com/en/cloud/paas/app-container-cloud/dvcjv/create-deployment-json-file.html">Create the deployment.json File</a></li>
+  <li><a href="https://docs.oracle.com/en/cloud/paas/app-container-cloud/csjse/explore-application-deployments-page.html#GUID-5E4472B1-F5C6-4556-908C-D76C4C14FC60">Explore the Application Deployments Page</a></li>
+</ul>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2019-03-21</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2019-03-21</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>Rehype プラグインで HTML の見出し要素にリンクを貼る - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2020/11/14-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2020/index.html">2020年</a></li>
+            <li><a href="/blog/2020/11/index.html">11月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2020-11-14</time></div>
+        <h1 id="page-title">Rehype プラグインで HTML の見出し要素にリンクを貼る</h1>
+
+<p><a href="https://github.com/Neos21/Neos21">GitHub で表示される Markdown</a> や <a href="https://getbootstrap.jp/docs/4.5/getting-started/introduction/">Bootstrap のドキュメント</a>なんかで、見出しにカーソルを当てると左右に <code>$</code> とか <code>#</code> みたいなアイコンが表示されて、コレが該当の見出しへのパーマリンクになっているモノがある。</p>
+<p>自分で HTML を書くと、以下のように実装する感じだ。</p>
+<pre class="language-html"><code class="language-html"><span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>h1</span> <span class="token attr-name">id</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>my-headline<span class="token punctuation">"</span></span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>a</span> <span class="token attr-name">href</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>#my-headline<span class="token punctuation">"</span></span><span class="token punctuation">></span></span>$<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>a</span><span class="token punctuation">></span></span>
+  こんにちは見出しです
+<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>h1</span><span class="token punctuation">></span></span>
+</code></pre>
+<p>今回は <code>&#x3C;a href="#my-headline">$&#x3C;/a></code> この部分を自動的に付与してくれる Rehype プラグイン <a href="https://github.com/rehypejs/rehype-autolink-headings">rehype-autolink-headings</a> を紹介する。</p>
+<h2 id="必要なパッケージとサンプルコード"><a class="header-link" href="#必要なパッケージとサンプルコード"><span class="header-link-mark"></span></a>必要なパッケージとサンプルコード</h2>
+<p>今回は Markdown から HTML にパースする際に、見出しにリンクを付けてみる。Rehype プラグインなので、HTML を読み込んで、見出しにリンクを付けて、再度 HTML にパースし直す、といった使い方もできる。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># Markdown を HTML へと変換するために必要な最低限の Unified・Remark・Rehype 関連パッケージ</span>
+$ <span class="token function">npm</span> <span class="token function">install</span> --save-dev unified remark-parse remark-rehype rehype-stringify
+
+<span class="token comment"># 見出しへの ID 付与を行う Remark プラグインと、見出しリンクを付与する今回のプラグイン</span>
+$ <span class="token function">npm</span> <span class="token function">install</span> --save-dev remark-slug rehype-autolink-headings
+</code></pre>
+<p>以下のようにパースする。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword">const</span> fs <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'fs'</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token property-access">promises</span><span class="token punctuation">;</span>
+
+<span class="token keyword">const</span> unified <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'unified'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">const</span> remarkParse <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'remark-parse'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">const</span> remarkSlug <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'remark-slug'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">const</span> remarkRehype <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'remark-rehype'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">const</span> rehypeAutolinkHeadings <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'rehype-autolink-headings'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">const</span> rehypeStringify <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'rehype-stringify'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token punctuation">(</span><span class="token keyword">async</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token keyword">const</span> inputMarkdown <span class="token operator">=</span> <span class="token keyword control-flow">await</span> fs<span class="token punctuation">.</span><span class="token method function property-access">readFile</span><span class="token punctuation">(</span><span class="token string">'./example.md'</span><span class="token punctuation">,</span> <span class="token string">'utf-8'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  
+  <span class="token keyword">const</span> processor <span class="token operator">=</span> <span class="token function">unified</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+    <span class="token punctuation">.</span><span class="token method function property-access">use</span><span class="token punctuation">(</span>remarkParse<span class="token punctuation">)</span>
+    <span class="token punctuation">.</span><span class="token method function property-access">use</span><span class="token punctuation">(</span>remarkSlug<span class="token punctuation">)</span>    <span class="token comment">// 見出しに ID を自動付与する</span>
+    <span class="token punctuation">.</span><span class="token method function property-access">use</span><span class="token punctuation">(</span>remarkRehype<span class="token punctuation">)</span>  <span class="token comment">// Markdown から HTML に変換する</span>
+    <span class="token punctuation">.</span><span class="token method function property-access">use</span><span class="token punctuation">(</span>rehypeAutolinkHeadings<span class="token punctuation">,</span> <span class="token punctuation">{</span>  <span class="token comment">// HTML に変換後、見出しリンクを自動付与する</span>
+      behavior<span class="token operator">:</span> <span class="token string">'prepend'</span><span class="token punctuation">,</span>          <span class="token comment">// `prepend`・`append`・`wrap`・`before`・`after` でリンクの挿入位置を指定できる</span>
+      properties<span class="token operator">:</span> <span class="token punctuation">{</span><span class="token punctuation">}</span><span class="token punctuation">,</span>               <span class="token comment">// `a` 要素に付与する属性</span>
+      content<span class="token operator">:</span> <span class="token punctuation">{</span>                    <span class="token comment">// hast Node として `a` 要素の子要素を定義できる・今回は span 要素を追加してみる</span>
+        type<span class="token operator">:</span> <span class="token string">'element'</span><span class="token punctuation">,</span>
+        tagName<span class="token operator">:</span> <span class="token string">'span'</span><span class="token punctuation">,</span>
+        properties<span class="token operator">:</span> <span class="token punctuation">{</span>
+          className<span class="token operator">:</span> <span class="token punctuation">[</span><span class="token string">'icon-header-link'</span><span class="token punctuation">]</span>
+        <span class="token punctuation">}</span><span class="token punctuation">,</span>
+        children<span class="token operator">:</span> <span class="token punctuation">[</span><span class="token punctuation">{</span>
+          type<span class="token operator">:</span> <span class="token string">'text'</span><span class="token punctuation">,</span>
+          value<span class="token operator">:</span> <span class="token string">'$'</span>
+        <span class="token punctuation">}</span><span class="token punctuation">]</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span><span class="token punctuation">)</span>
+    <span class="token punctuation">.</span><span class="token method function property-access">use</span><span class="token punctuation">(</span>rehypeStringify<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">const</span> result <span class="token operator">=</span> <span class="token keyword control-flow">await</span> processor<span class="token punctuation">.</span><span class="token method function property-access">process</span><span class="token punctuation">(</span>inputMarkdown<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  
+  <span class="token keyword">const</span> outputHtml <span class="token operator">=</span> result<span class="token punctuation">.</span><span class="token property-access">contents</span><span class="token punctuation">;</span>
+  <span class="token keyword control-flow">await</span> fs<span class="token punctuation">.</span><span class="token method function property-access">writeFile</span><span class="token punctuation">(</span><span class="token string">'./example.html'</span><span class="token punctuation">,</span> outputHtml<span class="token punctuation">,</span> <span class="token string">'utf-8'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>コレで、生成される HTML は以下のようになる。インデントだけ調整している。</p>
+<pre class="language-html"><code class="language-html"><span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>h1</span> <span class="token attr-name">id</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>タイトル<span class="token punctuation">"</span></span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>a</span> <span class="token attr-name">href</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>#タイトル<span class="token punctuation">"</span></span><span class="token punctuation">></span></span><span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>span</span> <span class="token attr-name">class</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>icon-header-link<span class="token punctuation">"</span></span><span class="token punctuation">></span></span>$<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>span</span><span class="token punctuation">></span></span><span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>a</span><span class="token punctuation">></span></span>
+  タイトル
+<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>h1</span><span class="token punctuation">></span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>p</span><span class="token punctuation">></span></span>文章<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>p</span><span class="token punctuation">></span></span>
+
+<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>h2</span> <span class="token attr-name">id</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>はじめに<span class="token punctuation">"</span></span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>a</span> <span class="token attr-name">href</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>#はじめに<span class="token punctuation">"</span></span><span class="token punctuation">></span></span><span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>span</span> <span class="token attr-name">class</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>icon-header-link<span class="token punctuation">"</span></span><span class="token punctuation">></span></span>$<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>span</span><span class="token punctuation">></span></span><span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>a</span><span class="token punctuation">></span></span>
+  はじめに
+<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>h2</span><span class="token punctuation">></span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>p</span><span class="token punctuation">></span></span>文章…<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>p</span><span class="token punctuation">></span></span>
+</code></pre>
+<p>こんな感じ。</p>
+<p><code>behavior: 'prepend'</code> という指定で、<code>h1</code> 要素などの先頭に <code>a</code> 要素が追加されている。挿入位置はお好みで。</p>
+<p><code>content</code> オプションは hast (HTML AST) の仕様に則って子要素を指定できるモノ。今回は <code>span</code> 要素を内側に入れ、<code>$</code> というテキストノードを追加している。</p>
+<p>こうした見出しリンクの付与が自動化できるのはありがたい。</p>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2020-11-14</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2020-11-14</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>Angular.js の $q から Promise を覚えた - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2017/06/08-02.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2017/index.html">2017年</a></li>
+            <li><a href="/blog/2017/06/index.html">06月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2017-06-08</time></div>
+        <h1 id="page-title">Angular.js の $q から Promise を覚えた</h1>
+
+<p>ES2015 (ES6) から登場した Promise を今更覚えたというお話。</p>
+<h2 id="promise-とは"><a class="header-link" href="#promise-とは"><span class="header-link-mark"></span></a>Promise とは</h2>
+<p>Promise、もしくは Promise パターンとは、非同期処理を同期的に扱うための仕組みで、非同期に処理する関数を Promise というオブジェクトで包み込んでおくことで、「ある非同期処理が終わったら、次の処理を行う」といった「約束 (Promise)」を取り付けることができるようになるもの。</p>
+<p>ES6 において仕様が策定されており、Promise チックなことができるライブラリのほとんどは、この仕様に準拠して実装されている。</p>
+<h2 id="promise-がない時代はどうしていたか--コールバック地獄"><a class="header-link" href="#promise-がない時代はどうしていたか--コールバック地獄"><span class="header-link-mark"></span></a>Promise がない時代はどうしていたか … コールバック地獄</h2>
+<p>これまで Ajax など非同期処理の中で「アレが終わったらコレする」をやろうとすると、「アレ」の処理に対して、終わった後に行わせたい「コレ」関数を渡しておき、処理の最後に呼び出す、ということをしてやらないといけなかった。このような扱いを<strong>コールバック</strong>と呼ぶ。要するに以下のようなコードにしないと、処理の順番を管理できなかったのだ。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword">function</span> <span class="token function">hoge</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token comment">// hoge() の何か非同期処理…</span>
+  
+  <span class="token comment">// hoge() が終わったら行わせたい処理：fuga()</span>
+  <span class="token comment">// fuga() には hoge() の実行結果を渡したい</span>
+  <span class="token punctuation">(</span><span class="token keyword">function</span> <span class="token function">fuga</span><span class="token punctuation">(</span><span class="token parameter">hogeResult</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token comment">// fuga() の何か次の処理…</span>
+    
+    <span class="token comment">// fuga() の後にやらせたい処理：foo()</span>
+    <span class="token comment">// foo() には fuga() の実行結果を渡したい</span>
+    <span class="token punctuation">(</span><span class="token keyword">function</span> <span class="token function">foo</span><span class="token punctuation">(</span><span class="token parameter">fugaResult</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token comment">// foo() の何か処理……</span>
+    <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">(</span>fugaResult<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">(</span>hogeResult<span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>見て分かるとおりインデントが深くなっていく。関数をそれぞれ宣言しておいて平たく並べたとしても、「どの関数からどの関数を呼ぶ (コールバック) すればいいのか」を管理する必要があり、大変だ。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword">function</span> <span class="token function">hoge</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token comment">// hoge() の何か非同期処理…</span>
+  
+  <span class="token comment">// hoge() が終わったら行わせたい処理：fuga()</span>
+  <span class="token comment">// fuga() には hoge() の実行結果を渡したい</span>
+  <span class="token function">fuga</span><span class="token punctuation">(</span>hogeResult<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+
+<span class="token keyword">function</span> <span class="token function">fuga</span><span class="token punctuation">(</span><span class="token parameter">hogeResult</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token comment">// fuga() の何か次の処理…</span>
+  
+  <span class="token comment">// fuga() の後にやらせたい処理：foo()</span>
+  <span class="token comment">// foo() には fuga() の実行結果を渡したい</span>
+  <span class="token function">foo</span><span class="token punctuation">(</span>fugaResult<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+
+<span class="token keyword">function</span> <span class="token function">foo</span><span class="token punctuation">(</span><span class="token parameter">fugaResult</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token comment">// foo() の何か処理……</span>
+<span class="token punctuation">}</span>
+
+<span class="token comment">// 全て準備したら最初に呼ぶ関数を実行する</span>
+<span class="token function">hoge</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>このとおり。これが、俗にいう「コールバック地獄」と呼ばれる状態のコードだ。</p>
+<h2 id="promise-は如何にこの問題を解決するか"><a class="header-link" href="#promise-は如何にこの問題を解決するか"><span class="header-link-mark"></span></a>Promise は如何にこの問題を解決するか</h2>
+<p>じゃあ Promise で実装するとどういう風になるのか、見てもらおう。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword">function</span> <span class="token function">hoge</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token keyword control-flow">return</span> <span class="token keyword">new</span> <span class="token class-name">Promise</span><span class="token punctuation">(</span><span class="token keyword">function</span><span class="token punctuation">(</span><span class="token parameter">resolve<span class="token punctuation">,</span> reject</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token comment">// hoge() の何か非同期処理…</span>
+    <span class="token comment">// 処理結果として hogeResult を返す</span>
+    <span class="token function">resolve</span><span class="token punctuation">(</span>hogeResult<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+
+<span class="token keyword">function</span> <span class="token function">fuga</span><span class="token punctuation">(</span><span class="token parameter">inputData</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token comment">// 何か事前処理したければココに書く</span>
+  <span class="token comment">// (基本的には同期処理のみ。非同期処理の順序を守るためにこの書き方をするので…)</span>
+  <span class="token keyword control-flow">return</span> <span class="token keyword">new</span> <span class="token class-name">Promise</span><span class="token punctuation">(</span><span class="token keyword">function</span><span class="token punctuation">(</span><span class="token parameter">resolve<span class="token punctuation">,</span> reject</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token comment">// fuga() の何か次の処理…</span>
+    <span class="token comment">// inputData をアレコレして fugaResult を返す</span>
+    <span class="token function">resolve</span><span class="token punctuation">(</span>fugaResult<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+
+<span class="token keyword">function</span> <span class="token function">foo</span><span class="token punctuation">(</span><span class="token parameter">inputData</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token keyword control-flow">return</span> <span class="token keyword">new</span> <span class="token class-name">Promise</span><span class="token punctuation">(</span><span class="token keyword">function</span><span class="token punctuation">(</span><span class="token parameter">resolve<span class="token punctuation">,</span> reject</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token comment">// foo() の何か処理……</span>
+    <span class="token keyword control-flow">if</span><span class="token punctuation">(</span>inputData <span class="token operator">></span> <span class="token number">1</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token comment">// inputData をアレコレして結果となる fooResult を返す</span>
+      <span class="token function">resolve</span><span class="token punctuation">(</span>fooResult<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+    <span class="token keyword control-flow">else</span> <span class="token punctuation">{</span>
+      例外があった場合はエラーを出力する
+      <span class="token function">reject</span><span class="token punctuation">(</span><span class="token string">'inputData は1以上でないとダメ'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+
+<span class="token comment">// 実行する際は以下のように書く</span>
+<span class="token function">hoge</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+  <span class="token punctuation">.</span><span class="token method function property-access">then</span><span class="token punctuation">(</span><span class="token keyword">function</span><span class="token punctuation">(</span><span class="token parameter">hogeResult</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token comment">// 何か前処理が必要ならココに…</span>
+    <span class="token comment">// fuga() を呼ぶ</span>
+    <span class="token keyword control-flow">return</span> <span class="token function">fuga</span><span class="token punctuation">(</span>hogeResult<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span>
+  <span class="token punctuation">.</span><span class="token method function property-access">then</span><span class="token punctuation">(</span><span class="token keyword">function</span><span class="token punctuation">(</span><span class="token parameter">fugaResult</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token comment">// foo() を呼ぶ</span>
+    <span class="token keyword control-flow">return</span> <span class="token function">foo</span><span class="token punctuation">(</span>fugaResult<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span>
+  <span class="token punctuation">.</span><span class="token keyword control-flow">catch</span><span class="token punctuation">(</span><span class="token keyword">function</span><span class="token punctuation">(</span><span class="token parameter">errorMessage</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token comment">// hoge()・fuga()・foo() のどこかでエラーが起きたらこのブロックに入る</span>
+    <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span>errorMessage<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>注目してほしいのは以下の点。</p>
+<ul>
+  <li><code>hoge()</code>・<code>fuga()</code>・<code>foo()</code> それぞれの関数内に、お互いの関数名などが登場せず、<em>それぞれの関数が独立している</em>。</li>
+  <li>実行する時のコードを簡略化して読むと、<code>hoge().then( fuga() ).then( foo() )</code> といった構成になっており、「<code>hoge()</code> したら (Then) <code>fuga()</code> する」というように自然言語に近い書き方で読みやすい。<em>いくら処理を繋げてもインデントが増えない</em>。</li>
+</ul>
+<p>出来ることは最初のコードと同じだが、より簡潔に、柔軟に非同期処理を扱えるようにしてくれるのが Promise というオブジェクトなのである。</p>
+<h2 id="promise-のお約束"><a class="header-link" href="#promise-のお約束"><span class="header-link-mark"></span></a>Promise のお約束</h2>
+<p>Promise を使うためのお約束は簡単。</p>
+<p>先ほどの例で、それぞれの関数は、中に <code>function</code> を持った Promise オブジェクトを <code>return</code> 返していることが分かるだろう。つまり、処理を必ず Promise オブジェクトで包み込むことで、</p>
+<ul>
+  <li>「Promise の中に書かれた処理が終わるまで、Promise 様が待ってあげましょう」</li>
+  <li>「Promise の中の処理が終わったら、<code>then()</code> メソッドで次の処理に繋げられるようにしましょう」</li>
+</ul>
+<p>というルールになっている。<code>then()</code> メソッドを持つオブジェクトは Thenable オブジェクトと呼ばれる。</p>
+<p>なお、その関数が返却する値は、<code>return hogeResult;</code> ではなく <code>resolve(hogeResult);</code> というように、<code>resolve()</code> というメソッドを使う。<code>resolve()</code> に渡した値は、その後に繋ぐ <code>.then(function(hogeResult) { })</code> の部分で受け取れる仕組みになっているので、</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token function">hoge</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+  <span class="token punctuation">.</span><span class="token method function property-access">then</span><span class="token punctuation">(</span><span class="token keyword">function</span><span class="token punctuation">(</span><span class="token parameter">hogeResult</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token keyword control-flow">return</span> <span class="token function">fuga</span><span class="token punctuation">(</span>hogeResult<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span>
+  <span class="token punctuation">.</span><span class="token method function property-access">then</span><span class="token punctuation">(</span><span class="token keyword">function</span><span class="token punctuation">(</span><span class="token parameter">fugaResult</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token keyword control-flow">return</span> <span class="token function">foo</span><span class="token punctuation">(</span>fugaResult<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>このような芸当が可能になっている。</p>
+<p>関数化しているそれぞれの部分を中に展開すると、Promise が必ず返されていることが直感的に分かるようになるだろう。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token comment">// 元々の hoge() 処理</span>
+<span class="token keyword">new</span> <span class="token class-name">Promise</span><span class="token punctuation">(</span><span class="token keyword">function</span><span class="token punctuation">(</span><span class="token parameter">resolve<span class="token punctuation">,</span> reject</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token function">resolve</span><span class="token punctuation">(</span>hogeResult<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span>
+  <span class="token punctuation">.</span><span class="token method function property-access">then</span><span class="token punctuation">(</span><span class="token keyword">function</span><span class="token punctuation">(</span><span class="token parameter">hogeResult</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token comment">// 元々の fuga() 処理</span>
+    <span class="token keyword control-flow">return</span> <span class="token keyword">new</span> <span class="token class-name">Promise</span><span class="token punctuation">(</span><span class="token keyword">function</span><span class="token punctuation">(</span><span class="token parameter">resolve<span class="token punctuation">,</span> reject</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token function">resolve</span><span class="token punctuation">(</span>hogeResult<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span>
+  <span class="token punctuation">.</span><span class="token method function property-access">then</span><span class="token punctuation">(</span><span class="token keyword">function</span><span class="token punctuation">(</span><span class="token parameter">fugaResult</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token comment">// 元々の foo() 処理</span>
+    <span class="token keyword control-flow">return</span> <span class="token keyword">new</span> <span class="token class-name">Promise</span><span class="token punctuation">(</span><span class="token keyword">function</span><span class="token punctuation">(</span><span class="token parameter">resolve<span class="token punctuation">,</span> reject</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token function">resolve</span><span class="token punctuation">(</span>fugaResult<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>なお、<code>reject()</code> も <code>resolve()</code> と同様に、値を次のメソッドに返せるが、<code>then()</code> では受け取れず、<code>catch()</code> メソッドで受け取れる (厳密には <code>then()</code> の第2引数に設定した関数で拾えたりするのだが、話を簡単にするためココでは触れない)。</p>
+<p>簡単にまとめると、<code>resolve()</code> は Promise における <code>return</code>、<code>reject()</code> は Promise における <code>throw</code> と思って良い。Promise は <code>return</code> (= <code>resolve()</code>) された値を <code>then()</code> で受け取って次の処理に受け渡すことができるし、<code>throw</code> (= <code>reject()</code>) された内容は <code>try / catch</code> の <code>catch</code> 句ならぬ <code>catch()</code> メソッドで受け取れる、というワケだ。</p>
+<h2 id="es2015-以前から-promise-を実現していたライブラリ"><a class="header-link" href="#es2015-以前から-promise-を実現していたライブラリ"><span class="header-link-mark"></span></a>ES2015 以前から Promise を実現していたライブラリ</h2>
+<p>最近はどのブラウザも Promise に対応するようになったが、Promise の仕様を策定しているような段階の時代は、当然ブラウザ実装はなかったので、各ライブラリが頑張って Promise チックな非同期処理の管理を行っていた。</p>
+<ul>
+  <li>参考：<a href="http://caniuse.com/#feat=promises">Can I use... Support tables for HTML5, CSS3, etc</a> … Promise は IE11 だけ対応していない。</li>
+</ul>
+<p>よく知られているのは jQuery の Ajax 処理だろうか。jQuery v1.4 ぐらいまでは以下のような書き方をしていた。</p>
+<pre class="language-javascript"><code class="language-javascript">$<span class="token punctuation">.</span><span class="token property-access">ajax</span><span class="token punctuation">{</span><span class="token punctuation">(</span><span class="token punctuation">{</span>
+  type<span class="token operator">:</span> <span class="token string">'POST'</span><span class="token punctuation">,</span>
+  url<span class="token operator">:</span> url<span class="token punctuation">,</span>
+  data<span class="token operator">:</span> data<span class="token punctuation">,</span>
+  <span class="token function-variable function">success</span><span class="token operator">:</span> <span class="token keyword">function</span><span class="token punctuation">(</span><span class="token parameter">data<span class="token punctuation">,</span> textStatus<span class="token punctuation">,</span> jqXHR</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token comment">// Try 区内の最後に呼びたい処理と同等</span>
+    <span class="token function">alert</span><span class="token punctuation">(</span><span class="token string">'Success!'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token function-variable function">error</span><span class="token operator">:</span> <span class="token keyword">function</span><span class="token punctuation">(</span><span class="token parameter">data</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token comment">// Catch 句と同等</span>
+    <span class="token function">alert</span><span class="token punctuation">(</span><span class="token string">'Error!'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token function-variable function">complete</span><span class="token operator">:</span> <span class="token keyword">function</span><span class="token punctuation">(</span><span class="token parameter">jqXHR<span class="token punctuation">,</span> textStatus</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token comment">// Finally 句と同等</span>
+    <span class="token function">alert</span><span class="token punctuation">(</span><span class="token string">'Complete!'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>これはまだ Promise な書き方ではなく、事前にコールバック関数 (処理が終わったら呼びたい関数) を連想配列で渡しているだけである。</p>
+<p>これが jQuery v1.5 になると以下のようにメソッドチェーンが可能になった。</p>
+<pre class="language-javascript"><code class="language-javascript">$<span class="token punctuation">.</span><span class="token method function property-access">ajax</span><span class="token punctuation">(</span><span class="token punctuation">{</span>
+  url<span class="token operator">:</span> url
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">success</span><span class="token punctuation">(</span><span class="token keyword">function</span><span class="token punctuation">(</span><span class="token parameter">data</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token comment">// Try 区内の最後に呼びたい処理と同等</span>
+  <span class="token function">alert</span><span class="token punctuation">(</span><span class="token string">'Success!'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">error</span><span class="token punctuation">(</span><span class="token keyword">function</span><span class="token punctuation">(</span><span class="token parameter">data</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token comment">// Catch 句と同等</span>
+  <span class="token function">alert</span><span class="token punctuation">(</span><span class="token string">'Error!'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">complete</span><span class="token punctuation">(</span><span class="token keyword">function</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token comment">// Finally 句と同等</span>
+  <span class="token function">alert</span><span class="token punctuation">(</span><span class="token string">'Complete!'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>ついでに言うと jQuery v1.8 からはメソッドの名前が変わった。</p>
+<pre class="language-javascript"><code class="language-javascript">$<span class="token punctuation">.</span><span class="token method function property-access">ajax</span><span class="token punctuation">(</span><span class="token punctuation">{</span>
+  url<span class="token operator">:</span> url
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">done</span><span class="token punctuation">(</span><span class="token keyword">function</span><span class="token punctuation">(</span><span class="token parameter">data</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token comment">// Try 区内の最後に呼びたい処理と同等</span>
+  <span class="token function">alert</span><span class="token punctuation">(</span><span class="token string">'Done! ← Success'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">fail</span><span class="token punctuation">(</span><span class="token keyword">function</span><span class="token punctuation">(</span><span class="token parameter">data</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token comment">// Catch 句と同等</span>
+  <span class="token function">alert</span><span class="token punctuation">(</span><span class="token string">'Fail! ← Error'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">always</span><span class="token punctuation">(</span><span class="token keyword">function</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token comment">// Finally 句と同等</span>
+  <span class="token function">alert</span><span class="token punctuation">(</span><span class="token string">'Always! ← Complete!'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>こうした書き方ができるようになったのは、jQuery が <code>jQuery.Deferred()</code> という仕組みを用意したからで、文字どおり、指定のコールバック関数の実行を延期 (Deferred) させられるようになったから、メソッドチェーンとして書けるようになった、ということ。</p>
+<p><code>jQuery.Deferred()</code> には <code>.then()</code> メソッドもあるので、こうした Promise にかなり近い書き方もできる。</p>
+<pre class="language-javascript"><code class="language-javascript">$<span class="token punctuation">.</span><span class="token method function property-access">ajax</span><span class="token punctuation">(</span><span class="token punctuation">{</span>
+  url<span class="token operator">:</span> <span class="token string">"ajax.html"</span><span class="token punctuation">,</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">then</span><span class="token punctuation">(</span>
+  <span class="token keyword">function</span><span class="token punctuation">(</span><span class="token parameter">data</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token function">alert</span><span class="token punctuation">(</span><span class="token string">'Success!'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token keyword">function</span><span class="token punctuation">(</span><span class="token parameter">data</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token function">alert</span><span class="token punctuation">(</span><span class="token string">'Error!'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>まだちゃんと紹介していなかったが、Promise と同じく、<code>then()</code> メソッドの第2引数に渡した関数が、直前の処理のエラーをキャッチしたりできる。</p>
+<ul>
+  <li>参考：<a href="http://blog.toshimaru.net/jquery-ajaxdeferredajax/">jQueryのDeferredを用いたモダンなAjax処理の書き方 - Hack Your Design!</a> … <code>jQuery.Deferred()</code> について。</li>
+</ul>
+<p>なお、<code>jQuery.Deferred()</code> が実現する Promise は、ES6 で策定されている Promise オブジェクトの仕様とは厳密には異なるため、他の Promise 処理と連結する際は変換が必要だったりする。</p>
+<p>他にも、「Dojo」というライブラリや、後述する「Q」ライブラリだったり、<code>new Promise()</code> を IE11 でも解釈させる Polyfill があったりと、ブラウザが実装するまで自前で Promise を何とかするライブラリが数多くあった。</p>
+<ul>
+  <li>参考：<a href="http://qiita.com/nanocloudx/items/5e2e55a767fd4c37ac1b">IEでPromiseを利用する - Qiita</a> … es6-promise という Polyfill の紹介。</li>
+</ul>
+<h2 id="自前で-promise-しようと思ったら-settimeout？"><a class="header-link" href="#自前で-promise-しようと思ったら-settimeout？"><span class="header-link-mark"></span></a>自前で Promise しようと思ったら… <code>setTimeout()</code>？</h2>
+<p>ところで、「ある関数の終了を監視して、その関数の処理が終わったら次の関数を呼び出す」という処理は、<code>setTimeout()</code> なんかを使えば書けるんじゃないだろうか。</p>
+<p>実は既存のライブラリでも、<code>setTimeout()</code> によって処理の終了を待っていたりする (自身が動作する環境を判別し、Node.js で動作していれば別のやり方を使ったりしていて、他にやりようがなければ <code>setTimeout()</code> で制御する、というやり方が多い)。自前でやろうとすればできなくもないが、それを規格化してネイティブで対応するようにしたのが Promise というワケだ。</p>
+<h2 id="「q」ライブラリと-angularjs-の「q」サービス"><a class="header-link" href="#「q」ライブラリと-angularjs-の「q」サービス"><span class="header-link-mark"></span></a>「Q」ライブラリと Angular.js の「$q」サービス</h2>
+<p>「Q」ライブラリのことは、Angular.js に組み込まれている「$q」サービスから知った。Promise が非同期処理の順序 (キュー) を管理するから「Q」なのだろうか。1文字なので検索しづらい。ｗ</p>
+<p>ES6 で策定された <code>new Promise()</code> するパターンとは異なる、「Deferred/Promise パターン」という実装パターンを採用しており、書き方が若干違う。この書き方だと、既存のメソッドを Promise なメソッドに置き換えるのが容易だったりするかもしれない。</p>
+<p>まずは Promise オブジェクトを返す関数を書いてみる。ココでは Angular.js の「$q」サービスを使う前提なので、<code>$q.defer()</code> などと書いているが、「Q」ライブラリを直接使う場合は <code>Q.defer()</code> のように読み替えてもらえば良い。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword">function</span> <span class="token function">hoge</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token comment">// コレが「new Promise()」の代わりのようなモノ。$q に Deferred オブジェクトを生成させる</span>
+  <span class="token keyword">var</span> deferred <span class="token operator">=</span> $q<span class="token punctuation">.</span><span class="token method function property-access">defer</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  
+  <span class="token comment">// 何か処理…</span>
+  
+  <span class="token comment">// ただの resolve() ではなく、deferred.resolve() に受け渡したい値を持たせる</span>
+  deferred<span class="token punctuation">.</span><span class="token method function property-access">resolve</span><span class="token punctuation">(</span>hogeResult<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  
+  <span class="token comment">// Promise オブジェクトは Deferred オブジェクトの中に内包されているので、</span>
+  <span class="token comment">// コレを return することで、この関数 hoge() は Promise を返す関数になる</span>
+  <span class="token keyword control-flow">return</span> deferred<span class="token punctuation">.</span><span class="token property-access">promise</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>通常の関数の最初に <code>var deferred</code> を宣言し、返したい値は <code>deferred.resolve()</code> に詰め、<code>return</code> するのは <code>deferred.promise</code> にする。先ほどの <code>new Promise()</code> で書く ES6 Promise と比べると、以下のような違いがある。</p>
+<ul>
+  <li>「Q」ライブラリの場合は Promise オブジェクトを内包する「Deferred」オブジェクトが主体となって、Promise オブジェクトを「操作」している。</li>
+  <li>「Q」ライブラリを使う方が、<code>new Promise(function(resolve, reject) { })</code> 内に処理を書くより、関数内のインデントが1段低く済ませられている。</li>
+</ul>
+<p>ES6 の Promise の場合は、Promise オブジェクトを生成し、そのコンストラクタに引数として渡す関数が、非同期処理をラップしたものでないといけない。そのため、どうしても <code>return new Promise(function...</code> と書いてからの行が伸びていく傾向にある。<code>hoge()</code> 関数内のインデントが Promise 生成によって1段階増えてしまうのも違和感が残る。</p>
+<p>一方、「Q」ライブラリの場合は、関数の最後に <code>return deferred.promise;</code> とさえすれば良く、<code>hoge()</code> 関数全体を Promise オブジェクト内の関数のように扱えるので、他の同期的な処理のメソッドと見た目に差異が生まれにくい。既存の関数をそのまま Promise 化しやすいと思う。</p>
+<ul>
+  <li>参考：<a href="https://github.com/kriskowal/q">GitHub - kriskowal/q: A promise library for JavaScript</a></li>
+  <li>参考：<a href="http://tech.quartetcom.co.jp/2016/03/22/javascript-promise-11/">JavaScriptのPromiseオブジェクトについて調べた事 (11) | QUARTETCOM TECH BLOG</a></li>
+  <li>参考：<a href="http://tech.quartetcom.co.jp/2016/03/22/javascript-promise-13/">JavaScriptのPromiseオブジェクトについて調べた事 (13) | QUARTETCOM TECH BLOG</a></li>
+  <li>参考：<a href="http://dev.classmethod.jp/client-side/javascript/angularjs-q-promise/">AngularJS $q サービスで覚える Promise ｜ Developers.IO</a></li>
+</ul>
+<hr>
+<p>Promise を理解する上で、このような「ライブラリによる実装方法の差異」があったり、そもそも仕様がコレという一つに決めきれていなかったり (そういう時代が割と長くて、ググった時に情報が混在してしまっている)、といったことが障壁になっていると思う。</p>
+<p>だからまずは「ES2015 で策定されている Promise の方法と実装方法」だけ学び、まずは Promise 単体の標準仕様を押さえておく。それから jQuery Deferred や Q ライブラリといった、「Deferred が Promise を操作する」というパターンの実装方法を学ぶと、概念的に混乱が生じにくいと思う。</p>
+<ul>
+  <li>参考：<a href="http://tech.quartetcom.co.jp/2016/03/22/javascript-promise/">JavaScriptのPromiseオブジェクトについて調べた事 | QUARTETCOM TECH BLOG</a></li>
+  <li>参考：<a href="https://pouchdb.com/2015/05/18/we-have-a-problem-with-promises.html">We have a problem with promises</a></li>
+</ul>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2017-06-08</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2017-06-08</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>Zeit Now を使ってみた。GitHub 連携したら Vue のデプロイも now.json 不要だった - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2019/11/27-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2019/index.html">2019年</a></li>
+            <li><a href="/blog/2019/11/index.html">11月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2019-11-27</time></div>
+        <h1 id="page-title">Zeit Now を使ってみた。GitHub 連携したら Vue のデプロイも now.json 不要だった</h1>
+
+<p><strong>Zeit</strong> という企業が提供する、<strong>NOW</strong> というウェブサービスがある。当初はゼロコンフィグで静的サイトをデプロイできる、とかいう話で Netlify みたいな感じのサービスだったと思うのだが、最近見てみたら V2 (第2世代) となっていて、Node.js や Python などのプログラムも動作するようになっていた。Heroku よりもさらにお手軽に使える PaaS になっているっぽい。サービス名のググラビリティが低いので、ココでは <em>Zeit Now v2</em> と表現する。</p>
+<p>今回はこの Zeit Now v2 を使って、Vue プロジェクトをビルドし、静的サイトとしてデプロイしてもらおうと思う。Zeit Now のアカウントを登録するところから紹介する。</p><ins class="ins-block">
+<p>2020年には Vercel にサービス名を改称している。</p></ins>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#zeit-now-%E3%81%AB%E7%99%BB%E9%8C%B2%E3%81%99%E3%82%8B">Zeit Now に登録する</a></li>
+  <li><a href="#git-integration-%E9%80%A3%E6%90%BA-%E6%A9%9F%E8%83%BD%E3%82%92%E4%BD%BF%E3%81%A3%E3%81%A6-github-%E3%83%AA%E3%83%9D%E3%82%B8%E3%83%88%E3%83%AA%E3%81%AE%E5%86%85%E5%AE%B9%E3%82%92%E3%83%87%E3%83%97%E3%83%AD%E3%82%A4%E3%81%99%E3%82%8B">Git Integration (連携) 機能を使って GitHub リポジトリの内容をデプロイする</a></li>
+  <li><a href="#zeit-now-cli-%E3%82%92%E4%BD%BF%E3%81%A3%E3%81%A6%E3%83%87%E3%83%97%E3%83%AD%E3%82%A4%E3%81%97%E3%81%A6%E3%81%BF%E3%82%8B">Zeit Now CLI を使ってデプロイしてみる</a></li>
+  <li><a href="#nowjson-%E3%82%92%E6%9B%B8%E3%81%84%E3%81%A6%E3%81%BF%E3%82%8B"><code>now.json</code> を書いてみる</a>
+    <ul>
+      <li><a href="#now-dev-%E3%82%92%E4%BD%BF%E3%81%86"><code>now dev</code> を使う</a></li>
+      <li><a href="#%E5%88%9D%E3%82%81%E3%81%A6%E3%81%AE--now">初めての <code>$ now</code></a></li>
+      <li><a href="#%E5%86%8D%E5%BA%A6-git-integration-%E3%82%92%E6%9C%89%E5%8A%B9%E3%81%AB%E3%81%97%E3%81%A6%E3%81%BF%E3%82%8B">再度 Git Integration を有効にしてみる</a></li>
+      <li><a href="#routes-%E3%82%92%E6%9B%B8%E3%81%84%E3%81%A6%E3%81%BF%E3%82%8B"><code>routes</code> を書いてみる</a></li>
+    </ul>
+  </li>
+  <li><a href="#%E3%83%9E%E3%82%B8%E3%81%A7%E3%82%BC%E3%83%AD%E3%82%B3%E3%83%B3%E3%83%95%E3%82%A3%E3%82%B0%E3%81%8B%E3%82%88">マジでゼロコンフィグかよ…</a></li>
+  <li><a href="#%E5%8F%82%E8%80%83%E6%96%87%E7%8C%AE">参考文献</a></li>
+</ul>
+<h2 id="zeit-now-に登録する"><a class="header-link" href="#zeit-now-に登録する"><span class="header-link-mark"></span></a>Zeit Now に登録する</h2>
+<p>まずは Zeit Now に登録する。</p>
+<p>サイトに移動して「Join Free」ボタンを押下。</p>
+<p>
+  <img src="27-01-01.png" alt="Join Free">
+</p>
+<p>「Continue With GitHub」ボタンを押下すると、GitHub アカウントと連携する形で Zeit Now のアカウントが用意される。</p>
+<p>
+  <img src="27-01-02.png" alt="GitHub 連携">
+</p>
+<p>
+  <img src="27-01-03.png" alt="承認して">
+</p>
+<p>
+  <img src="27-01-04.png" alt="おけおけ">
+</p>
+<p>連携したら初期設定やプロフィールを入れていく。</p>
+<p>
+  <img src="27-01-05.png" alt="初期設定">
+</p>
+<p>
+  <img src="27-01-06.png" alt="接続">
+</p>
+<p>
+  <img src="27-01-07.png" alt="対象アカウントを選択する">
+</p>
+<p>
+  <img src="27-01-08.png" alt="承認して">
+</p>
+<p>
+  <img src="27-01-09.png" alt="続ける">
+</p>
+<p>
+  <img src="27-01-10.png" alt="できた">
+</p>
+<p>ココまで到達できれば登録は OK。</p>
+<h2 id="git-integration-連携-機能を使って-github-リポジトリの内容をデプロイする"><a class="header-link" href="#git-integration-連携-機能を使って-github-リポジトリの内容をデプロイする"><span class="header-link-mark"></span></a>Git Integration (連携) 機能を使って GitHub リポジトリの内容をデプロイする</h2>
+<p>コード作成済みの GitHub リポジトリがあって、あとは Zeit Now に任せてゼロコンフィグでデプロイしたい、という場合は、このまま画面上で作業していくだけでデプロイが完了する。</p>
+<p>Zeit Now の画面で「New Project」のプルダウンを選択し、「From GitHub」を選択する。</p>
+<p>
+  <img src="27-01-11.png" alt="プロジェクト作成">
+</p>
+<p>すると自分の GitHub リポジトリ一覧が表示されるので、任意のリポジトリを選択する。</p>
+<p>
+  <img src="27-01-12.png" alt="連携するリポジトリを選択する">
+</p>
+<p>すると、Zeit Now がリポジトリの内容を取得し、自動的にプロジェクトの言語やフレームワークを特定、イイカンジにビルド・デプロイが行われる。</p>
+<p>
+  <img src="27-01-13.png" alt="あとはもう勝手に…">
+</p>
+<p>
+  <img src="27-01-14.png" alt="できちゃう">
+</p>
+<p>初期設定のままだと、</p>
+<ul>
+  <li><code>https://【プロジェクト名】-【ランダム文字列】.now.sh</code></li>
+</ul>
+<p>という URL でデプロイされる。このような URL は、GitHub のコミットごとや、後で紹介する Zeit Now CLI を使う度に、URL が自動生成されて作られる。平たくいうと、コミットごとに別々の URL を持った GitHub Pages ができる感じ。</p>
+<p>
+  <img src="27-01-15.png" alt="見えた">
+</p>
+<p>コレとは他に、</p>
+<ul>
+  <li><code>https://【プロジェクト名】-git-master.【アカウント名】.now.sh</code></li>
+</ul>
+<p>という URL も出来る。Git Integration を使い、ブランチ名が含まれるという URL になる。コチラはそのプロジェクトで最新のビルド・デプロイ先を参照するエイリアスになっている。</p>
+<p>過去のデプロイは URL が異なるので全て残っている。勿論古いデプロイを削除することもできる。</p>
+<h2 id="zeit-now-cli-を使ってデプロイしてみる"><a class="header-link" href="#zeit-now-cli-を使ってデプロイしてみる"><span class="header-link-mark"></span></a>Zeit Now CLI を使ってデプロイしてみる</h2>
+<p>ココまでで、やりたかったデプロイは出来てしまったのだが、あまりにもゼロコンフィグすぎて、少しくらい自分が意図したとおりに設定ファイルを書いて安心したい気持ちがある。</p>
+<p>そこで、Git Integration 機能を使わず、<strong>Zeit Now CLI</strong> を使ってデプロイをしてみる。</p>
+<p>Zeit Now CLI は npm でインストール可能。グローバルインストールする。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">npm</span> <span class="token function">install</span> -g now
+</code></pre>
+<p>次に、CLI でアカウントにログインするため、<code>$ now login</code> コマンドを実行する。</p>
+<pre class="language-bash"><code class="language-bash">$ now login
+<span class="token punctuation">(</span>node:15852<span class="token punctuation">)</span> ExperimentalWarning: The http2 module is an experimental API.
+<span class="token operator">></span> We sent an email to 【メールアドレス】. Please follow the steps provided
+  inside it and <span class="token function">make</span> sure the security code matches Snowy Liger.
+√ Email confirmed
+<span class="token operator">></span> Congratulations<span class="token operator">!</span> You are now logged in. In order to deploy something, run <span class="token variable"><span class="token variable">`</span>now<span class="token variable">`</span></span><span class="token builtin class-name">.</span>
+</code></pre>
+<p>メールアドレスを入れると、そのメール宛に確認のメールが飛ぶ。そのメールから Velify すると、動的にコマンドラインが進んでログインが完了する。</p>
+<h2 id="nowjson-を書いてみる"><a class="header-link" href="#nowjson-を書いてみる"><span class="header-link-mark"></span></a><code>now.json</code> を書いてみる</h2>
+<p>Zeit Now にデプロイするための設定は、<em><code>.now.json</code></em> というファイルをプロジェクトルートに用意し、そこに書き込んでいく。</p>
+<p>何をどう書いたら良いのか、公式のガイドを見てもイマイチ分からなかったので、見様見真似で書いてみた結果を記す。</p>
+<h3 id="now-dev-を使う"><a class="header-link" href="#now-dev-を使う"><span class="header-link-mark"></span></a><code>now dev</code> を使う</h3>
+<p>Vue のプロジェクトがあるディレクトリのルートに、こんな設定ファイルを置いた。</p>
+<ul>
+  <li><code>now.json</code></li>
+</ul>
+<pre class="language-json"><code class="language-json"><span class="token punctuation">{</span>
+  <span class="token property">"version"</span><span class="token operator">:</span> <span class="token number">2</span><span class="token punctuation">,</span>
+  <span class="token property">"name"</span><span class="token operator">:</span> <span class="token string">"practice-vue"</span><span class="token punctuation">,</span>
+  <span class="token property">"alias"</span><span class="token operator">:</span> <span class="token string">"practice-vue.neos21.now.sh"</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<ul>
+  <li><code>version</code> : Zeit Now の v2 系を使うため <code>2</code> を指定</li>
+  <li><code>name</code> : プロジェクト名</li>
+  <li><code>alias</code> : エイリアスとなる URL。<code>now.sh</code> まで含めて書く。アカウントを作ってあるので、<code>【アカウント名】.now.sh</code> と書いている</li>
+</ul>
+<p>まずは <code>$ now dev</code> というコマンドで、ローカル開発サーバを立てて動作確認できるようなので、コレを試してみる。</p>
+<p>Vue Build (<code>$ npm run build</code>) してから、<code>./dist/</code> ディレクトリを指定して開いてみる。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">npm</span> run build
+
+$ now dev ./dist/
+<span class="token punctuation">(</span>node:3500<span class="token punctuation">)</span> ExperimentalWarning: The http2 module is an experimental API.
+<span class="token operator">></span> Now CLI <span class="token number">16.2</span>.0 dev <span class="token punctuation">(</span>beta<span class="token punctuation">)</span> — https://zeit.co/feedback/dev
+<span class="token operator">></span> NOTE: Serving all files as static
+<span class="token operator">></span> Ready<span class="token operator">!</span> Available at http://localhost:3000
+</code></pre>
+<p>コレで <code>http://localhost:3000/</code> で Vue のページが開いた。</p>
+<h3 id="初めての--now"><a class="header-link" href="#初めての--now"><span class="header-link-mark"></span></a>初めての <code>$ now</code></h3>
+<p><code>now.json</code> にもう少し書き加えて、<code>package.json</code> を見つけてうまくビルドしてくれ、という内容を書いてみる。</p>
+<pre class="language-json"><code class="language-json"><span class="token punctuation">{</span>
+  <span class="token property">"version"</span><span class="token operator">:</span> <span class="token number">2</span><span class="token punctuation">,</span>
+  <span class="token property">"name"</span><span class="token operator">:</span> <span class="token string">"practice-vue"</span><span class="token punctuation">,</span>
+  <span class="token property">"alias"</span><span class="token operator">:</span> <span class="token string">"practice-vue.neos21.now.sh"</span><span class="token punctuation">,</span>
+  <span class="token property">"builds"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
+    <span class="token punctuation">{</span>
+      <span class="token property">"src"</span><span class="token operator">:</span> <span class="token string">"package.json"</span><span class="token punctuation">,</span>
+      <span class="token property">"use"</span><span class="token operator">:</span> <span class="token string">"@now/static-build"</span><span class="token punctuation">,</span>
+      <span class="token property">"config"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+        <span class="token property">"distDir"</span><span class="token operator">:</span> <span class="token string">"dist"</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">]</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>ビルド結果は <code>./dist/</code> ディレクトリに吐かれるので、それを指定している。<code>routes</code> プロパティがなくていいのか分からない。</p>
+<p><code>@now/static-build</code> を使うと、<code>package.json</code> の中の <code>now-build</code> という名前の npm-run-scripts を自動実行してくれる。ということで <code>package.json</code> に <code>now-build</code> スクリプトを定義しておこう。</p>
+<ul>
+  <li><code>package.json</code></li>
+</ul>
+<pre class="language-json"><code class="language-json"><span class="token punctuation">{</span>
+ <span class="token property">"scripts"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+    <span class="token property">"serve"</span><span class="token operator">:</span> <span class="token string">"vue-cli-service serve"</span><span class="token punctuation">,</span>
+    <span class="token property">"build"</span><span class="token operator">:</span> <span class="token string">"vue-cli-service build"</span><span class="token punctuation">,</span>
+    <span class="token property">"lint"</span><span class="token operator">:</span> <span class="token string">"vue-cli-service lint"</span><span class="token punctuation">,</span>
+    <span class="token property">"now-build"</span><span class="token operator">:</span> <span class="token string">"npm run build"</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>コレで <code>$ now dev</code> としてみたが、<code>$ now dev</code> は <code>now.json</code> を読み込んだ形跡がなく、動きが変わらなかった。</p>
+<pre class="language-bash"><code class="language-bash">$ now dev
+<span class="token punctuation">(</span>node:7600<span class="token punctuation">)</span> ExperimentalWarning: The http2 module is an experimental API.
+<span class="token operator">></span> Now CLI <span class="token number">16.2</span>.0 dev <span class="token punctuation">(</span>beta<span class="token punctuation">)</span> — https://zeit.co/feedback/dev
+<span class="token operator">></span> Creating initial build
+
+<span class="token comment"># コレでコンソールが終了してしまう</span>
+</code></pre>
+<p>ということで、<em><code>$ now dev</code> する時は事前に <code>$ npm run build</code> して <code>$ now dev ./dist/</code> とするしかなさそう。</em></p>
+<p>それじゃあ仕方ない、ということでいよいよ <code>$ now</code> コマンドでデプロイしてみる。</p>
+<pre class="language-bash"><code class="language-bash">$ now
+<span class="token punctuation">(</span>node:17304<span class="token punctuation">)</span> ExperimentalWarning: The http2 module is an experimental API.
+<span class="token operator">></span> Deploying C:<span class="token punctuation">\</span>Neos21<span class="token punctuation">\</span>practice-vue under neos21
+<span class="token operator">></span> Using project practice-vue
+<span class="token operator">></span> Synced <span class="token number">2</span> files <span class="token punctuation">(</span><span class="token number">1</span>.27KB<span class="token punctuation">)</span> <span class="token punctuation">[</span>514ms<span class="token punctuation">]</span>
+<span class="token operator">></span> https://practice-vue-tkg1kf9pf.now.sh <span class="token punctuation">[</span>v2<span class="token punctuation">]</span> <span class="token punctuation">[</span>863ms<span class="token punctuation">]</span>
+<span class="token operator">></span> Ready<span class="token operator">!</span> Deployed to https://practice-vue.neos21.now.sh <span class="token punctuation">[</span>in clipboard<span class="token punctuation">]</span> <span class="token punctuation">[</span>2m<span class="token punctuation">]</span>
+</code></pre>
+<p><code>routes</code> プロパティを書いていないが、<strong>コレで上手くデプロイされていた。</strong></p>
+<p>
+  <img src="27-01-16.png" alt="デプロイできた">
+</p>
+<h3 id="再度-git-integration-を有効にしてみる"><a class="header-link" href="#再度-git-integration-を有効にしてみる"><span class="header-link-mark"></span></a>再度 Git Integration を有効にしてみる</h3>
+<p>Zeit Now CLI で作ったプロジェクトに対し、また Git Integration で GitHub リポジトリ連携してみた。その上で <code>git push</code> してみたところ、Zeit Now のプロジェクトページで Build ログが見られた。</p>
+<pre><code>installing build runtime...
+build runtime installed: 837.717ms
+obtaining caches...
+missing `engines` in `package.json`, using default range: 8.10.x
+installing to /tmp/403d1885
+yarn install v1.17.3
+info No lockfile found.
+[1/4] Resolving packages...
+warning @vue/cli-plugin-eslint > eslint > file-entry-cache > flat-cache > circular-json@0.3.3: CircularJSON is in maintenance only, flatted is its successor.
+[2/4] Fetching packages...
+info fsevents@1.2.9: The platform "linux" is incompatible with this module.
+info "fsevents@1.2.9" is an optional dependency and failed compatibility check. Excluding it from installation.
+[3/4] Linking dependencies...
+warning " > bootstrap@4.3.1" has unmet peer dependency "jquery@1.9.1 - 3".
+warning " > sass-loader@7.3.1" has unmet peer dependency "webpack@^3.0.0 || ^4.0.0".
+[4/4] Building fresh packages...
+success Saved lockfile.
+Done in 45.45s.
+running "yarn run now-build"
+yarn run v1.17.3
+$ npm run build
+npm
+ 
+WARN lifecycle The node binary used for scripts is /tmp/yarn--1568727154064-0.21926342155500111/node but npm is using /node8/bin/node itself. Use the `--scripts-prepend-node-path` option to include the path for the node binary npm was executed with.
+
+> practice-vue@0.0.0 build /tmp/403d1885
+> vue-cli-service build
+
+-  Building for production...
+Starting type checking service...
+Using 1 worker with 2048MB memory limit
+=============
+
+WARNING: You are currently running a version of TypeScript which is not officially supported by typescript-estree.
+
+You may find that it works just fine, or you may not.
+
+SUPPORTED TYPESCRIPT VERSIONS: >=3.2.1 &#x3C;3.6.0
+
+YOUR TYPESCRIPT VERSION: 3.6.3
+
+Please only submit bug reports when using the officially supported version.
+
+=============
+=============
+
+WARNING: You are currently running a version of TypeScript which is not officially supported by typescript-estree.
+
+You may find that it works just fine, or you may not.
+
+SUPPORTED TYPESCRIPT VERSIONS: >=3.2.1 &#x3C;3.6.0
+
+YOUR TYPESCRIPT VERSION: 3.6.3
+
+Please only submit bug reports when using the officially supported version.
+
+=============
+ WARNING  Compiled with 2 warnings13:33:05
+
+ warning  
+
+asset size limit: The following asset(s) exceed the recommended size limit (244 KiB).
+This can impact web performance.
+Assets: 
+  js/chunk-vendors.d524f53c.js (501 KiB)
+
+ warning  
+
+entrypoint size limit: The following entrypoint(s) combined asset size exceeds the recommended limit (244 KiB). This can impact web performance.
+Entrypoints:
+  app (951 KiB)
+      css/chunk-vendors.e660d170.css
+      js/chunk-vendors.d524f53c.js
+      css/app.66c18c29.css
+      js/app.61fa0a97.js
+
+  File                                   Size              Gzipped
+
+  dist/js/chunk-vendors.d524f53c.js      500.82 KiB        140.61 KiB
+  dist/js/app.61fa0a97.js                9.20 KiB          3.18 KiB
+  dist/js/about.d8e476a7.js              1.61 KiB          0.81 KiB
+  dist/css/chunk-vendors.e660d170.css    222.81 KiB        29.95 KiB
+  dist/css/app.66c18c29.css              217.84 KiB        25.21 KiB
+
+  Images and other types of assets omitted.
+
+ DONE  Build complete. The dist directory is ready to be deployed.
+ INFO  Check out deployment instructions at https://cli.vuejs.org/guide/deployment.html
+      
+Done in 32.80s.
+done
+done
+</code></pre>
+<p>大変長ったらしいが、途中で <em><code>running "yarn run now-build"</code></em> と出力されているように、<code>package.json</code> に書いた <code>now-build</code> スクリプトが動いていることが分かる。上手くビルド・デプロイされた。</p>
+<h3 id="routes-を書いてみる"><a class="header-link" href="#routes-を書いてみる"><span class="header-link-mark"></span></a><code>routes</code> を書いてみる</h3>
+<p><code>now.json</code> にルーティング定義を書いてみる。</p>
+<pre class="language-json"><code class="language-json"><span class="token punctuation">{</span>
+  <span class="token property">"version"</span><span class="token operator">:</span> <span class="token number">2</span><span class="token punctuation">,</span>
+  <span class="token property">"name"</span><span class="token operator">:</span> <span class="token string">"practice-vue"</span><span class="token punctuation">,</span>
+  <span class="token property">"alias"</span><span class="token operator">:</span> <span class="token string">"practice-vue.neos21.now.sh"</span><span class="token punctuation">,</span>
+  <span class="token property">"builds"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
+    <span class="token punctuation">{</span>
+      <span class="token property">"src"</span><span class="token operator">:</span> <span class="token string">"package.json"</span><span class="token punctuation">,</span>
+      <span class="token property">"use"</span><span class="token operator">:</span> <span class="token string">"@now/static-build"</span><span class="token punctuation">,</span>
+      <span class="token property">"config"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+        <span class="token property">"distDir"</span><span class="token operator">:</span> <span class="token string">"dist"</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">]</span><span class="token punctuation">,</span>
+  <span class="token property">"routes"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
+    <span class="token punctuation">{</span> <span class="token property">"src"</span><span class="token operator">:</span> <span class="token string">"/(.*)"</span><span class="token punctuation">,</span> <span class="token property">"dest"</span><span class="token operator">:</span> <span class="token string">"/dist/$1"</span> <span class="token punctuation">}</span>
+  <span class="token punctuation">]</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>念のためローカルで <code>./dist/</code> ディレクトリは削除しておき、Zeit Now 上でビルドがされることを確認できるようにした。</p>
+<p>この内容で <code>$ now</code> してみた。デプロイは完了し、Vue アプリが表示されたので、Zeit Now 上でビルドされたモノが参照できているようだ。</p>
+<h2 id="マジでゼロコンフィグかよ"><a class="header-link" href="#マジでゼロコンフィグかよ"><span class="header-link-mark"></span></a>マジでゼロコンフィグかよ…</h2>
+<p>
+  <img src="27-01-17.png" alt="イイカンジ">
+</p>
+<p>
+  <img src="27-01-18.png" alt="更新もできてる">
+</p>
+<p>何か色々試したけど、<code>now.json</code> で指定したいのは <code>alias</code> の URL くらいで、ビルドもルーティングも、Zeit Now に自動認識させてうまいことやってもらう内容で十分だ。少なくとも Vue プロジェクトは何も考えずにデプロイできてしまった。</p>
+<p>Git Integration 機能で GitHub 連携している時は、もはや <code>$ now</code> コマンドすら不要で、<code>$ git push</code> すれば自動的にビルド・デプロイされるので、ホントに何の管理も必要ない、夢のゼロコンフィグが実現されていた。</p>
+<p>なお、今回 Zeit Now にデプロイしたプロジェクトは以下。2つの URL はいずれも最新のコミットからビルドされている。</p>
+<ul>
+  <li><a href="https://practice-vue.neos21.now.sh/">Practice Vue</a></li>
+  <li><a href="https://practice-vue-git-master.neos21.now.sh/">Practice Vue</a></li>
+</ul>
+<p>GitHub リポジトリは以下。</p>
+<ul>
+  <li><a href="https://github.com/Neos21/practice-vue">GitHub - Neos21/practice-vue: Practice Vue</a></li>
+</ul>
+<h2 id="参考文献"><a class="header-link" href="#参考文献"><span class="header-link-mark"></span></a>参考文献</h2>
+<ul>
+  <li><a href="https://qiita.com/aggre/items/f0cb9f8b8e8c54768e50">Now でクラウドの複雑さから解放されよう、今すぐに - Qiita</a></li>
+  <li><a href="https://aggre.io/post/now-2">Now 2 にアップグレードした</a></li>
+  <li><a href="https://qiita.com/gemetasu1103/items/ae45bd38035c2076f282">ZEIT NOWにNuxtをデプロイする - Qiita</a></li>
+  <li><a href="https://qiita.com/nkzawa/items/8bf62549f79ebbcaafd8">now: リアルタイム・グルーバル・デプロイメント - Qiita</a></li>
+  <li><a href="https://jpn.now.sh/">Now をつかおう。 - Now (ZEIT now.sh) の簡単な使い方</a></li>
+  <li><a href="https://www.virment.com/deploying-vuejs-app-to-now/">Vue.jsアプリをNow（zeit.co）にデプロイするまでの手順と使い方</a></li>
+  <li><a href="https://balloon.gq/2018/12/hugo-%E3%81%AB%E7%B6%9A%E3%81%84%E3%81%A6%E3%82%B3%E3%83%9E%E3%83%B3%E3%83%89%E3%81%A7%E3%82%B5%E3%82%A4%E3%83%88%E5%85%AC%E9%96%8B/">hugo に続いてコマンドでサイト公開。</a></li>
+</ul>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2019-11-27</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2019-11-27</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

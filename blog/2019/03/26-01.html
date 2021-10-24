@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>LINE Messaging API と Oracle Digital Assistant を併用して LINE から呼び出せるチャットボットを構築する - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2019/03/26-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2019/index.html">2019年</a></li>
+            <li><a href="/blog/2019/03/index.html">03月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2019-03-26</time></div>
+        <h1 id="page-title">LINE Messaging API と Oracle Digital Assistant を併用して LINE から呼び出せるチャットボットを構築する</h1>
+
+<p>以前、<em>LINE Messaging API</em> を用いて、オウム返しするだけのボットを作った。</p>
+<ul>
+  <li><a href="/blog/2019/02/27-01.html">LINE Messaging API を使ってオウム返しする Node.js 製チャットボットを作ってみる</a></li>
+</ul>
+<p>また、<strong>Oracle Digital Assistant</strong> というモノを使うと、ユーザの発言を解釈して複雑な会話フローを実現できることを学んだ。</p>
+<ul>
+  <li><a href="/blog/2019/03/24-01.html">Oracle Digital Assistant を使ってチャットボットを作る</a></li>
+</ul>
+<p>今回は、これら2つを連携して、Digital Assistant のフロントエンドに LINE アプリを使ってみる。</p>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#%E5%89%8D%E6%8F%90">前提</a></li>
+  <li><a href="#digital-assistant-channel-%E3%82%92%E7%94%A8%E6%84%8F%E3%81%99%E3%82%8B">Digital Assistant Channel を用意する</a></li>
+  <li><a href="#digital-assistant-%E9%80%A3%E6%90%BA%E7%94%A8%E3%81%AE%E3%83%A9%E3%82%A4%E3%83%96%E3%83%A9%E3%83%AA%E3%82%92%E3%82%A4%E3%83%B3%E3%82%B9%E3%83%88%E3%83%BC%E3%83%AB%E3%81%99%E3%82%8B">Digital Assistant 連携用のライブラリをインストールする</a></li>
+  <li><a href="#line-%E3%81%8B%E3%82%89%E5%8F%97%E4%BF%A1%E3%81%97%E3%81%9F%E3%83%A1%E3%83%83%E3%82%BB%E3%83%BC%E3%82%B8%E3%82%92-digital-assistant-channel-%E3%81%AB%E9%80%A3%E6%90%BA%E3%81%99%E3%82%8B">LINE から受信したメッセージを Digital Assistant Channel に連携する</a></li>
+  <li><a href="#digital-assistant-channel-%E3%81%8B%E3%82%89%E3%81%AE%E5%BF%9C%E7%AD%94%E3%82%92%E5%8F%97%E3%81%91%E5%8F%96%E3%82%8A-line-push-api-%E3%81%A7%E8%BF%94%E4%BF%A1%E3%81%99%E3%82%8B">Digital Assistant Channel からの応答を受け取り LINE Push API で返信する</a></li>
+  <li><a href="#%E3%83%87%E3%83%97%E3%83%AD%E3%82%A4%E3%81%97%E3%81%A6%E5%8B%95%E4%BD%9C%E7%A2%BA%E8%AA%8D">デプロイして動作確認</a></li>
+  <li><a href="#%E8%AB%B8%E8%AA%B2%E9%A1%8C">諸課題</a>
+    <ul>
+      <li><a href="#%E3%82%A4%E3%83%B3%E3%83%86%E3%83%B3%E3%83%88%E8%A7%A3%E6%9E%90%E3%81%AE%E3%81%9F%E3%82%81%E3%81%AB%E6%97%A5%E6%9C%AC%E8%AA%9E%E3%81%AE%E6%8A%95%E7%A8%BF%E3%82%92%E7%BF%BB%E8%A8%B3%E3%81%99%E3%82%8B">インテント解析のために日本語の投稿を翻訳する</a></li>
+      <li><a href="#digital-assistant-%E3%81%8B%E3%82%89%E3%81%AE%E5%BF%9C%E7%AD%94%E3%83%A1%E3%83%83%E3%82%BB%E3%83%BC%E3%82%B8%E3%82%92%E6%95%B4%E5%BD%A2%E3%81%99%E3%82%8B">Digital Assistant からの応答メッセージを整形する</a></li>
+    </ul>
+  </li>
+  <li><a href="#%E4%BB%A5%E4%B8%8A">以上</a></li>
+</ul>
+<h2 id="前提"><a class="header-link" href="#前提"><span class="header-link-mark"></span></a>前提</h2>
+<ul>
+  <li>開発言語は Node.js。Express を使用する</li>
+  <li>LINE Messaging API チャネルを作成してあること</li>
+  <li>LINE Messaging API チャネルからメッセージを受信できる Webhook サーバを用意していること
+    <ul>
+      <li>以前の記事を参考に、Heroku 等に Express サーバを置いてあれば OK</li>
+    </ul>
+  </li>
+  <li>Oracle Digital Assistant の Skill を作成してあること
+    <ul>
+      <li>今回は会話フローの内容については触れないので、好きに作っておく</li>
+    </ul>
+  </li>
+</ul>
+<h2 id="digital-assistant-channel-を用意する"><a class="header-link" href="#digital-assistant-channel-を用意する"><span class="header-link-mark"></span></a>Digital Assistant Channel を用意する</h2>
+<p>まずは、作成してある Skill を外部から呼び出せるよう、<em>Channel</em> というモノを作る。</p>
+<p>「Oracle Digital Assistant Designer UI」画面に移動したら、ハンバーガーメニュー → Development → Channels と進み、「+ Channel」ボタンからチャネルを新規作成する。</p>
+<ul>
+  <li>Name : 必須なので適当に決める (後で変えられる)</li>
+  <li>Channel Type : 「Webhook」を選択する。すると以下の2項目が表示される</li>
+  <li>Platform Version : 初期設定のまま「1.1 (Conversation Model)」を選択しておく</li>
+  <li>Outgoing Webhook URI : Digital Assistant からの応答メッセージを受け取る URL を決める。今回の例は <code>https://my-line-chat-bot.herokuapp.com/outgoing</code> とする (後で変えられる)</li>
+</ul>
+<p>この内容で「Create」ボタンを押下する。</p>
+<p>次の画面で、「Route To」項目から、作成した Skill を選択しておく。</p>
+<p>ココまで出来たら、この画面に表示されている<em>「Secret Key」と「Webhook URL」</em>の情報を控えておく。</p>
+<h2 id="digital-assistant-連携用のライブラリをインストールする"><a class="header-link" href="#digital-assistant-連携用のライブラリをインストールする"><span class="header-link-mark"></span></a>Digital Assistant 連携用のライブラリをインストールする</h2>
+<p>以降は Express サーバの実装拡張。</p>
+<p>まずは Digital Assistant と連携するためのライブラリをインストールする。Oracle 公式が出している、<strong><code>@oracle/bots-node-sdk</code></strong> というパッケージを使う。</p>
+<ul>
+  <li><a href="https://github.com/oracle/bots-node-sdk">GitHub - oracle/bots-node-sdk: Oracle Bots Node.js SDK</a></li>
+  <li><a href="https://oracle.github.io/bots-node-sdk/">Home - Documentation</a></li>
+</ul>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">npm</span> <span class="token function">install</span> -S @oracle/bots-node-sdk
+</code></pre>
+<h2 id="line-から受信したメッセージを-digital-assistant-channel-に連携する"><a class="header-link" href="#line-から受信したメッセージを-digital-assistant-channel-に連携する"><span class="header-link-mark"></span></a>LINE から受信したメッセージを Digital Assistant Channel に連携する</h2>
+<p>続いて、LINE からメッセージを受信するパスの処理。ココで、LINE から受け取ったメッセージを、先程作った Digital Assistant の Webhook URL に向けて送信しよう。</p>
+<ul>
+  <li><code>index.js</code></li>
+</ul>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword">const</span> express <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'express'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// Express サーバを生成する</span>
+<span class="token keyword">const</span> app <span class="token operator">=</span> <span class="token function">express</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// LINE からのメッセージ受信部分</span>
+app<span class="token punctuation">.</span><span class="token method function property-access">use</span><span class="token punctuation">(</span><span class="token string">'/callback'</span><span class="token punctuation">,</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'./line-router'</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// サーバを起動する</span>
+<span class="token keyword">const</span> port <span class="token operator">=</span> process<span class="token punctuation">.</span><span class="token property-access">env</span><span class="token punctuation">.</span><span class="token constant">PORT</span> <span class="token operator">||</span> <span class="token number">8080</span><span class="token punctuation">;</span>
+app<span class="token punctuation">.</span><span class="token method function property-access">listen</span><span class="token punctuation">(</span>port<span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">Listening on </span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>port<span class="token interpolation-punctuation punctuation">}</span></span><span class="token template-punctuation string">`</span></span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<ul>
+  <li><code>line-router.js</code></li>
+</ul>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword">const</span> express <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'express'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">const</span> line <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'@line/bot-sdk'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">const</span> <span class="token maybe-class-name">OracleBot</span> <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'@oracle/bots-node-sdk'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// ルータ・モジュールを作成する</span>
+<span class="token keyword">const</span> router <span class="token operator">=</span> express<span class="token punctuation">.</span><span class="token method function property-access"><span class="token maybe-class-name">Router</span></span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// LINE クライアントを生成する</span>
+<span class="token keyword">const</span> client <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">line<span class="token punctuation">.</span>Client</span><span class="token punctuation">(</span><span class="token punctuation">{</span>
+  channelAccessToken<span class="token operator">:</span> process<span class="token punctuation">.</span><span class="token property-access">env</span><span class="token punctuation">.</span><span class="token constant">LINE_CHANNEL_ACCESS_TOKEN</span><span class="token punctuation">,</span>
+  channelSecret<span class="token operator">:</span> process<span class="token punctuation">.</span><span class="token property-access">env</span><span class="token punctuation">.</span><span class="token constant">LINE_CHANNEL_SECRET</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// Digital Assistant クライアントを生成する</span>
+<span class="token keyword">const</span> digitalAssistantClient <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">OracleBot<span class="token punctuation">.</span>Middleware<span class="token punctuation">.</span>WebhookClient</span><span class="token punctuation">(</span><span class="token punctuation">{</span>
+  channel<span class="token operator">:</span> <span class="token punctuation">{</span>
+    url<span class="token operator">:</span> process<span class="token punctuation">.</span><span class="token property-access">env</span><span class="token punctuation">.</span><span class="token constant">DIGITAL_ASSISTANT_WEBHOOK_URL</span><span class="token punctuation">,</span>
+    secret<span class="token operator">:</span> process<span class="token punctuation">.</span><span class="token property-access">env</span><span class="token punctuation">.</span><span class="token constant">DIGITAL_ASSISTANT_WEBHOOK_SECRET</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// [/callback] : LINE からのメッセージ受信部分</span>
+router<span class="token punctuation">.</span><span class="token method function property-access">post</span><span class="token punctuation">(</span><span class="token string">'/'</span><span class="token punctuation">,</span> line<span class="token punctuation">.</span><span class="token method function property-access">middleware</span><span class="token punctuation">(</span>config<span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token parameter">req<span class="token punctuation">,</span> res</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token known-class-name class-name">Promise</span><span class="token punctuation">.</span><span class="token method function property-access">all</span><span class="token punctuation">(</span>req<span class="token punctuation">.</span><span class="token property-access">body</span><span class="token punctuation">.</span><span class="token property-access">events</span><span class="token punctuation">.</span><span class="token method function property-access">map</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token parameter">event</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+    <span class="token keyword control-flow">return</span> <span class="token function">handleEvent</span><span class="token punctuation">(</span>event<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span>
+    <span class="token punctuation">.</span><span class="token method function property-access">then</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token parameter">result</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+      res<span class="token punctuation">.</span><span class="token method function property-access">status</span><span class="token punctuation">(</span><span class="token number">200</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">json</span><span class="token punctuation">(</span><span class="token punctuation">{</span><span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">end</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token doc-comment comment">/**
+ * イベント1件を処理する
+ * 
+ * <span class="token keyword">@param</span> <span class="token class-name"><span class="token punctuation">{</span><span class="token operator">*</span><span class="token punctuation">}</span></span> <span class="token parameter">event</span> イベント
+ * <span class="token keyword">@return</span> <span class="token class-name"><span class="token punctuation">{</span>Promise<span class="token punctuation">}</span></span> テキストメッセージイベントの場合は client.pushMessage() の結果、それ以外は null
+ */</span>
+<span class="token keyword">function</span> <span class="token function">handleEvent</span><span class="token punctuation">(</span><span class="token parameter">event</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token comment">// メッセージイベントではない場合、テキスト以外のメッセージの場合は何も処理しない</span>
+  <span class="token keyword control-flow">if</span><span class="token punctuation">(</span>event<span class="token punctuation">.</span><span class="token property-access">type</span> <span class="token operator">!==</span> <span class="token string">'message'</span> <span class="token operator">||</span> event<span class="token punctuation">.</span><span class="token property-access">message</span><span class="token punctuation">.</span><span class="token property-access">type</span> <span class="token operator">!==</span> <span class="token string">'text'</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token keyword control-flow">return</span> <span class="token known-class-name class-name">Promise</span><span class="token punctuation">.</span><span class="token method function property-access">resolve</span><span class="token punctuation">(</span><span class="token keyword null nil">null</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  
+  <span class="token comment">// LINE ユーザ ID</span>
+  <span class="token keyword">const</span> userId <span class="token operator">=</span> event<span class="token punctuation">.</span><span class="token property-access">source</span><span class="token punctuation">.</span><span class="token property-access">userId</span><span class="token punctuation">;</span>
+  <span class="token comment">// LINE から受信したテキスト</span>
+  <span class="token keyword">const</span> text <span class="token operator">=</span> event<span class="token punctuation">.</span><span class="token property-access">message</span><span class="token punctuation">.</span><span class="token property-access">text</span><span class="token punctuation">;</span>
+  
+  <span class="token comment">// Digital Assistant に送信するメッセージを組み立てる</span>
+  <span class="token keyword">const</span> message <span class="token operator">=</span> <span class="token punctuation">{</span>
+    userId<span class="token operator">:</span> userId<span class="token punctuation">,</span>
+    messagePayload<span class="token operator">:</span> <span class="token maybe-class-name">OracleBot</span><span class="token punctuation">.</span><span class="token property-access"><span class="token maybe-class-name">Lib</span></span><span class="token punctuation">.</span><span class="token property-access"><span class="token maybe-class-name">MessageModel</span></span><span class="token punctuation">.</span><span class="token method function property-access">textConversationMessage</span><span class="token punctuation">(</span>text<span class="token punctuation">)</span>
+  <span class="token punctuation">}</span><span class="token punctuation">;</span>
+  
+  <span class="token comment">// Digital Assistant に送信する</span>
+  <span class="token keyword control-flow">return</span> digitalAssistantClient<span class="token punctuation">.</span><span class="token method function property-access">send</span><span class="token punctuation">(</span>message<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+
+module<span class="token punctuation">.</span><span class="token property-access">exports</span> <span class="token operator">=</span> router<span class="token punctuation">;</span>
+</code></pre>
+<p>こんな感じ。</p>
+<p>Digital Assistant における会話セッションの特定には、<code>message.userId</code> プロパティが使用される。ココに LINE のユーザ ID (ユーザが普段目にするモノとは別の ID) を指定すれば OK。送信するメッセージは <code>messagePayload</code> プロパティに渡すが、ココに設定するオブジェクトの組み立て方が分かりづらいので、<code>@oracle/bots-node-sdk</code> が提供する <code>textConversationMessage()</code> というメソッドを使う。</p>
+<p>あとは <code>@oracle/bots-node-sdk</code> から生成した <code>WebhookClient</code> の <code>send()</code> メソッドでメッセージを送れば OK。</p>
+<h2 id="digital-assistant-channel-からの応答を受け取り-line-push-api-で返信する"><a class="header-link" href="#digital-assistant-channel-からの応答を受け取り-line-push-api-で返信する"><span class="header-link-mark"></span></a>Digital Assistant Channel からの応答を受け取り LINE Push API で返信する</h2>
+<p>コレで LINE → Express サーバ → Digital Assistant という流れが組み立てられた。Digital Assistant の Webhook Channel は、設定画面で設定した「Outgoing Webhook URI」に対して POST リクエストを投げることで、応答メッセージを伝えてくる。コレを受け取って、LINE に向かって返信してやれば良いワケだ。</p>
+<ul>
+  <li><code>index.js</code> : Outgoing Webhook URI のルーティングを定義する</li>
+</ul>
+<pre class="language-javascript"><code class="language-javascript"><span class="token comment">// …前略…</span>
+
+<span class="token comment">// LINE からのメッセージ受信部分</span>
+app<span class="token punctuation">.</span><span class="token method function property-access">use</span><span class="token punctuation">(</span><span class="token string">'/callback'</span><span class="token punctuation">,</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'./line-router'</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// ↓以下を追加</span>
+<span class="token comment">// Digital Assistant からの応答メッセージ受信部分</span>
+app<span class="token punctuation">.</span><span class="token method function property-access">use</span><span class="token punctuation">(</span><span class="token string">'/outgoing'</span><span class="token punctuation">,</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'./digital-assistant-router'</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// …後略…</span>
+</code></pre>
+<ul>
+  <li><code>digital-assistant-router.js</code></li>
+</ul>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword">const</span> express <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'express'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">const</span> <span class="token maybe-class-name">OracleBot</span> <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'@oracle/bots-node-sdk'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// LINE クライアントを生成する</span>
+<span class="token keyword">const</span> client <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">line<span class="token punctuation">.</span>Client</span><span class="token punctuation">(</span><span class="token punctuation">{</span>
+  channelAccessToken<span class="token operator">:</span> process<span class="token punctuation">.</span><span class="token property-access">env</span><span class="token punctuation">.</span><span class="token constant">LINE_CHANNEL_ACCESS_TOKEN</span><span class="token punctuation">,</span>
+  channelSecret<span class="token operator">:</span> process<span class="token punctuation">.</span><span class="token property-access">env</span><span class="token punctuation">.</span><span class="token constant">LINE_CHANNEL_SECRET</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token comment">// Digital Assistant クライアントを生成する</span>
+<span class="token keyword">const</span> digitalAssistantClient <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">OracleBot<span class="token punctuation">.</span>Middleware<span class="token punctuation">.</span>WebhookClient</span><span class="token punctuation">(</span><span class="token punctuation">{</span>
+  channel<span class="token operator">:</span> <span class="token punctuation">{</span>
+    url<span class="token operator">:</span> process<span class="token punctuation">.</span><span class="token property-access">env</span><span class="token punctuation">.</span><span class="token constant">DIGITAL_ASSISTANT_WEBHOOK_URL</span><span class="token punctuation">,</span>
+    secret<span class="token operator">:</span> process<span class="token punctuation">.</span><span class="token property-access">env</span><span class="token punctuation">.</span><span class="token constant">DIGITAL_ASSISTANT_WEBHOOK_SECRET</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// ルータ・モジュールを作成する</span>
+<span class="token keyword">const</span> router <span class="token operator">=</span> express<span class="token punctuation">.</span><span class="token method function property-access"><span class="token maybe-class-name">Router</span></span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token comment">// Digital Assistant 用のパーサを組み込む</span>
+<span class="token maybe-class-name">OracleBot</span><span class="token punctuation">.</span><span class="token method function property-access">init</span><span class="token punctuation">(</span>router<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// [/outgoing] : Digital Assistant からの応答メッセージ受信部分</span>
+router<span class="token punctuation">.</span><span class="token method function property-access">post</span><span class="token punctuation">(</span><span class="token string">'/'</span><span class="token punctuation">,</span> digitalAssistantClient<span class="token punctuation">.</span><span class="token method function property-access">receiver</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token comment">// Digital Assistant から応答メッセージを受信した時の処理 : 応答メッセージを処理して LINE に返信する</span>
+digitalAssistantClient<span class="token punctuation">.</span><span class="token method function property-access">on</span><span class="token punctuation">(</span><span class="token maybe-class-name">OracleBot</span><span class="token punctuation">.</span><span class="token property-access"><span class="token maybe-class-name">Middleware</span></span><span class="token punctuation">.</span><span class="token property-access"><span class="token maybe-class-name">WebhookEvent</span></span><span class="token punctuation">.</span><span class="token constant">MESSAGE_RECEIVED</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token parameter">message</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token comment">// LINE ユーザ ID</span>
+  <span class="token keyword">const</span> userId <span class="token operator">=</span> message<span class="token punctuation">.</span><span class="token property-access">userId</span><span class="token punctuation">;</span>
+  <span class="token comment">// Digital Assistant からの応答メッセージ</span>
+  <span class="token keyword">const</span> text <span class="token operator">=</span> message<span class="token punctuation">.</span><span class="token property-access">messagePayload</span><span class="token punctuation">.</span><span class="token property-access">text</span><span class="token punctuation">;</span>
+  
+  <span class="token comment">// LINE に返信するメッセージを組み立てる</span>
+  <span class="token keyword">const</span> message <span class="token operator">=</span> <span class="token punctuation">{</span>
+    type<span class="token operator">:</span> <span class="token string">'text'</span><span class="token punctuation">,</span>
+    text<span class="token operator">:</span> text
+  <span class="token punctuation">}</span><span class="token punctuation">;</span>
+  
+  <span class="token comment">// Push API で返信する</span>
+  lineClient<span class="token punctuation">.</span><span class="token method function property-access">pushMessage</span><span class="token punctuation">(</span>userId<span class="token punctuation">,</span> message<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// Digital Assistant との処理エラー時 : コンソール出力する</span>
+digitalAssistantClient<span class="token punctuation">.</span><span class="token method function property-access">on</span><span class="token punctuation">(</span><span class="token maybe-class-name">OracleBot</span><span class="token punctuation">.</span><span class="token property-access"><span class="token maybe-class-name">Middleware</span></span><span class="token punctuation">.</span><span class="token property-access"><span class="token maybe-class-name">WebhookEvent</span></span><span class="token punctuation">.</span><span class="token constant">ERROR</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token parameter">error</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">error</span><span class="token punctuation">(</span>error<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+module<span class="token punctuation">.</span><span class="token property-access">exports</span> <span class="token operator">=</span> router<span class="token punctuation">;</span>
+</code></pre>
+<p>こんな感じ。</p>
+<p>特徴的なのは、<code>OracleBot.init()</code> 関数。<code>line.middleware()</code> と同様に、リクエストヘッダに含まれる署名の検証や JSON パースなどを行う Express ミドルウェアを挟んでくれる。</p>
+<p>公式のドキュメントでは、以下のように記述されている。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword">const</span> app <span class="token operator">=</span> <span class="token function">express</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token maybe-class-name">OracleBot</span><span class="token punctuation">.</span><span class="token method function property-access">init</span><span class="token punctuation">(</span>app<span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>しかし、Express サーバ全体に <code>init()</code> 処理を適用してしまうと、LINE 用の <code>/callback</code> ルータ側にもミドルウェアが設定されてしまい、LINE からのメッセージが正しく処理できなくなってしまう (<code>TypeError: Data must be a string or a buffer</code> といったエラーが発生する)。</p>
+<p>そこで、<code>express.Router()</code> でルータ・モジュールを分割し、Digital Assistant からの受信部分であるこのルータ・モジュールにのみミドルウェアを設定するようにした。</p>
+<p>ルーティング定義である <code>router.post()</code> 部分には <code>WebhookClient#receiver()</code> を挟んでいるだけ。Digital Assistant の Webhook に関する動作は、全て <code>WebhookClient#on()</code> メソッドで定義した各種イベントのコールによって実行される。つまり、LINE へ返信する実処理は <code>WebhookClient#on(MESSAGE_RECEIVED)</code> イベントで定義した関数に実装する。</p>
+<p>Webhook イベントはこの他に、<code>OracleBot.Middleware.WebhookEvent.MESSAGE_SENT</code> というモノがある。<code>/callback</code> ルーティングにて、<code>WebhookClient#send()</code> を実行した後、Webhook Channel への送信が成功したことを知らせるイベントだ。適宜設定すると良いだろう。</p>
+<p>LINE への返信には Push API を使っている。コレは、Digital Assistant にメッセージを送り、応答メッセージを受け取るという流れの中で、「リプライトークン」を保持しておけなかったため。受信したメッセージデータをどこかに蓄えておき、Digital Assistant から応答メッセージを受信したタイミングで、メッセージデータからリプライトークンを抜き取って使用する、みたいな機構が作れれば、Reply API でも返信できるだろう。しかし、何らかの DB が必要になる他、同一ユーザからの連続した投稿などに対応しきれなさそうなので、Digital Assistant における会話セッションを作るために指定した「LINE ユーザ ID」をそのまま利用して、Push API で返信するように実装した。</p>
+<h2 id="デプロイして動作確認"><a class="header-link" href="#デプロイして動作確認"><span class="header-link-mark"></span></a>デプロイして動作確認</h2>
+<ul>
+  <li><code>/callback</code> で LINE からのメッセージを受信して Digital Assistant に連携</li>
+  <li><code>/outgoing</code> で Digital Assistant からの応答メッセージを受信して LINE に返信</li>
+</ul>
+<p>という実装ができたら、このサーバアプリを Heroku などにデプロイしよう。</p>
+<ul>
+  <li>LINE Developers Console における「Webhook URL」設定</li>
+  <li>Digital Assistant における「Outgoing Webhook URI」設定</li>
+</ul>
+<p>それぞれのパス指定に誤りがないか、よく確認すること。いずれも HTTPS でないと通信できない。</p>
+<p>デプロイと設定ができたら、LINE トーク画面から Digital Assistant を呼び出せそうな文言を投稿してみよう。Digital Assistant を経由して、何らかの返信が得られれば OK だ。</p>
+<h2 id="諸課題"><a class="header-link" href="#諸課題"><span class="header-link-mark"></span></a>諸課題</h2>
+<p>LINE、Oracle Digital Assistant ともに、イマイチ API 仕様が明らかでなかったり、一応のドキュメントはあるものの物凄く分かりづらかったりする。ココまでで分かっている「課題」と思われる事項を挙げておく。</p>
+<h3 id="インテント解析のために日本語の投稿を翻訳する"><a class="header-link" href="#インテント解析のために日本語の投稿を翻訳する"><span class="header-link-mark"></span></a>インテント解析のために日本語の投稿を翻訳する</h3>
+<p>Digital Assistant のインテント解析において、日本語をサンプルフレーズに使えない (精度が低く不安定) ことは以前の記事でも触れた。</p>
+<p>現状のインテント・エンジンは英語と中国語くらいにしか対応していないようで、それ以外の言語を使う際は、Google か Microsoft の翻訳 API サービスを組み込んであげないといけない。</p>
+<p>インテント・エンジンは、単語の出現頻度くらいしかチェックしていないようなので、「do」と「do not」のように意味が逆転するような言葉が出てこない限り、機械翻訳の精度で十分と思われる。特定の日本語を翻訳する際に、対応する英語の類語をいくつかサンプルフレーズに入れてあれば問題ないだろう。</p>
+<p>翻訳 API サービスは、Skill の設定画面から組み込んで使用できるが、別の方法として、LINE からのメッセージを受け取る Express サーバ内で、特定の日本語文言を受け取ったら対応する英語のフレーズに置換して Digital Assistant に送信する、というやり方も考えられる。</p>
+<h3 id="digital-assistant-からの応答メッセージを整形する"><a class="header-link" href="#digital-assistant-からの応答メッセージを整形する"><span class="header-link-mark"></span></a>Digital Assistant からの応答メッセージを整形する</h3>
+<p>Digital Assistant からの応答メッセージに <code>System.List</code> コンポーネントを使った選択肢提示なんかを組み込んだ場合。上述の実装だと、ユーザは選択肢が分からず、正しく答えられないだろう。</p>
+<p>選択肢情報は、<code>message.messagePayload</code> の中に、<code>actions</code> プロパティとして格納されていたりする。</p>
+<pre class="language-javascript"><code class="language-javascript">digitalAssistantClient<span class="token punctuation">.</span><span class="token method function property-access">on</span><span class="token punctuation">(</span><span class="token maybe-class-name">OracleBot</span><span class="token punctuation">.</span><span class="token property-access"><span class="token maybe-class-name">Middleware</span></span><span class="token punctuation">.</span><span class="token property-access"><span class="token maybe-class-name">WebhookEvent</span></span><span class="token punctuation">.</span><span class="token constant">MESSAGE_RECEIVED</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token parameter">message</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token comment">// 応答メッセージ本文</span>
+  <span class="token keyword">let</span> text <span class="token operator">=</span> text <span class="token operator">=</span> message<span class="token punctuation">.</span><span class="token property-access">messagePayload</span><span class="token punctuation">.</span><span class="token property-access">text</span><span class="token punctuation">;</span>
+  
+  <span class="token comment">// 選択肢があったら、改行と中黒 (箇条書き記号) を付与して本文に繋げる</span>
+  message<span class="token punctuation">.</span><span class="token property-access">messagePayload</span><span class="token punctuation">.</span><span class="token property-access">actions</span><span class="token punctuation">.</span><span class="token method function property-access">forEach</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token parameter">action</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+    text <span class="token operator">+=</span> <span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">\n・</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>action<span class="token punctuation">.</span><span class="token property-access">label</span><span class="token interpolation-punctuation punctuation">}</span></span><span class="token template-punctuation string">`</span></span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>こんな風にすれば、</p>
+<pre><code>あなたの性別は？
+・男性
+・女性
+</code></pre>
+<p>といったテキストメッセージを LINE に返信できたりはする。</p>
+<p>だが、実際は Flex Message なんかを使ってリッチに見せたかったりすると思う。</p>
+<p>今のところ、Digital Assistant からの応答メッセージを機械的に Flex Message なんかに変換する方法はないので、</p>
+<ul>
+  <li>Digital Assistant から特定の文言を返信させるように実装し、</li>
+  <li>その文言を受け取ったら、予め用意しておいた返信用メッセージオブジェクトを使って返信する</li>
+</ul>
+<p>といった実装にするしかないだろう。</p>
+<p>ココらへん、良い方法があれば教えてほしい。</p>
+<p>なお、Webhook Channel 作成時の「Channel Type」で「Facebook Messenger」が選べるとおり、Facebook Messenger をフロントに使う場合は良い感じに応答メッセージが整形されるっぽい。LINE に関してもこういう対応をしてくれたら嬉しいのだが、ゴリゴリの米国企業が日韓ぐらいでしかシェアのないアプリに対応してくれることはまずないだろうな…。</p>
+<h2 id="以上"><a class="header-link" href="#以上"><span class="header-link-mark"></span></a>以上</h2>
+<p>ひとまずこんな感じで、LINE トーク画面から Oracle Digital Assistant を使う実装ができた。</p>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2019-03-26</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2019-03-26</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

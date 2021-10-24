@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>Cloudflare Pages と Cloudflare Workers KV を組み合わせてウェブアプリを作ってみた - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2021/07/17-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2021/index.html">2021年</a></li>
+            <li><a href="/blog/2021/07/index.html">07月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2021-07-17</time></div>
+        <h1 id="page-title">Cloudflare Pages と Cloudflare Workers KV を組み合わせてウェブアプリを作ってみた</h1>
+
+<p>前回に引き続き、Cloudflare の無料枠で遊んでみる。今回は静的サイトホスティングをしてくれる <strong>Cloudflare Pages</strong> を使って、前回作成した Cloudflare Workers を呼び出すようなアプリを作ってみる。ついでに <em>Cloudflare Web Analytics</em> も試しているので、最後までお楽しみに (？)</p>
+<ul>
+  <li>前記事：<a href="/blog/2021/07/16-01.html">Cloudflare Workers による FaaS・Cloudflare Workers KV による Key-Value Store を試してみた</a></li>
+</ul>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#cloudflare-pages-%E3%81%A8%E3%81%AF">Cloudflare Pages とは</a></li>
+  <li><a href="#github-%E3%83%AA%E3%83%9D%E3%82%B8%E3%83%88%E3%83%AA%E3%82%92%E7%94%A8%E6%84%8F%E3%81%99%E3%82%8B">GitHub リポジトリを用意する</a></li>
+  <li><a href="#cloudflare-pages-%E3%83%97%E3%83%AD%E3%82%B8%E3%82%A7%E3%82%AF%E3%83%88%E3%81%AE%E4%BD%9C%E6%88%90%E3%83%BB%E5%88%9D%E5%9B%9E%E3%83%87%E3%83%97%E3%83%AD%E3%82%A4">Cloudflare Pages プロジェクトの作成・初回デプロイ</a></li>
+  <li><a href="#workers-%E3%82%B9%E3%82%AF%E3%83%AA%E3%83%97%E3%83%88%E3%82%92%E6%9B%B4%E6%96%B0%E3%81%97%E3%81%A4%E3%81%A4%E3%80%81workers-%E3%81%A8%E9%80%A3%E6%90%BA%E3%81%99%E3%82%8B-react-%E3%82%A2%E3%83%97%E3%83%AA%E3%82%92%E4%BD%9C%E3%81%A3%E3%81%A6%E3%81%84%E3%81%8F">Workers スクリプトを更新しつつ、Workers と連携する React アプリを作っていく</a>
+    <ul>
+      <li><a href="#workers-%E3%81%AE%E5%AE%9F%E8%A3%85">Workers の実装</a></li>
+    </ul>
+  </li>
+  <li><a href="#react-%E3%82%A2%E3%83%97%E3%83%AA%E3%81%AE%E5%AE%9F%E8%A3%85">React アプリの実装</a></li>
+  <li><a href="#%E3%81%A4%E3%81%84%E3%81%A7%E3%81%AB-cloudflare-web-analytics-%E3%81%AE%E3%82%B3%E3%83%BC%E3%83%89%E3%82%82%E4%BB%95%E8%BE%BC%E3%82%93%E3%81%A7%E3%81%8A%E3%81%8F">ついでに Cloudflare Web Analytics のコードも仕込んでおく</a></li>
+  <li><a href="#cloudflare-pages-%E3%81%AB%E3%83%87%E3%83%97%E3%83%AD%E3%82%A4%E3%81%99%E3%82%8B">Cloudflare Pages にデプロイする</a></li>
+  <li><a href="#%E4%BB%A5%E4%B8%8A">以上</a></li>
+</ul>
+<h2 id="cloudflare-pages-とは"><a class="header-link" href="#cloudflare-pages-とは"><span class="header-link-mark"></span></a>Cloudflare Pages とは</h2>
+<p>Cloudflare Pages は、GitHub Pages や Netlify と同じく、<em>GitHub リポジトリへの Push をトリガーに</em>、自動的にプロジェクトをビルド・デプロイしてくれる静的サイトホスティングサービス。</p>
+<p>出来ること自体は GitHub Pages や Netlify と変わらないが、Cloudflare が持つ CDN エッジ上にサイトがデプロイされるため、他のホスティングサービスよりもリクエストが高速に行われるようだ。</p>
+<p>以下の公式サイトに記載があるとおり、無料枠ではビルドの同時実行数・1ヶ月あたりのビルド回数の上限があるが、サイト数やリクエスト数、帯域幅などは有料版と同じく無制限。頻繁な更新がなければ無料プランでも十分使えそうだ。</p>
+<ul>
+  <li><a href="https://pages.cloudflare.com/">Cloudflare Pages</a></li>
+</ul>
+<p>裏側は Cloudflare Workers を隠蔽して静的サイトホスティングに特化させているようで、サービスとしても今後 Workers と統合する予定だとか聞いた。</p>
+<p>Cloudflare Pages と Cloudflare Workers を組み合わせることで、Netlify + Netlify Functions ないしは Vercel + Vercel Serverless Functions 的な感じで、サーバレス環境が手に入るが、Netlify と Vercel にはデータ永続化層がない。<a href="https://www.mongodb.com/cloud/atlas">MongoDB Atlas</a> という無料枠のある NoSQL サービスを別途登録すれば、無料でデータ永続化層を用意して接続することはできるが、複数サービスを併用することになる。その点、Cloudflare の場合は NoSQL である Cloudflare Workers KV もセットなので、単一サービスで全てが完結し、Functions (Workers) から NoSQL (Workers KV) への通信も Cloudflare 内に閉じていて高速だ。</p>
+<h2 id="github-リポジトリを用意する"><a class="header-link" href="#github-リポジトリを用意する"><span class="header-link-mark"></span></a>GitHub リポジトリを用意する</h2>
+<p>Cloudflare Pages のプロジェクトを作るには、GitHub リポジトリとの連携が前提になるので、先に GitHub リポジトリを作っておく。</p>
+<p>今回は Create-React-App (CRA) で作った React の SPA を Cloudflare Pages にデプロイすることにする。</p>
+<ul>
+  <li>参考：<a href="https://developers.cloudflare.com/pages/framework-guides/deploy-a-react-application">Deploy a React application · Cloudflare Pages docs</a></li>
+  <li>参考：<a href="https://blog.logrocket.com/cloudflare-pages-tutorial-deploy-a-react-app-via-github/">Cloudflare Pages tutorial: Deploying a React app via GitHub - LogRocket Blog</a></li>
+  <li>参考：<a href="https://blog.hashihei.com/2021/04/10/cloudflare-pages%E3%81%ABreact-web%E3%82%A2%E3%83%97%E3%83%AA%E3%82%92%E3%83%9B%E3%82%B9%E3%83%88%E3%81%99%E3%82%8B/">Cloudflare PagesにReact-Webアプリをホストする – くじらぴーまん</a></li>
+</ul>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># CRA で React プロジェクトを作り、GitHub に Push する</span>
+$ npx create-react-app practice-cloudflare-pages
+</code></pre>
+<p>Cloudflare Pages にデプロイするからといって、コード修正は一切必要なかった。</p>
+<h2 id="cloudflare-pages-プロジェクトの作成・初回デプロイ"><a class="header-link" href="#cloudflare-pages-プロジェクトの作成・初回デプロイ"><span class="header-link-mark"></span></a>Cloudflare Pages プロジェクトの作成・初回デプロイ</h2>
+<p>ブラウザで Cloudflare Pages ダッシュボードに行き、次のように操作していく。</p>
+<ol>
+  <li>「プロジェクトを作成」ボタンを押す</li>
+  <li>「GitHub リポジトリからプロジェクトを作成する」画面で「GitHub アカウントを接続する」ボタンを押す</li>
+  <li>「リポジトリを選択する」欄で GitHub リポジトリを選択する</li>
+  <li>「セットアップの開始」ボタンを押す</li>
+  <li>「ビルドとデプロイをセットアップ」画面で設定を確認する
+    <ul>
+      <li>「フレームワークプリセット」：「Create React App」を選択する</li>
+      <li>「ビルドコマンド」：「<code>npm run build</code>」が設定されるはずなのでそのまま</li>
+      <li>「ビルド出力ディレクトリ」：「<code>/build</code>」が設定されるはずなのでそのまま</li>
+    </ul>
+  </li>
+  <li>「保存してデプロイする」ボタンを押す</li>
+  <li>「ビルドおよびデプロイを実行しています」と表示されるので3分ほど待つ</li>
+</ol>
+<p>→ コレで、Cloudflare Pages プロジェクトが作成でき、初回デプロイができた。現状は、React のロゴが見えているだけの、ボイラープレートファイルそのままの状態だ。</p>
+<ul>
+  <li><a href="https://practice-cloudflare-pages.pages.dev/">https://practice-cloudflare-pages.pages.dev/</a></li>
+</ul>
+<h2 id="workers-スクリプトを更新しつつ、workers-と連携する-react-アプリを作っていく"><a class="header-link" href="#workers-スクリプトを更新しつつ、workers-と連携する-react-アプリを作っていく"><span class="header-link-mark"></span></a>Workers スクリプトを更新しつつ、Workers と連携する React アプリを作っていく</h2>
+<p>サンプルとして、Workers KV を読み取り・書き込みする簡単なウェブアプリを作成する。今回は滅茶苦茶雑に、<strong>全ユーザで共有される一つのノートアプリ</strong>というモノを作ってみる。</p>
+<p>普通だったら<em>ユーザごとに</em>ノートブックのデータを分けて保持するだろうが、今回はユーザ登録や認証を考えたくなかったので、<strong>誰がアクセスしてきても同じノートを参照・編集することになる</strong>、という不思議なアプリにしてみた。ユーザを区別しなくて良いので、KV としては単一の Key にテキストを保存することになる。Workers KV は NoSQL、つまり結果整合性に重きをおき、強整合性は保証されないので、様々なユーザから保存と同時に参照が行われた時は、更新前・更新後どちらのデータが返されるか分からないタイミングがあったりする。</p>
+<p>また、今回はアクセス元が Cloudflare Pages からかどうかもチェックしていない。極端な話、<code>curl</code> コマンドで Workers の URL を叩いてもノートの内容が参照・更新できる雑仕様なので、そのつもりで。</p>
+<h3 id="workers-の実装"><a class="header-link" href="#workers-の実装"><span class="header-link-mark"></span></a>Workers の実装</h3>
+<p>Cloudflare Workers の実装、および URL エンドポイントは以下のとおり。前回の記事では <code>kv.get()</code> で KV から値を取得するだけだったが、今回は <code>PUT</code> メソッドでのアクセス時に <em><code>kv.put()</code></em> メソッドでデータを書き込み (Insert もしくは Update 相当) する処理を加えている。</p>
+<ul>
+  <li><a href="https://github.com/Neos21/practice-cloudflare-workers">Neos21/practice-cloudflare-workers: Practice Cloudflare Workers</a>
+    <ul>
+      <li><a href="https://github.com/Neos21/practice-cloudflare-workers/blob/030857ae3de9a852746b3752910f1855782a35ec/index.js">practice-cloudflare-workers/index.js at 030857ae3de9a852746b3752910f1855782a35ec</a></li>
+    </ul>
+  </li>
+  <li><a href="https://practice.neos21.workers.dev/">https://practice.neos21.workers.dev/</a></li>
+</ul>
+<p>また、Pages から呼び出すためには、レスポンスに CORS ヘッダが必要だったので、そのための対応をあちこちでしている。</p>
+<ul>
+  <li>参考：<a href="https://developers.cloudflare.com/pages/tutorials/build-an-api-with-workers#adding-cors-headers">Build an API for your frontend using Cloudflare Workers · Cloudflare Pages docs</a>
+    <ul>
+      <li>
+        <blockquote>
+          <p><strong>Adding CORS headers</strong></p>
+        </blockquote>
+      </li>
+      <li>↑このセクションを参考に実装する</li>
+    </ul>
+  </li>
+  <li><code>OPTIONS</code> メソッドの場合に、空 Response しつつ以下のヘッダを入れておく
+    <ul>
+      <li><code>Access-Control-Allow-Origin</code> : <code>*</code></li>
+      <li><code>Access-Control-Allow-Methods</code> : <code>GET, POST, PUT, DELETE, OPTIONS</code></li>
+      <li><code>Access-Control-Allow-Headers</code> : <code>Content-Type</code> (最低限)</li>
+    </ul>
+  </li>
+  <li>その他の全ての <code>Response</code> 時に、以下のヘッダが必要
+    <ul>
+      <li><code>Access-Control-Allow-Origin</code> : <code>*</code></li>
+    </ul>
+  </li>
+</ul>
+<p>この辺は漏れがちなので、<code>new Response()</code> の処理を共通関数で作ってあげた方が良いだろう。</p>
+<ul>
+  <li><code>npm start</code> で起動したローカル React 環境と <code>wrangler dev</code> で起動したローカル Workers との通信時</li>
+  <li>本番稼動している Pages と Workers 間の通信</li>
+</ul>
+<p>いずれも、この CORS ヘッダが必要だった。</p>
+<p>実装が済んだら、<code>wrangler publish</code> でデプロイしておこう。</p>
+<h2 id="react-アプリの実装"><a class="header-link" href="#react-アプリの実装"><span class="header-link-mark"></span></a>React アプリの実装</h2>
+<p>Pages にデプロイした React アプリの実装は以下のとおり。</p>
+<ul>
+  <li><a href="https://github.com/Neos21/practice-cloudflare-pages">Neos21/practice-cloudflare-pages: Practice Cloudflare Pages</a></li>
+  <li><a href="https://practice-cloudflare-pages.pages.dev/">https://practice-cloudflare-pages.pages.dev/</a></li>
+</ul>
+<p>Workers との通信は <code>window.fetch()</code> を使っている。今はもう Axios とか入れなくても Fetch API で事足りますな…。</p>
+<p>Workers KV から取得したテキストを表示・編集可能にするためのテキストエリアを配置。<code>form</code> 要素内にない <code>textarea</code> 要素に対して <code>value</code> をバインディングする際は、<code>onChange</code> イベントを必ず定義して、その中で <code>setState()</code> を呼び出して確実にバインディングした <code>value</code> 値を更新してあげないといけない。<code>onChange</code> だが、<code>onInput</code> 相当のタイミングでも都度発火する。</p>
+<p>Workers のエンドポイント URL は環境変数 <code>REACT_APP_API_URL</code> を定義して注入した。CRA が内蔵している <code>.env</code> ファイルの読み取り機能を使って、ローカル開発時と本番デプロイ時でそれぞれ別々の URL を渡すようにした。</p>
+<ul>
+  <li>ローカル開発時 = <code>npm start</code> で <code>http://localhost:3000/</code> を起動した時
+    <ul>
+      <li><code>.env</code> ファイルが参照される</li>
+      <li><code>http://127.0.0.1:8787/</code> へアクセスさせる (<code>wrangler dev</code> で起動されるローカル Workers のエンドポイント URL)</li>
+    </ul>
+  </li>
+  <li>本番でデプロイ時 = <code>npm run build</code> でビルドされた資材
+    <ul>
+      <li><code>.env.production</code> ファイルが参照され、ビルドされた資材の中に環境変数の値がベタ書きされる</li>
+      <li><code>https://practice.neos21.workers.dev/</code> へアクセスさせる (Cloudflare Workers の本番エンドポイント URL)</li>
+    </ul>
+  </li>
+</ul>
+<p>Cloudflare Pages プロジェクトを作成した時にデプロイ設定をしたとおり、<code>npm run build</code> でビルドした資材が Pages に公開されるので、<code>.env.production</code> を GitHub リポジトリに Push して参照させることにした。なので、Cloudflare Pages のプロジェクト設定での環境変数は一切指定していない。より機密性の高い情報は <code>.env</code> ファイルに書いてコミットするワケにはいかないので、そういう時は Pages のプロジェクト設定から環境変数を定義・注入させよう。</p>
+<ul>
+  <li>参考：<a href="https://create-react-app.dev/docs/adding-custom-environment-variables/#what-other-env-files-can-be-used">Adding Custom Environment Variables | Create React App</a>
+    <ul>
+      <li>
+        <blockquote>
+          <p>What other <code>.env</code> files can be used?</p>
+        </blockquote>
+      </li>
+    </ul>
+  </li>
+</ul>
+<h2 id="ついでに-cloudflare-web-analytics-のコードも仕込んでおく"><a class="header-link" href="#ついでに-cloudflare-web-analytics-のコードも仕込んでおく"><span class="header-link-mark"></span></a>ついでに Cloudflare Web Analytics のコードも仕込んでおく</h2>
+<p>ついでに、Cloudflare の無料枠で使える、<strong>Cloudflare Web Analytics</strong> という分析サービスのためのスクリプトコードを、<code>index.html</code> に仕込んでおく。</p>
+<p>Google Analytics なんかと似たような感じで、ページに <code>script</code> 要素を仕込むだけ。確認できる内容は Google Analytics よりは少なく、以下の項目ぐらい。</p>
+<ul>
+  <li>アクセス数</li>
+  <li>リファラ</li>
+  <li>URL パス</li>
+  <li>ブラウザ</li>
+  <li>OS</li>
+  <li>デバイス種別</li>
+  <li>アクセス元の国</li>
+  <li>ページロード時間</li>
+  <li>Core Web Virals … Google が提唱する UX 指標
+    <ul>
+      <li>LCP : Largest Contentful Paint … 読み込みパフォーマンス</li>
+      <li>FID : First Input Delay … ユーザの応答性</li>
+      <li>CLS : Cumulative Layout Shift … レイアウト崩れなど視覚的な安定性</li>
+    </ul>
+  </li>
+</ul>
+<p>解析できる項目 ≒ 処理が少ないためか、CDN エッジで全てが完結しているためか、PageSpeed Insights ではモバイル99点、パソコン100点である。Google Analytics のコード入れると途端に点数が下がるのと比べると、かなりパフォーマンスが良い。</p>
+<ul>
+  <li><a href="https://developers.google.com/speed/pagespeed/insights/?hl=JA&#x26;url=https%3A%2F%2Fpractice-cloudflare-pages.pages.dev%2F">PageSpeed Insights</a></li>
+</ul>
+<p>ずっと Google Analytics 使ってきたけど、Cloudflare Web Analytics に移行しようかな…。ｗ</p>
+<h2 id="cloudflare-pages-にデプロイする"><a class="header-link" href="#cloudflare-pages-にデプロイする"><span class="header-link-mark"></span></a>Cloudflare Pages にデプロイする</h2>
+<p>Web Analytics はおまけ程度に仕込むとして。</p>
+<p>アプリを実装したら、GitHub にコミット・Push する。すると Cloudflare Pages 側が自動的に Push を検知し、資材のビルドと公開処理が始まる。Pages のデプロイは<em>毎回3分程度</em>かかる。</p>
+<p>こうして公開したのが以下のサイト。</p>
+<ul>
+  <li><a href="https://practice-cloudflare-pages.pages.dev/">Practice Cloudflare Pages</a></li>
+</ul>
+<p>画面いっぱいに表示されたテキストエリアに自由にテキストを入力していただき、「Save」ボタンを押してもらうと、その内容が Workers を通じて Workers KV に保存される。</p>
+<p>違うブラウザや違うデバイスでアクセスしても、同じ KV から同じデータを取得しているので、タイミングによってはせっかく自分が書いて更新した内容が上書き削除されてしまう可能性もあるという、謎仕様のジョーク・ノートアプリの出来上がり。</p>
+<h2 id="以上"><a class="header-link" href="#以上"><span class="header-link-mark"></span></a>以上</h2>
+<p>Cloudflare Workers 単体でも、リクエストパスに応じて処理を振り分ければ、HTML や CSS を返すパス、Workers KV と接続する API のパス、などを作れるが、いささかコードが煩雑になる。</p>
+<p>そこで今回のように Cloudflare Pages を併用すれば、フロントエンドとバックエンドを綺麗に切り分けられる。今回は分かりやすくするため GitHub リポジトリを Workers 用と Pages 用とで2つに分けたが、設定ファイルの置き方次第で単一リポジトリでも運用は可能そうだ。Workers へのデプロイも、GitHub Actions を使うことで自動化でき、<code>wrangler publish</code> をローカルから叩かなくても良くなる。</p>
+<ul>
+  <li>参考：<a href="https://github.com/marketplace/actions/deploy-to-cloudflare-workers-with-wrangler">Deploy to Cloudflare Workers with Wrangler · Actions · GitHub Marketplace</a></li>
+</ul>
+<p>Netlify や Vercel でも「実現出来ること」はそう変わらないが、</p>
+<ul>
+  <li>CDN エッジで動作するというパフォーマンス面で抜群のアドバンテージ (Pages と Workers)</li>
+  <li>データ永続化層 (NoSQL) も単一サービスで管理できる (Workers KV)</li>
+</ul>
+<p>というメリットがかなり大きいので、細かな仕様差や制約事項が飲み込めれば、Cloudflare がかなりつよつよな無料サービスであろう。</p><div class="ad-rakuten">
+  <div class="ad-rakuten-image">
+    <a href="https://hb.afl.rakuten.co.jp/hgc/g00q0722.waxyc9ff.g00q0722.waxyd017/?pc=https%3A%2F%2Fitem.rakuten.co.jp%2Fbook%2F6385779%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Fbook%2Fi%2F13577471%2F">
+      <img src="https://thumbnail.image.rakuten.co.jp/@0_mall/book/cabinet/2043/9784774142043.jpg?_ex=128x128">
+    </a>
+  </div>
+  <div class="ad-rakuten-info">
+    <div class="ad-rakuten-title">
+      <a href="https://hb.afl.rakuten.co.jp/hgc/g00q0722.waxyc9ff.g00q0722.waxyd017/?pc=https%3A%2F%2Fitem.rakuten.co.jp%2Fbook%2F6385779%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Fbook%2Fi%2F13577471%2F">Webを支える技術 HTTP、URI、HTML、そしてREST （WEB＋DB press plusシリーズ） [ 山本陽平 ]</a>
+    </div>
+    <div class="ad-rakuten-shop">
+      <a href="https://hb.afl.rakuten.co.jp/hgc/g00q0722.waxyc9ff.g00q0722.waxyd017/?pc=https%3A%2F%2Fwww.rakuten.co.jp%2Fbook%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Fbook%2F">楽天ブックス</a>
+    </div>
+    <div class="ad-rakuten-price">価格 : 2827円</div>
+  </div>
+</div>
+<div class="ad-rakuten">
+  <div class="ad-rakuten-image">
+    <a href="https://hb.afl.rakuten.co.jp/hgc/g00reb42.waxycf23.g00reb42.waxyd080/?pc=https%3A%2F%2Fitem.rakuten.co.jp%2Frakutenkobo-ebooks%2Fe43066a7c55931d58f0b015fd9c5a15b%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Frakutenkobo-ebooks%2Fi%2F17810372%2F">
+      <img src="https://thumbnail.image.rakuten.co.jp/@0_mall/rakutenkobo-ebooks/cabinet/3351/2000006873351.jpg?_ex=128x128">
+    </a>
+  </div>
+  <div class="ad-rakuten-info">
+    <div class="ad-rakuten-title">
+      <a href="https://hb.afl.rakuten.co.jp/hgc/g00reb42.waxycf23.g00reb42.waxyd080/?pc=https%3A%2F%2Fitem.rakuten.co.jp%2Frakutenkobo-ebooks%2Fe43066a7c55931d58f0b015fd9c5a15b%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Frakutenkobo-ebooks%2Fi%2F17810372%2F">Webを支える技術 ーー HTTP，URI，HTML，そしてREST【電子書籍】[ 山本陽平 ]</a>
+    </div>
+    <div class="ad-rakuten-shop">
+      <a href="https://hb.afl.rakuten.co.jp/hgc/g00reb42.waxycf23.g00reb42.waxyd080/?pc=https%3A%2F%2Fwww.rakuten.co.jp%2Frakutenkobo-ebooks%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Frakutenkobo-ebooks%2F">楽天Kobo電子書籍ストア</a>
+    </div>
+    <div class="ad-rakuten-price">価格 : 2827円</div>
+  </div>
+</div>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2021-07-17</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2021-07-17</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

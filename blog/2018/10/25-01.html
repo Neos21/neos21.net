@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>【Angular Utilities】指定日時までのカウントダウンを表示する Date Time Countdown を作った - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2018/10/25-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2018/index.html">2018年</a></li>
+            <li><a href="/blog/2018/10/index.html">10月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2018-10-25</time></div>
+        <h1 id="page-title">【Angular Utilities】指定日時までのカウントダウンを表示する Date Time Countdown を作った</h1>
+
+<p>みんな大好き Moment.js と、v6 系が登場した RxJS を使って、カウントダウンタイマーを作った。</p>
+<ul>
+  <li><a href="https://neos21.github.io/angular-utilities/date-time-countdown">https://neos21.github.io/angular-utilities/date-time-countdown</a></li>
+</ul>
+<p>入力値を <code>moment</code> オブジェクトにブチ込んで、<code>moment#valueOf()</code> を使って UNIX 時刻を取得。コレを「未来日時 - 現在日時」と減算して、その結果を <code>moment.duration()</code> に渡すと、2つの日数の差分を出力できるようになる。</p>
+<p>あとは画面の入力フォームと出力したい形式に合わせてゴリゴリ調整するだけ。</p>
+<p>コレが「2つの時刻間の差を求めて表示する」処理になるのだが、今回はコレを1秒間隔で定期的に実行し直したい。そうすることで、1秒ずつカウントダウンしていく画面を作りたいのだ。</p>
+<p>Vanilla JS なら <code>setInterval</code> でやるところだが、今回は RxJS の <code>interval</code> を使う。</p>
+<pre class="language-typescript"><code class="language-typescript"><span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> interval<span class="token punctuation">,</span> <span class="token maybe-class-name">Subscription</span> <span class="token punctuation">}</span></span> <span class="token keyword">from</span> <span class="token string">'rxjs'</span><span class="token punctuation">;</span>
+
+@<span class="token function"><span class="token maybe-class-name">Component</span></span><span class="token punctuation">(</span> <span class="token comment">/* 中略 */</span> <span class="token punctuation">)</span>
+<span class="token keyword">export</span> <span class="token keyword">class</span> <span class="token class-name"><span class="token maybe-class-name">DateTimeCountdownComponent</span></span> <span class="token keyword">implements</span> <span class="token class-name"><span class="token maybe-class-name">OnInit</span></span><span class="token punctuation">,</span> <span class="token maybe-class-name">OnDestroy</span> <span class="token punctuation">{</span>
+  <span class="token doc-comment comment">/** タイマー */</span>
+  <span class="token keyword">private</span> timer<span class="token operator">:</span> <span class="token maybe-class-name">Subscription</span><span class="token punctuation">;</span>
+  
+  <span class="token doc-comment comment">/** 画面初期表示時の処理 */</span>
+  <span class="token keyword">public</span> <span class="token function">ngOnInit</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator">:</span> <span class="token keyword">void</span> <span class="token punctuation">{</span>
+    <span class="token comment">// 初期処理など…</span>
+    
+    <span class="token comment">// タイマーをセットする</span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">timer</span> <span class="token operator">=</span> <span class="token function">interval</span><span class="token punctuation">(</span><span class="token number">1000</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">subscribe</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+      <span class="token comment">// 1秒おきに繰り返したい処理</span>
+      <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token method function property-access">calcDuration</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  
+  <span class="token doc-comment comment">/** 画面遷移時の処理 */</span>
+  <span class="token keyword">public</span> <span class="token function">ngOnDestroy</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator">:</span> <span class="token keyword">void</span> <span class="token punctuation">{</span>
+    <span class="token comment">// タイマーを止める</span>
+    <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">timer</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">timer</span><span class="token punctuation">.</span><span class="token method function property-access">unsubscribe</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>こんな感じ。</p>
+<ul>
+  <li>参考：<a href="http://www.l08084.com/entry/2018/02/20/170157">RxJS: Observable.intervalの止め方 - L08084のブログ</a></li>
+</ul>
+<p>↑ <code>Observale.interval</code> を参考にしたのはこの記事なのだが、RxJS v6 になって <code>import</code> が変わっていた。</p>
+<ul>
+  <li>参考：<a href="https://www.learnrxjs.io/operators/creation/interval.html">interval · learn-rxjs</a></li>
+</ul>
+<p>コチラを見ると、<code>interval</code> のインポートの仕方が以下のように変わっていることが分かる。</p>
+<pre class="language-typescript"><code class="language-typescript"><span class="token comment">// RxJS v5 まで</span>
+<span class="token keyword">import</span> <span class="token string">'rxjs/add/observable/interval'</span><span class="token punctuation">;</span>
+
+<span class="token comment">// RxJS v6 から</span>
+<span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> interval <span class="token punctuation">}</span></span> <span class="token keyword">from</span> <span class="token string">'rxjs'</span><span class="token punctuation">;</span>
+</code></pre>
+<p>Angular Update Guide にも RxJS の変更があれやこれや登場するが、何でこんな変更が入ったんだろ？よく分からないが、とりあえずコレでできた。</p>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2018-10-25</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2018-10-25</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

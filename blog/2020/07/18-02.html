@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>WebRTC でビデオチャットアプリを作ってみた - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2020/07/18-02.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2020/index.html">2020年</a></li>
+            <li><a href="/blog/2020/07/index.html">07月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2020-07-18</time></div>
+        <h1 id="page-title">WebRTC でビデオチャットアプリを作ってみた</h1>
+
+<p>リモート会議をやる機会が増えて、Google Meet、Microsoft Teams、Zoom などを利用している。ビデオチャットとか面白いなー、<strong>WebRTC</strong> とかいうヤツがあったと思うけど触ったことないなー、と思ったので、作ってみることにした。</p>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#%E6%88%90%E6%9E%9C%E7%89%A9%E3%81%A8%E3%83%87%E3%83%A2%E3%82%B5%E3%82%A4%E3%83%88">成果物とデモサイト</a></li>
+  <li><a href="#%E5%8F%82%E8%80%83%E3%81%AB%E3%81%97%E3%81%9F%E6%96%87%E7%8C%AE%E3%83%BB%E3%82%B3%E3%83%BC%E3%83%89">参考にした文献・コード</a></li>
+  <li><a href="#webrtc-%E3%82%92%E5%A7%8B%E3%82%81%E3%82%8B%E3%81%9F%E3%82%81%E3%81%AB%E7%90%86%E8%A7%A3%E3%81%99%E3%82%8B%E3%81%93%E3%81%A8">WebRTC を始めるために理解すること</a>
+    <ul>
+      <li><a href="#webrtc-%E3%81%AB%E3%82%88%E3%82%8B%E5%8F%8C%E6%96%B9%E5%90%91%E9%80%9A%E4%BF%A1%E3%81%AE%E4%BB%95%E7%B5%84%E3%81%BF">WebRTC による双方向通信の仕組み</a></li>
+      <li><a href="#websocket-%E3%82%92%E5%88%A9%E7%94%A8%E3%81%97%E3%81%9F%E3%82%B7%E3%82%B0%E3%83%8A%E3%83%AA%E3%83%B3%E3%82%B0%E5%87%A6%E7%90%86">WebSocket を利用したシグナリング処理</a></li>
+      <li><a href="#rtcpeerconnection">RTCPeerConnection</a></li>
+    </ul>
+  </li>
+  <li><a href="#%E3%82%B7%E3%82%B0%E3%83%8A%E3%83%AA%E3%83%B3%E3%82%B0%E3%82%B5%E3%83%BC%E3%83%90%E3%81%AE%E5%AE%9F%E8%A3%85">シグナリングサーバの実装</a></li>
+  <li><a href="#%E3%82%AF%E3%83%A9%E3%82%A4%E3%82%A2%E3%83%B3%E3%83%88%E3%81%AE%E5%AE%9F%E8%A3%85">クライアントの実装</a></li>
+  <li><a href="#%E3%81%A4%E3%81%BE%E3%81%A5%E3%81%84%E3%81%9F%E3%81%A8%E3%81%93%E3%82%8D">つまづいたところ</a>
+    <ul>
+      <li><a href="#rtcpeerconnection-%E3%81%AE%E4%BB%95%E6%A7%98">RTCPeerConnection の仕様</a></li>
+      <li><a href="#getusermedia%E3%83%BBvideo-%E8%A6%81%E7%B4%A0%E3%81%AE%E6%89%B1%E3%81%84"><code>getUserMedia()</code>・<code>video</code> 要素の扱い</a></li>
+      <li><a href="#addstream-%E3%81%A7%E3%81%AF%E3%81%AA%E3%81%8F-addtrack"><code>addStream()</code> ではなく <code>addTrack()</code></a></li>
+    </ul>
+  </li>
+  <li><a href="#%E6%97%A2%E7%9F%A5%E3%81%AE%E4%B8%8D%E5%85%B7%E5%90%88">既知の不具合</a></li>
+  <li><a href="#%E4%BB%A5%E4%B8%8A">以上</a></li>
+</ul>
+<h2 id="成果物とデモサイト"><a class="header-link" href="#成果物とデモサイト"><span class="header-link-mark"></span></a>成果物とデモサイト</h2>
+<p>作成したコード全量は以下の GitHub リポジトリに格納した。</p>
+<ul>
+  <li><a href="https://github.com/Neos21/webrtc-video-chat">Neos21/webrtc-video-chat</a></li>
+</ul>
+<p>動作するデモは以下にデプロイした。</p>
+<ul>
+  <li><a href="https://neos21-webrtc-video-chat.glitch.me/">WebRTC Video Chat</a></li>
+</ul>
+<p>タブやブラウザ、端末を分けて2つからこのサイトにアクセスし、それぞれで画面上部の「Start」ボタンを押すと、ビデオ映像が双方向に通信されて、1対1のビデオチャットとして動作する。</p>
+<p>動作確認したのは PC の Chrome 系ブラウザと Firefox と、iOS Safari。iOS Safari は既知の不具合があったりする。うまく接続できない場合は一度「Stop」ボタンを押してもう一度「Start」ボタンで接続したりしてみて欲しい。</p>
+<h2 id="参考にした文献・コード"><a class="header-link" href="#参考にした文献・コード"><span class="header-link-mark"></span></a>参考にした文献・コード</h2>
+<p>今回実装する上で参考にした文献やコードを先に紹介する。コレから書く内容は、これらを眺めながら何となくコードを書いた結果覚えたことである。</p>
+<ul>
+  <li><a href="https://github.com/ticktakclock/WebRTCDemo">GitHub - ticktakclock/WebRTCDemo: WebRTCを使った複数人ビデオチャットデモとWebSocketを使ったリアルタイム制御デモ</a>
+    <ul>
+      <li><a href="https://ticktakclock.hatenablog.com/entry/2019/09/11/144122">WebRTCとWebSocketで画面共有(ビデオチャット)アプリを作る - ticktakclockの日記</a></li>
+      <li>かなり最近の日本語文献。モダンな作りでしっかりしていて、参考になるだろう</li>
+    </ul>
+  </li>
+  <li><a href="https://gist.github.com/dakeshi19/f170733d25b4299009d00c87359858f7">WebRTC · GitHub</a>
+    <ul>
+      <li><a href="https://itdepends.hateblo.jp/entry/2020/05/04/120500">WebRTCをかじってみた2020春 - はてだBlog（仮称）</a></li>
+      <li>コチラもかなり分かりやすく、モダン</li>
+    </ul>
+  </li>
+  <li><a href="https://gist.github.com/voluntas/67e5a26915751226fdcf">WebRTC コトハジメ · GitHub</a>
+    <ul>
+      <li>技術周りの解説記事、とても分かりやすい</li>
+    </ul>
+  </li>
+  <li><a href="https://qiita.com/massie_g/items/f5baf316652bbc6fcef1">WebRTCの簡易シグナリング - Qiita</a>
+    <ul>
+      <li>WebRTC のシグナリングの処理フローがとても参考になった</li>
+    </ul>
+  </li>
+  <li><a href="https://github.com/joshydotpoo/nodejs-videochat">GitHub - joshydotpoo/nodejs-videochat: Live stream video chat app using nodejs</a>
+    <ul>
+      <li>少々古く、そのままでは動作しないようだったが、作りがシンプルだったのでかなり参考にした</li>
+    </ul>
+  </li>
+  <li><a href="https://html5experts.jp/mganeko/5349/">WebRTC初心者でも簡単にできる！Node.jsで仲介（シグナリング）を作ってみよう | HTML5Experts.jp</a>
+    <ul>
+      <li>コチラもコードが古めだが、かなり参考にした</li>
+    </ul>
+  </li>
+  <li><a href="https://tsh.io/blog/how-to-write-video-chat-app-using-webrtc-and-nodejs/">How to write a video chat app using WebRTC and Node.js | TSH.io</a></li>
+  <li><a href="https://medium.com/@shadidhaque/building-a-video-chat-application-with-socket-io-and-typescript-9fe9f4567594">How to Build a Video Chat Application with Node.js, Socket.io and TypeScript</a>
+    <ul>
+      <li>英語文献だが順を追って実装していて良い</li>
+    </ul>
+  </li>
+  <li><a href="https://qiita.com/lighthouse/items/34bb8ccb6149bbfae427">WebRTCでビデオチャットアプリを作ってみた！ - Qiita</a></li>
+  <li><a href="https://qiita.com/riku-shiru/items/ffba3448f3aff152b6c1">Node.js + Express + Socket.ioで簡易チャットを作ってみる - Qiita</a>
+    <ul>
+      <li>WebRTC は登場せず、Socket.io でテキストチャットを作成する解説</li>
+    </ul>
+  </li>
+  <li><a href="https://qiita.com/massie_g/items/1316eb8c6e0d171307f5">最新のWebRTCのtrack系処理を、手動＋データチャネルシグナリングで観察してみる - Qiita</a></li>
+  <li><a href="https://lealog.hateblo.jp/entry/2019/12/05/095721">WebRTCのPerfect negotiationについて - console.lealog();</a>
+    <ul>
+      <li>Rollback について</li>
+    </ul>
+  </li>
+</ul>
+<h2 id="webrtc-を始めるために理解すること"><a class="header-link" href="#webrtc-を始めるために理解すること"><span class="header-link-mark"></span></a>WebRTC を始めるために理解すること</h2>
+<p><strong>WebRTC (Web Real-Time Communication)</strong> によるビデオチャットアプリを作りたいワケだが、予め勉強しておかないといけないことがいくつかあるようだ。ココではキーワードと簡単な理解を書いていこうと思う。</p>
+<h3 id="webrtc-による双方向通信の仕組み"><a class="header-link" href="#webrtc-による双方向通信の仕組み"><span class="header-link-mark"></span></a>WebRTC による双方向通信の仕組み</h3>
+<p>WebRTC は、<em>ブラウザ内で P2P 通信を実現し、ある端末と双方向にやり取りするモノ</em>である。Peer-To-Peer ということは、お互いの端末を直で特定しないと、通信が始められないワケだ。</p>
+<p>もしもグローバル IP を持っているマシン同士なら、双方が相手のグローバル IP を知っていれば直接通信できそうな気もするが、それにしても、通信相手のグローバル IP をどうやって知るか、という問題は残る。</p>
+<p>そこで、P2P 通信を始める前に、お互いの情報を交換するための<strong>「シグナリング」</strong>という処理が必要になる。<em>「シグナリングサーバ」</em>と呼ばれる役割を持ったサーバを作ってやり、コレを経由することでお互いの情報をやり取りするのだ。その際にやり取りする情報は以下のようなモノがある。</p>
+<ul>
+  <li><strong>Session Description Protocol (SDP)</strong>
+    <ul>
+      <li>自分の IP アドレスやポート番号、セッションに含むメディアの種類など</li>
+      <li>大まかにいって「どこのどいつが、どんなものを送ろうとしているか」</li>
+    </ul>
+  </li>
+  <li><em>Interactive Connectivity Establishment (ICE)</em>
+    <ul>
+      <li>通信経路の情報</li>
+      <li><strong>STUN サーバ (Session Traversal Utilities for NAT・自 IP を教えてくれるサーバ)</strong> による NAT 越え通信のためのポートマッピング (前述のグローバル IP の交換に近いイメージ)</li>
+      <li><em>TURN サーバ (Traversal Using Relay around NAT・P2P 通信の間をリレーするサーバ)</em> を利用した通信経路</li>
+    </ul>
+  </li>
+</ul>
+<p>SDP や ICE をやり取りすることで、相手と直接通信するための経路を確立し、P2P 接続を開始できるようになる。</p>
+<ul>
+  <li>参考：<a href="https://qiita.com/okyk/items/a405f827e23cb9ef3bde">【初心者向け】STUN/TURNサーバをざっくり解説してみた - Qiita</a></li>
+  <li>参考：<a href="https://html5experts.jp/mganeko/5181/">WebRTCに触ってみたいエンジニア必見！手動でWebRTC通信をつなげてみよう | HTML5Experts.jp</a></li>
+  <li>参考：<a href="https://jp.twilio.com/docs/stun-turn/faq">Frequently Asked Questions - Twilio</a></li>
+</ul>
+<h3 id="websocket-を利用したシグナリング処理"><a class="header-link" href="#websocket-を利用したシグナリング処理"><span class="header-link-mark"></span></a>WebSocket を利用したシグナリング処理</h3>
+<p>ということで、WebRTC によるチャットアプリを作るには、画面以外に、相手との通信を確立するまでの仲介を行う「シグナリングサーバ」が必要になりそうだ。</p>
+<p>シグナリングの処理自体は色んな技術で実現できるのだが、広く使われているのは <strong>WebSocket</strong> という双方向通信を実現するための仕組み。</p>
+<p>そしてコレを簡単に実装できるようにしてくれる npm パッケージとして、<em>Socket.io</em> というモノが存在する。Socket.io は古くから存在するためか、解説記事の「鮮度」がまちまち。メソッド名や API も色々変化があり、正しく参考にするのが大変な印象だった。</p>
+<ul>
+  <li>参考：<a href="https://www.atmarkit.co.jp/ait/articles/1603/14/news015.html">いまさら聞けないWebSocketとSocket.IOの基礎知識＆インストール (1/2)：Socket.IOで始めるWebSocket超入門（1） - ＠IT</a></li>
+  <li>参考：<a href="https://qiita.com/masarufuruya/items/2bd5dfe03096057af63f">Socket.ioとは何か?リアルタイムWebアプリケーションを実現する技術をまとめてみた - Qiita</a></li>
+  <li>参考：<a href="https://www.sejuku.net/blog/82316">【Node.js入門】誰でも分かるSocket.ioの使い方とチャットアプリの作り方まとめ！ | 侍エンジニア塾ブログ（Samurai Blog） - プログラミング入門者向けサイト</a></li>
+</ul>
+<h3 id="rtcpeerconnection"><a class="header-link" href="#rtcpeerconnection"><span class="header-link-mark"></span></a>RTCPeerConnection</h3>
+<p>WebRTC による P2P 通信を行うための Web API として、<strong>RTCPeerConnection</strong> というモノが各ブラウザに実装されている。</p>
+<ul>
+  <li>参考：<a href="https://developer.mozilla.org/ja/docs/Web/API/RTCPeerConnection">RTCPeerConnection - Web API | MDN</a></li>
+</ul>
+<p>P2P 通信を確立するまでの流れは次のようになる。</p>
+<ol>
+  <li>クライアント 1
+    <ol>
+      <li>Web ページを開いた時に、WebSocket (Socket.io) を利用してシグナリングサーバとの接続を確立しておく</li>
+      <li><code>navigator.mediaDevices.getUserMedia()</code> を使ってウェブカメラを起動、ストリームを取得する</li>
+      <li><code>RTCPeerConnection</code> インスタンスを生成し、取得したストリームを持たせる (<code>addTrack()</code>)</li>
+      <li><strong>Offer SDP</strong> というモノを作る (<code>createOffer()</code>)</li>
+      <li>Offer SDP を自分のピア (= <code>RTCPeerConnection</code>) に登録して覚えておく (<em><code>setLocalDescription()</code></em>)</li>
+      <li>Offer SDP を WebSocket (Socket.io) でシグナリングサーバに送信する</li>
+    </ol>
+  </li>
+  <li>シグナリングサーバ
+    <ol>
+      <li>クライアント 1 から受け取った Offer SDP を、他に接続されているクライアントにリレー (中継) 送信する</li>
+    </ol>
+  </li>
+  <li>クライアント 2
+    <ol>
+      <li>Web ページを開いた時に、WebSocket (Socket.io) を利用してシグナリングサーバとの接続を確立しておく</li>
+      <li><code>navigator.mediaDevices.getUserMedia()</code> を使ってウェブカメラを起動、ストリームを取得する</li>
+      <li><code>RTCPeerConnection</code> インスタンスを生成し、取得したストリームを持たせる (<code>addTrack()</code>)</li>
+      <li>WebSocket (Socket.io) を利用してシグナリングサーバが中継してきた Offer SDP を受け取る</li>
+      <li>受け取った Offer SDP をリモートの情報として登録して覚えておく (<strong><code>setRemoteDescription()</code></strong>)</li>
+      <li><strong>Answer SDP</strong> というモノを作る (<code>createAnswer()</code>)</li>
+      <li>Answer SDP を自分のピアに登録して覚えておく (<em><code>setLocalDescription()</code></em>)</li>
+      <li>Answer SDP を WebSocket (Socket.io) でシグナリングサーバに送信する</li>
+    </ol>
+  </li>
+  <li>シグナリングサーバ
+    <ol>
+      <li>クライアント 2 から受け取った Answer SDP を、他に接続されているクライアントにリレー (中継) 送信する</li>
+    </ol>
+  </li>
+  <li>クライアント 1
+    <ol>
+      <li>WebSocket (Socket.io) を利用してシグナリングサーバが中継してきた Answer SDP を受け取る</li>
+      <li>受け取った Answer SDP をリモートの情報として登録して覚えておく (<strong><code>setRemoteDescription()</code></strong>)</li>
+    </ol>
+  </li>
+</ol>
+<p>コレで P2P 接続が確立される。</p>
+<p>この裏で <code>onicecandidate</code> というイベントが絶えず発火している。ICE Candidate とは ICE (通信経路) の候補情報が追加された時に発火するそうで、タイミングとしては <code>createOffer()</code> 後に発火するイベントとなる。この Candidate 情報は WebSocket を経由して投げあっておく。</p>
+<p>P2P 接続が確立された後、相手側に <code>addTrack()</code> された映像や音声の情報があると、<code>ontrack</code> イベントが発火する。このイベントで、受け取った相手のストリームを <code>video</code> 要素なんかに流し込んでやれば良いというワケ。</p>
+<p><code>RTCPeerConnection</code> によるやり取りと、<code>getUserMedia()</code> による映像の取得とは、それぞれ切り離して処理できるので、落ち着いて処理の順番を見極め、ハンドリングしてやろう。</p>
+<h2 id="シグナリングサーバの実装"><a class="header-link" href="#シグナリングサーバの実装"><span class="header-link-mark"></span></a>シグナリングサーバの実装</h2>
+<p>シグナリングサーバ (<code>index.js</code>) の実装は、Socket.io の公式サンプルに沿って行った。</p>
+<p>Express サーバを <code>http</code> モジュールでラップし、さらにその <code>http</code> サーバを Socket.io でラップしてやると、Socket.io の準備ができる。</p>
+<p>Socket.io の処理としてはクライアントから受け取った情報を中継してブロードキャスト (よそに送信) してやるだけなので、コードは30行ほどで済んでしまった。</p>
+<h2 id="クライアントの実装"><a class="header-link" href="#クライアントの実装"><span class="header-link-mark"></span></a>クライアントの実装</h2>
+<p>Socket.io でラップした Express サーバは、<code>/socket.io/socket.io.js</code> というパスで JavaScript ファイルを提供するようになる。コレをクライアントサイドの HTML で読み込むと、グローバル変数 <code>io</code> が使えるようになり、Socket.io サーバとのやり取りが実装できるようになる。</p>
+<p>クライアントサイド (<code>index.html</code>) では、このクライアント用 <code>socket.io.js</code> を読み込み、<code>getUserMedia()</code> を叩いたり、<code>RTCPeerConnection</code> を作ったり、<code>io</code> が受け取ったメッセージを基に処理したり、というのを愚直に実装している。</p>
+<p>キモはこのクライアント側の実装なので、頑張った。</p>
+<h2 id="つまづいたところ"><a class="header-link" href="#つまづいたところ"><span class="header-link-mark"></span></a>つまづいたところ</h2>
+<h3 id="rtcpeerconnection-の仕様"><a class="header-link" href="#rtcpeerconnection-の仕様"><span class="header-link-mark"></span></a>RTCPeerConnection の仕様</h3>
+<p>RTCPeerConnection も、Socket.io のようにそれなりに歴史が長く、色々と仕様変更があったり、ブラウザごとの実装差異が大きい時期が長かった。</p>
+<p>そのため、記事によっては RTCPeerConnection の各メソッドをコールバック形式で実装していたり、ブラウザごとに異なる API をハンドリングしていたりと、つらみが高かった。</p>
+<p>2020年現在は、<code>RTCPeerConnection</code> で検索して出てくる MDN のリファレンスに従うのが一番正しく、Chrome と Firefox はこのとおりに動作する。</p>
+<p><code>RTCPeerConnection</code> は各メソッドを Promise 形式で返すので、<code>async・await</code> で処理してやると良いだろう。</p>
+<h3 id="getusermedia・video-要素の扱い"><a class="header-link" href="#getusermedia・video-要素の扱い"><span class="header-link-mark"></span></a><code>getUserMedia()</code>・<code>video</code> 要素の扱い</h3>
+<p><code>navigator.getUserMedia()</code> は古い。<code>navigator.mediaDevices.getUserMedia()</code> を使う。コレも Promise。</p>
+<p>localhost で動かしている端末に別の端末からアクセスした際に、<code>getUserMedia()</code> が動作しない。Chrome の起動オプションに次のように書き込む必要がある。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># Windows マシンから、LAN 内の Mac 端末が公開している開発サーバにアクセスする例</span>
+$ chrome.exe --unsafely-treat-insecure-origin-as-secure<span class="token operator">=</span><span class="token string">"http://neos-macbook.local:3000"</span>
+</code></pre>
+<p><code>video</code> 要素もハマりどころが多い。<code>URL.createObjectURL()</code> はもう古くて使う必要なし。<code>srcObject</code> に <code>stream</code> をブチ込む。</p>
+<p>iOS Safari はセキュリティが厳しくて自動再生とかが大変。<code>video</code> 要素に <code>playsinline muted autoplay</code> を振っておくと良いかな。</p>
+<p>ユーザの明示的なクリックイベント以外で <code>video.play()</code> などをやろうとすると怒られることが多い。特にリモートの映像を表示する時がソレに当たった。Chrome ブラウザの場合は <code>chrome://flags#enable-webrtc-remote-event-log</code> フラグなどを片っ端から有効化すると、自動再生ができるようになる。</p>
+<h3 id="addstream-ではなく-addtrack"><a class="header-link" href="#addstream-ではなく-addtrack"><span class="header-link-mark"></span></a><code>addStream()</code> ではなく <code>addTrack()</code></h3>
+<p><code>RTCPeerConnection</code> に映像ストリームを渡す方法として、<code>addStream()</code> が使える。現在も Chrome などでは動作するが、iOS Safari では動作しなかった。</p>
+<p>調べてみると、コレもまた古くなっていて、最近は <code>addTrack()</code> を使う実装方法になっているようだ。</p>
+<p><code>onaddstream</code>・<code>onremovestream</code> もそれに対応して、<code>ontrack</code> および <code>removetrack</code> に変わっている。メンドクサ。</p>
+<h2 id="既知の不具合"><a class="header-link" href="#既知の不具合"><span class="header-link-mark"></span></a>既知の不具合</h2>
+<p>Chrome ではひととおりはキレイに動くようになってきたが、処理できていないところがあったりする。また、iOS Safari でだけ上手くいかないところがあるので、なんとかしたい。</p>
+<ol>
+  <li>相手との接続が切れた後に、他の人と自動再接続したいができていない
+    <ul>
+      <li>1対1の通信が確立できたあと、相手が切断した時に、コチラは取り残されてしまう</li>
+      <li><code>removetrack</code> あたりに処理を入れて、別の Offer 中の人を拾い上げたりできるようにしたい</li>
+    </ul>
+  </li>
+  <li>iOS Safari が後から接続してきた人の Offer を正しく処理できない
+    <ul>
+      <li>iOS Safari において、<code>setLocalDescription(localStream)</code> した後に Offer を受け取り <code>setRemoteDescription(offer)</code> を実行しようとすると、<code>InvalidStateError: description type incompatible with current signaling state</code> なるエラーが発生する</li>
+      <li>一度も <code>setLocalDescription()</code> をせずに <code>setReoteDescription(offer)</code> → <code>setLocalDescription(answer)</code> と叩けばエラーにならないが、Chrome ブラウザでもキレイに動くようなハンドリングが出来ていない</li>
+      <li>なんで Chrome ではキレイに動くんだろう？iOS Safari は何が違うんだろう？</li>
+    </ul>
+  </li>
+</ol>
+<h2 id="以上"><a class="header-link" href="#以上"><span class="header-link-mark"></span></a>以上</h2>
+<p>歴史はそれなりに長いが、まだまだ発展途上といったところで、自分で実装してみると世のビデオチャットアプリはなんてよく作られているんだろうと感心する。</p>
+<p>まだまだ分からないところが多いので、もう少しキレイに動くアプリになるよう学習していきたい。</p>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2020-07-18</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2020-07-18</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

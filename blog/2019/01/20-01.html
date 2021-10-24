@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>Mac の Excel VBA は色々と挙動が違うので、VBA で OS 判別する - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2019/01/20-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2019/index.html">2019年</a></li>
+            <li><a href="/blog/2019/01/index.html">01月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2019-01-20</time></div>
+        <h1 id="page-title">Mac の Excel VBA は色々と挙動が違うので、VBA で OS 判別する</h1>
+
+<p>最近 Mac で Excel VBA を書く機会があるのだが、Windows の Excel との挙動の違いが多くてつらい。</p>
+<p>Excel for Mac のバージョンごとに改善していっているようだが、Excel for Mac 2016 (v15.41) 時点だとこんな感じ。</p>
+<ul>
+  <li><code>Dir()</code> 関数でファイル一覧をサクッと取得できない
+    <ul>
+      <li><code>Dir("/path/to/directory", MacID("XLSX"))</code> とか <code>Dir("/path/to/directory", vbDirectory)</code> みたいにしないと何も返ってこない。また、<code>Dir()</code> を複数回呼んでのループ (同ディレクトリの複数ファイル取得) もできない</li>
+    </ul>
+  </li>
+  <li>パスの区切り文字がバックスラッシュ <code>\</code> ではなくスラッシュ <code>/</code>
+    <ul>
+      <li>Excel for Mac 2011 まではコロン <code>:</code> 区切りがメインだったみたい。ブックを開く時なんかはスラッシュでのパスを渡しても問題なかった</li>
+      <li>参考：<a href="http://darumaexcel.uijin.com/info/pause.html">Mac版とWindows版とでファイルパスのフォルダの区切り記号が違う - だるまのエクセルVBA</a></li>
+      <li>参考：<a href="https://www.rondebruin.nl/mac/mac017.htm">Select Folder with VBA/Macscript in Mac Office</a></li>
+    </ul>
+  </li>
+  <li>VBEditor が重い・日本語入力できない
+    <ul>
+      <li>日本語はコードやコメント中に含めない方が良いらしい。一応コピペすれば書けるが…</li>
+      <li>うまくスクロールしなかったり、とにかく苛立つ挙動</li>
+    </ul>
+  </li>
+</ul>
+<p>特に、最初に書いた <strong><code>Dir()</code> 関数がまともに動かない</strong>というのは、Excel VBA でバッチ処理を作る際に致命的で、既存のマクロの修正を余儀なくされた。</p>
+<p><code>Dir()</code> 関数の代わりとなる、Mac 専用の VBA コードはあるので別途紹介するが、問題は「Windows でも Mac でも、処理の仕方は違えど、結果は同じにしたい」という時に、どうやって OS を判定して処理を分岐させるか、という点である。</p>
+<p>調べてみると、<strong><code>Application.OperatingSystem</code></strong> が OS 名を返すので、コレを使うのが楽そうだった。</p>
+<pre class="language-vb"><code class="language-vb"><span class="token keyword">If</span> Application<span class="token punctuation">.</span>OperatingSystem <span class="token keyword">Like</span> <span class="token string">"*Mac*"</span> <span class="token keyword">Then</span>
+  <span class="token comment">' Mac 向けの処理</span>
+<span class="token keyword">Else</span>
+  <span class="token comment">' Windows 向けの処理</span>
+<span class="token keyword">End</span> <span class="token keyword">If</span>
+</code></pre>
+<ul>
+  <li>参考：<a href="http://hensa40.cutegirl.jp/archives/465">エクセルやOSのバージョンを取得する(Application.Version) – 行け！偏差値40プログラマー</a></li>
+</ul>
+<p>例えば、環境に応じてパスの区切り文字が欲しい場合は、こんなコードが作れる。</p>
+<pre class="language-vb"><code class="language-vb"><span class="token keyword">Function</span> detectPathSplitter<span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token keyword">As</span> <span class="token keyword">String</span>
+  <span class="token keyword">If</span> Application<span class="token punctuation">.</span>OperatingSystem <span class="token keyword">Like</span> <span class="token string">"*Mac*"</span> <span class="token keyword">Then</span>
+    detectPathSplitter <span class="token operator">=</span> <span class="token string">"/"</span>
+  <span class="token keyword">Else</span>
+    detectPathSplitter <span class="token operator">=</span> Chr<span class="token punctuation">(</span><span class="token number">92</span><span class="token punctuation">)</span>  <span class="token comment">' Backslash</span>
+  <span class="token keyword">End</span> <span class="token keyword">If</span>
+<span class="token keyword">End</span> <span class="token keyword">Function</span>
+</code></pre>
+<p>バックスラッシュ <code>\</code> をそのまま書かず、<code>Chr(92)</code> としているのは、<em>Mac の VBEditor でマクロを保存すると、マクロ中に書かれたバックスラッシュが消えてしまうため</em>。コメント内に書いてあるバックスラッシュまで消えてしまうので難儀だった。</p>
+<p>それだけネックだったが、ひとまずは以前紹介した、Bash スクリプトの中で OS 判定するようなノリで判定できた。</p>
+<ul>
+  <li><a href="/blog/2017/12/15-02.html">Bash スクリプトの中で OS 判定する</a></li>
+</ul>
+<p>そして、MacOS 版 Excel で <code>Dir()</code> 相当のことを行うコードは次の記事で。</p>
+<ul>
+  <li><a href="/blog/2019/01/21-02.html">MacOS 版 Excel VBA で Dir() 関数の代わり・ファイル一覧を取得する</a></li>
+  <li>参考：<a href="https://techa1008.com/rocket-note/2017/12/05/branch-mac-and-windows-with-vba/">https://techa1008.com/rocket-note/2017/12/05/branch-mac-and-windows-with-vba/</a> … コレは ThisWorkbook.Path から区切り文字を取得して判別している。</li>
+  <li>参考：<a href="https://detail.chiebukuro.yahoo.co.jp/qa/question_detail/q1399944313">Excel VBAでOSを判断することは出来ますか？Windows or Macなど。 -... - Yahoo!知恵袋</a></li>
+</ul>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2019-01-20</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2019-01-20</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

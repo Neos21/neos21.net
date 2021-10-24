@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>Bash シェルスクリプトを安全に実行するための便利な set コマンド - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2018/09/10-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2018/index.html">2018年</a></li>
+            <li><a href="/blog/2018/09/index.html">09月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2018-09-10</time></div>
+        <h1 id="page-title">Bash シェルスクリプトを安全に実行するための便利な set コマンド</h1>
+
+<p>Jenkins で実行するシェルスクリプトを書いていて、</p>
+<ol>
+  <li><code>sh ./script.sh</code> で実行すると実行されるコマンドが Jenkins のコンソールに出力されないから分かりづらいな</li>
+  <li>コーディングミスとかでエラーになった時は中断してほしいな</li>
+  <li>コーディングミスで未定義の変数を使ってたりしたら教えてほしいな</li>
+  <li>というか実行前に Lint チェックみたいなことできなのかな</li>
+</ol>
+<p>と思ったので調べてみたところ、<strong><code>set</code> コマンドの各種オプション</strong>がそれぞれの要望を叶えてくれることが分かった。</p>
+<p>そこで今回は、<code>set</code> コマンドの便利オプションと使い方を紹介する。</p>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#set--x--%E3%82%B7%E3%82%A7%E3%83%AB%E3%82%B9%E3%82%AF%E3%83%AA%E3%83%97%E3%83%88%E5%86%85%E3%81%AE%E3%82%B3%E3%83%9E%E3%83%B3%E3%83%89%E3%82%92%E3%82%B3%E3%83%B3%E3%82%BD%E3%83%BC%E3%83%AB%E5%87%BA%E5%8A%9B%E3%81%99%E3%82%8B"><code>set -x</code> : シェルスクリプト内のコマンドをコンソール出力する</a></li>
+  <li><a href="#set--v--%E5%AE%9F%E8%A1%8C%E3%81%99%E3%82%8B%E3%82%B3%E3%83%9E%E3%83%B3%E3%83%89%E3%81%9D%E3%81%AE%E3%82%82%E3%81%AE%E3%82%92%E5%87%BA%E5%8A%9B%E3%81%99%E3%82%8B"><code>set -v</code> : 実行するコマンドそのものを出力する</a></li>
+  <li><a href="#set--e--%E3%82%A8%E3%83%A9%E3%83%BC%E6%99%82%E3%81%AB%E3%82%B7%E3%82%A7%E3%83%AB%E3%82%B9%E3%82%AF%E3%83%AA%E3%83%97%E3%83%88%E3%82%92%E4%B8%AD%E6%96%AD%E3%81%99%E3%82%8B"><code>set -e</code> : エラー時にシェルスクリプトを中断する</a></li>
+  <li><a href="#set--u--%E6%9C%AA%E5%AE%9A%E7%BE%A9%E3%81%AE%E5%A4%89%E6%95%B0%E3%81%8C%E4%BD%BF%E7%94%A8%E3%81%95%E3%82%8C%E3%81%9F%E6%99%82%E3%81%AB%E3%82%B7%E3%82%A7%E3%83%AB%E3%82%B9%E3%82%AF%E3%83%AA%E3%83%97%E3%83%88%E3%82%92%E4%B8%AD%E6%96%AD%E3%81%99%E3%82%8B"><code>set -u</code> : 未定義の変数が使用された時にシェルスクリプトを中断する</a></li>
+  <li><a href="#set--n--%E3%82%B3%E3%83%9E%E3%83%B3%E3%83%89%E3%82%92%E5%AE%9F%E8%A1%8C%E3%81%9B%E3%81%9A%E6%A7%8B%E6%96%87%E3%83%81%E3%82%A7%E3%83%83%E3%82%AF%E3%81%AE%E3%81%BF%E3%82%92%E8%A1%8C%E3%81%86"><code>set -n</code> : コマンドを実行せず構文チェックのみを行う</a></li>
+  <li><a href="#set--o--set-%E3%82%B3%E3%83%9E%E3%83%B3%E3%83%89%E3%81%A7%E3%81%AE%E8%A8%AD%E5%AE%9A%E7%8A%B6%E6%B3%81%E3%82%92%E7%9F%A5%E3%82%8B"><code>set -o</code> : <code>set</code> コマンドでの設定状況を知る</a></li>
+  <li><a href="#set---%E8%A8%AD%E5%AE%9A%E3%81%97%E3%81%9F%E3%82%AA%E3%83%97%E3%82%B7%E3%83%A7%E3%83%B3%E3%82%92%E7%84%A1%E5%8A%B9%E3%81%AB%E6%88%BB%E3%81%99"><code>set +</code> : 設定したオプションを無効に戻す</a></li>
+  <li><a href="#shebang-%E3%81%A7%E3%82%BB%E3%83%83%E3%83%88%E3%81%99%E3%82%8B%E6%9B%B8%E3%81%8D%E6%96%B9%E3%81%8C%E3%81%86%E3%81%BE%E3%81%8F%E3%81%84%E3%81%8B%E3%81%AA%E3%81%8B%E3%81%A3%E3%81%9F">Shebang でセットする書き方がうまくいかなかった</a></li>
+  <li><a href="#%E3%81%BE%E3%81%A8%E3%82%81">まとめ</a></li>
+</ul>
+<h2 id="set--x--シェルスクリプト内のコマンドをコンソール出力する"><a class="header-link" href="#set--x--シェルスクリプト内のコマンドをコンソール出力する"><span class="header-link-mark"></span></a><code>set -x</code> : シェルスクリプト内のコマンドをコンソール出力する</h2>
+<p>まず <em><code>set -x</code></em> から。コレをシェルスクリプトの先頭に書いておく。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token shebang important">#!/bin/bash</span>
+
+<span class="token builtin class-name">set</span> -x
+
+<span class="token builtin class-name">echo</span> ほげふが
+</code></pre>
+<p>この状態で <code>$ sh</code> コマンドを叩くと、以下のように出力される。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">sh</span> script.sh
++ <span class="token builtin class-name">echo</span> $<span class="token string">'?<span class="token entity" title="\201">\201</span>??<span class="token entity" title="\201">\201</span><span class="token entity" title="\222">\222</span>?<span class="token entity" title="\201">\201</span>??<span class="token entity" title="\201">\201</span><span class="token entity" title="\214">\214</span>'</span>
+ほげふが
+</code></pre>
+<p>日本語部分は数値参照になったりするが、だいたい何のコマンドを叩いたか分かるので助かる。</p>
+<h2 id="set--v--実行するコマンドそのものを出力する"><a class="header-link" href="#set--v--実行するコマンドそのものを出力する"><span class="header-link-mark"></span></a><code>set -v</code> : 実行するコマンドそのものを出力する</h2>
+<p><code>set -x</code> に似たオプションが、<em><code>set -v</code></em>。こちらのオプションは、変数などを展開せず出力してくれる。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token shebang important">#!/bin/bash</span>
+
+<span class="token builtin class-name">set</span> -v
+
+<span class="token assign-left variable">MY_VARIABLE</span><span class="token operator">=</span><span class="token string">'Hoge'</span>
+<span class="token builtin class-name">echo</span> <span class="token variable">$MY_VARIABLE</span>
+</code></pre>
+<p>こんなファイルがあったとして、次のように出力される。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">sh</span> script.sh
+
+<span class="token assign-left variable">MY_VARIABLE</span><span class="token operator">=</span><span class="token string">'Hoge'</span>
+<span class="token builtin class-name">echo</span> <span class="token variable">$MY_VARIABLE</span>
+Hoge
+</code></pre>
+<p><code>echo $MY_VARIABLE</code> 部分が分かりやすいだろう。変数展開せず、コマンドをそのまま出力している。</p>
+<p>シェルスクリプトの <code>set -v</code> 部分を <em><code>set -xv</code> もしくは <code>set -vx</code> (順不同)</em> とすることで、<code>set -x</code> オプションとの併用もできる。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">sh</span> script.sh
+
+<span class="token assign-left variable">MY_VARIABLE</span><span class="token operator">=</span><span class="token string">'Hoge'</span>
++ <span class="token assign-left variable">MY_VARIABLE</span><span class="token operator">=</span>Hoge
+<span class="token builtin class-name">echo</span> <span class="token variable">$MY_VARIABLE</span>
++ <span class="token builtin class-name">echo</span> Hoge
+Hoge
+</code></pre>
+<p><code>+</code> から始まる行が <code>set -x</code> によるモノ。<code>set -v</code> によるコマンド出力なのか、コマンド実行結果の標準出力なのかが一見分かりづらいものの、充分にデバッグできるだろう。</p>
+<h2 id="set--e--エラー時にシェルスクリプトを中断する"><a class="header-link" href="#set--e--エラー時にシェルスクリプトを中断する"><span class="header-link-mark"></span></a><code>set -e</code> : エラー時にシェルスクリプトを中断する</h2>
+<p>お次は <em><code>set -e</code></em>。まずはこのオプションを指定せず、以下のようなシェルスクリプトを用意してみる。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token shebang important">#!/bin/bash</span>
+
+<span class="token function">cat</span> none.txt
+<span class="token builtin class-name">echo</span> ほげふが
+</code></pre>
+<p>ココで、<code>cat</code> で出力しようとしている <code>none.txt</code> というファイルが存在しないとする。通常であれば、以下のような実行結果になる。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">sh</span> script.sh
+cat: none.txt: No such <span class="token function">file</span> or directory
+ほげふが
+</code></pre>
+<p><code>cat</code> コマンドが正常に動かず、その後に書かれた <code>echo</code> コマンドも実行される。</p>
+<p>ココに <code>set -e</code> コマンドを追加してみよう。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token shebang important">#!/bin/bash</span>
+
+<span class="token builtin class-name">set</span> -e
+
+<span class="token function">cat</span> none.txt
+<span class="token builtin class-name">echo</span> ほげふが
+</code></pre>
+<p>そしてシェルスクリプトを実行してみると、以下のようになる。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">sh</span> script.sh
+cat: none.txt: No such <span class="token function">file</span> or directory
+</code></pre>
+<p><code>cat</code> でエラーが出ると、後続の <code>echo</code> コマンドが実行されていないことが分かる。シェルスクリプトがエラーの時点で中断されているのだ。</p>
+<p>もし、エラーが出る場合が想定済みで、エラーを無視したい場合は、次のように <em><code>|| true</code></em> とすれば誤魔化せる。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token function">cat</span> none.txt <span class="token operator">||</span> <span class="token boolean">true</span>
+</code></pre>
+<p>また、<code>-e</code> オプションを一時的に無効化することもできる。コレについては後述。</p>
+<h2 id="set--u--未定義の変数が使用された時にシェルスクリプトを中断する"><a class="header-link" href="#set--u--未定義の変数が使用された時にシェルスクリプトを中断する"><span class="header-link-mark"></span></a><code>set -u</code> : 未定義の変数が使用された時にシェルスクリプトを中断する</h2>
+<p>今度は <em><code>set -u</code></em>。コチラは未定義の変数を使用した時にシェルスクリプトを中断してくれる。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token shebang important">#!/bin/bash</span>
+
+<span class="token builtin class-name">echo</span> ほげ
+<span class="token builtin class-name">echo</span> <span class="token variable">$NONE_VARIABLE</span>
+<span class="token builtin class-name">echo</span> ふが
+</code></pre>
+<p>例えばこんなコードがあり、<code>$NONE_VARIABLE</code> という変数が未定義だとする。このままだと、</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">sh</span> script.sh
+ほげ
+
+ふが
+</code></pre>
+<p>というように、未定義の <code>$NONE_VARIABLE</code> を空文字のように扱い、処理が継続してしまう。</p>
+<p>コレに対し、</p>
+<pre class="language-bash"><code class="language-bash"><span class="token shebang important">#!/bin/bash</span>
+
+<span class="token builtin class-name">set</span> -u
+
+<span class="token builtin class-name">echo</span> ほげ
+<span class="token builtin class-name">echo</span> <span class="token variable">$NONE_VARIABLE</span>
+<span class="token builtin class-name">echo</span> ふが
+</code></pre>
+<p>と <code>set -u</code> コマンドを設定すると、以下のようになる。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">sh</span> script.sh
+ほげ
+script.sh: line <span class="token number">6</span>: NONE_VARIABLE: unbound variable
+</code></pre>
+<p>最後の <code>echo ふが</code> は実行されておらず、処理がそこで中断されていることが分かる。</p>
+<h2 id="set--n--コマンドを実行せず構文チェックのみを行う"><a class="header-link" href="#set--n--コマンドを実行せず構文チェックのみを行う"><span class="header-link-mark"></span></a><code>set -n</code> : コマンドを実行せず構文チェックのみを行う</h2>
+<p>シェルスクリプトの挙動を変更するオプションとしては最後に紹介するモノ。<em><code>set -n</code></em> は、シェルスクリプト内のコマンドは実行せず、構文チェックのみ行ってくれる。</p>
+<p>例えば以下のような、<code>if</code> コマンドの書き方が間違っているスクリプトを用意する。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token shebang important">#!/bin/bash</span>
+
+<span class="token builtin class-name">set</span> -n
+
+<span class="token builtin class-name">echo</span> スタート
+if<span class="token punctuation">[</span>true<span class="token punctuation">]</span><span class="token punctuation">;</span> <span class="token keyword">then</span>
+  <span class="token builtin class-name">echo</span> HOGE
+<span class="token keyword">fi</span>
+<span class="token builtin class-name">echo</span> おわり
+</code></pre>
+<p>シェルスクリプトはコマンドの羅列であり、<code>if</code>・<code>[</code>・<code>]</code> はそれぞれ別のコマンドであるから、本来はスペースで区切らないといけないのだが、うっかりスペースを入れずに繋げて書いてしまっている。</p>
+<p>コレを実行してみると、</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">sh</span> script.sh
+script.sh: line <span class="token number">6</span>: syntax error near unexpected token <span class="token variable"><span class="token variable">`</span>then'
+script.sh: line <span class="token number">6</span>: <span class="token variable">`</span></span>if<span class="token punctuation">[</span>true<span class="token punctuation">]</span><span class="token punctuation">;</span> then'
+</code></pre>
+<p>と、このように <code>echo</code> などコマンドは一切実行されず、構文チェックのみ行われている。</p>
+<p>コーディング中はこのオプションを付与して構文誤りがないかチェックし、実装が完了したら <code>set -n</code> コマンドを除去して実際に動作するようにしておこう。</p>
+<h2 id="set--o--set-コマンドでの設定状況を知る"><a class="header-link" href="#set--o--set-コマンドでの設定状況を知る"><span class="header-link-mark"></span></a><code>set -o</code> : <code>set</code> コマンドでの設定状況を知る</h2>
+<p>ココからは <code>set</code> コマンドの活用編。ターミナルで <em><code>$ set -o</code></em> と叩くと、これら <code>set</code> コマンドのどのオプションが有効・無効になっているか確認できる。こんな感じだ。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token builtin class-name">set</span> -o
+allexport       off
+braceexpand     on
+emacs           on
+errexit         off
+errtrace        off
+functrace       off
+hashall         on
+histexpand      on
+<span class="token function">history</span>           on
+ignoreeof       off
+interactive-comments    on
+keyword         off
+monitor         on
+noclobber       off
+noexec          off
+noglob          off
+nolog           off
+notify          off
+nounset         off
+onecmd          off
+physical        off
+pipefail        off
+posix           off
+privileged      off
+verbose         off
+<span class="token function">vi</span>              off
+xtrace          off
+</code></pre>
+<h2 id="set---設定したオプションを無効に戻す"><a class="header-link" href="#set---設定したオプションを無効に戻す"><span class="header-link-mark"></span></a><code>set +</code> : 設定したオプションを無効に戻す</h2>
+<p>ココまで、<code>set -v</code>・<code>set -e</code> のように、ハイフン <code>-</code> でオプションを指定して、そのオプションを有効にしてきたが、これらのオプションを一時的に無効にしたい場合もあるだろう。</p>
+<p>その際は、<strong><code>set +v</code></strong> とか <strong><code>set +o</code></strong> のように、プラス <strong><code>+</code></strong> 記号でオプションを指定すると、そのオプションを無効化できる。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token shebang important">#!/bin/bash</span>
+
+<span class="token comment"># エラー時に中断するようにする</span>
+<span class="token builtin class-name">set</span> -e
+
+<span class="token builtin class-name">echo</span> ほげほげ
+
+<span class="token comment"># 以下のコマンドでエラーが起きても、ココだけは無視して継続させたい</span>
+<span class="token comment"># そんな時は set +e でオプションを解除する</span>
+<span class="token builtin class-name">set</span> +e
+
+<span class="token function">cat</span> none.txt
+
+<span class="token comment"># また元に戻す</span>
+<span class="token builtin class-name">set</span> -e
+
+<span class="token builtin class-name">echo</span> おわり
+</code></pre>
+<p>こんな感じ。</p>
+<p>当然だが、<code>set</code> コマンドはシェルスクリプト内でなくとも、ターミナル上でも使用できるので、先程の <code>set -o</code> オプションを使って設定状況を見比べてみよう。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># 設定確認</span>
+$ <span class="token builtin class-name">set</span> -o <span class="token operator">|</span> <span class="token function">grep</span> xtrace
+xtrace          off       <span class="token comment"># off の状態</span>
+
+<span class="token comment"># x オプションを設定する (set -o xtrace と書いても良い)</span>
+$ <span class="token builtin class-name">set</span> -x
+++ update_terminal_cwd
+++ <span class="token builtin class-name">local</span> <span class="token assign-left variable">url_path</span><span class="token operator">=</span>
+++ <span class="token builtin class-name">local</span> i ch hexch <span class="token assign-left variable">LC_CTYPE</span><span class="token operator">=</span>C <span class="token assign-left variable"><span class="token environment constant">LC_ALL</span></span><span class="token operator">=</span>
+<span class="token comment"># 省略……</span>
+
+<span class="token comment"># 設定確認</span>
+$ <span class="token builtin class-name">set</span> -o <span class="token operator">|</span> <span class="token function">grep</span> xtrace
++ <span class="token builtin class-name">set</span> -o
++ <span class="token function">grep</span> --color xtrace
+xtrace          on       <span class="token comment"># on になっている</span>
+++ update_terminal_cwd
+++ <span class="token builtin class-name">local</span> <span class="token assign-left variable">url_path</span><span class="token operator">=</span>
+++ <span class="token builtin class-name">local</span> i ch hexch <span class="token assign-left variable">LC_CTYPE</span><span class="token operator">=</span>C <span class="token assign-left variable"><span class="token environment constant">LC_ALL</span></span><span class="token operator">=</span>
+<span class="token comment"># 省略……</span>
+
+<span class="token comment"># x オプションを切る (set +o xtrace と書いても良い)</span>
+$ <span class="token builtin class-name">set</span> +x
++ <span class="token builtin class-name">set</span> +x
+
+$ <span class="token builtin class-name">set</span> -o <span class="token operator">|</span> <span class="token function">grep</span> xtrace
+xtrace          off       <span class="token comment"># off に戻っている</span>
+</code></pre>
+<p>このように、オプションの On・Off ができている。</p>
+<h2 id="shebang-でセットする書き方がうまくいかなかった"><a class="header-link" href="#shebang-でセットする書き方がうまくいかなかった"><span class="header-link-mark"></span></a>Shebang でセットする書き方がうまくいかなかった</h2>
+<p>この <code>set</code> コマンドと同等のオプションを、Shebang のところに書いても良いかのように読み取れる文献もあったのだが、自分が試した限りだと上手くいかなかった。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token shebang important">#!/bin/bash -xe</span>
+
+<span class="token comment"># ↑ こんな風に設定できるらしいが、有効にならず。</span>
+</code></pre>
+<p>仕方がないので、自分は</p>
+<pre class="language-bash"><code class="language-bash"><span class="token shebang important">#!/bin/bash</span>
+<span class="token builtin class-name">set</span> -xe
+</code></pre>
+<p>と、Shebang の直後に <code>set</code> コマンドを書く運用にする。</p>
+<ul>
+  <li>参考：<a href="https://sue445.hatenablog.com/entry/2014/05/23/143737">Jenkinsで使うシェルスクリプトは-xeつけた方がよかった - くりにっき</a></li>
+</ul>
+<h2 id="まとめ"><a class="header-link" href="#まとめ"><span class="header-link-mark"></span></a>まとめ</h2>
+<ul>
+  <li>実装中に構文チェックしたい (コマンドは実行されない)
+    <ul>
+      <li><code>set -n</code></li>
+    </ul>
+  </li>
+  <li>スクリプト実行時に表示されるコマンドを見たい
+    <ul>
+      <li><code>set -x</code> (行頭に <code>+</code> 記号が付き、変数展開される)</li>
+      <li><code>set -v</code> (変数展開されない)</li>
+    </ul>
+  </li>
+  <li>スクリプト実行時にエラーがあったらその時点で中断したい
+    <ul>
+      <li><code>set -e</code> (終了コードが <code>0</code> でないコマンドが出たら中断する)</li>
+      <li><code>set -u</code> (未定義の変数が出てきたら中断する)</li>
+    </ul>
+  </li>
+  <li>個人的によく使う組み合わせ
+    <ul>
+      <li><strong><code>set -xeu</code></strong></li>
+    </ul>
+  </li>
+</ul>
+<hr>
+<p>以上。<code>set</code> コマンドでシェルスクリプトがとても安全・便利に書けるようになった。</p>
+<ul>
+  <li>参考：<a href="https://orebibou.com/2015/12/bash%E3%81%AEset%E3%82%B3%E3%83%9E%E3%83%B3%E3%83%89%E3%81%A7%E8%A6%9A%E3%81%88%E3%81%A6%E3%81%8A%E3%81%8D%E3%81%9F%E3%81%84%E4%BD%BF%E3%81%84%E6%96%B99%E5%80%8B/">bashのsetコマンドで覚えておきたい使い方9個 | 俺的備忘録 〜なんかいろいろ〜</a></li>
+  <li>参考：<a href="https://qiita.com/youcune/items/fcfb4ad3d7c1edf9dc96">シェルスクリプトを書くときはset -euしておく</a></li>
+  <li>参考：<a href="https://togetter.com/li/1104655">シェルスクリプトの set -e は罠いっぱい - Togetter</a>
+    <ul>
+      <li><code>set -e</code> を使っているとハマるポイント。<code>set -e</code> オプションによって上手く動かない場合は参考にしたい。</li>
+    </ul>
+  </li>
+</ul>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2018-09-10</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2018-09-10</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

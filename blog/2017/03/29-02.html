@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>ImageIO.read() が異常終了したけど catch 句で例外が捕捉できなかった - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2017/03/29-02.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2017/index.html">2017年</a></li>
+            <li><a href="/blog/2017/03/index.html">03月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2017-03-29</time></div>
+        <h1 id="page-title">ImageIO.read() が異常終了したけど catch 句で例外が捕捉できなかった</h1>
+
+<p>Java プログラムで <code>ImageIO.read()</code> を使って、画像ファイルを BuffereImage オブジェクトとして読み込もうとする処理があった。</p>
+<pre class="language-java"><code class="language-java"><span class="token comment">// イメージ的にはこんな感じの処理部分</span>
+<span class="token class-name">BufferedImage</span> bfImg<span class="token punctuation">;</span>
+<span class="token keyword">try</span> <span class="token punctuation">{</span>
+  bfImg <span class="token operator">=</span> <span class="token class-name">ImageIO</span><span class="token punctuation">.</span><span class="token function">read</span><span class="token punctuation">(</span>file<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+<span class="token keyword">catch</span><span class="token punctuation">(</span><span class="token class-name">Exception</span> e<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token comment">// とりあえず何かしらの Exception なら catch するように書いてあった</span>
+  <span class="token keyword">return</span> <span class="token keyword">null</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>すると、一部の画像でプログラムが異常終了していたのだが、<code>try・catch</code> の <code>catch</code> 句で例外が捕捉できずに異常終了していた。</p>
+<p><code>try・catch</code> で例外がキャッチできないってなんだー？と思ったのだけど、結論としては <em>Java における「例外」をちゃんと理解していなかった</em>ことが分かった。</p>
+<h2 id="imageioread-でメモリリークが発生する"><a class="header-link" href="#imageioread-でメモリリークが発生する"><span class="header-link-mark"></span></a><code>ImageIO.read()</code> でメモリリークが発生する</h2>
+<p><code>ImageIO.read()</code> は引数の File オブジェクトを画像ファイルとして読み込み、BufferedImage オブジェクトに復号して返す。この時、元の画像ファイルは JPG や GIF であっても、<em>BufferedImage オブジェクトは内部的にはビットマップとして保持しているよう</em>なのだ。</p>
+<p>だから、<strong>元画像のファイルサイズは小さくとも、ピクセルサイズ (幅や高さ) が大きいと、メモリが枯渇する</strong>。これにより、処理がそこで終わってしまっていたようだ。</p>
+<h2 id="この時の-outofmemoryerror-は-error"><a class="header-link" href="#この時の-outofmemoryerror-は-error"><span class="header-link-mark"></span></a>この時の OutOfMemoryError は Error</h2>
+<p><code>ImageIO.read()</code> でメモリリークが発生する (しやすい) という情報はウェブ上ですぐ見つかったが、これが Catch できない理由が分からなかった。</p>
+<p>そこでふと思い出して、<code>catch</code> 句を以下のように書き換えてみた。</p>
+<pre class="language-java"><code class="language-java"><span class="token class-name">BufferedImage</span> bfImg<span class="token punctuation">;</span>
+<span class="token keyword">try</span> <span class="token punctuation">{</span>
+  bfImg <span class="token operator">=</span> <span class="token class-name">ImageIO</span><span class="token punctuation">.</span><span class="token function">read</span><span class="token punctuation">(</span>file<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+<span class="token keyword">catch</span><span class="token punctuation">(</span><span class="token class-name">Throwable</span> e<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token comment">// ↑Exception から Throwable にした</span>
+  <span class="token keyword">return</span> <span class="token keyword">null</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>すると、<code>OutOfMemoryError</code> をキャッチすることができた。</p>
+<p>メモリリーク・メモリ枯渇によって JVM から投げられるこの <em><code>OutOfMemoryError</code> は、Exception 型のサブクラスではなく、Error 型のサブクラス</em>。だから、<code>Exception e</code> で拾おうとしても拾えなかったのである。</p>
+<p>そして、<strong><code>Throwable</code> は、Exception 型と Error 型の両方のスーパークラス</strong>。こいつが全ての生みの親 (？)。こいつを <code>catch</code> 句に指定してやれば、子クラスである Error 型、そしてそのサブクラスである <code>OutOfMemoryError</code> も拾える、というワケ。</p>
+<p>例外処理というと「Exception」が全てと思いがちだが、これは「ある程度開発者が何らかの手立てができる NG パターン」を表すモノと思うと良い。NullPointerException なら呼び方が間違っていて、Null チェックするなり正しく呼べるようにするなり開発者が手立てを打てる、そういう感じ。</p>
+<p>一方、「Error」はというと、この <code>OutOfMemoryError</code> のように、基本的には Java プログラム内、アプリケーション内で何か手立てができるモノではない、というモノが投げられる。誰のせいでもない、とも言えるだろうか。いや、結局は JVM の起動引数でヒープサイズを適切に指定しなかった開発者の問題かもしれないけど、もしかしたら「これ以上ヒープサイズを拡張できないサーバマシン」なのかもしれないし、責任の所在が Exception よりはハッキリさせられない印象にあるモノ。</p>
+<h2 id="解決策はというと"><a class="header-link" href="#解決策はというと"><span class="header-link-mark"></span></a>解決策はというと</h2>
+<p>今回の場合、サーバのヒープサイズを拡張する許可が折りなかったので (!?)、処理方法を大幅に変えて、「<code>ImageIO.read()</code> や BufferedImage オブジェクトを使用せずに画像を扱う」ことにした。ナンテコッタイ…／(^o^)＼</p>
+<h2 id="参考"><a class="header-link" href="#参考"><span class="header-link-mark"></span></a>参考</h2>
+<ul>
+  <li><a href="http://d.hatena.ne.jp/daisuke-m/20081202/1228221927">Throwableについて本気出して考えてみた - 都元ダイスケ IT-PRESS</a></li>
+  <li><a href="http://javawock.blog.shinobi.jp/java/catch%20-exception%20e-%E3%81%A7error%E3%81%AE%E6%8D%95%E6%8D%89%E3%81%8C%E6%BC%8F%E3%82%8C%E3%82%8B">catch (Exception e)でErrorの捕捉が漏れる：Javaってまだいけますか</a></li>
+  <li><a href="http://www.ne.jp/asahi/hishidama/home/tech/java/exception.html">Java例外メモ(Hishidama's Java Exception Memo)</a></li>
+</ul>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2017-03-29</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2017-03-29</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

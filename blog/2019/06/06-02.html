@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>OCI で Terraform を始めてみる - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2019/06/06-02.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2019/index.html">2019年</a></li>
+            <li><a href="/blog/2019/06/index.html">06月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2019-06-06</time></div>
+        <h1 id="page-title">OCI で Terraform を始めてみる</h1>
+
+<p>インフラ構築を自動化できる <strong>Terraform</strong>。コレを <em>Oracle Cloud Infrastructure (OCI)</em> で動かしてみる。</p>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#terraform-%E3%82%92%E3%82%A4%E3%83%B3%E3%82%B9%E3%83%88%E3%83%BC%E3%83%AB%E3%81%99%E3%82%8B">Terraform をインストールする</a></li>
+  <li><a href="#terraform-%E5%AE%9F%E8%A1%8C%E7%94%A8%E3%81%AE-oci-%E3%83%A6%E3%83%BC%E3%82%B6%E3%82%92%E4%BD%9C%E6%88%90%E3%81%99%E3%82%8B">Terraform 実行用の OCI ユーザを作成する</a></li>
+  <li><a href="#terraform-%E5%AE%9A%E7%BE%A9%E3%83%95%E3%82%A1%E3%82%A4%E3%83%AB%E3%82%92%E6%9B%B8%E3%81%8F">Terraform 定義ファイルを書く</a>
+    <ul>
+      <li><a href="#maintf"><code>main.tf</code></a></li>
+      <li><a href="#instancetf"><code>instance.tf</code></a></li>
+      <li><a href="#variablestf"><code>variables.tf</code></a></li>
+      <li><a href="#terraformtfvars"><code>terraform.tfvars</code></a></li>
+      <li><a href="#outputstf"><code>outputs.tf</code></a></li>
+      <li><a href="#%E3%83%95%E3%82%A1%E3%82%A4%E3%83%AB%E3%81%AE%E6%BA%96%E5%82%99%E3%81%AF%E4%BB%A5%E4%B8%8A">ファイルの準備は以上</a></li>
+    </ul>
+  </li>
+  <li><a href="#terraform-init-%E3%81%A7%E3%83%97%E3%83%A9%E3%82%B0%E3%82%A4%E3%83%B3%E3%82%92%E6%BA%96%E5%82%99%E3%81%99%E3%82%8B"><code>terraform init</code> でプラグインを準備する</a></li>
+  <li><a href="#terraform-plan-%E3%81%A7-dry-run-%E3%81%97%E3%81%A6%E3%81%BF%E3%82%8B"><code>terraform plan</code> で Dry-Run してみる</a></li>
+  <li><a href="#terraform-apply-%E3%81%A7%E3%81%84%E3%82%88%E3%81%84%E3%82%88%E5%AE%9F%E8%A1%8C%E3%81%99%E3%82%8B"><code>terraform apply</code> でいよいよ実行する</a></li>
+  <li><a href="#terraform-destroy-%E3%81%A7%E7%92%B0%E5%A2%83%E3%82%92%E7%A0%B4%E6%A3%84%E3%81%A7%E3%81%8D%E3%82%8B"><code>terraform destroy</code> で環境を破棄できる</a></li>
+  <li><a href="#%E4%BB%8A%E5%9B%9E%E3%81%AF%E3%82%B3%E3%82%B3%E3%81%BE%E3%81%A7">今回はココまで</a></li>
+</ul>
+<h2 id="terraform-をインストールする"><a class="header-link" href="#terraform-をインストールする"><span class="header-link-mark"></span></a>Terraform をインストールする</h2>
+<p>Terraform は、Vagrant などで知られる HashiCorp が提供している。<code>terraform</code> コマンドは以下の公式ページからダウンロードできる。</p>
+<ul>
+  <li><a href="https://www.terraform.io/downloads.html">Download Terraform - Terraform by HashiCorp</a></li>
+</ul>
+<p>ダウンロードした Zip ファイルを解凍すると、MacOS 向けの場合は <code>terraform</code> という実行可能ファイル、Windows 向けの場合は <code>terraform.exe</code> というファイルが出てくる。コレを PATH の通っている場所に置くだけで良い。</p>
+<h2 id="terraform-実行用の-oci-ユーザを作成する"><a class="header-link" href="#terraform-実行用の-oci-ユーザを作成する"><span class="header-link-mark"></span></a>Terraform 実行用の OCI ユーザを作成する</h2>
+<p><em>Terraform は、各種クラウドサービスが提供する API をコールする「ラッパー」</em>でしかなく、OCI 環境を触るためには、その環境でリソースを作れる権限を持ったユーザアカウントを用意しないといけない。</p>
+<p>細かな手順は省略するが、全体的な流れとしては以下のとおり。</p>
+<ol>
+  <li>OCI 管理コンソールにログインする
+    <ul>
+      <li>この時、Tenancy 詳細を開き、Tenancy の OCID と、操作したいリージョンの名前を控えておく</li>
+    </ul>
+  </li>
+  <li>Identity → Users と移動し、Terraform 実行用の User を作成する
+    <ul>
+      <li>作成した User の OCID は控えておく</li>
+    </ul>
+  </li>
+  <li>Identity → Groups と移動し、Terraform 実行用ユーザが所属する Group を作成する</li>
+  <li>作成した Group に Terraform 実行用 User を所属させる</li>
+  <li>Identity → Policies と移動し、Terraform 実行用ユーザが所属する Group に対し、Tenancy 全体や Compartment 配下のリソースを操作できる権限を付与する
+    <ul>
+      <li>Terraform から OCI ユーザを作ったりもできるので、最初はテナンシー全体で何でもできる <code>Allow group 【グループ名】 to manage all-resources in tenancy</code> といったステートメントを付与してしまうのが手っ取り早いかと思う</li>
+    </ul>
+  </li>
+  <li>Terraform 実行用 User に登録するための API 鍵ペアを作成する
+    <ul>
+      <li><code>$ openssl genrsa -out ./api_key.pem 2048</code> コマンドで秘密鍵を作成する</li>
+      <li><code>$ openssl rsa -pubout -in ./api_key.pem -out ./api_key_public.pem</code> コマンドで公開鍵を作成する</li>
+    </ul>
+  </li>
+  <li>生成した公開鍵ファイルを Terraform 実行用 User の API Keys に登録する
+    <ul>
+      <li>登録後に表示される Fingerprint を控えておく</li>
+    </ul>
+  </li>
+</ol>
+<p>以上の操作で、</p>
+<ol>
+  <li>操作対象の Tenancy の OCID</li>
+  <li>操作対象のリージョン名</li>
+  <li>Terraform 実行用 User の OCID</li>
+  <li>Terraform 実行用 User に登録した API Key の Fingerprint</li>
+  <li>Terraform 実行用 User に登録した API Key の秘密鍵ファイル</li>
+</ol>
+<p>の5つの情報が準備できたはずだ。この5つの情報は Terraform 定義ファイルの中で使用することになる。</p>
+<hr>
+<p>先程、「Terraform はクラウドサービスの API をコールするラッパーだ」と書いたが、OCI については、<strong>OCI CLI</strong> という公式のコマンドラインツールを用いると、ほぼ全てのリソースが操作できる。Terraform が操作できる範囲は、この OCI CLI でできる範囲とほとんど変わりなく、OCI 環境を操作するための認証機構もほとんど同じだ。</p>
+<p>OCI CLI の場合、<code>$ oci setup config</code> というコマンドを使うと、<code>~/.oci/config</code> というファイルにプロファイル情報が書き込まれる。以下はサンプル。</p>
+<pre class="language-properties"><code class="language-properties">[DEFAULT]
+<span class="token attr-name">user</span><span class="token punctuation">=</span><span class="token attr-value">ocid1.user.oc1..xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx</span>
+<span class="token attr-name">fingerprint</span><span class="token punctuation">=</span><span class="token attr-value">xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx</span>
+<span class="token attr-name">key_file</span><span class="token punctuation">=</span><span class="token attr-value">/PATH/TO/.oci/oci_api_key.pem</span>
+<span class="token attr-name">tenancy</span><span class="token punctuation">=</span><span class="token attr-value">ocid1.tenancy.oc1..xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx</span>
+<span class="token attr-name">region</span><span class="token punctuation">=</span><span class="token attr-value">us-ashburn-1</span>
+</code></pre>
+<p>先程準備するよう記載した、5つの情報が列挙されていることが分かるだろうか。つまり、この OCI CLI 向けのプロファイル情報を流用すれば、Terraform を使って同じ範囲を操作できるということだ。</p>
+<h2 id="terraform-定義ファイルを書く"><a class="header-link" href="#terraform-定義ファイルを書く"><span class="header-link-mark"></span></a>Terraform 定義ファイルを書く</h2>
+<p>それではいよいよ、Terraform 定義ファイルを書いていく。適当な作業ディレクトリを作ったら、形式的に以下のようにファイルを作ろう。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">mkdir</span> terraform-oci-test
+$ <span class="token builtin class-name">cd</span> <span class="token variable">$_</span>
+$ <span class="token function">touch</span> main.tf
+$ <span class="token function">touch</span> variables.tf
+$ <span class="token function">touch</span> terraform.tfvars
+$ <span class="token function">touch</span> outputs.tf
+</code></pre>
+<p>Terraform は、カレントディレクトリ内にある <code>.tf</code> 形式のファイルを全て拾い上げて結合して実行してくれる。拡張子さえ守っていれば、1ファイルに全ての情報を記載しても、細かくファイルを分けても、動作には変わりない。ただ、ベストプラクティスとして、</p>
+<ol>
+  <li><code>main.tf</code> … プロバイダの指定やリソースの定義</li>
+  <li><code>variables.tf</code> … 変数の定義</li>
+  <li><code>outputs.tf</code> … アウトプットの定義</li>
+</ol>
+<p>という3つのファイルはお決まりで作ることが多い。</p>
+<p><code>terraform.tfvars</code> というファイルは、変数に対して値を設定するためのファイル。<code>.env</code> ファイル的なモノと思えばよいだろう。コチラは慣例的にこのようなファイル名、拡張子を取るが、コマンド実行時に引数でこのファイルを指定しないと参照されないので、例えば環境別に <code>env_dev.tfvars</code>・<code>env_prod.tfvars</code> などと名付けて複数ファイルを用意しても良い。</p>
+<p>この辺り、広く採用される「ベストプラクティス」はあるものの、構築する環境の規模や内容によっても変わってくるし、Terraform のバージョンアップによって新機能が追加されたりするとまた変わってくるので、「そのディレクトリを開いた時に全体的な構成が読み取りやすい状態であること」をとりあえず意識できれば良いかなと思う。</p>
+<p>今回は、作成済の<strong>VM (Compute Instance) を1台作成するサンプル</strong>を作ってみた。以降は、各ファイルに記述する内容を記していく。</p>
+<h3 id="maintf"><a class="header-link" href="#maintf"><span class="header-link-mark"></span></a><code>main.tf</code></h3>
+<p><code>main.tf</code> には、「OCI を操作しますよー」という「プロバイダ宣言」や、リソース作成時に定数的に参照するようなリソース定義をしたりする。</p>
+<pre class="language-hcl"><code class="language-hcl"><span class="token comment">/* 
+ * OCI プロバイダ定義 : https://www.terraform.io/docs/providers/oci/index.html
+ */</span>
+<span class="token keyword">provider<span class="token type variable"> "oci" </span></span><span class="token punctuation">{</span>
+  <span class="token property">region</span>           <span class="token punctuation">=</span> <span class="token string">"<span class="token interpolation"><span class="token punctuation">$</span><span class="token punctuation">{</span><span class="token keyword">var</span><span class="token punctuation">.</span><span class="token type variable">region</span><span class="token punctuation">}</span></span>"</span>
+  <span class="token property">tenancy_ocid</span>     <span class="token punctuation">=</span> <span class="token string">"<span class="token interpolation"><span class="token punctuation">$</span><span class="token punctuation">{</span><span class="token keyword">var</span><span class="token punctuation">.</span><span class="token type variable">tenancy_ocid</span><span class="token punctuation">}</span></span>"</span>
+  <span class="token property">user_ocid</span>        <span class="token punctuation">=</span> <span class="token string">"<span class="token interpolation"><span class="token punctuation">$</span><span class="token punctuation">{</span><span class="token keyword">var</span><span class="token punctuation">.</span><span class="token type variable">user_ocid</span><span class="token punctuation">}</span></span>"</span>
+  <span class="token property">fingerprint</span>      <span class="token punctuation">=</span> <span class="token string">"<span class="token interpolation"><span class="token punctuation">$</span><span class="token punctuation">{</span><span class="token keyword">var</span><span class="token punctuation">.</span><span class="token type variable">fingerprint</span><span class="token punctuation">}</span></span>"</span>
+  <span class="token property">private_key_path</span> <span class="token punctuation">=</span> <span class="token string">"<span class="token interpolation"><span class="token punctuation">$</span><span class="token punctuation">{</span><span class="token keyword">var</span><span class="token punctuation">.</span><span class="token type variable">private_key_path</span><span class="token punctuation">}</span></span>"</span>
+<span class="token punctuation">}</span>
+
+<span class="token comment">/* 
+ * 当該テナンシで利用可能な AD の一覧を取得する : https://www.terraform.io/docs/providers/oci/d/identity_availability_domains.html
+ */</span>
+<span class="token keyword">data <span class="token type variable">"oci_identity_availability_domains"</span></span> <span class="token string">"my_ads"</span> <span class="token punctuation">{</span>
+  <span class="token property">compartment_id</span> <span class="token punctuation">=</span> <span class="token string">"<span class="token interpolation"><span class="token punctuation">$</span><span class="token punctuation">{</span><span class="token keyword">var</span><span class="token punctuation">.</span><span class="token type variable">tenancy_ocid</span><span class="token punctuation">}</span></span>"</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>Terraform の構文はひたすらお勉強。全体的には、<code>【リソース種別】 "【予め決まっているリソース名】" "【自分で任意に付ける名前】" { }</code> というブロックで、一つのリソースを<em>宣言</em>する。</p>
+<p>プロバイダの宣言である <code>provider "oci"</code> 部分は、任意の名前が付いていないが、コレで「OCI を操作するための Terraform 定義ファイル群である」という宣言がなされている。<code>region</code> だの <code>tenancy_ocid</code> だの、といったプロパティ名は、予め決められているプロパティ名だ。</p>
+<p>プロパティに対する値は <code>= "${var.region}"</code> といった形で代入されている。<code>"${文字列}"</code> という記法で、環境変数の値や、よそのリソースの情報などを変数として利用できる。リージョン名や Tenancy の OCID などは、<code>"${var.【環境変数名】}"</code> という記法を使い、環境変数で値を設定するように定義している。環境変数への値の割当方法は後述。</p>
+<p>次に記載している <code>data "oci_identity_availability_domains" "my_ads" {}</code> というブロックは、OCI 上の Availability Domain 情報を配列で取得するための <strong>Data Sources</strong> というモノ。コレを利用して、「AD1 にインスタンスを置こう」とか、「Load Balancer は AD1 と AD2 に割り当てよう」などと記述できるワケだ。</p>
+<p>そうそう、コメントは <code>/* */</code> で複数行コメントができる他、単一行コメントは <strong><code>//</code> と <code>#</code></strong> のいずれかで記述できる。ココらへんはお好みで。</p>
+<h3 id="instancetf"><a class="header-link" href="#instancetf"><span class="header-link-mark"></span></a><code>instance.tf</code></h3>
+<p>ココで、今回は VM (Compute Instance) を構築しようとしているので、そのリソースを定義するためのファイルを別に作っておこうと思う。名前は任意だが、分かりやすく <em><code>instance.tf</code></em> とした。中身は以下のとおり。</p>
+<pre class="language-hcl"><code class="language-hcl"><span class="token comment">/* 
+ * Instance 監視サーバ : https://www.terraform.io/docs/providers/oci/r/core_instance.html
+ */</span>
+<span class="token keyword">resource <span class="token type variable">"oci_core_instance"</span></span> <span class="token string">"my_instance"</span> <span class="token punctuation">{</span>
+  <span class="token property">compartment_id</span>      <span class="token punctuation">=</span> <span class="token string">"<span class="token interpolation"><span class="token punctuation">$</span><span class="token punctuation">{</span><span class="token keyword">var</span><span class="token punctuation">.</span><span class="token type variable">compartment_ocid</span><span class="token punctuation">}</span></span>"</span>
+  <span class="token property">availability_domain</span> <span class="token punctuation">=</span> <span class="token string">"<span class="token interpolation"><span class="token punctuation">$</span><span class="token punctuation">{</span><span class="token function">lookup</span><span class="token punctuation">(</span><span class="token keyword">data</span><span class="token punctuation">.</span><span class="token type variable">oci_identity_availability_domains</span><span class="token punctuation">.</span>my_ads<span class="token punctuation">.</span>availability_domains<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">,</span> <span class="token string">"name"</span><span class="token punctuation">)</span><span class="token punctuation">}</span></span>"</span>  <span class="token comment">// AD1</span>
+  <span class="token property">shape</span>               <span class="token punctuation">=</span> <span class="token string">"<span class="token interpolation"><span class="token punctuation">$</span><span class="token punctuation">{</span><span class="token keyword">var</span><span class="token punctuation">.</span><span class="token type variable">instance_shape</span><span class="token punctuation">}</span></span>"</span>
+  <span class="token property">display_name</span>        <span class="token punctuation">=</span> <span class="token string">"my-instance"</span>
+  <span class="token keyword">source_details</span> <span class="token punctuation">{</span>
+    <span class="token property">source_type</span> <span class="token punctuation">=</span> <span class="token string">"image"</span>
+    <span class="token property">source_id</span>   <span class="token punctuation">=</span> <span class="token string">"<span class="token interpolation"><span class="token punctuation">$</span><span class="token punctuation">{</span><span class="token keyword">var</span><span class="token punctuation">.</span><span class="token type variable">instance_image_ocids</span><span class="token punctuation">[</span><span class="token keyword">var</span><span class="token punctuation">.</span><span class="token type variable">region</span><span class="token punctuation">]</span><span class="token punctuation">}</span></span>"</span>  <span class="token comment">// 当該リージョン用のイメージの OCID を指定する</span>
+  <span class="token punctuation">}</span>
+  <span class="token keyword">create_vnic_details</span> <span class="token punctuation">{</span>
+    <span class="token property">subnet_id</span>        <span class="token punctuation">=</span> <span class="token string">"<span class="token interpolation"><span class="token punctuation">$</span><span class="token punctuation">{</span><span class="token keyword">var</span><span class="token punctuation">.</span><span class="token type variable">subnet_ocid</span><span class="token punctuation">}</span></span>"</span>  <span class="token comment">// Subnet の OCID</span>
+    <span class="token property">assign_public_ip</span> <span class="token punctuation">=</span> <span class="token boolean">true</span>                  <span class="token comment">// Public IP を割り当てる</span>
+    <span class="token property">hostname_label</span>   <span class="token punctuation">=</span> <span class="token string">"myinstance"</span>
+  <span class="token punctuation">}</span>
+  <span class="token keyword">metadata</span> <span class="token punctuation">{</span>
+    <span class="token property">ssh_authorized_keys</span> <span class="token punctuation">=</span> <span class="token string">"<span class="token interpolation"><span class="token punctuation">$</span><span class="token punctuation">{</span><span class="token keyword">var</span><span class="token punctuation">.</span><span class="token type variable">instance_ssh_public_key</span><span class="token punctuation">}</span></span>"</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p><code>resource</code> から始まるブロックで、「何らかのリソースを作成する定義」を行う。今回は <code>oci_core_instance</code>、つまり Compute Instance を作るためのリソース定義、ということだ。</p>
+<p><code>availability_domain</code> プロパティ内で、<code>lookup()</code> 関数を使い、AD 一覧の配列 (<code>my_ads</code>) から1つ目の要素を取得し、その中の <code>name</code> プロパティの値を拾っている。コレで <code>kKLm:US-ASHBURN-AD-1</code> といったような Availability Domain 名を拾い上げ、プロパティに設定している。</p>
+<p>今回は小さく作りたいので、VCN や Subnet は別途作成済であるものとして、この Compute Instance を配置する Subnet の指定は、変数 <code>"${var.subnet_ocid}"</code> から行うようにしている。勿論、Terraform で VCN を作り、その下に Subnet を作り、そうして生成された Subnet の OCID を拾い上げ、この Compute Instance を作成する、といった<em>依存関係</em>も実現できる。コード量が増えてしまうので今回は省略するが、記述は難しくないので、OCI Provider の API ドキュメントを見ながら作ってみてほしい。</p>
+<h3 id="variablestf"><a class="header-link" href="#variablestf"><span class="header-link-mark"></span></a><code>variables.tf</code></h3>
+<p><code>main.tf</code> と <code>instance.tf</code> の定義で、「何かを作る」ための定義は終わり。<code>variables.tf</code> では、他のファイルで <em><code>"${var.【変数名】}"</code></em> と書いて参照した変数の「宣言」のみを列挙しておく。以下のような要領だ。</p>
+<pre class="language-hcl"><code class="language-hcl"><span class="token comment">/* 変数定義 */</span>
+
+<span class="token keyword">variable<span class="token type variable"> "region" </span></span><span class="token punctuation">{</span>
+  <span class="token property">type</span>        <span class="token punctuation">=</span> <span class="token string">"string"</span>
+  <span class="token property">description</span> <span class="token punctuation">=</span> <span class="token string">"リージョン (ex. us-ashburn-1)"</span>
+  <span class="token property">default</span>     <span class="token punctuation">=</span> <span class="token string">"us-ashburn-1"</span>
+<span class="token punctuation">}</span>
+
+<span class="token keyword">variable<span class="token type variable"> "tenancy_ocid"     </span></span><span class="token punctuation">{</span> <span class="token property">description</span> <span class="token punctuation">=</span> <span class="token string">"テナンシの OCID"</span> <span class="token punctuation">}</span>
+<span class="token keyword">variable<span class="token type variable"> "user_ocid"        </span></span><span class="token punctuation">{</span> <span class="token property">description</span> <span class="token punctuation">=</span> <span class="token string">"Terraform を実行するユーザの OCID"</span> <span class="token punctuation">}</span>
+<span class="token keyword">variable<span class="token type variable"> "fingerprint"      </span></span><span class="token punctuation">{</span> <span class="token property">description</span> <span class="token punctuation">=</span> <span class="token string">"Terraform を実行するユーザの API Key のフィンガープリント"</span> <span class="token punctuation">}</span>
+<span class="token keyword">variable<span class="token type variable"> "private_key_path" </span></span><span class="token punctuation">{</span> <span class="token property">description</span> <span class="token punctuation">=</span> <span class="token string">"Terraform を実行するユーザの API Key 秘密鍵のフルパス"</span> <span class="token punctuation">}</span>
+<span class="token keyword">variable<span class="token type variable"> "compartment_ocid" </span></span><span class="token punctuation">{</span> <span class="token property">description</span> <span class="token punctuation">=</span> <span class="token string">"コンパートメントの OCID"</span> <span class="token punctuation">}</span>
+
+<span class="token comment">// Compute Instance 関連</span>
+
+<span class="token keyword">variable<span class="token type variable"> "instance_image_ocids" </span></span><span class="token punctuation">{</span>
+  <span class="token property">description</span> <span class="token punctuation">=</span> <span class="token string">"インスタンスイメージの OCID マップ"</span>
+  <span class="token property">type</span>        <span class="token punctuation">=</span> <span class="token string">"map"</span>
+  <span class="token property">default</span>     <span class="token punctuation">=</span> <span class="token punctuation">{</span>
+    <span class="token comment">// - イメージ定義のベスト・プラクティス : https://www.terraform.io/docs/providers/oci/guides/best_practices.html#referencing-images</span>
+    <span class="token comment">// - イメージ情報は次の URL より確認できる : https://docs.us-phoenix-1.oraclecloud.com/images/</span>
+    <span class="token comment">// - 以下は Oracle-Linux-7.6-2019.05.14-0 イメージの OCID を指定している : https://docs.cloud.oracle.com/iaas/images/image/54f22559-7638-4da9-9e09-7fc78527608c/</span>
+    <span class="token property">us-ashburn-1</span>   <span class="token punctuation">=</span> <span class="token string">"ocid1.image.oc1.iad.aaaaaaaa4bfsnhv2cd766tiw5oraw2as7g27upxzvu7ynqwipnqfcfwqskla"</span>
+    <span class="token property">ap-tokyo-1</span>     <span class="token punctuation">=</span> <span class="token string">"ocid1.image.oc1.ap-tokyo-1.aaaaaaaamc2244t7h3gwrrci5z4ni2jsulwcg76gugupkb6epzrypawcz4hq"</span>
+    <span class="token property">ap-seoul-1</span>     <span class="token punctuation">=</span> <span class="token string">"ocid1.image.oc1.ap-seoul-1.aaaaaaaalhbuvdg453ddyhvnbk4jsrw546zslcfyl7vl4oxfgplss3ovlm4q"</span>
+    <span class="token property">ca-toronto-1</span>   <span class="token punctuation">=</span> <span class="token string">"ocid1.image.oc1.ca-toronto-1.aaaaaaaakjkxzw33dcocgu2oylpllue34tjtyngwru7pcpqn4qh2nwon7n7a"</span>
+    <span class="token property">eu-frankfurt-1</span> <span class="token punctuation">=</span> <span class="token string">"ocid1.image.oc1.eu-frankfurt-1.aaaaaaaandqh4s7a3oe3on6osdbwysgddwqwyghbx4t4ryvtcwk5xikkpvhq"</span>
+    <span class="token property">uk-london-1</span>    <span class="token punctuation">=</span> <span class="token string">"ocid1.image.oc1.uk-london-1.aaaaaaaa2xe7cufdwkksdazshtmqaddgd72kdhiyoqurtoukjklktf4nxkbq"</span>
+    <span class="token property">us-phoenix-1</span>   <span class="token punctuation">=</span> <span class="token string">"ocid1.image.oc1.phx.aaaaaaaavtjpvg4njutkeu7rf7c5lay6wdbjhd4cxis774h7isqd6gktqzoa"</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+
+<span class="token keyword">variable<span class="token type variable"> "instance_shape" </span></span><span class="token punctuation">{</span>
+  <span class="token property">description</span> <span class="token punctuation">=</span> <span class="token string">"Compute Instance のシェイプ"</span>
+  <span class="token property">default</span>     <span class="token punctuation">=</span> <span class="token string">"VM.Standard1.1"</span>
+<span class="token punctuation">}</span>
+
+<span class="token keyword">variable<span class="token type variable"> "subnet_ocid" </span></span><span class="token punctuation">{</span>
+  <span class="token property">description</span> <span class="token punctuation">=</span> <span class="token string">"Subnet の OCID"</span>
+<span class="token punctuation">}</span>
+
+<span class="token keyword">variable<span class="token type variable"> "instance_ssh_public_key" </span></span><span class="token punctuation">{</span>
+  <span class="token property">description</span> <span class="token punctuation">=</span> <span class="token string">"管理サーバへの SSH 接続用の公開鍵"</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p><code>variable "【変数名】" {}</code> というブロックで、一つの変数の宣言を行う。コレをなくして <code>"${var.【変数名】}"</code> とだけ書くのは、「宣言がないから NG」という関係だ。</p>
+<p><em><code>type</code></em> プロパティは必須ではない。大抵は暗黙的に <code>"string"</code> で解釈されるが、中には <code>map</code> などを使うこともある。</p>
+<p><em><code>description</code></em> プロパティで説明文を書いておくと、<code>terraform</code> コマンド実行時に説明として表示されるので、単なるコメントとしてではなく、<code>description</code> プロパティで書いておくと良いだろう。</p>
+<p><em><code>default</code></em> プロパティも任意だが、コレを書いておくと、環境変数で値を渡さなかった時にその値がデフォルトとして使用される。</p>
+<p>変数 <code>instance_image_ocids</code> の書き方は、OCI Provider が公式に推奨しているベスト・プラクティスに沿った書き方。このように変数を用意しておくと、<code>instance.tf</code> で <code>"${var.instance_image_ocids[var.region]}"</code> という風に OCID を参照できる。</p>
+<ul>
+  <li>参考：<a href="https://www.terraform.io/docs/providers/oci/guides/best_practices.html#referencing-images">Provider: Oracle Cloud Infrastructure - Terraform by HashiCorp</a></li>
+</ul>
+<h3 id="terraformtfvars"><a class="header-link" href="#terraformtfvars"><span class="header-link-mark"></span></a><code>terraform.tfvars</code></h3>
+<p>変数の宣言は <code>variables.tf</code> で行った。変数の使用箇所は <code>main.tf</code> や <code>instance.tf</code> などに登場する。では、変数の値をどう設定するか、というと、簡単なやり方は、<em><code>.tfvars</code></em> という拡張子で変数の値を設定したファイルを作ることだ。</p>
+<pre class="language-hcl"><code class="language-hcl"><span class="token comment">/* 変数値ファイル */</span>
+
+<span class="token property">region</span>           <span class="token punctuation">=</span> <span class="token string">"us-ashburn-1"</span>
+<span class="token property">tenancy_ocid</span>     <span class="token punctuation">=</span> <span class="token string">"ocid1.tenancy.oc1..xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"</span>
+<span class="token property">user_ocid</span>        <span class="token punctuation">=</span> <span class="token string">"ocid1.user.oc1..xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"</span>
+<span class="token property">fingerprint</span>      <span class="token punctuation">=</span> <span class="token string">"xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx"</span>
+<span class="token property">private_key_path</span> <span class="token punctuation">=</span> <span class="token string">"/PATH/TO/.oci/oci_api_key.pem"</span>
+<span class="token property">compartment_ocid</span> <span class="token punctuation">=</span> <span class="token string">"ocid1.compartment.oc1..xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"</span>
+
+<span class="token comment">// Compute Instance 関連</span>
+
+<span class="token comment">// instance_image_ocids 変数の値は特に変更しなくて良い</span>
+<span class="token comment">// instance_shape 変数の値も、今回は default 値を使用するので定義しない</span>
+
+<span class="token comment">// Compute Instance を所属させる Subnet の OCID を設定しておく</span>
+<span class="token property">subnet_ocid</span> <span class="token punctuation">=</span> <span class="token string">"ocid1.subnet.oc1.iad.xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"</span>
+<span class="token comment">// Compute Instance に SSH 接続するための SSH 公開鍵を設定しておく</span>
+<span class="token property">instance_ssh_public_key</span> <span class="token punctuation">=</span> <span class="token string">"ssh-rsa xxxxx"</span>
+</code></pre>
+<p>こんな感じ。<code>default</code> 値を使いまわしたいものはいちいち記述する必要はない。ただ、<code>default</code> がない状態で、<code>.tfvars</code> ファイルでも値を設定していない変数があった場合は、コマンド実行時に値を入力するよう問われる。</p>
+<h3 id="outputstf"><a class="header-link" href="#outputstf"><span class="header-link-mark"></span></a><code>outputs.tf</code></h3>
+<p>最後に <code>outputs.tf</code>。このファイルは、一連のリソース作成が終わった後にコンソール出力したい情報を定義しておく。今回の場合であれば、作成した Compute Instance の Public IP がココで分かれば、そのあとすぐに SSH 接続できたりするだろう。</p>
+<pre class="language-hcl"><code class="language-hcl"><span class="token comment">/* 結果出力 */</span>
+
+<span class="token comment">// 作成した Compute Instance に割り当てられた Public IP を出力する</span>
+<span class="token keyword">output<span class="token type variable"> "my_instance_public_ip" </span></span><span class="token punctuation">{</span>
+  <span class="token property">value</span> <span class="token punctuation">=</span> <span class="token punctuation">[</span> <span class="token string">"<span class="token interpolation"><span class="token punctuation">$</span><span class="token punctuation">{</span>oci_core_instance<span class="token punctuation">.</span>my_instance<span class="token punctuation">.</span>public_ip<span class="token punctuation">}</span></span>"</span> <span class="token punctuation">]</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>結果出力したい情報は <code>output "【適当な名前】" { value = 【出力したい値】 }</code> というブロックで記述する。<code>value</code> プロパティは固定。</p>
+<p><code>instance.tf</code> で、<code>resource "oci_core_instance" "my_instance" { }</code> というブロックでリソースを作るよう定義したが、コレで作ったリソースから情報を引っ張ってくるには、<code>"${【予め決まっているリソース名】.【宣言した任意の名前】.【予め決まっているプロパティ名】}"</code> という形で参照する。コレで、作成された Compute Instance の Public IP が拾えている。</p>
+<h3 id="ファイルの準備は以上"><a class="header-link" href="#ファイルの準備は以上"><span class="header-link-mark"></span></a>ファイルの準備は以上</h3>
+<p>コレでファイルの準備は以上だ。どのようなリソースがあって、どんなプロパティがあるか、といった情報は、以下の公式ドキュメントを読み込んでいくしかない。</p>
+<ul>
+  <li>参考：<a href="https://www.terraform.io/docs/providers/oci/index.html">Provider: Oracle Cloud Infrastructure - Terraform by HashiCorp</a></li>
+</ul>
+<h2 id="terraform-init-でプラグインを準備する"><a class="header-link" href="#terraform-init-でプラグインを準備する"><span class="header-link-mark"></span></a><code>terraform init</code> でプラグインを準備する</h2>
+<p><code>.tf</code> ファイルや <code>.tfvars</code> ファイルが用意できたら、いよいよ実行していきたいワケだが、その前に、これらのファイルがあるディレクトリで<strong><code>$ terraform init</code></strong> というコマンドを実行する。</p>
+<p>コレを実行すると、Terraform から OCI を操作するためのプラグインなどをダウンロードして、<code>./.terraform/</code> ディレクトリ配下に自動的に置いてくれる。</p>
+<h2 id="terraform-plan-で-dry-run-してみる"><a class="header-link" href="#terraform-plan-で-dry-run-してみる"><span class="header-link-mark"></span></a><code>terraform plan</code> で Dry-Run してみる</h2>
+<p><code>terraform init</code> で準備したらいよいよ実行…といきたいところだが、いきなりインフラ構築を始めてしまい、コードに間違いがあったりすると、復旧させるのが困難になる場合もある。</p>
+<p>そこで、Terraform には実際にインフラ構築をする前にテストするための、<strong><code>$ terraform plan</code></strong> という Dry-Run コマンドがある。コレを使ってみよう。</p>
+<p>ココからは、<code>-var-file</code> オプションを使って、用意していた <code>.tfvars</code> ファイルを参照するようにして実行する。</p>
+<pre class="language-bash"><code class="language-bash">$ terraform plan -var-file<span class="token operator">=</span><span class="token string">'./terraform.tfvars'</span>
+</code></pre>
+<p>このように実行すると、実際にはリソース作成などは行われないものの、コードに間違いがないか、コードを実行した結果、どのようなリソースが追加・変更・破棄されるのか、といった実行計画が確認できる。</p>
+<p><code>output.tf</code> で定義した <code>output</code> 情報は、<code>terraform plan</code> で実行した場合は出力されないので留意。</p>
+<h2 id="terraform-apply-でいよいよ実行する"><a class="header-link" href="#terraform-apply-でいよいよ実行する"><span class="header-link-mark"></span></a><code>terraform apply</code> でいよいよ実行する</h2>
+<p>実行計画を確認して問題なければ、いよいよ実行に移る。実行するには、<strong><code>$ terraform apply</code></strong> コマンドを使う。</p>
+<pre class="language-bash"><code class="language-bash">$ terraform apply -var-file<span class="token operator">=</span><span class="token string">'./terraform.tfvars'</span>
+</code></pre>
+<p>先程の <code>plan</code> 部分を <code>apply</code> に変更するだけで実行できる。</p>
+<p>リソースの作成にかかる時間はまちまちだが、Compute Instance 1台くらいであれば、2・3分もあれば完了するだろう。</p>
+<p>時々、<code>terraform plan</code> で異常が見つからなかったのに、<code>terraform apply</code> で実行して初めて問題が発生する場合があったりする。特に <code>output</code> の内容は <code>terraform plan</code> 実行時はあまり厳密にチェックされないので、よくよく注意して実行しよう。</p>
+<p>上手く実行できると、OCI 管理画面上でも Compute Instance が作成できていることが確認できるはずだ。また、カレントディレクトリには <code>terraform.tfstate</code> といったファイルが生成されており、Terraform コマンドによってどのようなリソースが作成されたのか、といった履歴が全て記録されている。</p>
+<h2 id="terraform-destroy-で環境を破棄できる"><a class="header-link" href="#terraform-destroy-で環境を破棄できる"><span class="header-link-mark"></span></a><code>terraform destroy</code> で環境を破棄できる</h2>
+<p><code>terraform apply</code> で作った環境は、<strong><code>$ terraform destroy</code></strong> というコマンドで丸ごと削除することもできる。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># -destroy オプションを付ければ削除時の実行計画が見られる</span>
+$ terraform plan -destroy -var-file<span class="token operator">=</span><span class="token string">'./terraform.tfvars'</span>
+
+<span class="token comment"># 削除する</span>
+$ terraform destroy -var-file<span class="token operator">=</span><span class="token string">'./terraform.tfvars'</span>
+</code></pre>
+<p>今回は Compute Instance 一つの例だから効果が分かりづらいかもしれないが、VCN を丸ごと作るようなコードの場合、OCI 管理画面でポチポチ削除していったりするよりもはるかに容易だ。</p>
+<h2 id="今回はココまで"><a class="header-link" href="#今回はココまで"><span class="header-link-mark"></span></a>今回はココまで</h2>
+<p>駆け足になったが、Terraform を使って、OCI 上に簡単なリソースを作成・破棄する基礎を紹介した。世間的にはまだマイナーな OCI を例に Terraform を紹介したが、GCP・AWS・Azure なども対応している。各クラウドサービスが提供する CLI ツールなどの使い方を個別に勉強するよりも、Terraform という単一の形式で管理した方が、言語やツールの仕様に関する学習コストは削減できるだろう。また、今回深くは紹介しなかったが、Terraform の機能によって「冪等性の担保」「差分管理」「変更・破棄の容易性」といったメリットを享受できるので、クラウドサービスを活用していく際はぜひとも Terraform を導入していきたい。</p>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2019-06-06</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2019-06-06</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

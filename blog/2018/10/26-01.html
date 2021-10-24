@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>Bitbucket API を使って複数のリポジトリからファイルをダウンロードしてきて比較してみる - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2018/10/26-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2018/index.html">2018年</a></li>
+            <li><a href="/blog/2018/10/index.html">10月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2018-10-26</time></div>
+        <h1 id="page-title">Bitbucket API を使って複数のリポジトリからファイルをダウンロードしてきて比較してみる</h1>
+
+<p>Bitbucket という、GitHub ライクでプライベートリポジトリが持てるホスティングサービスを使っている。</p>
+<p>この Bitbucket にも API が用意されていて、今回やりたかったことに使えそうだったので、試しにやってみた。</p>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#bitbucket-api">Bitbucket API</a></li>
+  <li><a href="#%E3%83%AA%E3%83%9D%E3%82%B8%E3%83%88%E3%83%AA%E3%81%8B%E3%82%89%E3%83%95%E3%82%A1%E3%82%A4%E3%83%AB%E3%82%92%E5%8F%96%E5%BE%97%E3%81%99%E3%82%8B">リポジトリからファイルを取得する</a></li>
+  <li><a href="#%E8%A4%87%E6%95%B0%E3%81%AE%E3%83%AA%E3%83%9D%E3%82%B8%E3%83%88%E3%83%AA%E3%81%8B%E3%82%89%E3%83%95%E3%82%A1%E3%82%A4%E3%83%AB%E3%82%92%E5%8F%96%E5%BE%97%E3%81%97%E3%81%A6%E4%BF%9D%E5%AD%98%E3%83%BB%E6%95%B4%E5%BD%A2%E3%81%99%E3%82%8B">複数のリポジトリからファイルを取得して保存・整形する</a></li>
+</ul>
+<h2 id="bitbucket-api"><a class="header-link" href="#bitbucket-api"><span class="header-link-mark"></span></a>Bitbucket API</h2>
+<p>Bitbucket API はバージョン1系とバージョン2系があるらしいのだが、自分の環境は諸事情によりバージョン1系を使っているので、以下あたりの説明を見ていた。</p>
+<ul>
+  <li>参考：<a href="https://docs.atlassian.com/bitbucket-server/rest/5.13.1/bitbucket-rest.html">REST Resources Provided By: Bitbucket Server - REST</a></li>
+</ul>
+<p>コレによると、複数のリポジトリをまとめた「プロジェクト」は以下のような URL で取得できる。</p>
+<ul>
+  <li><code>http://my-bitbucket.com/rest/api/1.0/projects</code></li>
+</ul>
+<p>この要領でリポジトリを絞り込み、さらにそのリポジトリ内を参照できるようだ。</p>
+<ul>
+  <li><code>http://my-bitbucket.com/rest/api/1.0/projects/my_project/repos/my_repository</code></li>
+  <li><code>http://my-bitbucket.com/rest/api/1.0/projects/my_project/repos/my_repository/branches</code></li>
+</ul>
+<p>こんな感じ。凄い。</p>
+<h2 id="リポジトリからファイルを取得する"><a class="header-link" href="#リポジトリからファイルを取得する"><span class="header-link-mark"></span></a>リポジトリからファイルを取得する</h2>
+<p>今回、ワケあって複数のリポジトリにある <code>package.json</code> を比較調査したかったのだが、全てのリポジトリを <code>git clone</code> してきて、<code>package.json</code> だけコピーして作業フォルダに置いて…といった作業が面倒くさかった。</p>
+<p>そこで、この Bitbucket API を利用して、各リポジトリからファイルを取得してみようと思う。</p>
+<p>リポジトリ内のファイルを参照するには、以下のような URL になる。</p>
+<ul>
+  <li><code>http://my-bitbucket.com/rest/api/1.0/projects/my_project/repos/my_repository/browse/package.json</code></li>
+</ul>
+<p>コレだと master ブランチの最新のファイルしか取れないが、<code>at</code> パラメータでコミット ID かブランチ名を指定すれば、過去のファイルや別ブランチのファイルも取得できる。</p>
+<ul>
+  <li><code>http://my-bitbucket.com/rest/api/1.0/projects/my_project/repos/my_repository/browse/package.json?at=97f57fe3c2b58749180415b634069dd5c78d606d</code></li>
+  <li><code>http://my-bitbucket.com/rest/api/1.0/projects/my_project/repos/my_repository/browse/package.json?at=refs%2Fheads%2Fmaster</code></li>
+</ul>
+<p>今回 <code>package.json</code> は、リポジトリの直下にあったが、もし子ディレクトリにあるファイルを参照する場合は、<code>…/browse/src/app/some-file.md</code> というように、スラッシュ <code>/</code> を URL にそのまま付与して掘り下げられる。</p>
+<p><code>at</code> パラメータでブランチ名を指定する場合は、<code>refs/heads/</code> を先頭に付け、記号などは <code>encodeURIComponent()</code> でエンコードしておく必要がある。だから <code>/</code> は <code>%2F</code> に変換され、<code>refs%2Fheads%2Fmaster</code> となっている。</p>
+<p>試しに <code>curl</code> でデータを取得してみる。Basic 認証は <code>-u</code> オプションで行えば良い。取得した JSON は <code>lines</code> プロパティに当該ファイルの行ごとのデータが入っているので、コレを <code>jq</code> でパースする。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">curl</span> -u <span class="token string">'【ユーザ名】:【パスワード】'</span> <span class="token string">'http://my-bitbucket.com/rest/api/1.0/projects/my_project/repos/my_repository/browse/package.json?at=refs%2Fheads%2Fmaster'</span> <span class="token operator">|</span> jq -r <span class="token string">'.lines[].text'</span>
+</code></pre>
+<p>よきよき。</p>
+<h2 id="複数のリポジトリからファイルを取得して保存・整形する"><a class="header-link" href="#複数のリポジトリからファイルを取得して保存・整形する"><span class="header-link-mark"></span></a>複数のリポジトリからファイルを取得して保存・整形する</h2>
+<p>Bitbucket API の使い方が分かったので、あとはリポジトリごとの情報を控えておき、Bitbucket API を順に叩いては対象ファイルを書き出す Node.js スクリプトを書いてみる。</p>
+<p>Node.js 組み込みの <code>http</code> モジュールを使っても良いけど、<em><code>request</code></em> というパッケージが便利なので、コレを使ってみた。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword">const</span> request <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'request'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">const</span> fs <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'fs'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">const</span> os <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'os'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// 設定事項</span>
+<span class="token keyword">const</span> username <span class="token operator">=</span> <span class="token string">'【ユーザ名】'</span><span class="token punctuation">;</span>
+<span class="token keyword">const</span> password <span class="token operator">=</span> <span class="token string">'【パスワード】'</span><span class="token punctuation">;</span>
+<span class="token keyword">const</span> bitbucketURL <span class="token operator">=</span> <span class="token string">'http://my-bitbucket.com'</span><span class="token punctuation">;</span>
+<span class="token comment">// Basic 認証文字列</span>
+<span class="token keyword">const</span> basicAuth <span class="token operator">=</span> <span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">Basic </span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span><span class="token keyword">new</span> <span class="token class-name">Buffer<span class="token punctuation">.</span>from</span><span class="token punctuation">(</span><span class="token template-string"><span class="token template-punctuation string">`</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>username<span class="token interpolation-punctuation punctuation">}</span></span><span class="token string">:</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>password<span class="token interpolation-punctuation punctuation">}</span></span><span class="token template-punctuation string">`</span></span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">toString</span><span class="token punctuation">(</span><span class="token string">'base64'</span><span class="token punctuation">)</span><span class="token interpolation-punctuation punctuation">}</span></span><span class="token template-punctuation string">`</span></span><span class="token punctuation">;</span>
+
+<span class="token comment">// 取得したいデータを一覧にする</span>
+<span class="token keyword">const</span> dataList <span class="token operator">=</span> <span class="token punctuation">[</span>
+  <span class="token punctuation">{</span> project<span class="token operator">:</span> <span class="token string">'my_project'</span>    <span class="token punctuation">,</span> repository<span class="token operator">:</span> <span class="token string">'my_repository'</span>    <span class="token punctuation">,</span> branch<span class="token operator">:</span> <span class="token string">'master'</span>    <span class="token punctuation">,</span> filePath<span class="token operator">:</span> <span class="token string">'package.json'</span> <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span> project<span class="token operator">:</span> <span class="token string">'second_project'</span><span class="token punctuation">,</span> repository<span class="token operator">:</span> <span class="token string">'second_repository'</span><span class="token punctuation">,</span> branch<span class="token operator">:</span> <span class="token string">'develop'</span>   <span class="token punctuation">,</span> filePath<span class="token operator">:</span> <span class="token string">'package.json'</span> <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span> project<span class="token operator">:</span> <span class="token string">'other_project'</span> <span class="token punctuation">,</span> repository<span class="token operator">:</span> <span class="token string">'other_repository'</span> <span class="token punctuation">,</span> branch<span class="token operator">:</span> <span class="token string">'feat/other'</span><span class="token punctuation">,</span> filePath<span class="token operator">:</span> <span class="token string">'package.json'</span> <span class="token punctuation">}</span>
+<span class="token punctuation">]</span><span class="token punctuation">;</span>
+
+<span class="token comment">// 出力先ディレクトリ</span>
+<span class="token keyword">const</span> destDir <span class="token operator">=</span> <span class="token string">'./package-json-files'</span><span class="token punctuation">;</span>
+
+<span class="token comment">// ディレクトリを作る</span>
+<span class="token keyword control-flow">if</span><span class="token punctuation">(</span><span class="token operator">!</span>fs<span class="token punctuation">.</span><span class="token method function property-access">existsSync</span><span class="token punctuation">(</span>destDir<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  fs<span class="token punctuation">.</span><span class="token method function property-access">mkdirSync</span><span class="token punctuation">(</span>destDir<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+<span class="token comment">// 順に取得 → ファイル保存を行う</span>
+dataList<span class="token punctuation">.</span><span class="token method function property-access">reduce</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token parameter">promiseChain<span class="token punctuation">,</span> current<span class="token punctuation">,</span> index</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token keyword control-flow">return</span> promiseChain
+    <span class="token punctuation">.</span><span class="token method function property-access">then</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+      <span class="token keyword control-flow">return</span> <span class="token function">getFile</span><span class="token punctuation">(</span>current<span class="token punctuation">.</span><span class="token property-access">project</span><span class="token punctuation">,</span> current<span class="token punctuation">.</span><span class="token property-access">repository</span><span class="token punctuation">,</span> current<span class="token punctuation">.</span><span class="token property-access">branch</span><span class="token punctuation">,</span> current<span class="token punctuation">.</span><span class="token property-access">filePath</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span><span class="token punctuation">)</span>
+    <span class="token punctuation">.</span><span class="token method function property-access">then</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token parameter">result</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+      <span class="token comment">// ファイル名を作る : 今回は JSON ファイルを扱うのでココだけ拡張子ベタ書き…</span>
+      <span class="token comment">// ファイル終端の改行がなくなるので、os.EOL を使って改行コードを入れてみた</span>
+      <span class="token keyword">const</span> num <span class="token operator">=</span> <span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">0</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>index <span class="token operator">+</span> <span class="token number">1</span><span class="token interpolation-punctuation punctuation">}</span></span><span class="token template-punctuation string">`</span></span><span class="token punctuation">.</span><span class="token method function property-access">slice</span><span class="token punctuation">(</span><span class="token operator">-</span><span class="token number">2</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      fs<span class="token punctuation">.</span><span class="token method function property-access">writeFileSync</span><span class="token punctuation">(</span><span class="token template-string"><span class="token template-punctuation string">`</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>destDir<span class="token interpolation-punctuation punctuation">}</span></span><span class="token string">/</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>num<span class="token interpolation-punctuation punctuation">}</span></span><span class="token string">-</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>current<span class="token punctuation">.</span><span class="token property-access">repository</span><span class="token interpolation-punctuation punctuation">}</span></span><span class="token string">.json</span><span class="token template-punctuation string">`</span></span><span class="token punctuation">,</span> <span class="token template-string"><span class="token template-punctuation string">`</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>result<span class="token punctuation">.</span><span class="token property-access">fileData</span><span class="token interpolation-punctuation punctuation">}</span></span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>os<span class="token punctuation">.</span><span class="token constant">EOL</span><span class="token interpolation-punctuation punctuation">}</span></span><span class="token template-punctuation string">`</span></span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span><span class="token punctuation">)</span>
+    <span class="token punctuation">.</span><span class="token keyword control-flow">catch</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token parameter">error</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+      <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">error</span><span class="token punctuation">(</span><span class="token string">'Fail'</span><span class="token punctuation">,</span> error<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">,</span> <span class="token known-class-name class-name">Promise</span><span class="token punctuation">.</span><span class="token method function property-access">resolve</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+  <span class="token punctuation">.</span><span class="token method function property-access">then</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+    <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'Finished'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token doc-comment comment">/**
+ * Bitbucket より指定のファイルを取得する
+ * 
+ * <span class="token keyword">@param</span> <span class="token parameter">project</span> プロジェクト名
+ * <span class="token keyword">@param</span> <span class="token parameter">repoository</span> リポジトリ名
+ * <span class="token keyword">@param</span> <span class="token parameter">branch</span> ブランチ名
+ * <span class="token keyword">@param</span> <span class="token parameter">filePath</span> ファイルまでのフルパス
+ * <span class="token keyword">@return</span> repository・branch・filePath および fileData プロパティとして取得したファイルの中身を返す
+ */</span>
+<span class="token keyword">function</span> <span class="token function">getFile</span><span class="token punctuation">(</span><span class="token parameter">project<span class="token punctuation">,</span> repository<span class="token punctuation">,</span> branch<span class="token punctuation">,</span> filePath</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token keyword control-flow">return</span> <span class="token keyword">new</span> <span class="token class-name">Promise</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token parameter">resolve<span class="token punctuation">,</span> reject</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+    <span class="token comment">// at オプションでブランチを指定する・at オプションに渡す文字列は URI エンコード ('/' → '%2F' など) する</span>
+    request<span class="token punctuation">.</span><span class="token method function property-access">get</span><span class="token punctuation">(</span><span class="token template-string"><span class="token template-punctuation string">`</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>bitbucketURL<span class="token interpolation-punctuation punctuation">}</span></span><span class="token string">/rest/api/1.0/projects/</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>project<span class="token interpolation-punctuation punctuation">}</span></span><span class="token string">/repos/</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>repository<span class="token interpolation-punctuation punctuation">}</span></span><span class="token string">/browse/</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>filePath<span class="token interpolation-punctuation punctuation">}</span></span><span class="token string">?at=</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span><span class="token function">encodeURIComponent</span><span class="token punctuation">(</span><span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">refs/heads/</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>branch<span class="token interpolation-punctuation punctuation">}</span></span><span class="token template-punctuation string">`</span></span><span class="token punctuation">)</span><span class="token interpolation-punctuation punctuation">}</span></span><span class="token template-punctuation string">`</span></span><span class="token punctuation">,</span> <span class="token punctuation">{</span>
+      headers<span class="token operator">:</span> <span class="token punctuation">{</span>
+        <span class="token maybe-class-name">Authorization</span><span class="token operator">:</span> basicAuth
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token parameter">error<span class="token punctuation">,</span> _response<span class="token punctuation">,</span> body</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+      <span class="token keyword control-flow">if</span><span class="token punctuation">(</span>error<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">error</span><span class="token punctuation">(</span><span class="token string">'Request Error'</span><span class="token punctuation">,</span> error<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword control-flow">return</span> <span class="token function">reject</span><span class="token punctuation">(</span>error<span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span>
+      
+      <span class="token keyword">const</span> parsedBody <span class="token operator">=</span> <span class="token known-class-name class-name">JSON</span><span class="token punctuation">.</span><span class="token method function property-access">parse</span><span class="token punctuation">(</span>body<span class="token punctuation">)</span><span class="token punctuation">;</span>
+      
+      <span class="token comment">// API からエラーが返ってきている場合はココで判定する</span>
+      <span class="token keyword control-flow">if</span><span class="token punctuation">(</span>parsedBody<span class="token punctuation">.</span><span class="token property-access">errors</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">error</span><span class="token punctuation">(</span><span class="token string">'Bad Request'</span><span class="token punctuation">,</span> parsedBody<span class="token punctuation">.</span><span class="token property-access">errors</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword control-flow">return</span> <span class="token function">reject</span><span class="token punctuation">(</span>parsedBody<span class="token punctuation">.</span><span class="token property-access">errors</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span>
+      
+      <span class="token comment">// lines プロパティの中身のみをまとめ直す</span>
+      <span class="token keyword">const</span> fileData <span class="token operator">=</span> parsedBody<span class="token punctuation">.</span><span class="token property-access">lines</span><span class="token punctuation">.</span><span class="token method function property-access">map</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token parameter">line</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+        <span class="token keyword control-flow">return</span> line<span class="token punctuation">.</span><span class="token property-access">text</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">join</span><span class="token punctuation">(</span><span class="token string">'\n'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      
+      <span class="token function">resolve</span><span class="token punctuation">(</span><span class="token punctuation">{</span>
+        repository<span class="token operator">:</span> repository<span class="token punctuation">,</span>
+        branch<span class="token operator">:</span> branch<span class="token punctuation">,</span>
+        filePath<span class="token operator">:</span> filePath<span class="token punctuation">,</span>
+        fileData<span class="token operator">:</span> fileData
+      <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>定数 <code>dataList</code> に、リポジトリとブランチ名、ファイルパスを列挙していく。正常に動かせれば、<code>./package-json-files/</code> ディレクトリ配下に</p>
+<ul>
+  <li><code>01-my_repository.json</code></li>
+  <li><code>02-second_repository.json</code></li>
+  <li><code>03-other_repository.json</code></li>
+</ul>
+<p>という名前で、各リポジトリの <code>package.json</code> が出力されていることだろう。</p>
+<p><code>request</code> パッケージで Basic 認証を行う方法は以下を参考にした。</p>
+<ul>
+  <li>参考：<a href="https://stackoverflow.com/questions/30137231/npm-request-with-headers-and-auth">node.js - npm request with headers and auth - Stack Overflow</a></li>
+</ul>
+<p><code>headers</code> に <code>Authorization</code> というキーを用意し、</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword">const</span> basicAuth <span class="token operator">=</span> <span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">Basic </span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span><span class="token keyword">new</span> <span class="token class-name">Buffer<span class="token punctuation">.</span>from</span><span class="token punctuation">(</span><span class="token template-string"><span class="token template-punctuation string">`</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>username<span class="token interpolation-punctuation punctuation">}</span></span><span class="token string">:</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>password<span class="token interpolation-punctuation punctuation">}</span></span><span class="token template-punctuation string">`</span></span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">toString</span><span class="token punctuation">(</span><span class="token string">'base64'</span><span class="token punctuation">)</span><span class="token interpolation-punctuation punctuation">}</span></span><span class="token template-punctuation string">`</span></span><span class="token punctuation">;</span>
+</code></pre>
+<p>こんな書式で認証用の文字列を用意する。</p>
+<p>ファイルを Bitbucket API から取得すると、ファイル終端の改行コードがなくなるので、<code>os.EOL</code> を使ってファイル書き出し時に改行コードを付与してみた。この辺雑だけど動いてるからいいや…。</p>
+<ul>
+  <li>参考：<a href="https://stackoverflow.com/questions/10384340/new-line-in-node-js">javascript - New Line in Node.js - Stack Overflow</a></li>
+</ul>
+<p>コレでファイルをかき集めることができたので、あとはよしなに整形して利用すれば良い。Bitbucket API 便利！</p>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2018-10-26</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2018-10-26</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

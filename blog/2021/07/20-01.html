@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>WSL2 で立ち上げたサーバに LAN 内の別 PC からアクセスする - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2021/07/20-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2021/index.html">2021年</a></li>
+            <li><a href="/blog/2021/07/index.html">07月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2021-07-20</time></div>
+        <h1 id="page-title">WSL2 で立ち上げたサーバに LAN 内の別 PC からアクセスする</h1>
+
+<ol>
+  <li>Windows GitBash (WSL 環境ではない) で <code>$ node server.js</code> とかやって、<code>http://localhost:8080/</code> という開発サーバを立ち上げたとする。</li>
+  <li>次に、Windows マシンの Private IP を <code>ipconfig</code> などで確認する。</li>
+  <li>そうすると、同じ LAN に接続している別の PC やスマホなどで、確認した Private IP を指定して <code>http://192.168.1.10:8080/</code> などとして開発サーバにアクセスできる。</li>
+</ol>
+<p>コレは通常どおりの動作だ。</p>
+<p>一方、開発サーバを立ち上げるのが WSL2 環境だと、</p>
+<ol>
+  <li>WSL2 で <code>$ node server.js</code> などとやって <code>http://localhost:8080/</code> という開発サーバを立ち上げたとする。
+    <ul>
+      <li>Windows ホスト側では、<code>http://localhost:8080/</code> で WSL2 上の開発サーバにアクセスできる。</li>
+      <li><code>http://192.168.1.10:8080/</code> ではアクセスできない。</li>
+    </ul>
+  </li>
+  <li><code>ipconfig</code> で、WSL2 (「イーサネット アダプター vEthernet (WSL)」) の Private IP を確認する。</li>
+  <li>Windows ホスト側から、WSL2 の Private IP を指定して <code>http://172.26.64.1:8080/</code> などとして開発サーバにアクセスできる。</li>
+  <li><em>同じ LAN に接続している別の PC やスマホなどからは、<code>http://192.168.1.10:8080/</code> でも <code>http://172.26.64.1:8080/</code> でもアクセスできない。</em>
+    <ul>
+      <li><code>http://172.26.64.1:8080/</code> (WSL2 の Private IP) が別のマシンから見えないのは妥当</li>
+    </ul>
+  </li>
+</ol>
+<p>…という状態になる。要するに、<strong>WSL2 のポートは、Windows ホスト側には <code>localhost</code> でのみ透過されている</strong>が、Windows ホストの Private IP や WSL2 自体の Private IP には接続されていないというワケだ。</p>
+<p>WSL2 上で起動した開発サーバに、スマホからアクセスして UI を確認したいと思っていたので、なんとか WSL2 のポートを Windows ホスト側にまで開放できないかやり方を調べた。</p>
+<ul>
+  <li><a href="https://rcmdnk.com/blog/2021/03/01/computer-windows-network/">Windows WSL2に外部から直接アクセスするための設定</a>
+    <ul>
+      <li><a href="https://github.com/microsoft/WSL/issues/4150#issuecomment-504209723">WSL 2 NIC Bridge mode 🖧 (Has TCP Workaround🔨) · Issue #4150 · microsoft/WSL</a></li>
+    </ul>
+  </li>
+</ul>
+<p>上のブログに素晴らしい PowerShell スクリプトが載っていた。以下に転載。</p>
+<pre class="language-powershell"><code class="language-powershell"><span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token operator">!</span><span class="token punctuation">(</span><span class="token namespace">[Security.Principal.WindowsPrincipal]</span><span class="token namespace">[Security.Principal.WindowsIdentity]</span>::GetCurrent<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">.</span>IsInRole<span class="token punctuation">(</span><span class="token string">"Administrators"</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">{</span> <span class="token function">Start-Process</span> powershell<span class="token punctuation">.</span>exe <span class="token string">"-File `"<span class="token variable">$PSCommandPath</span>`""</span> <span class="token operator">-</span>Verb RunAs<span class="token punctuation">;</span> <span class="token keyword">exit</span> <span class="token punctuation">}</span>
+
+<span class="token variable">$ip</span> = bash<span class="token punctuation">.</span>exe <span class="token operator">-</span>c <span class="token string">"ip r |tail -n1|cut -d ' ' -f9"</span>
+<span class="token keyword">if</span><span class="token punctuation">(</span> <span class="token operator">!</span> <span class="token variable">$ip</span> <span class="token punctuation">)</span><span class="token punctuation">{</span>
+  <span class="token function">echo</span> <span class="token string">"The Script Exited, the ip address of WSL 2 cannot be found"</span><span class="token punctuation">;</span>
+  <span class="token keyword">exit</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+
+<span class="token comment"># All the ports you want to forward separated by comma</span>
+<span class="token variable">$ports</span>=@<span class="token punctuation">(</span>22<span class="token punctuation">,</span>3000<span class="token punctuation">,</span>8080<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token variable">$ports_a</span> = <span class="token variable">$ports</span> <span class="token operator">-join</span> <span class="token string">","</span><span class="token punctuation">;</span>
+
+<span class="token comment"># Remove Firewall Exception Rules</span>
+<span class="token function">iex</span> <span class="token string">"Remove-NetFireWallRule -DisplayName 'WSL 2 Firewall Unlock' "</span><span class="token punctuation">;</span>
+
+<span class="token comment"># Adding Exception Rules for inbound and outbound Rules</span>
+<span class="token function">iex</span> <span class="token string">"New-NetFireWallRule -DisplayName 'WSL 2 Firewall Unlock' -Direction Outbound -LocalPort <span class="token variable">$ports_a</span> -Action Allow -Protocol TCP"</span><span class="token punctuation">;</span>
+<span class="token function">iex</span> <span class="token string">"New-NetFireWallRule -DisplayName 'WSL 2 Firewall Unlock' -Direction Inbound -LocalPort <span class="token variable">$ports_a</span> -Action Allow -Protocol TCP"</span><span class="token punctuation">;</span>
+
+<span class="token keyword">for</span><span class="token punctuation">(</span> <span class="token variable">$i</span> = 0<span class="token punctuation">;</span> <span class="token variable">$i</span> <span class="token operator">-lt</span> <span class="token variable">$ports</span><span class="token punctuation">.</span>length<span class="token punctuation">;</span> <span class="token variable">$i</span>+<span class="token operator">+</span> <span class="token punctuation">)</span><span class="token punctuation">{</span>
+  <span class="token variable">$port</span> = <span class="token variable">$ports</span><span class="token punctuation">[</span><span class="token variable">$i</span><span class="token punctuation">]</span><span class="token punctuation">;</span>
+  <span class="token function">iex</span> <span class="token string">"netsh interface portproxy add v4tov4 listenport=<span class="token variable">$port</span> listenaddress=* connectport=<span class="token variable">$port</span> connectaddress=<span class="token variable">$ip</span>"</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+
+<span class="token comment"># Show proxies</span>
+<span class="token function">iex</span> <span class="token string">"netsh interface portproxy show v4tov4"</span><span class="token punctuation">;</span>
+</code></pre>
+<p>ポイントは <code>$ports=@(22,3000,8080);</code> の行。ココで、Windows ホスト側に透過させたい WSL2 のポート番号を列挙しておく。</p>
+<p>コイツを適当な <code>.ps1</code> ファイルとして保存し、管理者権限で実行してやることで、Windows ホストの Private IP <code>http://192.168.1.10:8080/</code> でアクセスできるようになる。</p><div class="ad-rakuten">
+  <div class="ad-rakuten-image">
+    <a href="https://hb.afl.rakuten.co.jp/hgc/g00q0722.waxyc9ff.g00q0722.waxyd017/?pc=https%3A%2F%2Fitem.rakuten.co.jp%2Fbook%2F16677907%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Fbook%2Fi%2F20310953%2F">
+      <img src="https://thumbnail.image.rakuten.co.jp/@0_mall/book/cabinet/3095/9784802613095.jpg?_ex=128x128">
+    </a>
+  </div>
+  <div class="ad-rakuten-info">
+    <div class="ad-rakuten-title">
+      <a href="https://hb.afl.rakuten.co.jp/hgc/g00q0722.waxyc9ff.g00q0722.waxyd017/?pc=https%3A%2F%2Fitem.rakuten.co.jp%2Fbook%2F16677907%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Fbook%2Fi%2F20310953%2F">コマンドプロンプト、PowerShellそしてWSLまで　Windows コマンド環境のすべて [ 五十嵐 貴之 ]</a>
+    </div>
+    <div class="ad-rakuten-shop">
+      <a href="https://hb.afl.rakuten.co.jp/hgc/g00q0722.waxyc9ff.g00q0722.waxyd017/?pc=https%3A%2F%2Fwww.rakuten.co.jp%2Fbook%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Fbook%2F">楽天ブックス</a>
+    </div>
+    <div class="ad-rakuten-price">価格 : 3465円</div>
+  </div>
+</div>
+<div class="ad-amazon">
+  <div class="ad-amazon-image">
+    <a href="https://www.amazon.co.jp/dp/4802613091?tag=neos21-22&amp;linkCode=osi&amp;th=1&amp;psc=1">
+      <img src="https://m.media-amazon.com/images/I/61jCAtIy0FL._SL160_.jpg" width="123" height="160">
+    </a>
+  </div>
+  <div class="ad-amazon-info">
+    <div class="ad-amazon-title">
+      <a href="https://www.amazon.co.jp/dp/4802613091?tag=neos21-22&amp;linkCode=osi&amp;th=1&amp;psc=1">コマンドプロンプト、PowerShellそしてWSLまで Windows コマンド環境のすべて</a>
+    </div>
+  </div>
+</div>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2021-07-20</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2021-07-20</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

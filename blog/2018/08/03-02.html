@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>JavaScript のモジュール管理の仕組みをおさらいする：TypeScript をトランスパイルして HTML 上で利用するための前段 - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2018/08/03-02.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2018/index.html">2018年</a></li>
+            <li><a href="/blog/2018/08/index.html">08月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2018-08-03</time></div>
+        <h1 id="page-title">JavaScript のモジュール管理の仕組みをおさらいする：TypeScript をトランスパイルして HTML 上で利用するための前段</h1>
+
+<p><code>tsc</code> を利用して TypeScript をトランスパイルする素振り環境を作ってみた。最初はコンソール上でコンパイルした JS ファイルを <code>$ node example.js</code> のように動かして満足していたのだが、コンパイルした JS ファイルを HTML で読み込んで動かそうとしたら、<code>import</code>・<code>export</code> が解釈できないようで詰まってしまった。</p>
+<p>すぐにモジュールの仕様が問題なのは分かったが、その話をするために、まずは JavaScript におけるモジュール管理の仕組みをおさらいするための記事を書いてみた。</p>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#%E7%B4%A0%E6%8C%AF%E3%82%8A%E7%92%B0%E5%A2%83%E3%81%AE%E7%94%A8%E6%84%8F">素振り環境の用意</a></li>
+  <li><a href="#%E3%81%BE%E3%81%9A%E3%81%AF-nodejs-%E3%81%A7%E5%8B%95%E3%81%8B%E3%81%97%E3%81%A6%E3%81%BF%E3%82%8B">まずは Node.js で動かしてみる</a></li>
+  <li><a href="#html-%E3%81%8B%E3%82%89-js-%E3%83%95%E3%82%A1%E3%82%A4%E3%83%AB%E3%82%92%E8%AA%AD%E3%81%BF%E8%BE%BC%E3%82%93%E3%81%A7%E3%82%82%E5%8B%95%E4%BD%9C%E3%81%97%E3%81%A6%E3%81%8F%E3%82%8C%E3%81%AA%E3%81%84%EF%BC%9F">HTML から JS ファイルを読み込んでも動作してくれない？</a></li>
+  <li><a href="#%E3%83%A2%E3%82%B8%E3%83%A5%E3%83%BC%E3%83%AB%E7%AE%A1%E7%90%86%E3%81%AE%E4%BB%95%E7%B5%84%E3%81%BF%E3%82%92%E3%81%8A%E3%81%95%E3%82%89%E3%81%84%E3%81%97%E3%82%88%E3%81%86">モジュール管理の仕組みをおさらいしよう</a></li>
+  <li><a href="#javascript-%E3%81%AB%E3%81%8A%E3%81%91%E3%82%8B%E3%83%A2%E3%82%B8%E3%83%A5%E3%83%BC%E3%83%AB%E7%AE%A1%E7%90%86%E3%81%AE%E6%AD%B4%E5%8F%B2">JavaScript におけるモジュール管理の歴史</a></li>
+  <li><a href="#%E3%83%A2%E3%82%B8%E3%83%A5%E3%83%BC%E3%83%AB%E3%83%90%E3%83%B3%E3%83%89%E3%83%AB%E3%83%84%E3%83%BC%E3%83%AB%E3%81%AE%E7%99%BB%E5%A0%B4">モジュールバンドルツールの登場</a></li>
+  <li><a href="#%E3%83%A2%E3%82%B8%E3%83%A5%E3%83%BC%E3%83%AB%E3%81%AE%E4%BB%95%E6%A7%98%E3%81%8C%E8%A4%87%E6%95%B0%E7%94%9F%E3%81%BE%E3%82%8C%E3%81%9F">モジュールの仕様が複数生まれた</a>
+    <ul>
+      <li><a href="#amd">AMD</a></li>
+      <li><a href="#umd">UMD</a></li>
+      <li><a href="#esmodules">ESModules</a></li>
+    </ul>
+  </li>
+  <li><a href="#%E3%83%A2%E3%82%B8%E3%83%A5%E3%83%BC%E3%83%AB%E3%81%AE%E5%AE%9A%E7%BE%A9%E6%96%B9%E6%B3%95%E3%82%92%E3%83%96%E3%83%A9%E3%82%A6%E3%82%B6%E3%81%AB%E5%90%88%E3%82%8F%E3%81%9B%E3%81%A6%E3%82%84%E3%82%8C%E3%81%B0-typescript-%E3%82%B3%E3%83%BC%E3%83%89%E3%82%82%E3%83%88%E3%83%A9%E3%83%B3%E3%82%B9%E3%83%91%E3%82%A4%E3%83%AB%E3%81%97%E3%81%A6%E5%8B%95%E3%81%8B%E3%81%9B%E3%82%8B">モジュールの定義方法をブラウザに合わせてやれば TypeScript コードもトランスパイルして動かせる</a></li>
+  <li><a href="#%E5%8F%82%E8%80%83%E6%96%87%E7%8C%AE">参考文献</a></li>
+</ul>
+<h2 id="素振り環境の用意"><a class="header-link" href="#素振り環境の用意"><span class="header-link-mark"></span></a>素振り環境の用意</h2>
+<p>まずは素振り環境をどのように作ったか紹介する。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># 素振り用のディレクトリを作る</span>
+$ <span class="token function">mkdir</span> ts-on-html-practice <span class="token operator">&#x26;&#x26;</span> <span class="token builtin class-name">cd</span> <span class="token variable">$_</span>
+<span class="token comment"># package.json を用意する</span>
+$ <span class="token function">npm</span> init -y
+<span class="token comment"># TypeScript をインストールし devDependencies に追記する。v2.9.2 がインストールされた</span>
+$ <span class="token function">npm</span> i -D typescript
+<span class="token comment"># ローカルインストールした TypeScript (tsc) を使って tsconfig.json を生成させる</span>
+$ <span class="token variable"><span class="token variable">$(</span><span class="token function">npm</span> bin tsc<span class="token variable">)</span></span>/tsc --init
+</code></pre>
+<p>この状態で、<code>tsconfig.json</code> は以下のように設定されている。</p>
+<pre class="language-json"><code class="language-json"><span class="token punctuation">{</span>
+  <span class="token property">"compilerOptions"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+    <span class="token comment">/* Basic Options */</span>
+    <span class="token property">"target"</span><span class="token operator">:</span> <span class="token string">"es5"</span><span class="token punctuation">,</span>       <span class="token comment">/* Specify ECMAScript target version: 'ES3' (default), 'ES5', 'ES2015', 'ES2016', 'ES2017','ES2018' or 'ESNEXT'. */</span>
+    <span class="token property">"module"</span><span class="token operator">:</span> <span class="token string">"commonjs"</span><span class="token punctuation">,</span>  <span class="token comment">/* Specify module code generation: 'none', 'commonjs', 'amd', 'system', 'umd', 'es2015', or 'ESNext'. */</span>
+</code></pre>
+<p>コンパイル後の JavaScript が準拠するバージョン (<code>target</code>) は ES5、インポート構文の解釈 (<code>module</code>) は CommonJS ということになる。</p>
+<p>ここで、ソースファイルの所在を <code>src/</code>、生成ファイルの格納場所を <code>dist/</code> とするため、以下のオプションの設定を変更しておく。</p>
+<pre class="language-json"><code class="language-json"><span class="token punctuation">{</span>
+  <span class="token property">"compilerOptions"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+    <span class="token comment">// …中略…</span>
+    <span class="token property">"outDir"</span><span class="token operator">:</span> <span class="token string">"./dist"</span><span class="token punctuation">,</span>  <span class="token comment">/* Redirect output structure to the directory. */</span>
+    <span class="token property">"rootDir"</span><span class="token operator">:</span> <span class="token string">"./src"</span><span class="token punctuation">,</span>  <span class="token comment">/* Specify the root directory of input files. Use to control the output directory structure with --outDir. */</span>
+</code></pre>
+<p>続いて、開発を進めやすくするため、<code>package.json</code> の npm-scripts を以下のように設定する。</p>
+<pre class="language-json"><code class="language-json"><span class="token property">"scripts"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+  <span class="token property">"start"</span><span class="token operator">:</span> <span class="token string">"tsc -w"</span><span class="token punctuation">,</span>
+  <span class="token property">"tsc"</span><span class="token operator">:</span> <span class="token string">"tsc"</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>コレで準備完了。<code>$ npm start</code> と打つと <code>tsc</code> のファイル監視が始まる。<code>src/</code> ディレクトリを作ってその中に <code>.ts</code> ファイルを置くと、<code>dist/</code> 配下に <code>.js</code> ファイルを生成してくれる。</p>
+<h2 id="まずは-nodejs-で動かしてみる"><a class="header-link" href="#まずは-nodejs-で動かしてみる"><span class="header-link-mark"></span></a>まずは Node.js で動かしてみる</h2>
+<p>まずは Node.js 上でトランスパイルしたファイルが動くか試してみる。お試しで以下のような2つのファイルを作ってみる。</p>
+<ul>
+  <li><code>./src/parent.ts</code></li>
+</ul>
+<pre class="language-typescript"><code class="language-typescript"><span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">Child</span> <span class="token punctuation">}</span></span> <span class="token keyword">from</span> <span class="token string">'./child'</span><span class="token punctuation">;</span>
+
+<span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'Parent Start'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token keyword">const</span> child <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name"><span class="token maybe-class-name">Child</span></span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+child<span class="token punctuation">.</span><span class="token method function property-access">echo</span><span class="token punctuation">(</span><span class="token string">'Neo'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'Parent End'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<ul>
+  <li><code>./src/child.ts</code></li>
+</ul>
+<pre class="language-typescript"><code class="language-typescript"><span class="token keyword">export</span> <span class="token keyword">class</span> <span class="token class-name"><span class="token maybe-class-name">Child</span></span> <span class="token punctuation">{</span>
+  <span class="token function">echo</span><span class="token punctuation">(</span>str<span class="token operator">:</span> <span class="token builtin">string</span><span class="token punctuation">)</span><span class="token operator">:</span> <span class="token keyword">void</span> <span class="token punctuation">{</span>
+    <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">Hello </span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>str<span class="token interpolation-punctuation punctuation">}</span></span><span class="token string">!</span><span class="token template-punctuation string">`</span></span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p><code>export</code> した別クラスを <code>import</code> して生成し、その関数を利用するだけのシンプルなもの。</p>
+<p><code>tsc</code> によって <code>./dist/parent.js</code> と <code>./dist/child.js</code> が生成されていると思うので、ターミナルで以下のように叩いてみると、結果が見られるはずだ。</p>
+<pre class="language-bash"><code class="language-bash">$ node dist/parent.js 
+Parent Start
+Hello Neo<span class="token operator">!</span>
+Parent End
+</code></pre>
+<p>ココまでは良い。問題はココから。</p>
+<h2 id="html-から-js-ファイルを読み込んでも動作してくれない？"><a class="header-link" href="#html-から-js-ファイルを読み込んでも動作してくれない？"><span class="header-link-mark"></span></a>HTML から JS ファイルを読み込んでも動作してくれない？</h2>
+<p>先程生成した <code>./dist/parent.js</code> を読み込む <code>./html/test-1.html</code> という HTML ファイルを作ってみる。</p>
+<pre class="language-html"><code class="language-html"><span class="token doctype"><span class="token punctuation">&#x3C;!</span><span class="token doctype-tag">DOCTYPE</span> <span class="token name">html</span><span class="token punctuation">></span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>html</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>head</span><span class="token punctuation">></span></span>
+    <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>meta</span> <span class="token attr-name">charset</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>UTF-8<span class="token punctuation">"</span></span><span class="token punctuation">></span></span>
+    <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>title</span><span class="token punctuation">></span></span>TypeScript on HTML Practice 1<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>title</span><span class="token punctuation">></span></span>
+    <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>script</span> <span class="token attr-name">src</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>../dist/parent.js<span class="token punctuation">"</span></span><span class="token punctuation">></span></span><span class="token script"></span><span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>script</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>head</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>body</span><span class="token punctuation">></span></span><span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>body</span><span class="token punctuation">></span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>html</span><span class="token punctuation">></span></span>
+</code></pre>
+<p>この HTML ファイルをブラウザで表示すれば、管理者コンソールに <code>console.log()</code> の内容が出力されそうだが、以下のようなエラーが出てしまった。</p>
+<pre><code>Uncaught ReferenceError: exports is not defined
+  at parent.js:2
+</code></pre>
+<p>問題があるのは TypeScript コードではなく、それを JavaScript にトランスパイルする時のモジュールの決め方だ。現状はデフォルトのまま、CommonJS 形式で生成させているが、これではブラウザ上で <code>import</code>・<code>export</code> の関係を解釈できないのだ。</p>
+<h2 id="モジュール管理の仕組みをおさらいしよう"><a class="header-link" href="#モジュール管理の仕組みをおさらいしよう"><span class="header-link-mark"></span></a>モジュール管理の仕組みをおさらいしよう</h2>
+<p>このあたりの話は頭の中では理解できているので、「あぁコレがこうだからこうすればイケるよね」とは思っているのだが、それを文面に落とし込んだことがなかったので、整理する。</p>
+<h2 id="javascript-におけるモジュール管理の歴史"><a class="header-link" href="#javascript-におけるモジュール管理の歴史"><span class="header-link-mark"></span></a>JavaScript におけるモジュール管理の歴史</h2>
+<p>ブラウザ上で動作することが前提だった JavaScript の世界は、元々「モジュール」という概念がなかった。<code>jQuery</code> や <code>$</code> をグローバル変数に定義するから、後続のコードで <code>$</code> を使える、というそれだけだった。</p>
+<p>サーバサイドで JavaScript が動作する Node.js が登場し、当初は ServerJS という名前でモジュール管理の仕組みが策定された。これは <code>module.exports</code> によるエクスポートと <code>require()</code> によるインポートで、現在は名称変更して <em>CommonJS</em> という仕様で策定されている。</p>
+<h2 id="モジュールバンドルツールの登場"><a class="header-link" href="#モジュールバンドルツールの登場"><span class="header-link-mark"></span></a>モジュールバンドルツールの登場</h2>
+<p>Node.js 上で実現される、CommonJS によるモジュール管理の仕組みは便利なので、ウェブサイトやライブラリを開発する時は使いたい。しかし、このままでは当然ブラウザ上では動作しない。ということで、ブラウザ上で動作させる時にファイルを上手いことまとめる (「バンドルする」) ツールが登場した。</p>
+<p>まず有名なのは <em>Browserify</em> で、これは平たく言うと、<code>require()</code> 構文の部分に対象のファイルのコードをブチ込む、ということをやっている。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token comment">// 厳密なところは抜きにして、概念的にはこんなイメージ</span>
+
+<span class="token comment">// 【元ファイル】エクスポートする方</span>
+module<span class="token punctuation">.</span><span class="token property-access">exports</span> <span class="token operator">=</span> <span class="token punctuation">{</span>
+  <span class="token function-variable function">echo</span><span class="token operator">:</span> <span class="token keyword">function</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'Hello'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+
+<span class="token comment">// 【元ファイル】インポートして使う方</span>
+<span class="token keyword">const</span> myModule <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'my-module'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+myModule<span class="token punctuation">.</span><span class="token method function property-access">echo</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// コレを Browserify は以下のように変換することで動かしてくれるイメージ</span>
+<span class="token keyword">var</span> myModule <span class="token operator">=</span> <span class="token punctuation">{</span>
+  <span class="token function-variable function">echo</span><span class="token operator">:</span> <span class="token keyword">function</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'Hello'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+myModule<span class="token punctuation">.</span><span class="token method function property-access">echo</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>コレなら単一ファイルにまとまって、<code>import</code> も <code>export</code> もしなくなったのでブラウザで動く、というワケ。</p>
+<p>最近は Browserify よりも Webpack というバンドルツールが広まっている。こちらも結局やっていることとしては、このように複数に分かれているファイル (モジュール) を1つにバンドルする (まとめる) ということをやっている。ちなみに、Grunt や Gulp といったビルドツールは、プラグインを組み合わせてこうした処理を自分で構築するツールで、それ自体がバンドルを行ってくれるワケではない。</p>
+<h2 id="モジュールの仕様が複数生まれた"><a class="header-link" href="#モジュールの仕様が複数生まれた"><span class="header-link-mark"></span></a>モジュールの仕様が複数生まれた</h2>
+<h3 id="amd"><a class="header-link" href="#amd"><span class="header-link-mark"></span></a>AMD</h3>
+<p>実質的に Node.js 向けの仕様でしかない CommonJS はブラウザ上では動かないので、新たな仕様が策定された。まず生まれたのはモジュールを非同期でロードする、<strong>AMD (Asynchronous Module Definition)</strong> というモノ。AMD は <code>define()</code> でモジュールを定義し、読み込むモジュールを <code>define()</code> の第1引数で指定する、という書き方をする。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token comment">// 先程の CommonJS 形式で書いたモジュール読み込みの処理を書き直すとこうなる</span>
+
+<span class="token comment">// エクスポートする側</span>
+<span class="token function">define</span><span class="token punctuation">(</span><span class="token keyword">function</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token keyword control-flow">return</span> <span class="token punctuation">{</span>
+    <span class="token function-variable function">edho</span><span class="token operator">:</span> <span class="token keyword">function</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'Hello'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// インポートする側</span>
+<span class="token function">define</span><span class="token punctuation">(</span><span class="token punctuation">[</span><span class="token string">'my-module'</span><span class="token punctuation">,</span> <span class="token keyword">function</span><span class="token punctuation">(</span><span class="token parameter">myModule</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  myModule<span class="token punctuation">.</span><span class="token method function property-access">echo</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>この AMD の仕様で作られたモジュールをブラウザで動かせるようにしてくれたのが <em>RequireJS</em> というライブラリ。このライブラリを利用すれば、AMD 形式の JS ファイルが複数分散している状態でも、うまく非同期でロードしてくれる。このあと紹介する「方法1」はコレを使う。</p>
+<h3 id="umd"><a class="header-link" href="#umd"><span class="header-link-mark"></span></a>UMD</h3>
+<p>Webpack は、CommonJS 形式のファイルも AMD 形式のファイルも両方サポートしている。この「CommonJS でも AMD でも」というところがベースとなって、「CommonJS 仕様が求められる環境では CommonJS モジュールとして、AMD 仕様が求められる環境では AMD モジュールとして」振る舞えるようにした仕組みを <strong>UMD (Universal Module Definition)</strong> と呼ぶ。</p>
+<p>jQuery のソースコードの最初のところで、以下のような作りを見たことがあるかもしれない。コレが UMD パターンに即した成果ファイル。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token punctuation">(</span><span class="token keyword">function</span><span class="token punctuation">(</span><span class="token parameter">global<span class="token punctuation">,</span> factory</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token keyword control-flow">if</span> <span class="token punctuation">(</span><span class="token keyword">typeof</span> define <span class="token operator">===</span> <span class="token string">'function'</span> <span class="token operator">&#x26;&#x26;</span> define<span class="token punctuation">.</span><span class="token property-access">amd</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token comment">// AMD に対応した部分</span>
+    <span class="token function">define</span><span class="token punctuation">(</span><span class="token punctuation">[</span><span class="token string">'myModule'</span><span class="token punctuation">,</span> <span class="token string">'myOtherModule'</span><span class="token punctuation">]</span><span class="token punctuation">,</span> factory<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  <span class="token keyword control-flow">else</span> <span class="token keyword control-flow">if</span> <span class="token punctuation">(</span><span class="token keyword">typeof</span> exports <span class="token operator">===</span> <span class="token string">'object'</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token comment">// CommonJS に対応した部分</span>
+    module<span class="token punctuation">.</span><span class="token property-access">exports</span> <span class="token operator">=</span> <span class="token function">factory</span><span class="token punctuation">(</span><span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'myModule'</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'myOtherModule'</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  <span class="token keyword control-flow">else</span> <span class="token punctuation">{</span>
+    <span class="token comment">// それ以外のブラウザでの利用に対応した部分 (引数 global に window を指定することで対応する)</span>
+    global<span class="token punctuation">.</span><span class="token property-access">returnExports</span> <span class="token operator">=</span> <span class="token function">factory</span><span class="token punctuation">(</span>global<span class="token punctuation">.</span><span class="token property-access">myModule</span><span class="token punctuation">,</span> root<span class="token punctuation">.</span><span class="token property-access">myOtherModule</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span><span class="token punctuation">(</span><span class="token keyword">this</span><span class="token punctuation">,</span> <span class="token keyword">function</span><span class="token punctuation">(</span><span class="token parameter">myModule<span class="token punctuation">,</span> myOtherModule</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token comment">// Methods</span>
+  <span class="token keyword">function</span> <span class="token function">notHelloOrGoodbye</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span><span class="token punctuation">}</span><span class="token punctuation">;</span> <span class="token comment">// A private method</span>
+  <span class="token keyword">function</span> <span class="token function">hello</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span><span class="token punctuation">}</span><span class="token punctuation">;</span> <span class="token comment">// A public method because it's returned (see below)</span>
+  <span class="token keyword">function</span> <span class="token function">goodbye</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span><span class="token punctuation">}</span><span class="token punctuation">;</span> <span class="token comment">// A public method because it's returned (see below)</span>
+  
+  <span class="token comment">// Exposed public methods</span>
+  <span class="token keyword control-flow">return</span> <span class="token punctuation">{</span>
+    hello<span class="token operator">:</span> hello<span class="token punctuation">,</span>
+    goodbye<span class="token operator">:</span> goodbye
+  <span class="token punctuation">}</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<ul>
+  <li>参考：<a href="https://qiita.com/chuck0523/items/1868a4c04ab4d8cdfb23">意訳 初学者のためのJavaScriptモジュール講座 Part1 - Qiita</a></li>
+</ul>
+<h3 id="esmodules"><a class="header-link" href="#esmodules"><span class="header-link-mark"></span></a>ESModules</h3>
+<p>そしてついにブラウザが直接 JavaScript モジュールの仕組みを解釈できるようになった、<strong>ES2015 Modules (ESModules)</strong> という仕様が策定された。<code>.mjs</code> という拡張子でファイルを用意することが望まれ (ブラウザ上で動作させる場合は必須ではないみたい)、 <strong><code>&#x3C;script type="module"></code></strong> で読み込むような仕組みだ。</p>
+<p>実はもう IE11 以外の主要なブラウザで動作するようになっている。</p>
+<ul>
+  <li>参考：<a href="https://caniuse.com/#feat=es6-module">Can I use... Support tables for HTML5, CSS3, etc</a></li>
+</ul>
+<h2 id="モジュールの定義方法をブラウザに合わせてやれば-typescript-コードもトランスパイルして動かせる"><a class="header-link" href="#モジュールの定義方法をブラウザに合わせてやれば-typescript-コードもトランスパイルして動かせる"><span class="header-link-mark"></span></a>モジュールの定義方法をブラウザに合わせてやれば TypeScript コードもトランスパイルして動かせる</h2>
+<p>…ココまでが、JavaScript における「モジュール」の概念が生まれた歴史と、その発展の様子だ。</p>
+<table>
+  <thead>
+    <tr>
+      <th>対象環境</th>
+      <th>モジュール管理の仕組み</th>
+      <th>ブラウザで動かすには</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>ブラウザ (昔の話)</td>
+      <td>(モジュールの概念がないので) グローバル変数で頑張って管理</td>
+      <td>JS ファイルを読み込ませる順番 (グローバル変数の定義順) に注意</td>
+    </tr>
+    <tr>
+      <td>主に Node.js</td>
+      <td>CommonJS</td>
+      <td>Browserify や Webpack でバンドル</td>
+    </tr>
+    <tr>
+      <td>ブラウザ向け</td>
+      <td>AMD</td>
+      <td>RequireJS を使うか、Webpack でバンドル</td>
+    </tr>
+    <tr>
+      <td>Node.js・ブラウザ両方</td>
+      <td>UMD (≒ CommonJS &#x26; AMD)</td>
+      <td>RequireJS を使うか、Webpack でバンドル (中身はほぼ AMD と同じなので)</td>
+    </tr>
+    <tr>
+      <td>ブラウザ (最近)</td>
+      <td>ESModules</td>
+      <td><code>&#x3C;script type="module"></code> で読み込む</td>
+    </tr>
+  </tbody>
+</table>
+<p>次回は実際に、TypeScript のトランスパイル方法を変えたりして、HTML 上でも <code>export</code>・<code>import</code> している TypeScript コードが解釈できるようにする。</p>
+<ul>
+  <li><a href="/blog/2018/08/04-01.html">import・export を利用している TypeScript コードを HTML 上で動作させる方法</a></li>
+</ul>
+<h2 id="参考文献"><a class="header-link" href="#参考文献"><span class="header-link-mark"></span></a>参考文献</h2>
+<ul>
+  <li><a href="https://tsuchikazu.net/javascript-module/">JavaScriptのモジュール管理(CommonJSとかAMDとかBrowserifyとかwebpack) | tsuchikazu blog</a></li>
+  <li><a href="https://va2577.github.io/post/124/">ブラウザーで ECMAScript Modules を使うことを調べました 4(Universal Module Definition) – Espresso &#x26; Onigiri</a></li>
+  <li><a href="https://qiita.com/ringtail003/items/f7ed257c86e5522f6e59">TypeScript超入門(3)：モジュール - Qiita</a></li>
+  <li><a href="https://mae.chab.in/archives/2849">ES6 (ES2015) ModulesのUMD化。HTMLのScript要素とES6 importでの同時読み込みに対応させる方法 | maesblog</a></li>
+  <li><a href="https://blog.jxck.io/entries/2017-08-15/universal-mjs-ecosystem.html">.mjs とは何か、またはモジュールベース JS とエコシステムの今後 | blog.jxck.io</a></li>
+  <li><a href="https://postd.cc/the-state-of-javascript-modules/">JavaScript モジュールの現状 | POSTD</a></li>
+</ul>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2018-08-03</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2018-08-03</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

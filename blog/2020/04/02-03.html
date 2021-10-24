@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>Super キーで「全てのアプリケーション」の表示・非表示のみをトグルして Activities Overview 画面を封じる GNOME Shell 拡張機能を書いた - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2020/04/02-03.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2020/index.html">2020年</a></li>
+            <li><a href="/blog/2020/04/index.html">04月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2020-04-02</time></div>
+        <h1 id="page-title">Super キーで「全てのアプリケーション」の表示・非表示のみをトグルして Activities Overview 画面を封じる GNOME Shell 拡張機能を書いた</h1>
+
+<p>Ubuntu 18.04 にて。既存の GNOME Shell 拡張機能を書き換えることで、自分が求める動作を実現させた。</p>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#%E4%BD%95%E3%81%8C%E5%95%8F%E9%A1%8C%E3%81%A0%E3%81%A3%E3%81%9F%E3%81%8B">何が問題だったか</a></li>
+  <li><a href="#%E6%97%A2%E5%AD%98%E3%81%AE-gnome-shell-%E6%8B%A1%E5%BC%B5%E6%A9%9F%E8%83%BD%E3%82%92%E6%9B%B8%E3%81%8D%E6%8F%9B%E3%81%88%E3%82%8B">既存の GNOME Shell 拡張機能を書き換える</a></li>
+  <li><a href="#extensionjs-%E3%82%92%E6%AC%A1%E3%81%AE%E3%82%88%E3%81%86%E3%81%AB%E7%9B%B4%E3%81%99"><code>extension.js</code> を次のように直す</a></li>
+  <li><a href="#diff-%E3%81%A7%E8%A1%A8%E7%8F%BE">Diff で表現</a></li>
+  <li><a href="#%E3%81%A9%E3%81%86%E3%82%84%E3%81%A3%E3%81%A6%E5%8F%8D%E6%98%A0%E3%81%99%E3%82%8B%EF%BC%9F">どうやって反映する？</a></li>
+  <li><a href="#%E4%BD%95%E3%82%92%E3%81%A9%E3%81%86%E5%AE%9F%E8%A3%85%E3%81%97%E3%81%A6%E3%81%84%E3%82%8B%E3%81%AE%E3%81%8B">何をどう実装しているのか</a></li>
+  <li><a href="#%E3%81%BE%E3%81%A8%E3%82%81">まとめ</a></li>
+</ul>
+<h2 id="何が問題だったか"><a class="header-link" href="#何が問題だったか"><span class="header-link-mark"></span></a>何が問題だったか</h2>
+<p>Ubuntu のデフォルトだと、画面左上の「アクティビティ」を押下すると表示される、ウィンドウとワークスペースの一覧画面。MacOS の Mission Control みたいなヤツ。この画面を<em>「Activities Overview」画面</em>と呼ぶそうなのだが、<strong>存在から抹消したい。</strong></p>
+<p>自分はキーボード・ショートカットを色々変更して、アクティビティ系の表示設定は全て無効化し、PrintScreen キーに <code>Show all applications</code> を割り当てている (デフォルトは <code>Super + A</code>)。コレで PrintScreen キーを押すと全てのアプリケーション一覧が表示されるのだが、もう一度 PrintScreen を押すと、アプリケーション一覧が閉じるのではなく、「Activities Overview」画面が開いてしまうのだ。「All Applications」と「Activities Overview」を行き来してしまうので、閉じるには Esc キーを押さないといけない。</p>
+<p>「アクティビティ」アイコンを消す系の GNOME Shell 拡張機能は多数あるのだが、この「Show all applications」からの「Activities Overview」画面への移動を抑止するような仕組みは、探しても見つからなかった。できれば Windows における Win キー単独の押下みたいな感じで、<strong>PrintScreen キーの押下で「全てのアプリケーション一覧」の表示 ⇔ 非表示をトグル切り替え</strong>する動きをしてほしいと思っている。</p>
+<ul>
+  <li>参考：<a href="https://askubuntu.com/questions/1072043/keyboard-shortcut-to-show-applications/1072142">18.04 - Keyboard shortcut to "Show Applications" - Ask Ubuntu</a></li>
+  <li>参考：<a href="https://askubuntu.com/questions/1090202/how-do-i-disable-showing-the-activities-overview-forever">gnome shell - How do I disable showing the "Activities overview" forever? - Ask Ubuntu</a></li>
+</ul>
+<p>ところで、<strong><a href="https://extensions.gnome.org/extension/1122/esc-to-close-overview-from-applications-list/">ESC to close overview from applications list</a></strong>という GNOME Shell 拡張機能がある。「Activities Overview」か「All Applications」画面で Esc キーを押すと、この画面を閉じられるというモノだ。</p>
+<p>この GNOME Shell 拡張機能を参考に、やりたいことが実現できるのではないかと思い、書いてみることにした。</p>
+<h2 id="既存の-gnome-shell-拡張機能を書き換える"><a class="header-link" href="#既存の-gnome-shell-拡張機能を書き換える"><span class="header-link-mark"></span></a>既存の GNOME Shell 拡張機能を書き換える</h2>
+<p>というワケで実装。</p>
+<p>GNOME Shell 拡張機能は JavaScript で書かれており、インストールした拡張機能は以下のディレクトリに存在した。</p>
+<ul>
+  <li><code>~/.local/share/gnome-shell/extensions/ESC_to_close_overview@daniel.badawi.me/</code></li>
+</ul>
+<p>この配下に <em><code>extension.js</code></em> というファイルがある。</p>
+<h2 id="extensionjs-を次のように直す"><a class="header-link" href="#extensionjs-を次のように直す"><span class="header-link-mark"></span></a><code>extension.js</code> を次のように直す</h2>
+<p>この <code>extension.js</code> を次のように修正した。全文を貼り付ける。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword">const</span> <span class="token maybe-class-name">Clutter</span> <span class="token operator">=</span> imports<span class="token punctuation">.</span><span class="token property-access">gi</span><span class="token punctuation">.</span><span class="token property-access"><span class="token maybe-class-name">Clutter</span></span><span class="token punctuation">;</span>
+<span class="token keyword">const</span> <span class="token maybe-class-name">Main</span> <span class="token operator">=</span> imports<span class="token punctuation">.</span><span class="token property-access">ui</span><span class="token punctuation">.</span><span class="token property-access">main</span><span class="token punctuation">;</span>
+<span class="token keyword">const</span> <span class="token maybe-class-name">Lang</span> <span class="token operator">=</span> imports<span class="token punctuation">.</span><span class="token property-access">lang</span><span class="token punctuation">;</span>
+
+<span class="token comment">// 以下2行を追加</span>
+<span class="token keyword">const</span> <span class="token punctuation">{</span> <span class="token maybe-class-name">Gio</span><span class="token punctuation">,</span> <span class="token maybe-class-name">Meta</span><span class="token punctuation">,</span> <span class="token maybe-class-name">Shell</span> <span class="token punctuation">}</span> <span class="token operator">=</span> imports<span class="token punctuation">.</span><span class="token property-access">gi</span><span class="token punctuation">;</span>
+<span class="token keyword">const</span> <span class="token constant">SHELL_KEYBINDINGS_SCHEMA</span> <span class="token operator">=</span> <span class="token string">'org.gnome.shell.keybindings'</span><span class="token punctuation">;</span>
+
+<span class="token keyword">let</span> _this<span class="token punctuation">;</span>
+<span class="token keyword">let</span> escAction<span class="token punctuation">;</span>
+
+<span class="token comment">//based on https://github.com/GNOME/gnome-shell/blob/gnome-3-20/js/ui/viewSelector.js</span>
+<span class="token keyword">function</span> <span class="token function">esc</span><span class="token punctuation">(</span><span class="token parameter">actor<span class="token punctuation">,</span> event</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        _this <span class="token operator">=</span> <span class="token keyword">this</span><span class="token punctuation">;</span>
+        <span class="token keyword control-flow">if</span> <span class="token punctuation">(</span><span class="token maybe-class-name">Main</span><span class="token punctuation">.</span><span class="token property-access">modalCount</span> <span class="token operator">></span> <span class="token number">1</span><span class="token punctuation">)</span>
+            <span class="token keyword control-flow">return</span> <span class="token maybe-class-name">Clutter</span><span class="token punctuation">.</span><span class="token constant">EVENT_PROPAGATE</span><span class="token punctuation">;</span>
+
+        <span class="token keyword">let</span> modifiers <span class="token operator">=</span> event<span class="token punctuation">.</span><span class="token method function property-access">get_state</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">let</span> symbol <span class="token operator">=</span> event<span class="token punctuation">.</span><span class="token method function property-access">get_key_symbol</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+        <span class="token comment">// 以下条件を追加</span>
+        <span class="token keyword control-flow">if</span> <span class="token punctuation">(</span>symbol <span class="token operator">==</span> <span class="token maybe-class-name">Clutter</span><span class="token punctuation">.</span><span class="token property-access"><span class="token maybe-class-name">Escape</span></span> <span class="token operator">||</span> symbol <span class="token operator">==</span> <span class="token maybe-class-name">Clutter</span><span class="token punctuation">.</span><span class="token property-access"><span class="token maybe-class-name">Print</span></span> <span class="token operator">||</span> symbol <span class="token operator">==</span> <span class="token maybe-class-name">Clutter</span><span class="token punctuation">.</span><span class="token property-access"><span class="token maybe-class-name">KEY_3270_PrintScreen</span></span> <span class="token operator">||</span> symbol <span class="token operator">==</span> <span class="token maybe-class-name">Clutter</span><span class="token punctuation">.</span><span class="token property-access"><span class="token maybe-class-name">Super_L</span></span> <span class="token operator">||</span> symbol <span class="token operator">==</span> <span class="token maybe-class-name">Clutter</span><span class="token punctuation">.</span><span class="token property-access"><span class="token maybe-class-name">Super_R</span></span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+            <span class="token keyword control-flow">return</span> <span class="token function">escAction</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token punctuation">}</span> <span class="token keyword control-flow">else</span> <span class="token keyword control-flow">if</span> <span class="token punctuation">(</span><span class="token keyword">this</span><span class="token punctuation">.</span><span class="token method function property-access">_shouldTriggerSearch</span><span class="token punctuation">(</span>symbol<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+            <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token method function property-access">startSearch</span><span class="token punctuation">(</span>event<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token punctuation">}</span> <span class="token keyword control-flow">else</span> <span class="token keyword control-flow">if</span> <span class="token punctuation">(</span><span class="token operator">!</span><span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">_searchActive</span> <span class="token operator">&#x26;&#x26;</span> <span class="token operator">!</span>global<span class="token punctuation">.</span><span class="token property-access">stage</span><span class="token punctuation">.</span><span class="token property-access">key_focus</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+            <span class="token keyword control-flow">if</span> <span class="token punctuation">(</span>symbol <span class="token operator">==</span> <span class="token maybe-class-name">Clutter</span><span class="token punctuation">.</span><span class="token property-access"><span class="token maybe-class-name">Tab</span></span> <span class="token operator">||</span> symbol <span class="token operator">==</span> <span class="token maybe-class-name">Clutter</span><span class="token punctuation">.</span><span class="token property-access"><span class="token maybe-class-name">Down</span></span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+                <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">_activePage</span><span class="token punctuation">.</span><span class="token method function property-access">navigate_focus</span><span class="token punctuation">(</span><span class="token keyword null nil">null</span><span class="token punctuation">,</span> <span class="token maybe-class-name">Gtk</span><span class="token punctuation">.</span><span class="token property-access"><span class="token maybe-class-name">DirectionType</span></span><span class="token punctuation">.</span><span class="token constant">TAB_FORWARD</span><span class="token punctuation">,</span> <span class="token boolean">false</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+                <span class="token keyword control-flow">return</span> <span class="token maybe-class-name">Clutter</span><span class="token punctuation">.</span><span class="token constant">EVENT_STOP</span><span class="token punctuation">;</span>
+            <span class="token punctuation">}</span> <span class="token keyword control-flow">else</span> <span class="token keyword control-flow">if</span> <span class="token punctuation">(</span>symbol <span class="token operator">==</span> <span class="token maybe-class-name">Clutter</span><span class="token punctuation">.</span><span class="token property-access"><span class="token maybe-class-name">ISO_Left_Tab</span></span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+                <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">_activePage</span><span class="token punctuation">.</span><span class="token method function property-access">navigate_focus</span><span class="token punctuation">(</span><span class="token keyword null nil">null</span><span class="token punctuation">,</span> <span class="token maybe-class-name">Gtk</span><span class="token punctuation">.</span><span class="token property-access"><span class="token maybe-class-name">DirectionType</span></span><span class="token punctuation">.</span><span class="token constant">TAB_BACKWARD</span><span class="token punctuation">,</span> <span class="token boolean">false</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+                <span class="token keyword control-flow">return</span> <span class="token maybe-class-name">Clutter</span><span class="token punctuation">.</span><span class="token constant">EVENT_STOP</span><span class="token punctuation">;</span>
+            <span class="token punctuation">}</span>
+        <span class="token punctuation">}</span>
+        <span class="token keyword control-flow">return</span> <span class="token maybe-class-name">Clutter</span><span class="token punctuation">.</span><span class="token constant">EVENT_PROPAGATE</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+
+<span class="token keyword">function</span> <span class="token function">init</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token comment">// ↓ 追加ココカラ</span>
+  <span class="token maybe-class-name">Main</span><span class="token punctuation">.</span><span class="token property-access">wm</span><span class="token punctuation">.</span><span class="token method function property-access">removeKeybinding</span><span class="token punctuation">(</span><span class="token string">'toggle-application-view'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token maybe-class-name">Main</span><span class="token punctuation">.</span><span class="token property-access">overview</span><span class="token punctuation">.</span><span class="token property-access">viewSelector</span><span class="token punctuation">.</span><span class="token method-variable function-variable method function property-access">_toggleAppsPage</span> <span class="token operator">=</span> <span class="token keyword">function</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token maybe-class-name">Main</span><span class="token punctuation">.</span><span class="token property-access">overview</span><span class="token punctuation">.</span><span class="token property-access">viewSelector</span><span class="token punctuation">.</span><span class="token property-access">_showAppsButton</span><span class="token punctuation">.</span><span class="token property-access">checked</span> <span class="token operator">=</span> <span class="token boolean">true</span><span class="token punctuation">;</span>
+    <span class="token keyword control-flow">if</span><span class="token punctuation">(</span><span class="token maybe-class-name">Main</span><span class="token punctuation">.</span><span class="token property-access">modalCount</span> <span class="token operator">>=</span> <span class="token number">1</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token maybe-class-name">Main</span><span class="token punctuation">.</span><span class="token property-access">overview</span><span class="token punctuation">.</span><span class="token method function property-access">hide</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+    <span class="token keyword control-flow">else</span> <span class="token punctuation">{</span>
+      <span class="token maybe-class-name">Main</span><span class="token punctuation">.</span><span class="token property-access">overview</span><span class="token punctuation">.</span><span class="token method function property-access">show</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span><span class="token punctuation">;</span>
+  <span class="token maybe-class-name">Main</span><span class="token punctuation">.</span><span class="token property-access">wm</span><span class="token punctuation">.</span><span class="token method function property-access">addKeybinding</span><span class="token punctuation">(</span><span class="token string">'toggle-application-view'</span><span class="token punctuation">,</span>
+                        <span class="token keyword">new</span> <span class="token class-name">Gio<span class="token punctuation">.</span>Settings</span><span class="token punctuation">(</span><span class="token punctuation">{</span> schema_id<span class="token operator">:</span> <span class="token constant">SHELL_KEYBINDINGS_SCHEMA</span> <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+                        <span class="token maybe-class-name">Meta</span><span class="token punctuation">.</span><span class="token property-access"><span class="token maybe-class-name">KeyBindingFlags</span></span><span class="token punctuation">.</span><span class="token constant">NONE</span><span class="token punctuation">,</span>
+                        <span class="token maybe-class-name">Shell</span><span class="token punctuation">.</span><span class="token property-access"><span class="token maybe-class-name">ActionMode</span></span><span class="token punctuation">.</span><span class="token constant">NORMAL</span> <span class="token operator">|</span>
+                        <span class="token maybe-class-name">Shell</span><span class="token punctuation">.</span><span class="token property-access"><span class="token maybe-class-name">ActionMode</span></span><span class="token punctuation">.</span><span class="token constant">OVERVIEW</span><span class="token punctuation">,</span>
+                        <span class="token maybe-class-name">Main</span><span class="token punctuation">.</span><span class="token property-access">overview</span><span class="token punctuation">.</span><span class="token property-access">viewSelector</span><span class="token punctuation">.</span><span class="token method function property-access">_toggleAppsPage</span><span class="token punctuation">.</span><span class="token method function property-access">bind</span><span class="token punctuation">(</span><span class="token maybe-class-name">Main</span><span class="token punctuation">.</span><span class="token property-access">overview</span><span class="token punctuation">.</span><span class="token property-access">viewSelector</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token comment">// ↑ 追加ココマデ</span>
+  
+    <span class="token maybe-class-name">Main</span><span class="token punctuation">.</span><span class="token property-access">overview</span><span class="token punctuation">.</span><span class="token property-access">viewSelector</span><span class="token punctuation">.</span><span class="token property-access">_onStageKeyPress</span> <span class="token operator">=</span> esc<span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+
+<span class="token keyword">function</span> <span class="token function">originalEscAction</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token keyword control-flow">if</span> <span class="token punctuation">(</span>_this<span class="token punctuation">.</span><span class="token property-access">_searchActive</span><span class="token punctuation">)</span>
+        _this<span class="token punctuation">.</span><span class="token method function property-access">reset</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword control-flow">else</span> <span class="token keyword control-flow">if</span> <span class="token punctuation">(</span>_this<span class="token punctuation">.</span><span class="token property-access">_showAppsButton</span><span class="token punctuation">.</span><span class="token property-access">checked</span><span class="token punctuation">)</span>
+        _this<span class="token punctuation">.</span><span class="token property-access">_showAppsButton</span><span class="token punctuation">.</span><span class="token property-access">checked</span> <span class="token operator">=</span> <span class="token boolean">false</span><span class="token punctuation">;</span>
+    <span class="token keyword control-flow">else</span>
+        <span class="token maybe-class-name">Main</span><span class="token punctuation">.</span><span class="token property-access">overview</span><span class="token punctuation">.</span><span class="token method function property-access">hide</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword control-flow">return</span> <span class="token maybe-class-name">Clutter</span><span class="token punctuation">.</span><span class="token constant">EVENT_STOP</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+
+<span class="token keyword">function</span> <span class="token function">modifiedEscAction</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token keyword control-flow">if</span> <span class="token punctuation">(</span>_this<span class="token punctuation">.</span><span class="token property-access">_searchActive</span><span class="token punctuation">)</span>
+        _this<span class="token punctuation">.</span><span class="token method function property-access">reset</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword control-flow">else</span>
+        <span class="token maybe-class-name">Main</span><span class="token punctuation">.</span><span class="token property-access">overview</span><span class="token punctuation">.</span><span class="token method function property-access">hide</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword control-flow">return</span> <span class="token maybe-class-name">Clutter</span><span class="token punctuation">.</span><span class="token constant">EVENT_STOP</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+
+<span class="token keyword">function</span> <span class="token function">enable</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    escAction <span class="token operator">=</span> modifiedEscAction<span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+
+<span class="token keyword">function</span> <span class="token function">disable</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    escAction <span class="token operator">=</span> originalEscAction<span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<h2 id="diff-で表現"><a class="header-link" href="#diff-で表現"><span class="header-link-mark"></span></a>Diff で表現</h2>
+<p><code>diff</code> で表現すると次のとおり。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">diff</span> --color<span class="token operator">=</span>auto ORIG-extension.js extension.js
+
+4a5,8
+<span class="token operator">></span> // 以下2行を追加
+<span class="token operator">></span> const <span class="token punctuation">{</span> Gio, Meta, Shell <span class="token punctuation">}</span> <span class="token operator">=</span> imports.gi<span class="token punctuation">;</span>
+<span class="token operator">></span> const SHELL_KEYBINDINGS_SCHEMA <span class="token operator">=</span> <span class="token string">'org.gnome.shell.keybindings'</span><span class="token punctuation">;</span>
+<span class="token operator">></span> 
+17c21,22
+<span class="token operator">&#x3C;</span>         <span class="token keyword">if</span> <span class="token punctuation">(</span>symbol <span class="token operator">==</span> Clutter.Escape<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+---
+<span class="token operator">></span>         // 以下条件を追加
+<span class="token operator">></span>         <span class="token keyword">if</span> <span class="token punctuation">(</span>symbol <span class="token operator">==</span> Clutter.Escape <span class="token operator">||</span> symbol <span class="token operator">==</span> Clutter.Print <span class="token operator">||</span> symbol <span class="token operator">==</span> Clutter.KEY_3270_PrintScreen <span class="token operator">||</span> symbol <span class="token operator">==</span> Clutter.Super_L <span class="token operator">||</span> symbol <span class="token operator">==</span> Clutter.Super_R<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+33a39,57
+<span class="token operator">></span>   // ↓ 追加ココカラ
+<span class="token operator">></span>   Main.wm.removeKeybinding<span class="token punctuation">(</span><span class="token string">'toggle-application-view'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token operator">></span>   Main.overview.viewSelector._toggleAppsPage <span class="token operator">=</span> <span class="token function-name function">function</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+<span class="token operator">></span>     Main.overview.viewSelector._showAppsButton.checked <span class="token operator">=</span> <span class="token boolean">true</span><span class="token punctuation">;</span>
+<span class="token operator">></span>     if<span class="token punctuation">(</span>Main.modalCount <span class="token operator">></span><span class="token operator">=</span> <span class="token number">1</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+<span class="token operator">></span>       Main.overview.hide<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token operator">></span>     <span class="token punctuation">}</span>
+<span class="token operator">></span>     <span class="token keyword">else</span> <span class="token punctuation">{</span>
+<span class="token operator">></span>       Main.overview.show<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token operator">></span>     <span class="token punctuation">}</span>
+<span class="token operator">></span>   <span class="token punctuation">}</span><span class="token punctuation">;</span>
+<span class="token operator">></span>   Main.wm.addKeybinding<span class="token punctuation">(</span><span class="token string">'toggle-application-view'</span>,
+<span class="token operator">></span>                         new Gio.Settings<span class="token punctuation">(</span><span class="token punctuation">{</span> schema_id: SHELL_KEYBINDINGS_SCHEMA <span class="token punctuation">}</span><span class="token punctuation">)</span>,
+<span class="token operator">></span>                         Meta.KeyBindingFlags.NONE,
+<span class="token operator">></span>                         Shell.ActionMode.NORMAL <span class="token operator">|</span>
+<span class="token operator">></span>                         Shell.ActionMode.OVERVIEW,
+<span class="token operator">></span>                         Main.overview.viewSelector._toggleAppsPage.bind<span class="token punctuation">(</span>Main.overview.viewSelector<span class="token punctuation">))</span><span class="token punctuation">;</span>
+<span class="token operator">></span>   // ↑ 追加ココマデ
+<span class="token operator">></span>   
+</code></pre>
+<h2 id="どうやって反映する？"><a class="header-link" href="#どうやって反映する？"><span class="header-link-mark"></span></a>どうやって反映する？</h2>
+<p><code>extension.js</code> を書き換えただけではこのコードは反映されない。</p>
+<p><code>Alt + F2</code> キーを押して「コマンドを入力」を表示し、<strong><code>r</code></strong> とのみ入力して実行する。</p>
+<p>すると画面中央に「再起動中…」というポップアップが表示され、GNOME Shell 拡張機能を再読込できる。</p>
+<p>コレで書き換えた <code>extension.js</code> が有効になる。PrintScreen キーを押せば「全てのアプリケーション一覧」が開き、もう一度 PrintScreen キーを押せば一覧が閉じる。閉じるキーには Esc キーの他に Super キーなども含めておいた。</p>
+<ul>
+  <li>参考：<a href="https://tutorialmore.com/questions-32177.htm">software installation - ターミナルからGNOME Shell拡張機能をインストールする - 初心者向けチュートリアル</a></li>
+</ul>
+<h2 id="何をどう実装しているのか"><a class="header-link" href="#何をどう実装しているのか"><span class="header-link-mark"></span></a>何をどう実装しているのか</h2>
+<p>初めて GNOME Shell 拡張機能とやらを触ってみたワケだが、どうやって実装したかメモを残しておく。</p>
+<p>まず、言語的には JavaScript がベースなので、処理はなんとなく追いやすかった。<code>import</code> しているソース群は、ググってみると以下にあったので、参考にした。</p>
+<ul>
+  <li><a href="https://github.com/GNOME/gnome-shell/">GitHub - GNOME/gnome-shell: Next generation GNOME desktop shell</a></li>
+</ul>
+<p>初めに、<code>if(symbol == Clutter.Escape)</code> 部分が気になったので、<code>Clutter</code> をググり、キーボードごとの定数があることを突き止め、条件を増やしてみた。しかし、PrintScreen キーを押下してもこの条件文には到達していないようだったので、もう少し調べてみた。</p>
+<p><code>ViewSelector</code> クラスの実装を見てみると、何やら Overview 絡みのキーイベントを定義しているっぽいところを見つけた。</p>
+<ul>
+  <li><a href="https://github.com/GNOME/gnome-shell/blob/9c1940ef9db50ee693c2f82c8a2a4486bce1a1fe/js/ui/viewSelector.js#L222-L234">gnome-shell/viewSelector.js at 9c1940ef9db50ee693c2f82c8a2a4486bce1a1fe · GNOME/gnome-shell · GitHub</a></li>
+</ul>
+<pre class="language-javascript"><code class="language-javascript"><span class="token maybe-class-name">Main</span><span class="token punctuation">.</span><span class="token property-access">wm</span><span class="token punctuation">.</span><span class="token method function property-access">addKeybinding</span><span class="token punctuation">(</span><span class="token string">'toggle-application-view'</span><span class="token punctuation">,</span>
+                      <span class="token keyword">new</span> <span class="token class-name">Gio<span class="token punctuation">.</span>Settings</span><span class="token punctuation">(</span><span class="token punctuation">{</span> schema_id<span class="token operator">:</span> <span class="token constant">SHELL_KEYBINDINGS_SCHEMA</span> <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+                      <span class="token maybe-class-name">Meta</span><span class="token punctuation">.</span><span class="token property-access"><span class="token maybe-class-name">KeyBindingFlags</span></span><span class="token punctuation">.</span><span class="token constant">IGNORE_AUTOREPEAT</span><span class="token punctuation">,</span>
+                      <span class="token maybe-class-name">Shell</span><span class="token punctuation">.</span><span class="token property-access"><span class="token maybe-class-name">ActionMode</span></span><span class="token punctuation">.</span><span class="token constant">NORMAL</span> <span class="token operator">|</span>
+                      <span class="token maybe-class-name">Shell</span><span class="token punctuation">.</span><span class="token property-access"><span class="token maybe-class-name">ActionMode</span></span><span class="token punctuation">.</span><span class="token constant">OVERVIEW</span><span class="token punctuation">,</span>
+                      <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token method function property-access">_toggleAppsPage</span><span class="token punctuation">.</span><span class="token method function property-access">bind</span><span class="token punctuation">(</span><span class="token keyword">this</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token maybe-class-name">Main</span><span class="token punctuation">.</span><span class="token property-access">wm</span><span class="token punctuation">.</span><span class="token method function property-access">addKeybinding</span><span class="token punctuation">(</span><span class="token string">'toggle-overview'</span><span class="token punctuation">,</span>
+                      <span class="token keyword">new</span> <span class="token class-name">Gio<span class="token punctuation">.</span>Settings</span><span class="token punctuation">(</span><span class="token punctuation">{</span> schema_id<span class="token operator">:</span> <span class="token constant">SHELL_KEYBINDINGS_SCHEMA</span> <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+                      <span class="token maybe-class-name">Meta</span><span class="token punctuation">.</span><span class="token property-access"><span class="token maybe-class-name">KeyBindingFlags</span></span><span class="token punctuation">.</span><span class="token constant">IGNORE_AUTOREPEAT</span><span class="token punctuation">,</span>
+                      <span class="token maybe-class-name">Shell</span><span class="token punctuation">.</span><span class="token property-access"><span class="token maybe-class-name">ActionMode</span></span><span class="token punctuation">.</span><span class="token constant">NORMAL</span> <span class="token operator">|</span>
+                      <span class="token maybe-class-name">Shell</span><span class="token punctuation">.</span><span class="token property-access"><span class="token maybe-class-name">ActionMode</span></span><span class="token punctuation">.</span><span class="token constant">OVERVIEW</span><span class="token punctuation">,</span>
+                      <span class="token maybe-class-name">Main</span><span class="token punctuation">.</span><span class="token property-access">overview</span><span class="token punctuation">.</span><span class="token method function property-access">toggle</span><span class="token punctuation">.</span><span class="token method function property-access">bind</span><span class="token punctuation">(</span><span class="token maybe-class-name">Main</span><span class="token punctuation">.</span><span class="token property-access">overview</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p><code>addKeybinding()</code> があるなら <code>remove</code> もあるかな？と思い調べてみたら、あった。</p>
+<ul>
+  <li><a href="https://gist.github.com/kiwanami/7121125#file-extension-js-L80">InputSourceを素早く切り替えたり、特定のウインドウでは何もしないような gnome-shell extension。以前のよくあるIMの動作を再現する。gnome-shell-extension-tool -c で作って、xmlはschemasディレクトリを作ってglib-compile-schemas schemasとかでコンパイルする感じで。 · GitHub</a></li>
+</ul>
+<pre class="language-javascript"><code class="language-javascript"><span class="token maybe-class-name">Main</span><span class="token punctuation">.</span><span class="token property-access">wm</span><span class="token punctuation">.</span><span class="token method function property-access">removeKeybinding</span><span class="token punctuation">(</span><span class="token string">'custom-switch-is-key'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>というワケで、まずはイベントを <code>remove</code> だけして様子を見てみると、<code>toggle-application-view</code> イベントを消したらアプリケーション一覧が開かなくなったので、コイツがキモだと分かった。</p>
+<p>コードを見ると、<code>_toggleAppsPage()</code> 関数で何やらチェックボックス的なモノを操作しつつ、Overview を表示しているっぽかった。</p>
+<ul>
+  <li><a href="https://github.com/GNOME/gnome-shell/blob/9c1940ef9db50ee693c2f82c8a2a4486bce1a1fe/js/ui/viewSelector.js#L264-L267">gnome-shell/viewSelector.js at 9c1940ef9db50ee693c2f82c8a2a4486bce1a1fe · GNOME/gnome-shell · GitHub</a></li>
+</ul>
+<pre class="language-javascript"><code class="language-javascript"><span class="token function">_toggleAppsPage</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">_showAppsButton</span><span class="token punctuation">.</span><span class="token property-access">checked</span> <span class="token operator">=</span> <span class="token operator">!</span><span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">_showAppsButton</span><span class="token punctuation">.</span><span class="token property-access">checked</span><span class="token punctuation">;</span>
+  <span class="token maybe-class-name">Main</span><span class="token punctuation">.</span><span class="token property-access">overview</span><span class="token punctuation">.</span><span class="token method function property-access">show</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p><code>_showAppsButton</code> の <code>checked</code> を切り替えることに意味があるのか？と思いコードを追うと、以下の行を発見。どうやらチェック状況によって別の関数を呼び出すイベントが定義されているようだった。</p>
+<ul>
+  <li><a href="https://github.com/GNOME/gnome-shell/blob/9c1940ef9db50ee693c2f82c8a2a4486bce1a1fe/js/ui/viewSelector.js#L138">gnome-shell/viewSelector.js at 9c1940ef9db50ee693c2f82c8a2a4486bce1a1fe · GNOME/gnome-shell · GitHub</a></li>
+</ul>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">_showAppsButton</span><span class="token punctuation">.</span><span class="token method function property-access">connect</span><span class="token punctuation">(</span><span class="token string">'notify::checked'</span><span class="token punctuation">,</span> <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token method function property-access">_onShowAppsButtonToggled</span><span class="token punctuation">.</span><span class="token method function property-access">bind</span><span class="token punctuation">(</span><span class="token keyword">this</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p><code>_toggleAppsPage()</code> 関数のすぐ下にある <code>showApps()</code> 関数も参考にすると、</p>
+<ul>
+  <li><code>_showAppsButton.checked</code> を <code>true</code> にすれば、「Activities Overview」ではなく「アプリケーション一覧」が開く</li>
+  <li><code>Main.overview.show()</code> か <code>hide()</code> で、「Activities Overview」または「アプリケーション一覧」の画面全体を表示・非表示できる</li>
+</ul>
+<p>ということが分かった。</p>
+<p>そしたら、既存のイベントを一旦 <code>remove</code> し、オレオレイベントを再定義してやることにしよう。それが <code>init()</code> 関数に追記した以下のコードだ。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword">const</span> <span class="token punctuation">{</span> <span class="token maybe-class-name">Gio</span><span class="token punctuation">,</span> <span class="token maybe-class-name">Meta</span><span class="token punctuation">,</span> <span class="token maybe-class-name">Shell</span> <span class="token punctuation">}</span> <span class="token operator">=</span> imports<span class="token punctuation">.</span><span class="token property-access">gi</span><span class="token punctuation">;</span>
+<span class="token keyword">const</span> <span class="token constant">SHELL_KEYBINDINGS_SCHEMA</span> <span class="token operator">=</span> <span class="token string">'org.gnome.shell.keybindings'</span><span class="token punctuation">;</span>
+
+<span class="token comment">// 以下 init() 関数内</span>
+
+<span class="token maybe-class-name">Main</span><span class="token punctuation">.</span><span class="token property-access">wm</span><span class="token punctuation">.</span><span class="token method function property-access">removeKeybinding</span><span class="token punctuation">(</span><span class="token string">'toggle-application-view'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token maybe-class-name">Main</span><span class="token punctuation">.</span><span class="token property-access">overview</span><span class="token punctuation">.</span><span class="token property-access">viewSelector</span><span class="token punctuation">.</span><span class="token method-variable function-variable method function property-access">_toggleAppsPage</span> <span class="token operator">=</span> <span class="token keyword">function</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token maybe-class-name">Main</span><span class="token punctuation">.</span><span class="token property-access">overview</span><span class="token punctuation">.</span><span class="token property-access">viewSelector</span><span class="token punctuation">.</span><span class="token property-access">_showAppsButton</span><span class="token punctuation">.</span><span class="token property-access">checked</span> <span class="token operator">=</span> <span class="token boolean">true</span><span class="token punctuation">;</span>
+  <span class="token keyword control-flow">if</span><span class="token punctuation">(</span><span class="token maybe-class-name">Main</span><span class="token punctuation">.</span><span class="token property-access">modalCount</span> <span class="token operator">>=</span> <span class="token number">1</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token maybe-class-name">Main</span><span class="token punctuation">.</span><span class="token property-access">overview</span><span class="token punctuation">.</span><span class="token method function property-access">hide</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  <span class="token keyword control-flow">else</span> <span class="token punctuation">{</span>
+    <span class="token maybe-class-name">Main</span><span class="token punctuation">.</span><span class="token property-access">overview</span><span class="token punctuation">.</span><span class="token method function property-access">show</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+<span class="token maybe-class-name">Main</span><span class="token punctuation">.</span><span class="token property-access">wm</span><span class="token punctuation">.</span><span class="token method function property-access">addKeybinding</span><span class="token punctuation">(</span><span class="token string">'toggle-application-view'</span><span class="token punctuation">,</span>
+                      <span class="token keyword">new</span> <span class="token class-name">Gio<span class="token punctuation">.</span>Settings</span><span class="token punctuation">(</span><span class="token punctuation">{</span> schema_id<span class="token operator">:</span> <span class="token constant">SHELL_KEYBINDINGS_SCHEMA</span> <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+                      <span class="token maybe-class-name">Meta</span><span class="token punctuation">.</span><span class="token property-access"><span class="token maybe-class-name">KeyBindingFlags</span></span><span class="token punctuation">.</span><span class="token constant">NONE</span><span class="token punctuation">,</span>
+                      <span class="token maybe-class-name">Shell</span><span class="token punctuation">.</span><span class="token property-access"><span class="token maybe-class-name">ActionMode</span></span><span class="token punctuation">.</span><span class="token constant">NORMAL</span> <span class="token operator">|</span>
+                      <span class="token maybe-class-name">Shell</span><span class="token punctuation">.</span><span class="token property-access"><span class="token maybe-class-name">ActionMode</span></span><span class="token punctuation">.</span><span class="token constant">OVERVIEW</span><span class="token punctuation">,</span>
+                      <span class="token maybe-class-name">Main</span><span class="token punctuation">.</span><span class="token property-access">overview</span><span class="token punctuation">.</span><span class="token property-access">viewSelector</span><span class="token punctuation">.</span><span class="token method function property-access">_toggleAppsPage</span><span class="token punctuation">.</span><span class="token method function property-access">bind</span><span class="token punctuation">(</span><span class="token maybe-class-name">Main</span><span class="token punctuation">.</span><span class="token property-access">overview</span><span class="token punctuation">.</span><span class="token property-access">viewSelector</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p><code>import</code> は以下を参考にした。</p>
+<ul>
+  <li><a href="https://github.com/GNOME/gnome-shell/blob/9c1940ef9db50ee693c2f82c8a2a4486bce1a1fe/js/ui/viewSelector.js#L4-L17">gnome-shell/viewSelector.js at 9c1940ef9db50ee693c2f82c8a2a4486bce1a1fe · GNOME/gnome-shell · GitHub</a></li>
+</ul>
+<p>既存イベントを <code>remove</code> したら <code>_toggleAppsPage()</code> 関数をオレオレ関数に書き換える。<code>Main.modalCount</code> を見ると、「Activities Overview」か「アプリケーション一覧」が開いているかどうかが分かるので、開いていれば <code>hide()</code>、開いていなければ <code>show()</code> を呼ぶようにした。</p>
+<p><code>addKeybiding()</code> 中で、<code>Meta.KeyBindingFlags</code> を使用しているところがある。元々のコードでは <em><code>Meta.KeyBindingFlags.IGNORE_AUTOREPEAT</code></em> という定数を使用していたが、どうもこの定数が見当たらなかったので、代わりにテキトーに <code>NONE</code> を指定してみることにした。</p>
+<p><code>init()</code> 関数あたりに <code>print('META : ' + JSON.stringify(Meta.KeyBindingFlags) );</code> といったコードを入れ、<code>Alt + F2</code> → <code>r</code> で GNOME Shell を再起動、その後ターミナルで</p>
+<pre class="language-bash"><code class="language-bash">$ journalctl /usr/bin/gnome-shell
+</code></pre>
+<p>の最後の方を見ると、次のようなログが見えるはずだ。<code>IGNORE_AUTOREPEAT</code> は存在しないみたい。</p>
+<p>実装時は <code>init()</code> 関数内を <code>try / catch</code> で囲み、エラーを <code>print(e)</code> で出力することで、<code>Meta.KeyBindingFlags.IGNORE_AUTOREPEAT</code> が存在しないことを突き止められた。</p>
+<pre><code> 2月 20 12:32:44 Neos-ThinkPad org.gnome.Shell.desktop[1143]: Error: Expected type flags for Argument 'flags' but got type 'undefined'
+</code></pre>
+<p>こんな感じのエラーが出ていた。</p>
+<p>テキトーに <code>NONE</code> を指定してやったら上手く行ったので、コードを整理して終わり。上で示した完成形となった。</p>
+<h2 id="まとめ"><a class="header-link" href="#まとめ"><span class="header-link-mark"></span></a>まとめ</h2>
+<ul>
+  <li>GNOME Shell 拡張機能は <code>~/.local/share/gnome-shell/extensions/</code> 配下に保存される</li>
+  <li><code>extension.js</code> を編集後、<code>Alt + F2</code> → <code>r</code> で GNOME Shell を再起動すると、<code>extension.js</code> の内容が再読込される</li>
+  <li><code>print()</code> 関数を使うと、<code>$ journalctl /usr/bin/gnome-shell</code> にログが出力できる</li>
+  <li>Print Debug しながら、スクリプトを編集し再読込していくことで、なんとか実装できていく</li>
+</ul>
+<p>ということで、GNOME Shell 拡張機能を書いてみた。今回は既存のどこぞの拡張機能のソースコードを手直しする形で実装してみたけど、コマンドラインツールでゼロから作って、拡張機能ストアに登録することもできるようなので、今後試してみたい。</p>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2020-04-02</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2020-04-02</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

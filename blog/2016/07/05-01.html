@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>Gulp で Browser-Sync を動かしてブラウザにリアルタイムに変更を反映させる - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2016/07/05-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2016/index.html">2016年</a></li>
+            <li><a href="/blog/2016/07/index.html">07月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2016-07-05</time></div>
+        <h1 id="page-title">Gulp で Browser-Sync を動かしてブラウザにリアルタイムに変更を反映させる</h1>
+
+<p>前回の記事はコレ。</p>
+<ul>
+  <li><a href="/blog/2016/05/28-02.html">npm でパッケージ管理しながら Gulp で Browserify を実行させて http-server で動作確認を行う</a></li>
+</ul>
+<p>前回の記事で、Browserify を使って JavaScript ファイルをガッチャンコする Gulp タスクを作った。動作確認には Http-Server というパッケージを使っていたが、JavaScript のビルドは毎度 <code>gulp build-js</code> (自作タスク名) というコマンドを叩かなくてはならず、HTML ファイルを修正した時もブラウザを F5 しなおさなくてはならなかった。</p>
+<p>今回はこれらの細々した動作を完全に自動化させ、ファイルを保存すると自動的にビルドし、ブラウザを自動で更新して変更内容を反映するための環境を作る。</p>
+<h2 id="browser-sync-をインストールする"><a class="header-link" href="#browser-sync-をインストールする"><span class="header-link-mark"></span></a>Browser-Sync をインストールする</h2>
+<p>ブラウザへの反映を自動化するために、Browser-Sync というパッケージを導入する。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># グローバルインストール</span>
+$ <span class="token function">npm</span> <span class="token function">install</span> --global browser-sync
+
+<span class="token comment"># package.json に書き込みつつローカルインストール</span>
+$ <span class="token function">npm</span> <span class="token function">install</span> -D browser-sync
+</code></pre>
+<p>Browser-Sync を単体で使うこともできるようなのだが、今回は Gulp タスクに組み込んでしまおうと思う。</p>
+<h2 id="gulp-タスクの書き換え"><a class="header-link" href="#gulp-タスクの書き換え"><span class="header-link-mark"></span></a>Gulp タスクの書き換え</h2>
+<p>これまでは、Browserify を実行する <code>build-js</code> というタスクしか作っていなかった <code>gulpfile.js</code> だが、ココにファイルの変更を監視するタスクと、ブラウザを更新するタスクを追加する。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token doc-comment comment">/** gulpfile.js */</span>
+<span class="token keyword">var</span> gulp <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">"gulp"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">var</span> browserify <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">"browserify"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">var</span> source <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">"vinyl-source-stream"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">var</span> browserSync <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">"browser-sync"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>    <span class="token comment">// 今回追加したモジュール。変数名にはハイフンが使えないっぽい (後述)</span>
+
+<span class="token doc-comment comment">/** 「gulp」コマンドを打たれた時に実行するコマンドたちを定義 */</span>
+gulp<span class="token punctuation">.</span><span class="token method function property-access">task</span><span class="token punctuation">(</span><span class="token string">"default"</span><span class="token punctuation">,</span> <span class="token punctuation">[</span><span class="token string">"watch"</span><span class="token punctuation">,</span> <span class="token string">"build-js"</span><span class="token punctuation">,</span> <span class="token string">"browserSync"</span><span class="token punctuation">,</span> <span class="token string">"reload"</span><span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token doc-comment comment">/** ファイルの更新をチェックして JS のビルド処理を呼び出す */</span>
+gulp<span class="token punctuation">.</span><span class="token method function property-access">task</span><span class="token punctuation">(</span><span class="token string">"watch"</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token comment">// () => は function() {} のショートハンド</span>
+  gulp<span class="token punctuation">.</span><span class="token method function property-access">watch</span><span class="token punctuation">(</span><span class="token punctuation">[</span><span class="token string">"./src.js"</span><span class="token punctuation">]</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+    gulp<span class="token punctuation">.</span><span class="token method function property-access">start</span><span class="token punctuation">(</span><span class="token punctuation">[</span><span class="token string">"build-js"</span><span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token doc-comment comment">/** JS のビルド : src.js を main.js にビルドする */</span>
+gulp<span class="token punctuation">.</span><span class="token method function property-access">task</span><span class="token punctuation">(</span><span class="token string">"build-js"</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token function">browserify</span><span class="token punctuation">(</span><span class="token punctuation">{</span>
+    <span class="token comment">// ビルド対象ファイル</span>
+    entries<span class="token operator">:</span> <span class="token punctuation">[</span><span class="token string">"./src.js"</span><span class="token punctuation">]</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span>
+  <span class="token punctuation">.</span><span class="token method function property-access">bundle</span><span class="token punctuation">(</span><span class="token punctuation">)</span>                   <span class="token comment">// Browserify の実行</span>
+  <span class="token punctuation">.</span><span class="token method function property-access">pipe</span><span class="token punctuation">(</span><span class="token function">source</span><span class="token punctuation">(</span><span class="token string">"main.js"</span><span class="token punctuation">)</span><span class="token punctuation">)</span>    <span class="token comment">// Vinyl に変換</span>
+  <span class="token punctuation">.</span><span class="token method function property-access">pipe</span><span class="token punctuation">(</span>gulp<span class="token punctuation">.</span><span class="token method function property-access">dest</span><span class="token punctuation">(</span><span class="token string">"./"</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>     <span class="token comment">// 出力</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token doc-comment comment">/** ブラウザ表示 */</span>
+gulp<span class="token punctuation">.</span><span class="token method function property-access">task</span><span class="token punctuation">(</span><span class="token string">"browserSync"</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token function">browserSync</span><span class="token punctuation">(</span><span class="token punctuation">{</span>
+    server<span class="token operator">:</span> <span class="token punctuation">{</span>
+      baseDir<span class="token operator">:</span> <span class="token string">"./"</span>    <span class="token comment">// サーバとなる Root ディレクトリ</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token comment">// ファイルの監視 : 以下のファイルが変わったらリロード処理を呼び出す</span>
+  gulp<span class="token punctuation">.</span><span class="token method function property-access">watch</span><span class="token punctuation">(</span><span class="token string">"./main.js"</span><span class="token punctuation">,</span> <span class="token punctuation">[</span><span class="token string">"reload"</span><span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token comment">// ビルドされた JS ファイル</span>
+  gulp<span class="token punctuation">.</span><span class="token method function property-access">watch</span><span class="token punctuation">(</span><span class="token string">"./*.html"</span><span class="token punctuation">,</span>  <span class="token punctuation">[</span><span class="token string">"reload"</span><span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token comment">// HTML ファイル</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token doc-comment comment">/** リロード */</span>
+gulp<span class="token punctuation">.</span><span class="token method function property-access">task</span><span class="token punctuation">(</span><span class="token string">"reload"</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  browserSync<span class="token punctuation">.</span><span class="token method function property-access">reload</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>少々長くなったが、これが <code>gulpfile.js</code> の全量だ。</p>
+<p><code>build-js</code> タスクの他に、<code>default</code> の定義と、<code>watch</code>・<code>browserSync</code>・<code>reload</code> を追加した。</p>
+<p><code>gulp.watch()</code> というメソッドで、ファイルの更新を監視することができる。監視対象のファイルは <code>*</code> アスタリスクでの指定も可能。</p>
+<p><code>browserSync</code> というタスクで、Browser-Sync を使って簡易サーバを立ち上げる。そしてこのタスクからは、ブラウザをリロードするトリガーとなるファイルの変更を監視する。</p>
+<p>というわけで、<code>src.js</code> を変更した時の一連の動作の順番をまとめるとこうなる。</p>
+<ol>
+  <li><code>src.js</code> を書き換えて保存する</li>
+  <li><code>watch</code> タスクがファイルの変更を検知し、<code>build-js</code> タスクを呼ぶ</li>
+  <li><code>build-js</code> タスクで <code>main.js</code> をビルドする</li>
+  <li><code>main.js</code> に変更が入ったことになるので、<code>browserSync</code> タスクでの監視がこれを検知し、<code>reload</code> タスクを呼ぶ</li>
+  <li><code>reload</code> タスクがブラウザをリロードする</li>
+</ol>
+<p>一方、HTML ファイルを書き換えた場合は、ビルド処理がないので、直接 <code>browserSync</code> タスクが変更を検知して <code>reload</code> タスクを呼ぶ。</p>
+<p>一つ注意点としては、<code>gulpfile.js</code> では変数名にハイフンが使えないらしい。<code>var browserSync</code> を <code>var browser-sync</code> と書いていたら、以下のようなエラーが出てしまった。</p>
+<pre class="language-bash"><code class="language-bash">/NodeJsTest/gulpfile.js:4
+var browser-sync <span class="token operator">=</span> require<span class="token punctuation">(</span><span class="token string">"browser-sync"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+           ^
+SyntaxError: Unexpected token -
+</code></pre>
+<h2 id="gulp-タスクを動かす"><a class="header-link" href="#gulp-タスクを動かす"><span class="header-link-mark"></span></a>Gulp タスクを動かす</h2>
+<p><code>gulpfile.js</code> ができたら、ターミナル (Windows ならコマンドプロンプトか GitBash) を開き、上の <code>gulpfile.js</code> があるフォルダで <code>gulp</code> コマンドを打つ。</p>
+<pre class="language-bash"><code class="language-bash">$ gulp
+</code></pre>
+<p>すると、<code>default</code> タスクに記載のタスクが実行され、Browser-Sync によってブラウザが開く。</p>
+<pre class="language-bash"><code class="language-bash">$ gulp
+<span class="token punctuation">[</span>01:52:48<span class="token punctuation">]</span> Using gulpfile /NodeJsTest/gulpfile.js
+<span class="token punctuation">[</span>01:52:48<span class="token punctuation">]</span> Starting <span class="token string">'watch'</span><span class="token punctuation">..</span>.
+<span class="token punctuation">[</span>01:52:48<span class="token punctuation">]</span> Finished <span class="token string">'watch'</span> after <span class="token number">25</span> ms
+<span class="token punctuation">[</span>01:52:48<span class="token punctuation">]</span> Starting <span class="token string">'build-js'</span><span class="token punctuation">..</span>.
+<span class="token punctuation">[</span>01:52:48<span class="token punctuation">]</span> Finished <span class="token string">'build-js'</span> after <span class="token number">34</span> ms
+<span class="token punctuation">[</span>01:52:48<span class="token punctuation">]</span> Starting <span class="token string">'browserSync'</span><span class="token punctuation">..</span>.
+<span class="token punctuation">[</span>01:52:48<span class="token punctuation">]</span> Finished <span class="token string">'browserSync'</span> after <span class="token number">296</span> ms
+<span class="token punctuation">[</span>01:52:48<span class="token punctuation">]</span> Starting <span class="token string">'reload'</span><span class="token punctuation">..</span>.
+<span class="token punctuation">[</span>BS<span class="token punctuation">]</span> Reloading Browsers<span class="token punctuation">..</span>.
+<span class="token punctuation">[</span>01:52:48<span class="token punctuation">]</span> Finished <span class="token string">'reload'</span> after <span class="token number">847</span> μs
+<span class="token punctuation">[</span>01:52:48<span class="token punctuation">]</span> Starting <span class="token string">'default'</span><span class="token punctuation">..</span>.
+<span class="token punctuation">[</span>01:52:48<span class="token punctuation">]</span> Finished <span class="token string">'default'</span> after <span class="token number">3.85</span> μs
+<span class="token punctuation">[</span>01:52:49<span class="token punctuation">]</span> Starting <span class="token string">'reload'</span><span class="token punctuation">..</span>.
+<span class="token punctuation">[</span>BS<span class="token punctuation">]</span> Reloading Browsers<span class="token punctuation">..</span>.
+<span class="token punctuation">[</span>01:52:49<span class="token punctuation">]</span> Finished <span class="token string">'reload'</span> after <span class="token number">670</span> μs
+<span class="token punctuation">[</span>BS<span class="token punctuation">]</span> Access URLs:
+ ------------------------------------
+       Local: http://localhost:3000
+    External: http://192.168.1.2:3000
+ ------------------------------------
+          UI: http://localhost:3001
+ UI External: http://192.168.1.2:3001
+ ------------------------------------
+<span class="token punctuation">[</span>BS<span class="token punctuation">]</span> Serving files from: ./
+</code></pre>
+<p>ブラウザが開くと <a href="http://localhost:3000">http://localhost:3000</a> にアクセスした状態になる。</p>
+<p>ターミナルはそのまま置いておき、<code>src.js</code> なり <code>index.html</code> なりを編集すると、以下のようにタスクが自動的に実行され、ブラウザがリロードされて変更内容が自動的に反映される。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># src.js を変更して保存した直後のターミナル表示</span>
+
+<span class="token punctuation">[</span>01:54:50<span class="token punctuation">]</span> Starting <span class="token string">'build-js'</span><span class="token punctuation">..</span>.
+<span class="token punctuation">[</span>01:54:50<span class="token punctuation">]</span> Finished <span class="token string">'build-js'</span> after <span class="token number">2.89</span> ms
+<span class="token punctuation">[</span>01:54:50<span class="token punctuation">]</span> Starting <span class="token string">'reload'</span><span class="token punctuation">..</span>.
+<span class="token punctuation">[</span>BS<span class="token punctuation">]</span> Reloading Browsers<span class="token punctuation">..</span>.
+<span class="token punctuation">[</span>01:54:50<span class="token punctuation">]</span> Finished <span class="token string">'reload'</span> after <span class="token number">1.79</span> ms
+</code></pre>
+<p><code>gulp.watch()</code> を書いているタスクは表示されないが、そこが監視していて呼び出したタスクについてはターミナルに表示される。</p>
+<p>開発を中断する時は、<code>Ctrl + C</code> で gulp コマンドの動作を止めるなり、ターミナルを閉じるなりしてしまえば良い。</p>
+<hr>
+<p>自身の開発環境に合わせて <code>gulpfile.js</code> のタスクを修正する必要はあるものの、一度作ってしまえばある程度使い回しが利くシロモノだ。いちいちビルドタスクを動かして、ブラウザを F5 して…としなくても、完全自動で反映されるのは想像しているよりも快適だ。</p>
+<p>今回のソースは以下にコミットしてあるので、よかったらこちらもご覧いただきたい。</p>
+<ul>
+  <li><a href="https://github.com/Neos21/practice-node-js">GitHub - Neos21/practice-node-js: Node.js などのお勉強リポジトリ。</a></li>
+</ul>
+<h2 id="参考"><a class="header-link" href="#参考"><span class="header-link-mark"></span></a>参考</h2>
+<ul>
+  <li><a href="http://qiita.com/ferretdayo/items/47937cfb38babcf17a20">開発しやすい環境の作り方~Web系~ - Qiita</a></li>
+  <li><a href="http://web-devlog.net/post/2015/08/27/072523/">http://web-devlog.net/post/2015/08/27/072523/</a></li>
+  <li><a href="http://qiita.com/kabane/items/186017e24d9ed606b4ae">遅すぎたgulp実践導入 (Mac編) - Qiita</a> … gulp-webserver というパッケージを使用しているが、<code>gulp.watch()</code> に関しての内容は同じように使える</li>
+</ul>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2016-07-05</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2016-07-05</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

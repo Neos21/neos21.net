@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>SQL*Loader を使ってみる - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2017/03/06-02.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2017/index.html">2017年</a></li>
+            <li><a href="/blog/2017/03/index.html">03月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2017-03-06</time></div>
+        <h1 id="page-title">SQL*Loader を使ってみる</h1>
+
+<p><strong>SQL*Loader</strong> とは、Oracle DB 付属のツールで、CSV ファイルなどに書かれたデータを一気に INSERT できるツールだ。コントロールファイルと呼ばれる設定ファイルの書き方に特徴があったり、設定値未指定の場合の初期値に難があったりするので、参考となる情報をまとめておく。</p>
+<h2 id="sqlloader-の使い方"><a class="header-link" href="#sqlloader-の使い方"><span class="header-link-mark"></span></a>SQL*Loader の使い方</h2>
+<p>SQL*Loader は以下のように 、コマンドプロンプトなどから<code>Sqlldr</code> コマンドで実行する。</p>
+<pre class="language-batch"><code class="language-batch"><span class="token command"><span class="token keyword">Sqlldr</span> userid=scott<span class="token parameter attr-name">/tiger</span> control=sample.ctl</span>
+</code></pre>
+<p><code>control</code> オプションに書いたファイルが、設定項目を持つ「コントロールファイル」となる。</p>
+<p><code>Sqlldr</code> コマンドのみを打つと、このコマンドで使えるパラメータやデフォルト値が確認できる。</p>
+<h2 id="コントロールファイルのサンプル"><a class="header-link" href="#コントロールファイルのサンプル"><span class="header-link-mark"></span></a>コントロールファイルのサンプル</h2>
+<p>以下をテンプレート代わりにしてもらえると良いかと。仮に <code>sample.ctl</code> としておく。</p>
+<pre><code>OPTIONS (
+  LOAD = -1,
+  SKIP = 0,
+  ERRORS = 0,
+  ROWS = -1,
+  DIRECT = TRUE,
+  MULTITHREADING = TRUE,
+  PARALLEL = TRUE
+)
+LOAD DATA
+  CHARACTERSET UTF8
+  INFILE 'sample.csv'
+  BADFILE 'sample.bad'
+  APPEND
+    
+    INTO sample_table
+    FIELDS TERMINATED BY ","
+    TRAILING NULLCOLS
+  (
+    column_A,
+    column_B "TO_DATE(:column_B, 'YYYY/MM/DD HH24:MI:SS')",
+    column_C DATE 'YYYY/MM/DD HH24:MI:SS',
+    column_D DECIMAL EXTERNAL(10),
+    column_E ZONED(5, 2),
+    column_F CHAR(100),
+    column_G CONSTANT "Text",
+    column_H SYSDATE
+    column_I NULLIF column_E=BLANKS,
+    column_J TERMINATED BY ';',
+    column_K
+  )
+</code></pre>
+<p>コントロールファイル内でのコメントは「<code>--</code>」で可能。</p>
+<h3 id="options-について"><a class="header-link" href="#options-について"><span class="header-link-mark"></span></a><code>OPTIONS</code> について</h3>
+<ul>
+  <li><code>OPTIONS</code> 句はコマンドライン引数でも書ける。コマンドライン引数の設定の方が優先されるが、コントロールファイルにまとめておくのが分かりやすいかと。</li>
+  <li><em>書かなかった設定項目は初期値が設定される</em>のだが、この初期値が微妙な場合があるので、よくよく注意してほしい。</li>
+  <li><code>LOAD</code> ： ロードする件数。デフォルトは <code>-1</code> で全てを読み込む。</li>
+  <li><code>SKIP</code> ： スキップするレコード数。ファイルの先頭から何行無視するかを指定できる。デフォルトは <code>-1</code> でスキップなし。</li>
+  <li><code>ERRORS</code> ： 許容するエラー数。レコードの登録に失敗したレコードが何件あったら処理を中断するか、という指定。<strong>デフォルトは50レコード失敗で中断</strong>。<code>0</code> ならエラーを許容しない。<code>-1</code> でどれだけエラーが出ても無視する。<br>以前、この設定をせず、初期値である 50 を有効にしていたシステムがあって、<em>日次バッチでデータを取り込むために SQL*Loader を使っていた</em>。普段から40数件エラーがあったのだがそれには気付いておらず、ギリギリ取り込める状態が続いていたのだが、ある日エラー件数が50件を超えてデータが取り込めず、翌日の業務に影響が出るという本番障害があった。公式のリファレンスやヘルプを読まずに使うのは必ず問題を引き起こすので注意。</li>
+  <li><code>DIRECT</code> ： <code>TRUE</code> でダイレクト・パス・ロードを使う。高速に取り込める仕組みだが、条件があるので注意。</li>
+  <li><code>MULTITHREADING</code> ： <code>TRUE</code> で、ダイレクト・パス・ロードを使用しているときにマルチスレッディング処理させる。</li>
+  <li><code>PARALLEL</code> ： 読み込み操作をパラレル化する。</li>
+</ul>
+<h3 id="load-data-について"><a class="header-link" href="#load-data-について"><span class="header-link-mark"></span></a><code>LOAD DATA</code> について</h3>
+<ul>
+  <li><code>CHARACTERSET</code> ： 入力ファイル (データファイル) のキャラセット指定。</li>
+  <li><code>INFILE</code> ： データファイル。SQL*Loader を実行するディレクトリからの相対パス指定。複数ファイル指定することもできる。</li>
+  <li><code>BADFILE</code> ： エラーがあったときに、このファイルにログを出力する。オプション指定を省略すると、「データファイル名.bad」で作られる。</li>
+  <li><code>APPEND</code> ： データを追加する。既にデータが存在する場合は、重複しないデータだけ追加される。他のモードは <code>INSERT</code>、<code>REPLACE</code>、<code>TRUNCATE</code>。</li>
+  <li><code>PRESERVE BLANKS</code> を指定すると、カラムの前後にある区切り文字前後の空白を消せる。全カラムに <code>TRIM()</code> 関数をかませるようなもので、副作用もあるので使用は注意。</li>
+  <li><code>INTO (テーブル) (フィールド)</code> を複数指定すれば、異なるテーブルにデータを出力できる。</li>
+  <li><code>INTO (テーブル) WHEN (条件)</code> と書くと、条件を満たしたデータだけ挿入できる。条件に合わないデータは <code>DISCARDFILE</code> に出力されるが、<code>BADFILE</code> と違って <code>DISCARDFILE</code> 項目を指定しておかないとファイルに出力されないので注意。<code>INFILE</code>、<code>BADFILE</code> の流れで <code>DISCARDFILE 'sample.dis'</code> などと書いておく。</li>
+  <li><code>FIELDS TERMINATED BY</code> ： データを区切る、区切り文字を指定する。CSV ファイルはカンマ区切りなので <code>","</code> と記載。タブであれば「<code>BY X'09'</code>」、スペース・タブ・改行のいずれかであれば「<code>BY WHITESPACE</code>」とすれば良い。</li>
+  <li><code>TRAILING NULLCOLS</code> ： データのない項目には <code>NULL</code> を入れる。</li>
+</ul>
+<h3 id="カラム指定について"><a class="header-link" href="#カラム指定について"><span class="header-link-mark"></span></a>カラム指定について</h3>
+<ul>
+  <li>大抵は <code>column_A, column_B</code> のように、カラム名だけ列挙すれば良い。</li>
+  <li>項目の後ろに関数を書けば、その内容が入れられる。<code>column_B "TO_DATE(:column_B, 'YYYY/MM/DD HH24:MI:SS')"</code> は、<code>:column_B</code> の値を <code>TO_DATE()</code> 関数で変換した内容を <code>column_B</code> に挿入する、となる。</li>
+  <li><code>column_C DATE 'YYYY/MM/DD HH24:MI:SS'</code> というように、データ属性と書式を指定することもできる。</li>
+  <li><code>DECIMAL EXTERNAL(10)</code> は NUMBER 型の整数、<code>ZONED(5, 2)</code> は NUMBER 型の小数。<code>CHAR(100)</code> は CHAR および VARCHAR2 型。</li>
+  <li><code>column_G CONSTANT "Text"</code> とすれば、定数として <code>Text</code> という文字列を追加できる。データファイルの内容を使わずにインサートする。同様に <code>SYSDATE</code> も挿入可能。</li>
+  <li><code>column_I NULLIF column_E=BLANKS</code> は、<code>column_E</code> が空白およびそれに類するもの (<code>BLANKS</code>) の時に、<code>column_I</code> に <code>NULL</code> が挿入される。</li>
+  <li><code>column_J TERMINATED BY ';', column_K</code> というように、カラムごとに区切り文字を指定できる。普段の書いていない場合は <code>FIELDS TERMINATED BY</code> で指定した区切り文字になる。</li>
+</ul>
+<h2 id="データファイルは？"><a class="header-link" href="#データファイルは？"><span class="header-link-mark"></span></a>データファイルは？</h2>
+<p>通常は CSV ファイルとして、1行が1レコードのファイルを用意しておけば良い。コントロールファイルで定義したカラムに、カンマごとにデータが入っていく。</p>
+<p>改行を含んだ CSV ファイルが上手く取り込めるかは知らない (試したことがない)。</p>
+<h2 id="参考"><a class="header-link" href="#参考"><span class="header-link-mark"></span></a>参考</h2>
+<ul>
+  <li><a href="http://otndnld.oracle.co.jp/document/products/oracle10g/102/doc_cd/server.102/B19211-01/ldr_params.html">SQL*Loaderコマンドライン・リファレンス</a></li>
+  <li><a href="http://www.shift-the-oracle.com/inside/direct-pass-insert.html">ダイレクト・パス・インサート - オラクル・Oracleをマスターするための基本と仕組み</a></li>
+  <li><a href="http://www.ne.jp/asahi/hishidama/home/tech/oracle/sqlldr.html">SQL*Loaderメモ(Hishidama's sqlloader for Oracle9i Memo)</a></li>
+  <li><a href="http://oracle.se-free.com/utl/C2_when.html">ＯＲＡＣＬＥ／オラクルＳＱＬリファレンス（SQLLOADER）</a></li>
+  <li><a href="http://www.shift-the-oracle.com/utility/sqlloader/">SQL*Loader の使い方 - オラクル・Oracleをマスターするための基本と仕組み</a></li>
+  <li><a href="http://www.mitchy-world.jp/oracle/oracle003.htm">SQL*Loader Oracle 備忘録 ＠みっちーわーるど</a></li>
+  <li><a href="http://apis.jpn.ph/fswiki/wiki.cgi?page=Oracle/SqlLoader">Oracle/SqlLoader - 備忘録</a></li>
+</ul>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2017-03-06</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2017-03-06</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

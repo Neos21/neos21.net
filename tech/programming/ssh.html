@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>SSH - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/tech/programming/ssh.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/tech/programming/index.html">プログラミング</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <h1 id="page-title">SSH</h1>
+
+<p>SSH とか OpenSSL とかその辺の話。<code>ssh-keygen</code> とか <code>openssl</code> とかコマンド複雑すぎて分からんねん。作り方、どんなファイルが出てくるか、中身の確認方法、ペアとなるファイルの同一性確認方法などをまとめる。</p>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#ssh-%E9%8D%B5%E3%83%9A%E3%82%A2%E3%81%AE%E4%BD%9C%E3%82%8A%E6%96%B9%E3%81%A8%E4%B8%AD%E8%BA%AB%E3%81%AE%E8%A6%8B%E6%96%B9">SSH 鍵ペアの作り方と中身の見方</a>
+    <ul>
+      <li><a href="#%E7%94%9F%E6%88%90%E6%96%B9%E6%B3%95">生成方法</a></li>
+      <li><a href="#%E3%83%95%E3%82%A1%E3%82%A4%E3%83%AB%E3%81%AE%E5%86%85%E5%AE%B9-%E3%82%B5%E3%83%B3%E3%83%97%E3%83%AB">ファイルの内容 (サンプル)</a>
+        <ul>
+          <li><a href="#id_rsa-%E7%A7%98%E5%AF%86%E9%8D%B5"><code>id_rsa</code> (秘密鍵)</a></li>
+          <li><a href="#id_rsapub-%E5%85%AC%E9%96%8B%E9%8D%B5"><code>id_rsa.pub</code> (公開鍵)</a></li>
+        </ul>
+      </li>
+      <li><a href="#%E5%86%85%E5%AE%B9%E7%A2%BA%E8%AA%8D">内容確認</a></li>
+      <li><a href="#%E5%8F%82%E8%80%83%E6%96%87%E7%8C%AE">参考文献</a></li>
+    </ul>
+  </li>
+  <li><a href="#%E3%82%B5%E3%83%BC%E3%83%90%E8%A8%BC%E6%98%8E%E6%9B%B8">サーバ証明書</a>
+    <ul>
+      <li><a href="#%E7%94%9F%E6%88%90%E6%96%B9%E6%B3%95-1">生成方法</a></li>
+      <li><a href="#%E3%83%95%E3%82%A1%E3%82%A4%E3%83%AB%E3%81%AE%E5%86%85%E5%AE%B9-%E3%82%B5%E3%83%B3%E3%83%97%E3%83%AB-1">ファイルの内容 (サンプル)</a>
+        <ul>
+          <li><a href="#ca-keypem-%E8%87%AA%E5%B7%B1%E7%BD%B2%E5%90%8D%E8%AA%8D%E8%A8%BC%E5%B1%80%E3%81%AE%E7%A7%98%E5%AF%86%E9%8D%B5"><code>ca-key.pem</code> (自己署名認証局の秘密鍵)</a></li>
+          <li><a href="#ca-certcsr-%E8%A8%BC%E6%98%8E%E6%9B%B8%E7%99%BA%E8%A1%8C%E8%A6%81%E6%B1%82-csr"><code>ca-cert.csr</code> (証明書発行要求 CSR)</a></li>
+          <li><a href="#ca-certpem-%E3%82%B5%E3%83%BC%E3%83%90%E8%A8%BC%E6%98%8E%E6%9B%B8"><code>ca-cert.pem</code> (サーバ証明書)</a></li>
+        </ul>
+      </li>
+      <li><a href="#%E5%86%85%E5%AE%B9%E7%A2%BA%E8%AA%8D-1">内容確認</a></li>
+      <li><a href="#%E5%8F%82%E8%80%83%E6%96%87%E7%8C%AE-1">参考文献</a></li>
+    </ul>
+  </li>
+  <li><a href="#rsa-%E9%8D%B5%E3%83%9A%E3%82%A2">RSA 鍵ペア</a>
+    <ul>
+      <li><a href="#%E7%94%9F%E6%88%90%E6%96%B9%E6%B3%95-2">生成方法</a></li>
+      <li><a href="#%E3%83%95%E3%82%A1%E3%82%A4%E3%83%AB%E3%81%AE%E5%86%85%E5%AE%B9-%E3%82%B5%E3%83%B3%E3%83%97%E3%83%AB-2">ファイルの内容 (サンプル)</a>
+        <ul>
+          <li><a href="#rsakey-%E7%A7%98%E5%AF%86%E9%8D%B5"><code>rsa.key</code> (秘密鍵)</a></li>
+          <li><a href="#rsa-publicpem-%E5%85%AC%E9%96%8B%E9%8D%B5"><code>rsa-public.pem</code> (公開鍵)</a></li>
+        </ul>
+      </li>
+      <li><a href="#%E5%86%85%E5%AE%B9%E7%A2%BA%E8%AA%8D-2">内容確認</a></li>
+      <li><a href="#%E5%8F%82%E8%80%83%E6%96%87%E7%8C%AE-2">参考文献</a></li>
+    </ul>
+  </li>
+</ul>
+<h2 id="ssh-鍵ペアの作り方と中身の見方"><a class="header-link" href="#ssh-鍵ペアの作り方と中身の見方"><span class="header-link-mark"></span></a>SSH 鍵ペアの作り方と中身の見方</h2>
+<p>OpenSSH 形式の鍵ペア。SSH 接続時に使用する。<code>ssh-keygen</code> コマンドを使用する。</p>
+<h3 id="生成方法"><a class="header-link" href="#生成方法"><span class="header-link-mark"></span></a>生成方法</h3>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># 秘密鍵と公開鍵をセットで作成する</span>
+$ ssh-keygen -t rsa -b <span class="token number">4096</span> -N <span class="token string">'【パスフレーズ】'</span> -C <span class="token string">'【コメント】'</span> -f <span class="token string">"<span class="token variable">${<span class="token environment constant">HOME</span>}</span>/.ssh/id_rsa"</span>
+
+Generating public/private rsa key pair.
+Your identification has been saved <span class="token keyword">in</span> /Users/Example/.ssh/id_rsa.
+Your public key has been saved <span class="token keyword">in</span> /Users/Example/.ssh/id_rsa.pub.
+The key fingerprint is:
+SHA256:xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 【コメント】
+The key's randomart image is:
++---<span class="token punctuation">[</span>RSA <span class="token number">4096</span><span class="token punctuation">]</span>----+
+<span class="token operator">|</span>          <span class="token builtin class-name">.</span>      <span class="token operator">|</span>
+<span class="token operator">|</span>       o o       <span class="token operator">|</span>
+<span class="token operator">|</span>    <span class="token builtin class-name">.</span> <span class="token builtin class-name">.</span> <span class="token operator">=</span> o      <span class="token operator">|</span>
+<span class="token operator">|</span>     + + B  <span class="token builtin class-name">.</span>    <span class="token operator">|</span>
+<span class="token operator">|</span>    o <span class="token builtin class-name">.</span> S+<span class="token punctuation">..</span> +o  <span class="token operator">|</span>
+<span class="token operator">|</span>     <span class="token punctuation">..</span>+o E.++.+ <span class="token operator">|</span>
+<span class="token operator">|</span>      .++<span class="token punctuation">..</span>ooo+<span class="token punctuation">..</span><span class="token operator">|</span>
+<span class="token operator">|</span>       .+*+ o+o  <span class="token operator">|</span>
+<span class="token operator">|</span>         +OXo<span class="token punctuation">..</span>  <span class="token operator">|</span>
++----<span class="token punctuation">[</span>SHA256<span class="token punctuation">]</span>-----+
+
+<span class="token comment"># 秘密鍵ファイルから公開鍵ファイルを作るには `-y` オプションを使う</span>
+$ ssh-keygen -yf <span class="token string">"<span class="token variable">${<span class="token environment constant">HOME</span>}</span>/.ssh/id_rsa"</span>
+ssh-rsa ……中略……
+<span class="token comment"># コメントは付いていないことに留意</span>
+<span class="token comment"># `> "${HOME}/.ssh/id_rsa.pub` などとリダイレクトすればファイルに保存できる</span>
+</code></pre>
+<ul>
+  <li><code>-b 4096</code> と指定したとおり、4096 bit で作成した</li>
+  <li><code>-N ''</code> とすると、パスフレーズなしの秘密鍵ファイルが生成できる</li>
+  <li><code>-f</code> でファイルの出力先を指定。<code>${HOME}/.ssh/id_rsa</code> (秘密鍵) と <code>${HOME}/.ssh/id_rsa.pub</code> (公開鍵) の2ファイルが生成される</li>
+  <li>各オプションを記述しないと、対話式プロンプトの中で入力していくことになる</li>
+</ul>
+<h3 id="ファイルの内容-サンプル"><a class="header-link" href="#ファイルの内容-サンプル"><span class="header-link-mark"></span></a>ファイルの内容 (サンプル)</h3>
+<h4 id="id_rsa-秘密鍵"><a class="header-link" href="#id_rsa-秘密鍵"><span class="header-link-mark"></span></a><code>id_rsa</code> (秘密鍵)</h4>
+<pre><code>-----BEGIN OPENSSH PRIVATE KEY-----
+……中略……
+-----END OPENSSH PRIVATE KEY-----
+</code></pre>
+<h4 id="id_rsapub-公開鍵"><a class="header-link" href="#id_rsapub-公開鍵"><span class="header-link-mark"></span></a><code>id_rsa.pub</code> (公開鍵)</h4>
+<pre class="language-bash"><code class="language-bash">ssh-rsa ……中略…… 【コメント】
+</code></pre>
+<h3 id="内容確認"><a class="header-link" href="#内容確認"><span class="header-link-mark"></span></a>内容確認</h3>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># 秘密鍵からフィンガープリントを確認する</span>
+$ ssh-keygen -l -f <span class="token string">"<span class="token variable">${<span class="token environment constant">HOME</span>}</span>/.ssh/id_rsa"</span>
+<span class="token number">4096</span> SHA256:xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 【コメント】 <span class="token punctuation">(</span>RSA<span class="token punctuation">)</span>
+
+<span class="token comment"># 公開鍵からフィンガープリントを確認する</span>
+$ ssh-keygen -l -f <span class="token string">"<span class="token variable">${<span class="token environment constant">HOME</span>}</span>/.ssh/id_rsa.pub"</span>
+<span class="token number">4096</span> SHA256:xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx 【コメント】 <span class="token punctuation">(</span>RSA<span class="token punctuation">)</span>
+</code></pre>
+<ul>
+  <li>オプションは <code>-l -f</code> と書いても <code>-lf</code> と書いても良い</li>
+</ul>
+<p>Hash Visualization を見るには <code>-v</code> オプションを付ける。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># 秘密鍵から Hash Visualization を見る</span>
+$ ssh-keygen -vlf <span class="token string">"<span class="token variable">${<span class="token environment constant">HOME</span>}</span>/.ssh/id_rsa"</span>
++---<span class="token punctuation">[</span>RSA <span class="token number">4096</span><span class="token punctuation">]</span>----+
+<span class="token operator">|</span>          <span class="token builtin class-name">.</span>      <span class="token operator">|</span>
+<span class="token operator">|</span>       o o       <span class="token operator">|</span>
+<span class="token operator">|</span>    <span class="token builtin class-name">.</span> <span class="token builtin class-name">.</span> <span class="token operator">=</span> o      <span class="token operator">|</span>
+<span class="token operator">|</span>     + + B  <span class="token builtin class-name">.</span>    <span class="token operator">|</span>
+<span class="token operator">|</span>    o <span class="token builtin class-name">.</span> S+<span class="token punctuation">..</span> +o  <span class="token operator">|</span>
+<span class="token operator">|</span>     <span class="token punctuation">..</span>+o E.++.+ <span class="token operator">|</span>
+<span class="token operator">|</span>      .++<span class="token punctuation">..</span>ooo+<span class="token punctuation">..</span><span class="token operator">|</span>
+<span class="token operator">|</span>       .+*+ o+o  <span class="token operator">|</span>
+<span class="token operator">|</span>         +OXo<span class="token punctuation">..</span>  <span class="token operator">|</span>
++----<span class="token punctuation">[</span>SHA256<span class="token punctuation">]</span>-----+
+
+<span class="token comment"># 公開鍵から Hash Visualization を見る</span>
+$ ssh-keygen -vlf <span class="token string">"<span class="token variable">${<span class="token environment constant">HOME</span>}</span>/.ssh/id_rsa.pub"</span>
++---<span class="token punctuation">[</span>RSA <span class="token number">4096</span><span class="token punctuation">]</span>----+
+<span class="token operator">|</span>          <span class="token builtin class-name">.</span>      <span class="token operator">|</span>
+<span class="token operator">|</span>       o o       <span class="token operator">|</span>
+<span class="token operator">|</span>    <span class="token builtin class-name">.</span> <span class="token builtin class-name">.</span> <span class="token operator">=</span> o      <span class="token operator">|</span>
+<span class="token operator">|</span>     + + B  <span class="token builtin class-name">.</span>    <span class="token operator">|</span>
+<span class="token operator">|</span>    o <span class="token builtin class-name">.</span> S+<span class="token punctuation">..</span> +o  <span class="token operator">|</span>
+<span class="token operator">|</span>     <span class="token punctuation">..</span>+o E.++.+ <span class="token operator">|</span>
+<span class="token operator">|</span>      .++<span class="token punctuation">..</span>ooo+<span class="token punctuation">..</span><span class="token operator">|</span>
+<span class="token operator">|</span>       .+*+ o+o  <span class="token operator">|</span>
+<span class="token operator">|</span>         +OXo<span class="token punctuation">..</span>  <span class="token operator">|</span>
++----<span class="token punctuation">[</span>SHA256<span class="token punctuation">]</span>-----+
+</code></pre>
+<h3 id="参考文献"><a class="header-link" href="#参考文献"><span class="header-link-mark"></span></a>参考文献</h3>
+<ul>
+  <li><a href="https://qiita.com/matoken/items/c5f2cda7466ab7a2fae6">ssh鍵の鍵指紋を表示 - Qiita</a></li>
+  <li><a href="https://qiita.com/koudaiii/items/45f9f5929afb0039ffdb">秘密鍵から公開鍵作る - Qiita</a></li>
+</ul>
+<h2 id="サーバ証明書"><a class="header-link" href="#サーバ証明書"><span class="header-link-mark"></span></a>サーバ証明書</h2>
+<p>サーバ証明書は <code>openssl</code> コマンドで作成・確認できる。証明書発行要求 (CSR) ファイルというモノを経由するので若干分かりにくい。</p>
+<h3 id="生成方法-1"><a class="header-link" href="#生成方法-1"><span class="header-link-mark"></span></a>生成方法</h3>
+<p>以下では自己署名証明書、いわゆるオレオレ証明書の作り方を説明する。正規のサーバ証明書を受け取った際に、各ファイルの組合せを理解できるようになるだろう。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># 秘密鍵を作成する</span>
+$ openssl genrsa -aes256 -out ./ca-key.pem <span class="token number">2048</span>
+Generating RSA private key, <span class="token number">2048</span> bit long modulus
+<span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span>+++
+<span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span>+++
+e is <span class="token number">65537</span> <span class="token punctuation">(</span>0x10001<span class="token punctuation">)</span>
+Enter pass phrase <span class="token keyword">for</span> ./ca-key.pem:  <span class="token comment"># パスフレーズを入力する</span>
+Verifying - Enter pass phrase <span class="token keyword">for</span> ./ca-key.pem:  <span class="token comment"># 再度パスフレーズを入力する</span>
+
+<span class="token comment"># 証明書発行要求 CSR ファイルを作成する</span>
+$ openssl req -new -key ./ca-key.pem -out ./ca-cert.csr
+Enter pass phrase <span class="token keyword">for</span> ./ca-key.pem:  <span class="token comment"># 秘密鍵のパスフレーズを入力する</span>
+You are about to be asked to enter information that will be incorporated
+into your certificate request.
+What you are about to enter is what is called a Distinguished Name or a DN.
+There are quite a few fields but you can leave some blank
+For some fields there will be a default value,
+If you enter <span class="token string">'.'</span>, the field will be left blank.
+-----
+Country Name <span class="token punctuation">(</span><span class="token number">2</span> letter code<span class="token punctuation">)</span> <span class="token punctuation">[</span><span class="token punctuation">]</span>:JP  <span class="token comment"># 「JP」と入力する</span>
+State or Province Name <span class="token punctuation">(</span>full name<span class="token punctuation">)</span> <span class="token punctuation">[</span><span class="token punctuation">]</span>:Tokyo  <span class="token comment"># 適当に「Tokyo」などと入力する</span>
+Locality Name <span class="token punctuation">(</span>eg, city<span class="token punctuation">)</span> <span class="token punctuation">[</span><span class="token punctuation">]</span>:Ikebukuro  <span class="token comment"># 適当に入力する</span>
+Organization Name <span class="token punctuation">(</span>eg, company<span class="token punctuation">)</span> <span class="token punctuation">[</span><span class="token punctuation">]</span>:Neo<span class="token string">'s World  # 適当に入力する
+Organizational Unit Name (eg, section) []:Section  # 適当に入力する
+Common Name (eg, fully qualified host name) []:example.com  # ドメイン名などを入力する
+Email Address []:  # 未入力のまま進める
+
+Please enter the following '</span>extra<span class="token string">' attributes
+to be sent with your certificate request
+A challenge password []:  # 未入力のまま進める
+
+# サーバ証明書 (自己署名証明書) を作成する
+$ openssl x509 -days 825 -in ./ca-cert.csr -req -signkey ./ca-key.pem -out ./ca-cert.pem
+Signature ok
+subject=/C=JP/ST=Tokyo/L=Ikebukuro/O=Neo'</span>s World/OU<span class="token operator">=</span>Section/CN<span class="token operator">=</span>example.com
+Getting Private key
+Enter pass phrase <span class="token keyword">for</span> ./ca-key.pem:  <span class="token comment"># 自己署名認証局の秘密鍵のパスフレーズを入力する</span>
+</code></pre>
+<h3 id="ファイルの内容-サンプル-1"><a class="header-link" href="#ファイルの内容-サンプル-1"><span class="header-link-mark"></span></a>ファイルの内容 (サンプル)</h3>
+<h4 id="ca-keypem-自己署名認証局の秘密鍵"><a class="header-link" href="#ca-keypem-自己署名認証局の秘密鍵"><span class="header-link-mark"></span></a><code>ca-key.pem</code> (自己署名認証局の秘密鍵)</h4>
+<pre><code>-----BEGIN RSA PRIVATE KEY-----
+Proc-Type: 4,ENCRYPTED
+DEK-Info: AES-256-CBC,xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+……中略……
+-----END RSA PRIVATE KEY-----
+</code></pre>
+<h4 id="ca-certcsr-証明書発行要求-csr"><a class="header-link" href="#ca-certcsr-証明書発行要求-csr"><span class="header-link-mark"></span></a><code>ca-cert.csr</code> (証明書発行要求 CSR)</h4>
+<pre><code>-----BEGIN CERTIFICATE REQUEST-----
+……中略……
+-----END CERTIFICATE REQUEST-----
+</code></pre>
+<h4 id="ca-certpem-サーバ証明書"><a class="header-link" href="#ca-certpem-サーバ証明書"><span class="header-link-mark"></span></a><code>ca-cert.pem</code> (サーバ証明書)</h4>
+<pre><code>-----BEGIN CERTIFICATE-----
+……中略……
+-----END CERTIFICATE-----
+</code></pre>
+<h3 id="内容確認-1"><a class="header-link" href="#内容確認-1"><span class="header-link-mark"></span></a>内容確認</h3>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># 秘密鍵の内容を確認する</span>
+$ openssl rsa -text -noout -in ./ca-key.pem 
+Enter pass phrase <span class="token keyword">for</span> ./ca-key.pem:  <span class="token comment"># パスフレーズを入力する</span>
+Private-Key: <span class="token punctuation">(</span><span class="token number">2048</span> bit<span class="token punctuation">)</span>
+modulus:
+    xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:
+    ……中略……
+    xx:xx
+publicExponent: <span class="token number">65537</span> <span class="token punctuation">(</span>0x10001<span class="token punctuation">)</span>
+privateExponent:
+    ……中略……
+prime1:
+    ……中略……
+prime2:
+    ……中略……
+exponent1:
+    ……中略……
+exponent2:
+    ……中略……
+coefficient:
+    ……中略……
+
+<span class="token comment"># 秘密鍵のフィンガープリントを確認する</span>
+$ openssl rsa -pubout -outform DER -in ./ca-key.pem <span class="token operator">|</span> openssl md5 -c
+Enter pass phrase <span class="token keyword">for</span> ./ca-key.pem:  <span class="token comment"># パスフレーズを入力する</span>
+writing RSA key
+xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx
+
+<span class="token comment"># 証明書発行要求 (CSR) の内容を確認する</span>
+$ openssl req -text -noout -in ./ca-cert.csr 
+Certificate Request:
+    Data:
+        Version: <span class="token number">0</span> <span class="token punctuation">(</span>0x0<span class="token punctuation">)</span>
+        Subject: <span class="token assign-left variable">C</span><span class="token operator">=</span>JP, <span class="token assign-left variable">ST</span><span class="token operator">=</span>Tokyo, <span class="token assign-left variable">L</span><span class="token operator">=</span>Ikebukuro, <span class="token assign-left variable">O</span><span class="token operator">=</span>Neo<span class="token string">'s World, OU=Section, CN=example.com
+        Subject Public Key Info:
+            Public Key Algorithm: rsaEncryption
+                Public-Key: (2048 bit)
+                Modulus:
+                    ……中略……
+                Exponent: 65537 (0x10001)
+        Attributes:
+            a0:00
+    Signature Algorithm: sha256WithRSAEncryption
+         ……中略……
+
+# 証明書発行要求 (CSR) の公開鍵を表示する (サーバ証明書の公開鍵と一致する)
+$ openssl req -pubkey -noout -in ./ca-cert.csr
+-----BEGIN PUBLIC KEY-----
+……中略……
+-----END PUBLIC KEY-----
+
+# 証明書発行要求 (CSR) のフィンガープリントを表示する (サーバ証明書のフィンガープリントと一致する)
+$ openssl req -pubkey -noout -in ./ca-cert.csr | openssl md5 -c
+xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx
+
+# サーバ証明書の内容を確認する
+$ openssl x509 -text -fingerprint -noout -in ca-cert.pem 
+Certificate:
+    Data:
+        Version: 1 (0x0)
+        Serial Number: 00000000000000000000 (0xffffffffffffffff)
+    Signature Algorithm: sha1WithRSAEncryption
+        Issuer: C=JP, ST=Tokyo, L=Ikebukuro, O=Neo'</span>s World, <span class="token assign-left variable">OU</span><span class="token operator">=</span>Section, <span class="token assign-left variable">CN</span><span class="token operator">=</span>example.com
+        Validity
+            Not Before: Jan <span class="token number">25</span> 00:00:00 <span class="token number">2021</span> GMT
+            Not After <span class="token builtin class-name">:</span> Jan <span class="token number">23</span> 00:00:00 <span class="token number">2031</span> GMT
+        Subject: <span class="token assign-left variable">C</span><span class="token operator">=</span>JP, <span class="token assign-left variable">ST</span><span class="token operator">=</span>Tokyo, <span class="token assign-left variable">L</span><span class="token operator">=</span>Ikebukuro, <span class="token assign-left variable">O</span><span class="token operator">=</span>Neo's World, <span class="token assign-left variable">OU</span><span class="token operator">=</span>Section, <span class="token assign-left variable">CN</span><span class="token operator">=</span>example.com
+        Subject Public Key Info:
+            Public Key Algorithm: rsaEncryption
+                Public-Key: <span class="token punctuation">(</span><span class="token number">2048</span> bit<span class="token punctuation">)</span>
+                Modulus:
+                    ……中略……
+                Exponent: <span class="token number">65537</span> <span class="token punctuation">(</span>0x10001<span class="token punctuation">)</span>
+    Signature Algorithm: sha1WithRSAEncryption
+         ……中略……
+SHA1 <span class="token assign-left variable">Fingerprint</span><span class="token operator">=</span>xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx
+
+<span class="token comment"># サーバ証明書の公開鍵を表示する (証明書発行要求 (CSR) の公開鍵と一致する)</span>
+$ openssl x509 -pubkey -noout -in ./ca-cert.pem 
+-----BEGIN PUBLIC KEY-----
+……中略……
+-----END PUBLIC KEY-----
+
+<span class="token comment"># サーバ証明書のフィンガープリントを表示する (証明書発行要求 (CSR) のフィンガープリントと一致する)</span>
+$ openssl x509 -pubkey -noout -in ./ca-cert.pem <span class="token operator">|</span> openssl md5 -c
+</code></pre>
+<h3 id="参考文献-1"><a class="header-link" href="#参考文献-1"><span class="header-link-mark"></span></a>参考文献</h3>
+<ul>
+  <li><a href="https://qiita.com/ll_kuma_ll/items/13c962a6a74874af39c6">オレだよオレオレ認証局で証明書つくる - Qiita</a></li>
+  <li><a href="https://jp.globalsign.com/support/faq/07.html">opensslコマンドで証明書情報を確認したい | サポート・お申し込みガイド | GMOグローバルサイン【公式】</a></li>
+</ul>
+<h2 id="rsa-鍵ペア"><a class="header-link" href="#rsa-鍵ペア"><span class="header-link-mark"></span></a>RSA 鍵ペア</h2>
+<p>クラウドサービスで API キーとして用いるような鍵ペア。<code>openssl</code> コマンドで作成・確認できる。</p>
+<h3 id="生成方法-2"><a class="header-link" href="#生成方法-2"><span class="header-link-mark"></span></a>生成方法</h3>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># 秘密鍵を作成する</span>
+$ openssl genrsa -out ./rsa.key <span class="token number">4096</span>
+Generating RSA private key, <span class="token number">4096</span> bit long modulus
+<span class="token punctuation">..</span><span class="token punctuation">..</span>.++
+<span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span>.++
+e is <span class="token number">65537</span> <span class="token punctuation">(</span>0x10001<span class="token punctuation">)</span>
+
+<span class="token comment"># 秘密鍵から公開鍵を作成する</span>
+$ openssl rsa -pubout -in ./rsa.key -out ./rsa-public.pem
+writing RSA key
+</code></pre>
+<h3 id="ファイルの内容-サンプル-2"><a class="header-link" href="#ファイルの内容-サンプル-2"><span class="header-link-mark"></span></a>ファイルの内容 (サンプル)</h3>
+<h4 id="rsakey-秘密鍵"><a class="header-link" href="#rsakey-秘密鍵"><span class="header-link-mark"></span></a><code>rsa.key</code> (秘密鍵)</h4>
+<pre><code>-----BEGIN RSA PRIVATE KEY-----
+……中略……
+-----END RSA PRIVATE KEY-----
+</code></pre>
+<h4 id="rsa-publicpem-公開鍵"><a class="header-link" href="#rsa-publicpem-公開鍵"><span class="header-link-mark"></span></a><code>rsa-public.pem</code> (公開鍵)</h4>
+<pre><code>-----BEGIN PUBLIC KEY-----
+……中略……
+-----END PUBLIC KEY-----
+</code></pre>
+<h3 id="内容確認-2"><a class="header-link" href="#内容確認-2"><span class="header-link-mark"></span></a>内容確認</h3>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># 秘密鍵ファイルから公開鍵のフィンガープリントを確認する</span>
+$ openssl rsa -pubout -outform DER -in ./rsa.key <span class="token operator">|</span> openssl md5 -c
+writing RSA key
+xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx
+
+<span class="token comment"># 公開鍵ファイルからフィンガープリントを確認する</span>
+$ openssl rsa -pubin -outform DER -in ./rsa-public.pem <span class="token operator">|</span> openssl md5 -c
+writing RSA key
+xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx
+</code></pre>
+<h3 id="参考文献-2"><a class="header-link" href="#参考文献-2"><span class="header-link-mark"></span></a>参考文献</h3>
+<ul>
+  <li><a href="http://openssl.6102.n7.nabble.com/cannot-read-PEM-key-file-no-start-line-td53438.html">OpenSSL - User - cannot read PEM key file - no start line</a></li>
+</ul>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2021-01-27</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2021-01-27</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

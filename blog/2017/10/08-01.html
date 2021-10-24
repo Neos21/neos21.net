@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>cordova-plugin-bluetoothle を使って iOS 同士で Bluetooth 通信する Cordova アプリを作る : 3 ペリフェラル編 (後編) - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2017/10/08-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2017/index.html">2017年</a></li>
+            <li><a href="/blog/2017/10/index.html">10月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2017-10-08</time></div>
+        <h1 id="page-title">cordova-plugin-bluetoothle を使って iOS 同士で Bluetooth 通信する Cordova アプリを作る : 3 ペリフェラル編 (後編)</h1>
+
+<p>前回の続き。</p>
+<ul>
+  <li><a href="/blog/2017/10/07-01.html">cordova-plugin-bluetoothle を使って iOS 同士で Bluetooth 通信する Cordova アプリを作る : 1 仕組み・準備編</a></li>
+</ul>
+<p>前回までで、ペリフェラル端末として動作するのに必要な API を Promise 化して用意するところまでができた。</p>
+<p>今回は各 API にどのようなオプションを渡して動かせば良いのか紹介し、<code>initializePeripheral</code> の特殊な動きを確認していきたい。</p>
+<h2 id="まずは処理を並べてみる"><a class="header-link" href="#まずは処理を並べてみる"><span class="header-link-mark"></span></a>まずは処理を並べてみる</h2>
+<p>まずはコンポーネント側の「ペリフェラル通信開始」ボタンを押下したときの処理として、前回作ったサービスクラスのメソッドを並べるだけ並べてみようと思う。ペリフェラル端末はこのように通信準備を行い、通信を止めていく、ということを確認しよう。</p>
+<pre class="language-typescript"><code class="language-typescript">@<span class="token function"><span class="token maybe-class-name">Component</span></span><span class="token punctuation">(</span><span class="token punctuation">{</span> <span class="token comment">/* 省略 */</span> <span class="token punctuation">}</span><span class="token punctuation">)</span>
+<span class="token keyword">export</span> <span class="token keyword">class</span> <span class="token class-name"><span class="token maybe-class-name">PeripheralComponent</span></span> <span class="token punctuation">{</span>
+  <span class="token comment">// プロパティの類、およびサービスクラスの DI は省略</span>
+  
+  <span class="token doc-comment comment">/** 「ペリフェラル通信開始」ボタン押下時の処理 */</span>
+  <span class="token function">execPeripheral</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token comment">// メッセージ更新 (基本的には console.log と同等と思ってください)</span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token method function property-access">updateMessage</span><span class="token punctuation">(</span><span class="token string">'ペリフェラル通信開始'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    
+    <span class="token comment">// 一定時間セントラル端末からの要求がなければ終了処理を実行するためのタイマー</span>
+    <span class="token keyword">let</span> waitTimer<span class="token punctuation">;</span>
+    
+    <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">peripheralService</span><span class="token punctuation">.</span><span class="token method function property-access">initializePeripheral</span><span class="token punctuation">(</span><span class="token punctuation">(</span>result<span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+      <span class="token comment">// TODO : initializePeripheral のコールバック関数は後で実装</span>
+    <span class="token punctuation">}</span><span class="token punctuation">)</span>
+      <span class="token punctuation">.</span><span class="token method function property-access">then</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+        <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token method function property-access">updateMessage</span><span class="token punctuation">(</span><span class="token string">'ペリフェラル初期化完了・サービス追加開始'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">return</span> <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">peripheralService</span><span class="token punctuation">.</span><span class="token method function property-access">addService</span><span class="token punctuation">(</span> <span class="token comment">/* TODO : オプション */</span> <span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span><span class="token punctuation">)</span>
+      <span class="token punctuation">.</span><span class="token method function property-access">then</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+        <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token method function property-access">updateMessage</span><span class="token punctuation">(</span><span class="token string">'サービス追加完了・アドバタイジング開始'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">return</span> <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">peripheralService</span><span class="token punctuation">.</span><span class="token method function property-access">startAdvertising</span><span class="token punctuation">(</span> <span class="token comment">/* TODO : オプション */</span> <span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span><span class="token punctuation">)</span>
+      <span class="token punctuation">.</span><span class="token method function property-access">then</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+        <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token method function property-access">updateMessage</span><span class="token punctuation">(</span><span class="token string">'アドバタイジング開始・セントラル端末の通信待機中…'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        
+        <span class="token comment">// 10秒間セントラル端末からの応答がなければ終了処理を呼び出すためタイマーを設置する</span>
+        <span class="token comment">// TODO : タイマーの解除処理は別途実装する</span>
+        waitTimer <span class="token operator">-</span> <span class="token function">setTimeout</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+          <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token method function property-access">updateMessage</span><span class="token punctuation">(</span><span class="token string">'10秒間応答がなかったため中断します'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+          <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token method function property-access">destroyPeripheral</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token punctuation">}</span><span class="token punctuation">,</span> <span class="token number">10</span> <span class="token operator">*</span> <span class="token number">1000</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span><span class="token punctuation">)</span>
+      <span class="token punctuation">.</span><span class="token keyword">catch</span><span class="token punctuation">(</span><span class="token punctuation">(</span>error<span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+        <span class="token comment">// どこかの処理で失敗したらエラーメッセージを表示</span>
+        <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token method function property-access">updateMessage</span><span class="token punctuation">(</span><span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">ペリフェラル通信開始処理に失敗しました : </span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>error<span class="token interpolation-punctuation punctuation">}</span></span><span class="token template-punctuation string">`</span></span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  
+  <span class="token doc-comment comment">/** 進捗を示すメッセージを更新し描画を強制更新する */</span>
+  <span class="token keyword">private</span> <span class="token function">updateMessage</span><span class="token punctuation">(</span>message<span class="token operator">:</span> <span class="token builtin">string</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">message</span> <span class="token operator">=</span> message<span class="token punctuation">;</span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">changeDetectorRef</span><span class="token punctuation">.</span><span class="token method function property-access">detectChanges</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  
+  <span class="token doc-comment comment">/** ペリフェラル端末の終了処理 */</span>
+  <span class="token keyword">private</span> <span class="token function">destroyPeripheral</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token method function property-access">updateMessage</span><span class="token punctuation">(</span><span class="token string">'終了処理開始 : アドバタイジング終了'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">peripheralService</span><span class="token punctuation">.</span><span class="token method function property-access">stopAdvertising</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+      <span class="token punctuation">.</span><span class="token method function property-access">then</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+        <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token method function property-access">updateMessage</span><span class="token punctuation">(</span><span class="token string">'アドバタイジング終了完了・サービス終了開始'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">return</span> <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">peripheralService</span><span class="token punctuation">.</span><span class="token method function property-access">removeAllServices</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span><span class="token punctuation">)</span>
+      <span class="token punctuation">.</span><span class="token method function property-access">then</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+        <span class="token comment">// 全て正常終了</span>
+        <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token method function property-access">updateMessage</span><span class="token punctuation">(</span><span class="token string">'サービス終了完了・ペリフェラル通信の終了処理が完了'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span><span class="token punctuation">)</span>
+      <span class="token punctuation">.</span><span class="token keyword">catch</span><span class="token punctuation">(</span><span class="token punctuation">(</span>error<span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+        <span class="token comment">// どこかの処理で失敗したらエラーメッセージを表示</span>
+        <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token method function property-access">updateMessage</span><span class="token punctuation">(</span><span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">ペリフェラル通信終了処理に失敗しました : </span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>error<span class="token interpolation-punctuation punctuation">}</span></span><span class="token template-punctuation string">`</span></span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+</code></pre>
+<p>今回のサンプルは、複雑な要求・応答のやりとりの中でのエラーハンドリングをしないようにするため、「接続して通信したら切断する」という一連の動作をほぼ自動で行うようにしている。</p>
+<p>サービスクラスに用意したメソッドのうち、<code>respond</code> だけ登場していない。また、<code>waitTimer</code> というタイマー変数のキャンセル処理もない。これはこのあと <code>initializePeripheral</code> のコールバックの中で実装する。</p>
+<p><code>updateMessage()</code> という関数では、<code>this.message</code> を更新しながら、<code>this.changeDetectorRef.detectChanges()</code> を呼んでいる。これは何かというと、Angular の <strong>ChangeDetectorRef</strong> クラスのことで、画面を強制的に再描画させるための API だ。前回も触れたように、<code>initializePeripheral</code> のコールバックが発火するタイミングが通常のイベントの範囲とは異なる特殊なタイミングになるので、Angular がイベントとして検知できない瞬間があるのだ。そうすると <code>this.message</code> の値を変えても画面が再描画されず、メッセージが更新されたことが分からないのである。これを回避するために <code>detectChanges()</code> を呼んでいるワケだ。以前以下の記事でも紹介しているので、こちらも参照してほしい。</p>
+<ul>
+  <li><a href="/blog/2017/09/05-01.html">Angular4 で強制的に DOM 要素の変更を検知させて画面描画を更新させたいとき</a></li>
+</ul>
+<h2 id="initializeperipheral-のコールバック関数を実装する"><a class="header-link" href="#initializeperipheral-のコールバック関数を実装する"><span class="header-link-mark"></span></a><code>initializePeripheral</code> のコールバック関数を実装する</h2>
+<p>いよいよ <code>initializePeripheral</code> のコールバック関数を実装する。この実装を見てやっと、「特殊なタイミングで発火する」の意味が分かっていただけるかと思う。</p>
+<pre class="language-typescript"><code class="language-typescript"><span class="token comment">// execPeripheral() 内</span>
+
+<span class="token comment">// 一定時間セントラル端末からの要求がなければ終了処理を実行するためのタイマー</span>
+<span class="token keyword">let</span> waitTimer<span class="token punctuation">;</span>
+
+<span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">peripheralService</span><span class="token punctuation">.</span><span class="token method function property-access">initializePeripheral</span><span class="token punctuation">(</span><span class="token punctuation">(</span>result<span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token comment">// ステータスからコールバックの発火内容を分ける</span>
+  
+  <span class="token keyword">if</span><span class="token punctuation">(</span>result<span class="token punctuation">.</span><span class="token property-access">status</span> <span class="token operator">===</span> <span class="token string">'writeRequested'</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token method function property-access">updateMessage</span><span class="token punctuation">(</span><span class="token string">'write 要求を受信しました'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    
+    <span class="token comment">// 受信したテキスト (result.value) をデコードしてテキストボックスに出力する</span>
+    <span class="token comment">// TODO : BluetoothService#decodeText() は後で実装を紹介する</span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">pReceiveText</span> <span class="token operator">=</span> <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">bluetoothService</span><span class="token punctuation">.</span><span class="token method function property-access">decodeText</span><span class="token punctuation">(</span>result<span class="token punctuation">.</span><span class="token property-access">value</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  <span class="token keyword">else</span> <span class="token keyword">if</span><span class="token punctuation">(</span>result<span class="token punctuation">.</span><span class="token property-access">status</span> <span class="token operator">===</span> <span class="token string">'readRequested'</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token method function property-access">updateMessage</span><span class="token punctuation">(</span><span class="token string">'read 要求を受信しました'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    
+    <span class="token comment">// 処理中断用のタイマーを解除する</span>
+    <span class="token keyword">if</span><span class="token punctuation">(</span>waitTimer<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token function">clearTimeout</span><span class="token punctuation">(</span>waitTimer<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+    
+    <span class="token comment">// result.requestId で特定できる read 要求に対して、応答してから終了する</span>
+    <span class="token comment">// TODO : BluetoothService#encodeText() は後で実装を紹介する</span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">peripheralService</span><span class="token punctuation">.</span><span class="token method function property-access">respond</span><span class="token punctuation">(</span><span class="token punctuation">{</span>
+      requestId<span class="token operator">:</span> result<span class="token punctuation">.</span><span class="token property-access">requestId</span><span class="token punctuation">,</span>
+      value<span class="token operator">:</span> <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">bluetoothService</span><span class="token punctuation">.</span><span class="token method function property-access">encodeText</span><span class="token punctuation">(</span>pReceiveText<span class="token punctuation">)</span>
+    <span class="token punctuation">}</span><span class="token punctuation">)</span>
+      <span class="token punctuation">.</span><span class="token method function property-access">then</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+        <span class="token comment">// 応答に成功したら終了処理を呼ぶ</span>
+        <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token method function property-access">destroyPeripheral</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span><span class="token punctuation">)</span>
+      <span class="token punctuation">.</span><span class="token keyword">catch</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+        <span class="token comment">// 応答に失敗した場合も終了処理を呼ぶ</span>
+        <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token method function property-access">destroyPeripheral</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  <span class="token keyword">else</span> <span class="token punctuation">{</span>
+    <span class="token comment">// その他の場合は今回は特に何もしない</span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token method function property-access">updateMessage</span><span class="token punctuation">(</span><span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">次のイベントが発生しました : </span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>result<span class="token punctuation">.</span><span class="token property-access">status</span><span class="token interpolation-punctuation punctuation">}</span></span><span class="token template-punctuation string">`</span></span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  
+  <span class="token comment">// いずれの処理の場合も画面を強制的に再描画するためココでも ChangeDetectorRef を呼んでおく</span>
+  <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">changeDetectorRef</span><span class="token punctuation">.</span><span class="token method function property-access">detectChanges</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span>
+  <span class="token punctuation">.</span><span class="token method function property-access">then</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token method function property-access">updateMessage</span><span class="token punctuation">(</span><span class="token string">'ペリフェラル初期化完了・サービス追加開始'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token comment">/* 以下略 */</span>
+    <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p><code>initializePeripheral</code> のコールバック関数には引数が1つ渡されており (ココでいう <code>result</code>)、この中の <code>status</code> プロパティが、コールバックの実行理由を示している。</p>
+<p>取りうる <code>status</code> プロパティは以下で確認できる。</p>
+<ul>
+  <li>参考：<a href="https://github.com/randdusing/cordova-plugin-bluetoothle#success-35">GitHub - randdusing/cordova-plugin-bluetoothle: Bluetooth Low Energy Phonegap Plugin</a></li>
+</ul>
+<blockquote>
+  <ul>
+    <li>status => enabled = Bluetooth is enabled</li>
+    <li>status => disabled = Bluetooth is disabled</li>
+    <li>status => readRequested = Respond to a read request with respond(). Characteristic (Android/iOS) or Descriptor (Android)</li>
+    <li>status => writeRequested = Respond to a write request with respond(). Characteristic (Android/iOS) or Descriptor (Android)</li>
+    <li>status => subscribed = Subscription started request, use notify() to send new data</li>
+    <li>status => unsubscribed = Subscription ended request, stop sending data</li>
+    <li>status => notificationReady = Resume sending subscription updates (iOS)</li>
+    <li>status => notificationSent = Notification has been sent (Android)</li>
+    <li>status => connected = A device has connected</li>
+    <li>status => disconnected = A device has disconnected</li>
+    <li>status => mtuChanged = MTU has changed for device</li>
+  </ul>
+</blockquote>
+<p>細かく状況を確認しようと思えば、セントラル端末が接続してきたときに <code>connected</code> ステータスのコールバックが実行されるし、今回はサンプルに含んでいないがセントラル側で <code>subscribe()</code> を使った場合は <code>subscribed</code> ステータスのコールバックが発生する。今回の例では、このうち <code>readRequested</code> と <code>writeRequested</code> のイベントを検知している。その他のプロパティはステータスに応じて <code>requestId</code> が渡されたり色々と変化する。</p>
+<p>後で実装するが、セントラル側では</p>
+<ol>
+  <li>先に <code>write</code> 要求によってペリフェラル端末に向けてメッセージを送信し、</li>
+  <li>次に <code>read</code> 要求によってペリフェラル端末にメッセージを応答するよう要求する</li>
+</ol>
+<p>という処理をするつもりである。そこで、ペリフェラル端末側の実装としては</p>
+<ol>
+  <li><code>write</code> 要求を受け取ったら (= <code>writeRequested</code> を検知したら) 受け取ったメッセージをテキストボックスに出力し、</li>
+  <li><code>read</code> 要求を受け取ったら (= <code>readRequested</code> を検知したら) テキストボックスの文字列をセントラル端末に返送する</li>
+</ol>
+<p>という処理を用意しておく。</p>
+<p>それ以外のイベントココでは検知せず素通りさせるが、<code>ChangeDetectorRef#detectChanges()</code> は実行しておくと良い。特に <code>writeRequested</code> の際に受信テキストを表示するところが正しく検知されないので、ココのために実行しておく。</p>
+<p><code>readRequested</code> を受け取ったら、テキストを返送してから、ペリフェラル端末の終了処理 <code>peripheralDestroy()</code> を呼び出しておく。</p>
+<p><code>updateMessage()</code> による進捗メッセージ表示は、実際は高速で連続して更新されるので、通信が始まったら一瞬で送受信 → 終了処理、と流れると思われる。</p>
+<h2 id="テキストのエンコード・デコード"><a class="header-link" href="#テキストのエンコード・デコード"><span class="header-link-mark"></span></a>テキストのエンコード・デコード</h2>
+<p><code>BluetoothService#encodeText()</code> と、<code>BluetoothService#decodeText()</code> というメソッドが突如登場したと思う。これは送信する文字列を Base64 文字列にエンコードし、受信したテキストはデコードするための処理。</p>
+<p><code>BluetoothService</code> というサービスクラスを作り、以下のように実装する。</p>
+<pre class="language-typescript"><code class="language-typescript">@<span class="token function"><span class="token maybe-class-name">Injectable</span></span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+<span class="token keyword">export</span> <span class="token keyword">class</span> <span class="token class-name"><span class="token maybe-class-name">BluetoothService</span></span> <span class="token punctuation">{</span>
+  <span class="token doc-comment comment">/** 引数の文字列を Base64 エンコードする */</span>
+  <span class="token function">encodeText</span><span class="token punctuation">(</span>str<span class="token operator">:</span> <span class="token builtin">string</span><span class="token punctuation">)</span><span class="token operator">:</span> <span class="token builtin">string</span> <span class="token punctuation">{</span>
+    <span class="token keyword">const</span> encodedString <span class="token operator">=</span> <span class="token function">btoa</span><span class="token punctuation">(</span><span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">windowRefService</span><span class="token punctuation">.</span><span class="token property-access">nativeWindow</span><span class="token punctuation">.</span><span class="token method function property-access">unescape</span><span class="token punctuation">(</span><span class="token function">encodeURIComponent</span><span class="token punctuation">(</span>str<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">return</span> encodedString<span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  
+  <span class="token doc-comment comment">/** 引数の Base64 文字列をデコードする */</span>
+  <span class="token function">decodeText</span><span class="token punctuation">(</span>encodedString<span class="token operator">:</span> <span class="token builtin">string</span><span class="token punctuation">)</span><span class="token operator">:</span> <span class="token builtin">string</span> <span class="token punctuation">{</span>
+    <span class="token keyword">const</span> str <span class="token operator">=</span> <span class="token function">decodeURIComponent</span><span class="token punctuation">(</span><span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">windowRefService</span><span class="token punctuation">.</span><span class="token property-access">nativeWindow</span><span class="token punctuation">.</span><span class="token method function property-access">escape</span><span class="token punctuation">(</span><span class="token function">atob</span><span class="token punctuation">(</span>encodedString<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">return</span> str<span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>cordova-plugin-bluetoothle はテキストのエンコード・デコード用メソッドを提供しているのだが、日本語に対応していないため、以前紹介した Base64 エンコードの処理を使い回すことにした。</p>
+<h2 id="addservice-と-startadvertising-のオプション設定"><a class="header-link" href="#addservice-と-startadvertising-のオプション設定"><span class="header-link-mark"></span></a><code>addService</code> と <code>startAdvertising</code> のオプション設定</h2>
+<p>ここまでで、ペリフェラルの初期設定およびイベント検知 (<code>initializePeripheral</code>)、通信終了処理の実装が終わった。</p>
+<p>残りは通信開始時のオプション設定だ。これは API リファレンスを参考に、以下のように実装する。前回作成した定数クラス <code>bluetoothConstants</code> を使う。</p>
+<pre class="language-typescript"><code class="language-typescript"><span class="token comment">// 省略</span>
+<span class="token punctuation">.</span><span class="token method function property-access">then</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token method function property-access">updateMessage</span><span class="token punctuation">(</span><span class="token string">'ペリフェラル初期化完了・サービス追加開始'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">return</span> <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">peripheralService</span><span class="token punctuation">.</span><span class="token method function property-access">addService</span><span class="token punctuation">(</span><span class="token punctuation">{</span>
+    <span class="token comment">// 追加するサービスの UUID を指定する</span>
+    service<span class="token operator">:</span> bluetoothConstants<span class="token punctuation">.</span><span class="token property-access">serviceUuid</span><span class="token punctuation">,</span>
+    <span class="token comment">// サービスに紐付くキャラクタリスティック : 配列で複数指定できるが今回は1つのみ</span>
+    characteristics<span class="token operator">:</span> <span class="token punctuation">[</span><span class="token punctuation">{</span>
+      <span class="token comment">// キャラクタリスティック UUID</span>
+      uuid<span class="token operator">:</span> bluetoothConstants<span class="token punctuation">.</span><span class="token property-access">characteristicUuid</span><span class="token punctuation">,</span>
+      <span class="token comment">// 許可設定</span>
+      permissions<span class="token operator">:</span> <span class="token punctuation">{</span>
+        read<span class="token operator">:</span> <span class="token boolean">true</span><span class="token punctuation">,</span>
+        write<span class="token operator">:</span> <span class="token boolean">true</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token comment">// 通信の設定</span>
+      properties<span class="token operator">:</span> <span class="token punctuation">{</span>
+        read<span class="token operator">:</span> <span class="token boolean">true</span><span class="token punctuation">,</span>
+        writeWithoutResponse<span class="token operator">:</span> <span class="token boolean">true</span><span class="token punctuation">,</span>  <span class="token comment">// レスポンスなしで write() させる設定。true の場合は write に対し respond() できなくなる</span>
+        write<span class="token operator">:</span> <span class="token boolean">true</span><span class="token punctuation">,</span>
+        notify<span class="token operator">:</span> <span class="token boolean">true</span><span class="token punctuation">,</span>
+        indicate<span class="token operator">:</span> <span class="token boolean">true</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span><span class="token punctuation">]</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span>
+<span class="token punctuation">.</span><span class="token method function property-access">then</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token method function property-access">updateMessage</span><span class="token punctuation">(</span><span class="token string">'サービス追加完了・アドバタイジング開始'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token comment">// アドバタイジングを開始するサービスを指定する</span>
+  <span class="token keyword">return</span> <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">peripheralService</span><span class="token punctuation">.</span><span class="token method function property-access">startAdvertising</span><span class="token punctuation">(</span><span class="token punctuation">{</span>
+    services<span class="token operator">:</span> <span class="token punctuation">[</span>bluetoothConstants<span class="token punctuation">.</span><span class="token property-access">serviceUuid</span><span class="token punctuation">]</span><span class="token punctuation">,</span>  <span class="token comment">// iOS 向けの書き方 : 配列</span>
+    service<span class="token operator">:</span> bluetoothConstants<span class="token punctuation">.</span><span class="token property-access">serviceUuid</span><span class="token punctuation">,</span>  <span class="token comment">// Android 向けの書き方もついでに</span>
+    <span class="token comment">// アドバタイジング名</span>
+    name<span class="token operator">:</span> bluetoothConstants<span class="token punctuation">.</span><span class="token property-access">advertisingName</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span>
+<span class="token comment">// 以後略</span>
+</code></pre>
+<p>このようになる。</p>
+<hr>
+<p>これでペリフェラル側の実装が完了した。</p>
+<p>次回はセントラル側の実装を行い、今回用意したペリフェラル端末とやり取りできるようにしていこうと思う。</p>
+<ul>
+  <li><a href="/blog/2017/10/11-01.html">cordova-plugin-bluetoothle を使って iOS 同士で Bluetooth 通信する Cordova アプリを作る : 4 セントラル編 (前編)</a></li>
+</ul>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2017-10-08</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2017-10-08</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

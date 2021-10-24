@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>Express で構築した WebAPI サーバをユニットテストする (コードカバレッジも見る) - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2019/02/07-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2019/index.html">2019年</a></li>
+            <li><a href="/blog/2019/02/index.html">02月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2019-02-07</time></div>
+        <h1 id="page-title">Express で構築した WebAPI サーバをユニットテストする (コードカバレッジも見る)</h1>
+
+<p>Express で構築した WebAPI サーバをユニットテストしたく、やり方を調べた。</p>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#%E4%BB%8A%E5%9B%9E%E3%81%AE%E8%A6%81%E4%BB%B6">今回の要件</a></li>
+  <li><a href="#%E3%83%86%E3%82%B9%E3%83%88%E3%83%A9%E3%83%B3%E3%83%8A%E3%83%BC%E3%81%AF-mocha-%E3%82%92%E4%BD%BF%E3%81%86">テストランナーは Mocha を使う</a></li>
+  <li><a href="#express-%E3%82%B5%E3%83%BC%E3%83%90%E3%81%AE%E5%88%B6%E5%BE%A1%E3%81%AB%E3%81%AF-supertest-%E3%82%92%E4%BD%BF%E3%81%86">Express サーバの制御には supertest を使う</a></li>
+  <li><a href="#html-%E5%BD%A2%E5%BC%8F%E3%81%A7%E3%83%AC%E3%83%9D%E3%83%BC%E3%83%88%E3%82%92%E5%87%BA%E5%8A%9B%E3%81%99%E3%82%8B%E3%81%9F%E3%82%81%E3%81%AB-nyc-%E3%82%92%E4%BD%BF%E3%81%86">HTML 形式でレポートを出力するために nyc を使う</a></li>
+  <li><a href="#%E4%BB%BB%E6%84%8F--jasmine-%E9%A2%A8%E3%81%AB%E3%83%86%E3%82%B9%E3%83%88%E3%82%92%E6%9B%B8%E3%81%91%E3%82%8B%E3%82%88%E3%81%86%E3%81%AB-expect-%E3%82%92%E3%82%A4%E3%83%B3%E3%82%B9%E3%83%88%E3%83%BC%E3%83%AB%E3%81%99%E3%82%8B">任意 : Jasmine 風にテストを書けるように <code>expect</code> をインストールする</a></li>
+  <li><a href="#%E4%BB%A5%E4%B8%8A">以上</a></li>
+</ul>
+<h2 id="今回の要件"><a class="header-link" href="#今回の要件"><span class="header-link-mark"></span></a>今回の要件</h2>
+<p>今回の前提、および達成したいことは以下のとおり。</p>
+<ul>
+  <li>Node.js の Express を使って構築した RESTful な WebAPI サーバがある
+    <ul>
+      <li>WebAPI サーバなので、常に JSON をレスポンスする。ファイルや Web ページを返すような箇所はない (画面を持たない)</li>
+    </ul>
+  </li>
+  <li>このプロジェクトでユニットテストを書きたい
+    <ul>
+      <li>Angular を触っていたので、Jasmine みたいに書きたい</li>
+    </ul>
+  </li>
+  <li>ユニットテストによる<em>コードカバレッジを集計</em>したい
+    <ul>
+      <li>Angular を触っていたので、Istanbul レポーターみたいな HTML 形式で見たい</li>
+    </ul>
+  </li>
+</ul>
+<p>Angular を触っていたので、Angular CLI による雛形プロジェクトが内包する、「Jasmine + Karma + Istanbul」な構成で、WebAPI サーバプロジェクトをテストしたいな、と思っている。</p>
+<h2 id="テストランナーは-mocha-を使う"><a class="header-link" href="#テストランナーは-mocha-を使う"><span class="header-link-mark"></span></a>テストランナーは Mocha を使う</h2>
+<p>Angular アプリの場合は、テストを書くライブラリとして Jasmine があり、それを実行するテストランナーとして Karma が存在した。だが、Karma は<strong>ブラウザ上でテストを行う</strong>テストランナーで、今回のように画面を持たない WebAPI サーバのユニットテストにはあまり適さないのだ。ということで <em>Jasmine + Karma</em> な構成は断念。</p>
+<p>他のツールを調べてみると、<strong>Mocha</strong> というフレームワークを使う例が多かったので、コレを採用することにした。<code>karma.conf.js</code> のような設定ファイルを作ることなく、ゼロコンフィグでユニットテスト環境が作れる。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># mocha をインストールする</span>
+$ <span class="token function">npm</span> <span class="token function">install</span> mocha --save-dev
+
+<span class="token comment"># mocha はデフォルトでプロジェクト直下の test/ ディレクトリ内にある .js ファイルをテストコードとして認識するので</span>
+<span class="token comment"># まずは test/ ディレクトリを作る</span>
+$ <span class="token function">mkdir</span> <span class="token builtin class-name">test</span>
+
+<span class="token comment"># test/ ディレクトリ配下にテストコードを書くファイルを1つ試しに作る</span>
+$ <span class="token function">touch</span> test/my-test.js
+</code></pre>
+<p><code>test/my-test.js</code> の中身はこんな風に、<code>describe()</code> や <code>it()</code> でテストケースを別けて書ける。Jasmine っぽい。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token function">describe</span><span class="token punctuation">(</span><span class="token string">'HOGE'</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token function">it</span><span class="token punctuation">(</span><span class="token string">'FUGA'</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token parameter">done</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+    <span class="token keyword control-flow">if</span><span class="token punctuation">(</span><span class="token string">'aaa'</span> <span class="token operator">===</span> <span class="token string">'aaa'</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token function">done</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+    <span class="token keyword control-flow">else</span> <span class="token punctuation">{</span>
+      <span class="token function">done</span><span class="token punctuation">(</span><span class="token string">'失敗'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>まずはテストファイルのみで、何の外部ファイルも読み込んでいないが、コレでテストが動くか確認してみる。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># ローカルインストールした mocha を実行するため npx を使用</span>
+$ npx mocha
+</code></pre>
+<p>コレでいきなりテストが実行され、コンソール上に結果が表示されるはずだ。終了する際は <code>Ctrl + C</code> を押さないといけない様子。</p>
+<h2 id="express-サーバの制御には-supertest-を使う"><a class="header-link" href="#express-サーバの制御には-supertest-を使う"><span class="header-link-mark"></span></a>Express サーバの制御には supertest を使う</h2>
+<p>次に、Express サーバを構成するコードを読み込んでテストをしたいので、Express サーバを制御するのに使える <strong>supertest</strong> という npm パッケージを使ってみる。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">npm</span> <span class="token function">install</span> supertest --save-dev
+</code></pre>
+<p>アプリ側のコードは以下のようにしておく。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword">const</span> express <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'express'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token keyword">const</span> app <span class="token operator">=</span> <span class="token function">express</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// ルーティング定義などなど……</span>
+app<span class="token punctuation">.</span><span class="token method function property-access">use</span><span class="token punctuation">(</span><span class="token string">'/'</span><span class="token punctuation">,</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'./routes/router'</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// UT 時はココが実行されないようにしておく</span>
+<span class="token keyword control-flow">if</span><span class="token punctuation">(</span><span class="token operator">!</span>module<span class="token punctuation">.</span><span class="token property-access">parent</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token comment">// サーバ起動</span>
+  <span class="token keyword">const</span> port <span class="token operator">=</span> process<span class="token punctuation">.</span><span class="token property-access">env</span><span class="token punctuation">.</span><span class="token constant">PORT</span> <span class="token operator">||</span> <span class="token number">8080</span><span class="token punctuation">;</span>
+  app<span class="token punctuation">.</span><span class="token method function property-access">listen</span><span class="token punctuation">(</span>port<span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+    <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">Listen : </span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>port<span class="token interpolation-punctuation punctuation">}</span></span><span class="token template-punctuation string">`</span></span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+
+<span class="token comment">// 変数 app をエクスポートしておく</span>
+module<span class="token punctuation">.</span><span class="token property-access">exports</span> <span class="token operator">=</span> app<span class="token punctuation">;</span>
+</code></pre>
+<p>で、テストコード側は以下のように書く。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token comment">// 前述の Express サーバのコード</span>
+<span class="token keyword">const</span> app <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'../src/index'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// ココで listen() する</span>
+<span class="token keyword">const</span> supertest <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'supertest'</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">agent</span><span class="token punctuation">(</span>app<span class="token punctuation">.</span><span class="token method function property-access">listen</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token function">describe</span><span class="token punctuation">(</span><span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">GET : '/'</span><span class="token template-punctuation string">`</span></span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token function">it</span><span class="token punctuation">(</span><span class="token string">'200 が返されるべきである'</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token parameter">done</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+    supertest<span class="token punctuation">.</span><span class="token method function property-access">get</span><span class="token punctuation">(</span><span class="token string">'/'</span><span class="token punctuation">)</span>
+      <span class="token punctuation">.</span><span class="token method function property-access">expect</span><span class="token punctuation">(</span><span class="token number">200</span><span class="token punctuation">)</span>
+      <span class="token punctuation">.</span><span class="token method function property-access">end</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token parameter">error<span class="token punctuation">,</span> response</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+        <span class="token keyword control-flow">if</span><span class="token punctuation">(</span>error<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+          <span class="token keyword control-flow">return</span> <span class="token function">done</span><span class="token punctuation">(</span>error<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token punctuation">}</span>
+        <span class="token function">done</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>アプリ側のコードで <code>if(!module.parent)</code> と判定している部分が見慣れないだろうか。コレは、ユニットテストコード内で supertest が複数回 <code>app.listen()</code> してしまうのを避けるために仕込んでいる。</p>
+<ul>
+  <li>参考：<a href="http://www.marcusoft.net/2015/10/eaddrinuse-when-watching-tests-with-mocha-and-supertest.html">EADDRINUSE when watching tests with mocha and supertest</a></li>
+</ul>
+<p>この関係で、アプリ側のコードの <code>if(!module.parent)</code> ブロック内はコードカバレッジが通らなくなることに留意。まぁココはサーバ起動のためのコードだからいいでしょ。w</p>
+<p>とりあえずコレでテストが書けるようになった。</p>
+<h2 id="html-形式でレポートを出力するために-nyc-を使う"><a class="header-link" href="#html-形式でレポートを出力するために-nyc-を使う"><span class="header-link-mark"></span></a>HTML 形式でレポートを出力するために nyc を使う</h2>
+<p>続いて、テスト結果を Istanbul の HTML 形式で出力したいので、<strong>nyc</strong> というパッケージを利用する。コレは Mocha の動作結果をパイプして、Istanbul レポータを出力したり仲介してくれるツール。</p>
+<ul>
+  <li>参考：<a href="https://www.npmjs.com/package/nyc">nyc - npm</a></li>
+</ul>
+<p>コレをローカルインストールし、<code>mocha</code> コマンドの手前に挟む。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">npm</span> <span class="token function">install</span> nyc --save-dev
+</code></pre>
+<p><code>package.json</code> で以下のように npm-scripts を組む。</p>
+<pre class="language-json"><code class="language-json"><span class="token property">"scripts"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+  <span class="token property">"test"</span><span class="token operator">:</span> <span class="token string">"nyc --reporter=text --reporter=html mocha --watch"</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>このようにして、<code>$ npm test</code> を実行すると、基本は <code>mocha --watch</code> のとおり、ファイルの変更を監視する Watch モードで動作し、ひととおりテストが終わると、nyc が HTML 形式のレポートを <code>./coverage/</code> ディレクトリに出力してくれる。また、<code>Ctrl + C</code> で終了すると、nyc がコンソールにレポートを出力してくれる。</p>
+<h2 id="任意--jasmine-風にテストを書けるように-expect-をインストールする"><a class="header-link" href="#任意--jasmine-風にテストを書けるように-expect-をインストールする"><span class="header-link-mark"></span></a>任意 : Jasmine 風にテストを書けるように <code>expect</code> をインストールする</h2>
+<p>ココまででやりたいことは達成できたが、テストを書く時の比較検証を Jasmine 風に書きたいので、<strong>expect</strong> というツールを入れることにする。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">npm</span> <span class="token function">install</span> <span class="token function">expect</span> --save-dev
+</code></pre>
+<p>そしてテストコードを以下のように修正する。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token comment">// Jasmine 風な expect() を書くため入れる</span>
+<span class="token keyword">const</span> expect <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'expect'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// Express サーバのコード</span>
+<span class="token keyword">const</span> app <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'../src/index'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// ココで listen() する</span>
+<span class="token keyword">const</span> supertest <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'supertest'</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">agent</span><span class="token punctuation">(</span>app<span class="token punctuation">.</span><span class="token method function property-access">listen</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token function">describe</span><span class="token punctuation">(</span><span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">GET : '/'</span><span class="token template-punctuation string">`</span></span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token function">it</span><span class="token punctuation">(</span><span class="token string">'200 が返されるべきである'</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token parameter">done</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+    supertest<span class="token punctuation">.</span><span class="token method function property-access">get</span><span class="token punctuation">(</span><span class="token string">'/'</span><span class="token punctuation">)</span>
+      <span class="token punctuation">.</span><span class="token method function property-access">expect</span><span class="token punctuation">(</span><span class="token number">200</span><span class="token punctuation">)</span>
+      <span class="token punctuation">.</span><span class="token method function property-access">end</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token parameter">error<span class="token punctuation">,</span> response</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+        <span class="token keyword control-flow">if</span><span class="token punctuation">(</span>error<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+          <span class="token keyword control-flow">return</span> <span class="token function">done</span><span class="token punctuation">(</span>error<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token punctuation">}</span>
+        <span class="token comment">// Jasmine 風に expect() が書けるようになる</span>
+        <span class="token function">expect</span><span class="token punctuation">(</span>response<span class="token punctuation">.</span><span class="token property-access">text</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">toBe</span><span class="token punctuation">(</span><span class="token string">'Hello World'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token function">done</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>こんな感じで <code>expect().toBe()</code> とかが書けるようになった。楽チン。</p>
+<h2 id="以上"><a class="header-link" href="#以上"><span class="header-link-mark"></span></a>以上</h2>
+<p>ということで、</p>
+<ul>
+  <li>Express で作った、画面を持たない WebAPI サーバをユニットテストするには
+    <ul>
+      <li><strong>mocha + supertest</strong> でテスト環境を構築し、</li>
+    </ul>
+  </li>
+  <li>mocha でテストした結果をカバレッジレポートに出力するには
+    <ul>
+      <li><strong>nyc</strong> をはさみ、</li>
+    </ul>
+  </li>
+  <li>ついでに Jasmine と同じように <code>expect()</code> を書くには
+    <ul>
+      <li><strong>expect</strong> を入れる</li>
+    </ul>
+  </li>
+</ul>
+<p>という構成で解決できた。</p>
+<p>今回作ったサンプルコードを含む、実際に動作するサンプルプロジェクトを以下に作ったので、コチラも参考にしていただければ幸い。</p>
+<ul>
+  <li><a href="https://github.com/Neos21/example-unit-test-express-web-api">GitHub - Neos21/unit-test-express-web-api: Express で作った WebAPI サーバをユニットテストするための環境サンプル</a></li>
+</ul>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2019-02-07</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2019-02-07</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

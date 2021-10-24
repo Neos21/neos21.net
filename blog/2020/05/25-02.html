@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>VSCode + Gradle で構築したプロジェクトで JavaFX を実装する - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2020/05/25-02.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2020/index.html">2020年</a></li>
+            <li><a href="/blog/2020/05/index.html">05月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2020-05-25</time></div>
+        <h1 id="page-title">VSCode + Gradle で構築したプロジェクトで JavaFX を実装する</h1>
+
+<p>エディタに VSCode、ビルドツールに Gradle を使用した Java プロジェクトで、<strong>JavaFX</strong> を使ってみる。</p>
+<p>JavaFX とは、AWT や Swing の後発ライブラリで、Java 言語でクロスプラットフォームな GUI アプリを作るためのライブラリだ。</p>
+<p>実装するにあたって、いくつか手を入れないとうまく動かなかったので、その点を紹介する。</p>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#%E5%89%8D%E6%8F%90%E6%9D%A1%E4%BB%B6">前提条件</a></li>
+  <li><a href="#classpath-%E3%82%92%E7%B7%A8%E9%9B%86%E3%81%97%E3%81%A6-javafx-%E3%82%92%E5%8F%82%E7%85%A7%E3%81%A7%E3%81%8D%E3%82%8B%E3%82%88%E3%81%86%E3%81%AB%E3%81%99%E3%82%8B"><code>.classpath</code> を編集して JavaFX を参照できるようにする</a></li>
+  <li><a href="#buildgradle-%E3%82%92%E7%B7%A8%E9%9B%86%E3%81%97%E3%81%A6-javafx-%E8%BE%BC%E3%81%BF%E3%81%AE%E3%83%93%E3%83%AB%E3%83%89%E3%81%8C%E3%81%A7%E3%81%8D%E3%82%8B%E3%82%88%E3%81%86%E3%81%AB%E3%81%99%E3%82%8B"><code>build.gradle</code> を編集して JavaFX 込みのビルドができるようにする</a></li>
+  <li><a href="#javafx-%E3%82%92%E5%AE%9F%E8%A3%85%E3%81%97%E3%81%A6%E3%81%BF%E3%82%8B">JavaFX を実装してみる</a></li>
+  <li><a href="#%E3%82%A2%E3%83%97%E3%83%AA%E3%82%92%E8%B5%B7%E5%8B%95%E3%81%97%E3%81%A6%E3%81%BF%E3%82%8B">アプリを起動してみる</a></li>
+</ul>
+<h2 id="前提条件"><a class="header-link" href="#前提条件"><span class="header-link-mark"></span></a>前提条件</h2>
+<p>前提条件は以下のとおりとする。</p>
+<ul>
+  <li>JDK は JavaFX が同梱されている JDK8 を使用する
+    <ul>
+      <li>現在の JDK には同梱されていないので、最新版の JDK で構成する場合は、OpenJDK と OpenJFX を入れる必要があるらしい (試していない)</li>
+    </ul>
+  </li>
+  <li><code>$ gradle init --type java-application</code> で雛形を作成しておく</li>
+  <li>VSCode に拡張機能「Java Extension Pack」をインストールしておく</li>
+</ul>
+<p>VSCode に拡張機能を入れたあと Gradle プロジェクトを開くと、</p>
+<ul>
+  <li><code>.project</code></li>
+  <li><code>.classpath</code></li>
+  <li><code>bin/</code></li>
+</ul>
+<p>などのファイルが自動的に生成される。これらによって VSCode 上の自動補完などが効くようになるようだ。</p>
+<h2 id="classpath-を編集して-javafx-を参照できるようにする"><a class="header-link" href="#classpath-を編集して-javafx-を参照できるようにする"><span class="header-link-mark"></span></a><code>.classpath</code> を編集して JavaFX を参照できるようにする</h2>
+<p>現状、VSCode 上でコードを入力しても、JavaFX 関連のクラス名だとうまく自動補完が効かない。そこで、<code>.classpath</code> ファイルを開いて次のように編集すると、自動補完などが効くようになる。</p>
+<pre class="language-xml"><code class="language-xml"><span class="token comment">&#x3C;!-- ↓元はこのような行がある --></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>classpathentry</span> <span class="token attr-name">kind</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>con<span class="token punctuation">"</span></span> <span class="token attr-name">path</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/JavaSE-1.8/<span class="token punctuation">"</span></span> <span class="token punctuation">/></span></span>
+
+<span class="token comment">&#x3C;!-- ↓次のように編集する --></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>classpathentry</span> <span class="token attr-name">kind</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>con<span class="token punctuation">"</span></span> <span class="token attr-name">path</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/JavaSE-1.8/<span class="token punctuation">"</span></span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>accessrules</span><span class="token punctuation">></span></span>
+    <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>accessrule</span> <span class="token attr-name">kind</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>accessible<span class="token punctuation">"</span></span> <span class="token attr-name">pattern</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>javafx/**<span class="token punctuation">"</span></span> <span class="token punctuation">/></span></span>
+    <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>accessrule</span> <span class="token attr-name">kind</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>accessible<span class="token punctuation">"</span></span> <span class="token attr-name">pattern</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>com/sun/javafx/**<span class="token punctuation">"</span></span> <span class="token punctuation">/></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>accessrules</span><span class="token punctuation">></span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>classpathentry</span><span class="token punctuation">></span></span>
+</code></pre>
+<p>このように <code>accessrules</code> 要素でパッケージを参照できるようにしておく。これは外部 JAR ライブラリを導入する場合も必要になることがあるので、覚えておくと良いかと。</p>
+<pre class="language-xml"><code class="language-xml"><span class="token comment">&#x3C;!-- 例として OpenCV の JAR ファイルを読み込む場合 --></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>classpathentry</span> <span class="token attr-name">kind</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>lib<span class="token punctuation">"</span></span> <span class="token attr-name">exported</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>true<span class="token punctuation">"</span></span> <span class="token attr-name">path</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>lib/opencv.jar<span class="token punctuation">"</span></span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>accessrules</span><span class="token punctuation">></span></span>
+    <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>accessible</span> <span class="token attr-name">kind</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>accessible<span class="token punctuation">"</span></span> <span class="token attr-name">pattern</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>**<span class="token punctuation">"</span></span> <span class="token punctuation">/></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>accessrules</span><span class="token punctuation">></span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>classpathentry</span><span class="token punctuation">></span></span>
+</code></pre>
+<p>コレを自動でなんとかしてくれる方法がないか調べたが、よく分からず。良い管理方法があったら教えてほしい。</p>
+<h2 id="buildgradle-を編集して-javafx-込みのビルドができるようにする"><a class="header-link" href="#buildgradle-を編集して-javafx-込みのビルドができるようにする"><span class="header-link-mark"></span></a><code>build.gradle</code> を編集して JavaFX 込みのビルドができるようにする</h2>
+<p><code>.classpath</code> の記述は VSCode 上の自動補完やコンパイルにのみ影響するらしい。<code>gradle build</code> コマンドなどを使う際の依存関係は、<em><code>build.gradle</code></em> ファイルを編集しないといけない。</p>
+<p>JavaFX を使う上で必要な変更を以下に記す。</p>
+<pre class="language-groovy"><code class="language-groovy">plugins <span class="token punctuation">{</span>
+  <span class="token comment">// 既存の 'java' と 'application' はそのままに以下を追加</span>
+  
+  <span class="token comment">// classpath を出力させて自動補完を効かせる</span>
+  id <span class="token string">'eclipse'</span>
+<span class="token punctuation">}</span>
+
+dependencies <span class="token punctuation">{</span>
+  <span class="token comment">// 既存の依存関係はそのままに以下を追加</span>
+  
+  <span class="token comment">// JavaFX を追加する</span>
+  compile <span class="token function">files</span><span class="token punctuation">(</span><span class="token string gstring">"<span class="token expression"><span class="token punctuation">$</span><span class="token punctuation">{</span>System<span class="token punctuation">.</span>properties<span class="token punctuation">[</span><span class="token string">'java.home'</span><span class="token punctuation">]</span><span class="token punctuation">}</span></span>/lib/ext/jfxrt.jar"</span><span class="token punctuation">)</span>
+<span class="token punctuation">}</span>
+
+<span class="token comment">// Java ファイルと同じ階層に FXML ファイルを置けるようにする</span>
+sourceSets <span class="token punctuation">{</span>
+  main <span class="token punctuation">{</span>
+    java <span class="token punctuation">{</span>
+      srcDir <span class="token string">'src'</span>
+    <span class="token punctuation">}</span>
+    resources <span class="token punctuation">{</span>
+      srcDir <span class="token string">'src/main/java'</span>
+    <span class="token punctuation">}</span>
+    java<span class="token punctuation">.</span>outputDir <span class="token operator">=</span> <span class="token function">file</span><span class="token punctuation">(</span><span class="token string">'bin'</span><span class="token punctuation">)</span>
+    output<span class="token punctuation">.</span>resourcesDir <span class="token operator">=</span> <span class="token function">file</span><span class="token punctuation">(</span><span class="token string">'bin'</span><span class="token punctuation">)</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<ul>
+  <li>参考：<a href="https://www.gwtcenter.com/using-nonstandard-sourcesets-on-gradle">Gradleで非標準のSourceSetsを使う | GWT Center</a></li>
+</ul>
+<p>ユニットテストが鬱陶しい場合は以下を消してしまえば、<code>./test/</code> 配下のファイルによる影響をなくせる。</p>
+<pre class="language-groovy"><code class="language-groovy">dependencies <span class="token punctuation">{</span>
+  <span class="token comment">// Use JUnit test framework</span>
+  testImplementation <span class="token string">'junit:junit:4.12'</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<h2 id="javafx-を実装してみる"><a class="header-link" href="#javafx-を実装してみる"><span class="header-link-mark"></span></a>JavaFX を実装してみる</h2>
+<p>試しに JavaFX を用いたウィンドウを開いてみる。とっても簡素なモノだ。</p>
+<ul>
+  <li><code>src/main/java/my_app/App.java</code>
+    <ul>
+      <li>エントリポイント</li>
+    </ul>
+  </li>
+</ul>
+<pre class="language-java"><code class="language-java"><span class="token keyword">package</span> <span class="token namespace">my_app</span><span class="token punctuation">;</span>
+
+<span class="token keyword">import</span> <span class="token namespace">java<span class="token punctuation">.</span>io<span class="token punctuation">.</span></span><span class="token class-name">IOException</span><span class="token punctuation">;</span>
+
+<span class="token keyword">import</span> <span class="token namespace">javafx<span class="token punctuation">.</span>application<span class="token punctuation">.</span></span><span class="token class-name">Application</span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token namespace">javafx<span class="token punctuation">.</span>fxml<span class="token punctuation">.</span></span><span class="token class-name">FXMLLoader</span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token namespace">javafx<span class="token punctuation">.</span>scene<span class="token punctuation">.</span></span><span class="token class-name">Scene</span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token namespace">javafx<span class="token punctuation">.</span>scene<span class="token punctuation">.</span>layout<span class="token punctuation">.</span></span><span class="token class-name">Pane</span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token namespace">javafx<span class="token punctuation">.</span>stage<span class="token punctuation">.</span></span><span class="token class-name">Stage</span><span class="token punctuation">;</span>
+
+<span class="token keyword">public</span> <span class="token keyword">final</span> <span class="token keyword">class</span> <span class="token class-name">App</span> <span class="token keyword">extends</span> <span class="token class-name">Application</span> <span class="token punctuation">{</span>
+  <span class="token keyword">public</span> <span class="token keyword">static</span> <span class="token keyword">void</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token keyword">final</span> <span class="token class-name">String</span> <span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span>args<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token function">launch</span><span class="token punctuation">(</span>args<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  
+  <span class="token annotation punctuation">@Override</span>
+  <span class="token keyword">public</span> <span class="token keyword">void</span> <span class="token function">start</span><span class="token punctuation">(</span><span class="token keyword">final</span> <span class="token class-name">Stage</span> primaryStage<span class="token punctuation">)</span> <span class="token keyword">throws</span> <span class="token class-name">IOException</span> <span class="token punctuation">{</span>
+    <span class="token keyword">final</span> <span class="token class-name">FXMLLoader</span> loader <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">FXMLLoader</span><span class="token punctuation">(</span><span class="token function">getClass</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">getResource</span><span class="token punctuation">(</span><span class="token string">"./root.fxml"</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">final</span> <span class="token class-name">Pane</span> root <span class="token operator">=</span> loader<span class="token punctuation">.</span><span class="token function">load</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">final</span> <span class="token class-name">Scene</span> scene <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">Scene</span><span class="token punctuation">(</span>root<span class="token punctuation">,</span> <span class="token number">600</span><span class="token punctuation">,</span> <span class="token number">400</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    primaryStage<span class="token punctuation">.</span><span class="token function">setScene</span><span class="token punctuation">(</span>scene<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    primaryStage<span class="token punctuation">.</span><span class="token function">show</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p><code>FXMLLoader</code> を使い、<code>root.fxml</code> というファイルを読み込んでいる。</p>
+<ul>
+  <li><code>src/main/java/my_app/root.fxml</code>
+    <ul>
+      <li>コンポーネントの UI (View) を定義する XML 風のファイル</li>
+    </ul>
+  </li>
+</ul>
+<pre class="language-xml"><code class="language-xml"><span class="token prolog">&#x3C;?xml version="1.0" encoding="UTF-8"?></span>
+<span class="token prolog">&#x3C;?import javafx.scene.control.Label?></span>
+<span class="token prolog">&#x3C;?import javafx.scene.layout.HBox?></span>
+
+<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>HBox</span> <span class="token attr-name">xmlns</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>http://javafx.com/javafx/8.0.65<span class="token punctuation">"</span></span> <span class="token attr-name"><span class="token namespace">xmlns:</span>fx</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>http://javafx.com/fxml/1<span class="token punctuation">"</span></span>
+      <span class="token attr-name"><span class="token namespace">fx:</span>controller</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>my_app.RootController<span class="token punctuation">"</span></span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>Label</span> <span class="token attr-name">text</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>TEST<span class="token punctuation">"</span></span> <span class="token punctuation">/></span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>HBox</span><span class="token punctuation">></span></span>
+</code></pre>
+<p>先程 <code>build.gradle</code> で <code>sourceSets</code> ブロックを記述したので、<code>.java</code> ファイルと同じ階層に <code>.fxml</code> ファイルが置けるようになった。</p>
+<p><code>fx:controller</code> 属性で対応するクラスを指定している。</p>
+<ul>
+  <li><code>src/main/java/my_app/RootController.java</code>
+    <ul>
+      <li><code>root.fxml</code> に紐付くコントローラクラス</li>
+    </ul>
+  </li>
+</ul>
+<pre class="language-java"><code class="language-java"><span class="token keyword">package</span> <span class="token namespace">my_app</span><span class="token punctuation">;</span>
+
+<span class="token keyword">public</span> <span class="token keyword">final</span> <span class="token keyword">class</span> <span class="token class-name">RootController</span> <span class="token punctuation">{</span> <span class="token punctuation">}</span>
+</code></pre>
+<p>今回は特に処理を入れていないので、コントローラクラスには実装なし。</p>
+<ul>
+  <li>Initializable を実装すれば、<code>FXMLLoader</code> を <code>load()</code> したタイミングで初期処理が実行できる</li>
+  <li>画面上の要素に <code>fx:id</code> 属性を付与すれば、コントローラ側でその要素を特定して参照できる
+    <ul>
+      <li><code>&#x3C;Label fx:id="myLabel" /></code></li>
+      <li><code>@FXML private Label myLabel;</code> とアノテーション付きでフィールドを宣言する</li>
+      <li><code>this.myLabel.setText("HOGE FUGA");</code> というように要素を操作できる</li>
+    </ul>
+  </li>
+  <li><code>onAction</code> 属性を使えば、ボタンからコントローラのメソッドを呼び出したりできる
+    <ul>
+      <li><code>&#x3C;Button onAction="#onExec" text="実行する" /></code></li>
+      <li><code>@FXML public onExec() {}</code> とアノテーション付きでメソッドを宣言する</li>
+    </ul>
+  </li>
+</ul>
+<p>どんなレイアウトがあって、どんなコントロール部品があるのか、どうやってプロパティを設定したらいいか、とかいうことは、チマチマ検索していくしかない…。「こういうことをやりたいんだけどどうやるんだろう？」という逆引きは StackOverflow が参考になると思う。</p>
+<h2 id="アプリを起動してみる"><a class="header-link" href="#アプリを起動してみる"><span class="header-link-mark"></span></a>アプリを起動してみる</h2>
+<p>とりあえずココまで実装すると、</p>
+<pre class="language-bash"><code class="language-bash">$ ./gradlew run
+</code></pre>
+<p>で Java アプリが起動する。実行割合が 75% 程度で止まったまま、GUI ウィンドウが開くことが確認できると思う。ウィンドウを閉じたり、Ctrl + C でターミナルを終了したりすれば良い。</p>
+<p>今日はココまで。</p>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2020-05-25</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2020-05-25</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

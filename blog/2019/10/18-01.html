@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>Node.js の Child Process 研究 : fork・exec・execFile・spawn の違いをサンプルコードとともに検証 - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2019/10/18-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2019/index.html">2019年</a></li>
+            <li><a href="/blog/2019/10/index.html">10月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2019-10-18</time></div>
+        <h1 id="page-title">Node.js の Child Process 研究 : fork・exec・execFile・spawn の違いをサンプルコードとともに検証</h1>
+
+<p>Node.js の組み込みモジュール、<strong><code>child_process</code></strong>。基本的には、実行中の <code>node</code> プロセスとは別のプロセスを生成する関数が揃っているモジュールだが、今回はこのモジュールの中の似たような関数を比較し、理解を深めていこうと思う。</p>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#child_processexec"><code>child_process.exec()</code></a></li>
+  <li><a href="#child_processexecsync"><code>child_process.execSync()</code></a></li>
+  <li><a href="#child_processexecfile"><code>child_process.execFile()</code></a></li>
+  <li><a href="#child_processexecfilesync"><code>child_process.execFileSync()</code></a></li>
+  <li><a href="#child_processspawn"><code>child_process.spawn()</code></a></li>
+  <li><a href="#child_processspawnsync"><code>child_process.spawnSync()</code></a></li>
+  <li><a href="#child_processfork"><code>child_process.fork()</code></a></li>
+  <li><a href="#%E7%89%B9%E5%BE%B4%E6%AF%94%E8%BC%83%E8%A1%A8">特徴比較表</a></li>
+  <li><a href="#%E3%81%A4%E3%81%84%E3%81%A7%E3%81%AB%E3%82%B3%E3%83%BC%E3%83%89%E3%83%AA%E3%83%BC%E3%83%87%E3%82%A3%E3%83%B3%E3%82%B0%E3%81%97%E3%81%A6%E3%81%BF%E3%82%8B">ついでにコードリーディングしてみる</a></li>
+  <li><a href="#%E3%81%A9%E3%81%AE%E9%96%A2%E6%95%B0%E3%82%92%E4%BD%BF%E3%81%86%E3%81%B9%E3%81%8D%E3%81%8B%E3%80%81%E8%A6%8B%E6%A5%B5%E3%82%81%E6%96%B9">どの関数を使うべきか、見極め方</a></li>
+</ul>
+<h2 id="child_processexec"><a class="header-link" href="#child_processexec"><span class="header-link-mark"></span></a><code>child_process.exec()</code></h2>
+<p><code>exec()</code> は、Node.js から外部コマンドを実行し、その結果を取得できる。厳密にいうと、<em>シェルを起動し、そのシェル上で指定のコマンドを実行している。</em></p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword">const</span> childProcess <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'child_process'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+childProcess<span class="token punctuation">.</span><span class="token method function property-access">exec</span><span class="token punctuation">(</span><span class="token string">'cat package.json | wc -l'</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token parameter">error<span class="token punctuation">,</span> stdout<span class="token punctuation">,</span> stderr</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token keyword control-flow">if</span><span class="token punctuation">(</span>error<span class="token punctuation">)</span> <span class="token keyword control-flow">return</span> <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">error</span><span class="token punctuation">(</span><span class="token string">'ERROR'</span><span class="token punctuation">,</span> error<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'STDOUT'</span><span class="token punctuation">,</span> stdout<span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment">// string</span>
+  <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'STDERR'</span><span class="token punctuation">,</span> stderr<span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment">// string</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>シェルを起動しているので、パイプ <code>|</code> などが使えている。<code>echo $SHELL</code> で確かめてみると、macOS のターミナルでは <code>/bin/bash</code> が使われているようだった。</p>
+<p>コールバック関数の <code>stdout</code> と <code>stderr</code> は、標準出力と標準エラー出力のバッファを返す。平たくいうと、指定したコマンドが完了するまで待ち、全ての結果をまとめて返してくれる。</p>
+<p>パイプなどを含めてシェルコマンドが実行できてしまうので、<em>シェル・インジェクション</em>のセキュリティ問題を引き起こさないよう注意。シェルを起動しない関数で代替できないか検討しよう。</p>
+<ul>
+  <li>参考：<a href="https://riptutorial.com/ja/node-js/example/9105/%E3%82%B7%E3%82%A7%E3%83%AB%E3%82%92%E8%B5%B7%E5%8B%95%E3%81%97%E3%81%A6%E3%82%B3%E3%83%9E%E3%83%B3%E3%83%89%E3%82%92%E5%AE%9F%E8%A1%8C%E3%81%99%E3%82%8B">Node.js - シェルを起動してコマンドを実行する | node.js Tutorial</a></li>
+</ul>
+<h2 id="child_processexecsync"><a class="header-link" href="#child_processexecsync"><span class="header-link-mark"></span></a><code>child_process.execSync()</code></h2>
+<p><code>exec()</code> はコールバック関数の形になっているので、Node.js の <code>util.promisify</code> を使えば Promise 化して使える。</p>
+<p>一方、同期関数である <code>execSync()</code> も用意してある。あまり推奨されないが、一応紹介。戻り値は Buffer 型なので <code>toString()</code> などかませる。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword control-flow">try</span> <span class="token punctuation">{</span>
+  <span class="token keyword">const</span> stdout <span class="token operator">=</span> childProcess<span class="token punctuation">.</span><span class="token method function property-access">execSync</span><span class="token punctuation">(</span><span class="token string">'cat package.json | wc -l'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'STDOUT'</span><span class="token punctuation">,</span> stdout<span class="token punctuation">.</span><span class="token method function property-access">toString</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment">// Buffer</span>
+<span class="token punctuation">}</span>
+<span class="token keyword control-flow">catch</span><span class="token punctuation">(</span>error<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'STDERR'</span><span class="token punctuation">,</span> error<span class="token punctuation">.</span><span class="token property-access">stderr</span><span class="token punctuation">.</span><span class="token method function property-access">toString</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment">// Buffer</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<ul>
+  <li>参考：<a href="https://qiita.com/mazxxxry/items/eb2036b28f75eb39333c">child_processをpromise化する話 - Qiita</a></li>
+  <li>参考：<a href="https://www.gesource.jp/weblog/?p=8228">node.jsのchild_process.exec()やexecSyncでOSのコマンドを実行する – 山本隆の開発日誌</a></li>
+  <li>参考：<a href="http://tkybpp.hatenablog.com/entry/2016/04/25/163246">Node.jsからシェルコマンドを実行する - BppLOG</a></li>
+</ul>
+<h2 id="child_processexecfile"><a class="header-link" href="#child_processexecfile"><span class="header-link-mark"></span></a><code>child_process.execFile()</code></h2>
+<p><code>exec()</code> とよく似ているが、コチラはデフォルトでは<strong>シェルを起動せず</strong>指定のコマンドを実行する。つまり、パイプなどが使えない。</p>
+<p>シェルを介さず実行可能ファイルを直接実行するので、若干効率的。第1引数はコマンド名、すなわち実行可能ファイルの名前のみを指定し、オプション引数などを指定する場合は第2引数に配列で指定していく。</p>
+<pre class="language-javascript"><code class="language-javascript">childProcess<span class="token punctuation">.</span><span class="token method function property-access">execFile</span><span class="token punctuation">(</span><span class="token string">'node'</span><span class="token punctuation">,</span> <span class="token punctuation">[</span><span class="token string">'--version'</span><span class="token punctuation">]</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token parameter">error<span class="token punctuation">,</span> stdout<span class="token punctuation">,</span> stderr</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token keyword control-flow">if</span><span class="token punctuation">(</span>error<span class="token punctuation">)</span> <span class="token keyword control-flow">return</span> <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">error</span><span class="token punctuation">(</span><span class="token string">'ERROR'</span><span class="token punctuation">,</span> error<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'STDOUT'</span><span class="token punctuation">,</span> stdout<span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment">// string</span>
+  <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'STDERR'</span><span class="token punctuation">,</span> stderr<span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment">// string</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>コチラも結果はバッファ受け取り。コマンドが全て終わるまで待たされる。</p>
+<p>デフォルトではシェルを起動しないのだが、オプションを設定するとシェルを起動しその上でコマンド実行できる。つまり <code>exec()</code> と同じことができるようになる。</p>
+<pre class="language-javascript"><code class="language-javascript">childProcess<span class="token punctuation">.</span><span class="token method function property-access">execFile</span><span class="token punctuation">(</span><span class="token string">'cat package.json | wc -l &#x26;&#x26; echo $SHELL'</span><span class="token punctuation">,</span> <span class="token punctuation">{</span> shell<span class="token operator">:</span> <span class="token boolean">true</span> <span class="token punctuation">}</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token parameter">error<span class="token punctuation">,</span> stdout<span class="token punctuation">,</span> stderr</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token keyword control-flow">if</span><span class="token punctuation">(</span>error<span class="token punctuation">)</span> <span class="token keyword control-flow">return</span> <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">error</span><span class="token punctuation">(</span><span class="token string">'ERROR'</span><span class="token punctuation">,</span> error<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'STDOUT'</span><span class="token punctuation">,</span> stdout<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'STDERR'</span><span class="token punctuation">,</span> stderr<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>このように、<code>{ shell: true }</code> と指定すると、macOS で試した限りは <code>/bin/bash</code> が起動し、パイプを含めたコマンドが実行できる。</p>
+<pre class="language-javascript"><code class="language-javascript">childProcess<span class="token punctuation">.</span><span class="token method function property-access">execFile</span><span class="token punctuation">(</span><span class="token string">'cat package.json |'</span><span class="token punctuation">,</span> <span class="token punctuation">[</span><span class="token string">'wc'</span><span class="token punctuation">,</span> <span class="token string">'-l'</span><span class="token punctuation">,</span> <span class="token string">'&#x26;&#x26;'</span><span class="token punctuation">,</span> <span class="token string">'echo $SHELL'</span><span class="token punctuation">]</span><span class="token punctuation">,</span> <span class="token punctuation">{</span> shell<span class="token operator">:</span> <span class="token boolean">true</span> <span class="token punctuation">}</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token parameter">error<span class="token punctuation">,</span> stdout<span class="token punctuation">,</span> stderr</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token comment">// 以下略…</span>
+</code></pre>
+<p>こんな風に、第2引数に配列で値を取るやり方も上手く動く。コードとしてはメチャクチャで、わざわざこんな組み方はしないだろうが、コレでも動くワケだ。</p>
+<ul>
+  <li>参考：<a href="https://riptutorial.com/ja/node-js/example/9106/%E5%AE%9F%E8%A1%8C%E5%8F%AF%E8%83%BD%E3%83%95%E3%82%A1%E3%82%A4%E3%83%AB%E3%82%92%E5%AE%9F%E8%A1%8C%E3%81%99%E3%82%8B%E3%83%97%E3%83%AD%E3%82%BB%E3%82%B9%E3%81%AE%E7%94%9F%E6%88%90">Node.js - 実行可能ファイルを実行するプロセスの生成 | node.js Tutorial</a></li>
+</ul>
+<h2 id="child_processexecfilesync"><a class="header-link" href="#child_processexecfilesync"><span class="header-link-mark"></span></a><code>child_process.execFileSync()</code></h2>
+<p><code>execFile()</code> は <code>util.promisify</code> で Promise 化できる。同期処理版として <code>execFileSync()</code> という関数もある。<code>execSync()</code> と同様、<code>stdout</code> を戻り値で受け取れ、<code>stderr</code> が発生する場合は <code>catch</code> することで受け取れる。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword control-flow">try</span> <span class="token punctuation">{</span>
+  <span class="token comment">// shell: true も指定できる</span>
+  <span class="token keyword">const</span> stdout <span class="token operator">=</span> childProcess<span class="token punctuation">.</span><span class="token method function property-access">execFileSync</span><span class="token punctuation">(</span><span class="token string">'cat'</span><span class="token punctuation">,</span> <span class="token punctuation">[</span><span class="token string">'package.json | wc -l'</span><span class="token punctuation">]</span><span class="token punctuation">,</span> <span class="token punctuation">{</span> shell<span class="token operator">:</span> <span class="token boolean">true</span> <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'STDOUT'</span><span class="token punctuation">,</span> stdout<span class="token punctuation">.</span><span class="token method function property-access">toString</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment">// Buffer</span>
+<span class="token punctuation">}</span>
+<span class="token keyword control-flow">catch</span><span class="token punctuation">(</span>error<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'STDERR'</span><span class="token punctuation">,</span> error<span class="token punctuation">.</span><span class="token property-access">stderr</span><span class="token punctuation">.</span><span class="token method function property-access">toString</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment">// Buffer</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p><code>shell: true</code> を指定すれば、<code>exec()</code>・<code>execSync()</code> と変わらない、というのが <code>execFile()</code> と <code>execFileSync()</code> だ。</p>
+<h2 id="child_processspawn"><a class="header-link" href="#child_processspawn"><span class="header-link-mark"></span></a><code>child_process.spawn()</code></h2>
+<p><code>spawn()</code> は <code>execFile()</code> とよく似ている。デフォルトではシェルを起動せず、実行可能ファイルを別プロセスで起動する。一番の違いは、結果を Buffer ではなく Stream で受け取るところ。だからコールバック関数の形ではなく、<code>.on()</code> で指定するイベント形式なのだ。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword">const</span> spawn <span class="token operator">=</span> childProcess<span class="token punctuation">.</span><span class="token method function property-access">spawn</span><span class="token punctuation">(</span><span class="token string">'cat'</span><span class="token punctuation">,</span> <span class="token punctuation">[</span><span class="token string">'package.json'</span><span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+spawn<span class="token punctuation">.</span><span class="token property-access">stdout</span><span class="token punctuation">.</span><span class="token method function property-access">on</span><span class="token punctuation">(</span><span class="token string">'data'</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token parameter">data</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'STDOUT'</span><span class="token punctuation">,</span> data<span class="token punctuation">.</span><span class="token method function property-access">toString</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment">// Stream</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+spawn<span class="token punctuation">.</span><span class="token property-access">stderr</span><span class="token punctuation">.</span><span class="token method function property-access">on</span><span class="token punctuation">(</span><span class="token string">'data'</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token parameter">data</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'STDERR'</span><span class="token punctuation">,</span> data<span class="token punctuation">.</span><span class="token method function property-access">toString</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment">// Stream</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+spawn<span class="token punctuation">.</span><span class="token method function property-access">on</span><span class="token punctuation">(</span><span class="token string">'close'</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token parameter">code</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'CODE'</span><span class="token punctuation">,</span> code<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p><code>spawn()</code> も、<code>execFile()</code> 同様に <code>{ shell: true }</code> のオプションを受け取れるので、シェル上でコマンドを実行することもできる。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword">const</span> spawn <span class="token operator">=</span> childProcess<span class="token punctuation">.</span><span class="token method function property-access">spawn</span><span class="token punctuation">(</span><span class="token string">'cat package.json | wc -l &#x26;&#x26; echo $SHELL'</span><span class="token punctuation">,</span> <span class="token punctuation">{</span> shell<span class="token operator">:</span> <span class="token boolean">true</span> <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+spawn<span class="token punctuation">.</span><span class="token property-access">stdout</span><span class="token punctuation">.</span><span class="token method function property-access">on</span><span class="token punctuation">(</span><span class="token string">'data'</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token parameter">data</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'STDOUT'</span><span class="token punctuation">,</span> data<span class="token punctuation">.</span><span class="token method function property-access">toString</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+spawn<span class="token punctuation">.</span><span class="token property-access">stderr</span><span class="token punctuation">.</span><span class="token method function property-access">on</span><span class="token punctuation">(</span><span class="token string">'data'</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token parameter">data</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'STDERR'</span><span class="token punctuation">,</span> data<span class="token punctuation">.</span><span class="token method function property-access">toString</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+spawn<span class="token punctuation">.</span><span class="token method function property-access">on</span><span class="token punctuation">(</span><span class="token string">'close'</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token parameter">code</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'CODE'</span><span class="token punctuation">,</span> code<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>Buffer ではなく Stream で受け取る、と表現したが、上のように複数コマンドが動いていて、全ての結果を同時に受け取れない場合や、例えば <code>docker build</code> のように、実行に時間がかかり、順次標準出力が出てくるようなコマンドの場合は、その度に <code>stdout.on('data')</code> イベントが発動する。つまり、上のコードの実行結果は以下のようになるのだ。</p>
+<pre class="language-bash"><code class="language-bash">$ node example-spawn.js
+STDOUT  <span class="token number">12</span>
+STDOUT  /bin/bash
+</code></pre>
+<p><code>12</code> を出力したのが <code>wc -l</code> で、その後の <code>/bin/bash</code> は <code>&#x26;&#x26;</code> で繋いだ別コマンド。実行結果が出力されるタイミングが違うので、2回 <code>console.log('STDOUT')</code> が発動しているのだ。</p>
+<p>このような挙動は、コマンドの出力結果が大量にある時は扱いやすい。</p>
+<ul>
+  <li>参考：<a href="https://riptutorial.com/ja/node-js/example/4913/%E6%96%B0%E3%81%97%E3%81%84%E3%83%97%E3%83%AD%E3%82%BB%E3%82%B9%E3%82%92%E7%94%9F%E6%88%90%E3%81%97%E3%81%A6%E3%82%B3%E3%83%9E%E3%83%B3%E3%83%89%E3%82%92%E5%AE%9F%E8%A1%8C%E3%81%99%E3%82%8B">Node.js - 新しいプロセスを生成してコマンドを実行する | node.js Tutorial</a></li>
+  <li>参考：<a href="https://qiita.com/TsuyoshiUshio@github/items/cf4b28e7999403f7a04c">node の spawn に関して調べてみた - Qiita</a></li>
+  <li>参考：<a href="https://qiita.com/TsuyoshiUshio@github/items/9c66e1b84bae61ba893f">node の spawn に関して調べてみた その２ - Qiita</a></li>
+</ul>
+<h2 id="child_processspawnsync"><a class="header-link" href="#child_processspawnsync"><span class="header-link-mark"></span></a><code>child_process.spawnSync()</code></h2>
+<p>せっかく Stream で順次受け取れる <code>spawn()</code> だが、<code>spawnSync()</code> という同期版もある。実行結果は Buffer で取得できるので、<code>execFileSync()</code> とほぼ同じ。ただ、何か問題があった場合も <code>spawnSync()</code> の実行部分で例外が発生しないのが特徴。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token comment">// shell: true オプションも使える</span>
+<span class="token keyword">const</span> spawn <span class="token operator">=</span> childProcess<span class="token punctuation">.</span><span class="token method function property-access">spawnSync</span><span class="token punctuation">(</span><span class="token string">'cat package.json | wc -l &#x26;&#x26; echo $SHELL'</span><span class="token punctuation">,</span> <span class="token punctuation">{</span> shell<span class="token operator">:</span> <span class="token boolean">true</span> <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'STDOUT'</span><span class="token punctuation">,</span> spawn<span class="token punctuation">.</span><span class="token property-access">stdout</span><span class="token punctuation">.</span><span class="token method function property-access">toString</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment">// Buffer</span>
+<span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'STDERR'</span><span class="token punctuation">,</span> spawn<span class="token punctuation">.</span><span class="token property-access">stderr</span><span class="token punctuation">.</span><span class="token method function property-access">toString</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment">// Buffer</span>
+</code></pre>
+<h2 id="child_processfork"><a class="header-link" href="#child_processfork"><span class="header-link-mark"></span></a><code>child_process.fork()</code></h2>
+<p><code>fork()</code> はコレまでのモノとちょっと毛色が違う。</p>
+<p>何ができるかというと、引数で指定した JS ファイルを、別の <code>node</code> プロセスで起動・実行できる。</p>
+<p>引数は <code>require()</code> と同じノリで、JS ファイルへのパスを取る。しかし実行される <code>node</code> プロセスは呼び出し元とは別プロセスになる。</p>
+<p>親子のプロセス間でデータをやり取りするには、<em>IPC 通信</em>という仕組みを使う。</p>
+<ul>
+  <li><code>my-parent.js</code></li>
+</ul>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword">const</span> childProcess <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'child_process'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token keyword">const</span> myChild <span class="token operator">=</span> childProcess<span class="token punctuation">.</span><span class="token method function property-access">fork</span><span class="token punctuation">(</span><span class="token string">'./my-child'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+myChild<span class="token punctuation">.</span><span class="token method function property-access">on</span><span class="token punctuation">(</span><span class="token string">'message'</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token parameter">message</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'子プロセスからメッセージを受信'</span><span class="token punctuation">,</span> message<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// 子プロセスにメッセージを送信</span>
+myChild<span class="token punctuation">.</span><span class="token method function property-access">send</span><span class="token punctuation">(</span><span class="token string">'message'</span><span class="token punctuation">,</span> <span class="token string">'From Parent'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<ul>
+  <li><code>my-child.js</code></li>
+</ul>
+<pre class="language-javascript"><code class="language-javascript">process<span class="token punctuation">.</span><span class="token method function property-access">on</span><span class="token punctuation">(</span><span class="token string">'message'</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token parameter">message</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'親プロセスからメッセージを受信'</span><span class="token punctuation">,</span> message<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// 親プロセスにメッセージを送信</span>
+process<span class="token punctuation">.</span><span class="token method function property-access">send</span><span class="token punctuation">(</span><span class="token string">'From Child'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>一定の処理が終わったら、<code>my-child.js</code> の子プロセスを終了させたいが、この終了のさせ方は色々あったので、別の記事で検証結果をまとめることにする。</p>
+<ul>
+  <li>参考：<a href="https://qiita.com/gfx/items/2632e49165c3660c997c">child_process.fork()は全然fork(2)じゃないけど面白い。 - Qiita</a></li>
+</ul>
+<h2 id="特徴比較表"><a class="header-link" href="#特徴比較表"><span class="header-link-mark"></span></a>特徴比較表</h2>
+<p>それぞれの関数を紹介したので、特徴を比較してみる。</p>
+<table>
+  <thead>
+    <tr>
+      <th>関数名</th>
+      <th>処理</th>
+      <th>シェル</th>
+      <th>戻り値の型</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>exec</td>
+      <td>非同期</td>
+      <td>起動する</td>
+      <td>String (Buffer)</td>
+    </tr>
+    <tr>
+      <td>execSync</td>
+      <td>同期</td>
+      <td>起動する</td>
+      <td>Buffer</td>
+    </tr>
+    <tr>
+      <td>execFile</td>
+      <td>非同期</td>
+      <td>起動しない</td>
+      <td>String (Buffer)</td>
+    </tr>
+    <tr>
+      <td>execFile + shell:true</td>
+      <td>非同期</td>
+      <td>起動する</td>
+      <td>String (Buffer)</td>
+    </tr>
+    <tr>
+      <td>execFileSync</td>
+      <td>同期</td>
+      <td>起動しない</td>
+      <td>Buffer</td>
+    </tr>
+    <tr>
+      <td>execFileSync + shell:true</td>
+      <td>同期</td>
+      <td>起動する</td>
+      <td>Buffer</td>
+    </tr>
+    <tr>
+      <td>spawn</td>
+      <td>非同期 (イベント)</td>
+      <td>起動しない</td>
+      <td>String (Stream)</td>
+    </tr>
+    <tr>
+      <td>spawn + shell:true</td>
+      <td>非同期 (イベント)</td>
+      <td>起動する</td>
+      <td>String (Stream)</td>
+    </tr>
+    <tr>
+      <td>spawnSync</td>
+      <td>同期</td>
+      <td>起動しない</td>
+      <td>Buffer</td>
+    </tr>
+    <tr>
+      <td>spawnSync + shell:true</td>
+      <td>同期</td>
+      <td>起動する</td>
+      <td>Buffer</td>
+    </tr>
+    <tr>
+      <td>fork</td>
+      <td>非同期的 (IPC)</td>
+      <td>起動しない</td>
+      <td>-</td>
+    </tr>
+  </tbody>
+</table>
+<p>こうしてみると、やはり <code>fork()</code> だけが「別プロセスを起動する」といっても、ちょっと毛色が違うことは分かるかと思う。だからコレだけはちょっと除外して、残りを見てみる。</p>
+<p><code>exec()</code> と <code>execSync()</code> は、必ずシェルを起動する。それ以外の仕様は同じなので、<code>execFile()</code>・<code>execFileSync()</code> のエイリアスみたいな存在だ。</p>
+<p><code>execFile()</code>・<code>execFileSync()</code> と、<code>spawn()</code>・<code>spawnSync()</code> は、戻り値の受け取り方が Buffer で一度にまとめてもらえるか、Stream で順次もらえるか、という違いが主だ。それ以外は <code>{ shell: true }</code> オプションを渡すことでシェル起動の要否を切り替えられるし、あまり違いはないように見える。</p>
+<p>こうやって整理できれば、「シェルを起動したいのか」「実行結果は逐次欲しいのかどうか」で判断して、使うべき関数を導けそうだ。</p>
+<h2 id="ついでにコードリーディングしてみる"><a class="header-link" href="#ついでにコードリーディングしてみる"><span class="header-link-mark"></span></a>ついでにコードリーディングしてみる</h2>
+<p>ココまで来たら、内部実装を見てみよう。</p>
+<p><code>child_process</code> モジュールの内容は、Node.js リポジトリの <code>./lib/child_process.js</code> と <code>./lib/internal/child_process.js</code> の2つがメインとなって成り立っている。以下、関数ごとに該当する行をハイライトしたリンクを記載しておく。</p>
+<ul>
+  <li><code>exec()</code>
+    <ul>
+      <li><a href="https://github.com/nodejs/node/blob/6c430b48b9dff238995aeffe3626bd8b156f563d/lib/child_process.js#L143-L148">node/child_process.js at 6c430b48b9dff238995aeffe3626bd8b156f563d · nodejs/node · GitHub</a></li>
+      <li>→ <code>execFile()</code> を呼び出している。ほとんど <code>execFile()</code> のエイリアスだと分かる</li>
+    </ul>
+  </li>
+  <li><code>execSync()</code>
+    <ul>
+      <li><a href="https://github.com/nodejs/node/blob/6c430b48b9dff238995aeffe3626bd8b156f563d/lib/child_process.js#L630-L645">node/child_process.js at 6c430b48b9dff238995aeffe3626bd8b156f563d · nodejs/node · GitHub</a></li>
+      <li>→ <code>spawnSync()</code> を呼び出している</li>
+    </ul>
+  </li>
+  <li><code>execFile()</code>
+    <ul>
+      <li><a href="https://github.com/nodejs/node/blob/6c430b48b9dff238995aeffe3626bd8b156f563d/lib/child_process.js#L178-L390">node/child_process.js at 6c430b48b9dff238995aeffe3626bd8b156f563d · nodejs/node · GitHub</a></li>
+      <li>→ <code>spawn()</code> を呼び出している</li>
+    </ul>
+  </li>
+  <li><code>execFileSync()</code>
+    <ul>
+      <li><a href="https://github.com/nodejs/node/blob/6c430b48b9dff238995aeffe3626bd8b156f563d/lib/child_process.js#L612-L627">node/child_process.js at 6c430b48b9dff238995aeffe3626bd8b156f563d · nodejs/node · GitHub</a></li>
+      <li>→ <code>spawnSync()</code> を呼び出している</li>
+    </ul>
+  </li>
+  <li><code>fork()</code>
+    <ul>
+      <li><a href="https://github.com/nodejs/node/blob/6c430b48b9dff238995aeffe3626bd8b156f563d/lib/child_process.js#L54-L109">node/child_process.js at 6c430b48b9dff238995aeffe3626bd8b156f563d · nodejs/node · GitHub</a></li>
+      <li>→ <code>spawn()</code> を呼び出している</li>
+    </ul>
+  </li>
+  <li><code>spawn()</code>
+    <ul>
+      <li><a href="https://github.com/nodejs/node/blob/6c430b48b9dff238995aeffe3626bd8b156f563d/lib/child_process.js#L535-L543">node/child_process.js at 6c430b48b9dff238995aeffe3626bd8b156f563d · nodejs/node · GitHub</a></li>
+      <li>次の Internal メソッドを呼び出している
+        <ul>
+          <li><a href="https://github.com/nodejs/node/blob/6c430b48b9dff238995aeffe3626bd8b156f563d/lib/internal/child_process.js#L330-L452">node/child_process.js at 6c430b48b9dff238995aeffe3626bd8b156f563d · nodejs/node · GitHub</a></li>
+        </ul>
+      </li>
+    </ul>
+  </li>
+  <li><code>spawnSync()</code>
+    <ul>
+      <li><a href="https://github.com/nodejs/node/blob/6c430b48b9dff238995aeffe3626bd8b156f563d/lib/child_process.js#L545-L590">node/child_process.js at 6c430b48b9dff238995aeffe3626bd8b156f563d · nodejs/node · GitHub</a></li>
+      <li>次の Internal メソッドを呼び出している
+        <ul>
+          <li><a href="https://github.com/nodejs/node/blob/6c430b48b9dff238995aeffe3626bd8b156f563d/lib/internal/child_process.js#L1032-L1053">node/child_process.js at 6c430b48b9dff238995aeffe3626bd8b156f563d · nodejs/node · GitHub</a></li>
+        </ul>
+      </li>
+    </ul>
+  </li>
+</ul>
+<p>ということで、<code>spawn()</code> と <code>spawnSync()</code> が、一番ローレイヤーな大元の関数で、<code>exec()</code> や <code>execFile()</code> は <code>spawn()</code> のラッパー関数だということが分かった。どうりで動きがよく似ているワケだ。</p>
+<p><code>fork()</code> についても <code>spawn()</code> を利用していて、IPC 接続用の調整をしているくらいで、根っこは同じだというところは面白い。</p>
+<ul>
+  <li>参考：<a href="https://nodejs.org/api/child_process.html">Child Process | Node.js v12.7.0 Documentation</a></li>
+  <li>参考：<a href="http://www.axlight.com/mt/sundayhacking/2014/03/nodejschild-processexecexecfilespawn.html">node.jsのchild_processのexecとexecFileとspawnの違い - SundayHacking</a></li>
+</ul>
+<h2 id="どの関数を使うべきか、見極め方"><a class="header-link" href="#どの関数を使うべきか、見極め方"><span class="header-link-mark"></span></a>どの関数を使うべきか、見極め方</h2>
+<p>ということで、Child Process の似たような関数群の違いが分かったと思う。最後にまとめとして、どういう場合にどの関数を使うべきか、見極め方を記して終わりにする。</p>
+<ol>
+  <li>基本的に同期関数は使わないことを考えると、<code>execSync()</code>・<code>execFileSync()</code>・<code>spawnSync()</code> の存在は無視していい</li>
+  <li>Node.js スクリプトを別プロセスで起動して、親子プロセス間でやり取りしたければ <code>fork()</code> 一択。<br>そうでなければ次の判断基準を見る</li>
+  <li>コマンドの実行結果の量が少なめで、一度に受け取りたければ <code>execFile()</code>。<br>コマンドの実行結果を順次取得したいとか、量が多くバッファを超えそうな場合は <code>spawn()</code> を選ぶ</li>
+  <li>実行可能ファイルの呼び出しだけでなく、パイプなどシェルの機能を使いたければ、そこにさらに <code>{ shell: true }</code> オプションを渡す
+    <ul>
+      <li><code>execFile()</code> + <code>{ shell: true }</code> の場合は <code>exec()</code> がほぼ等価なエイリアスとして使える (混乱するようなら <code>exec()</code> は存在を無視していい)</li>
+      <li>(シェルを使う場合はシェル・インジェクションに注意すること)</li>
+    </ul>
+  </li>
+</ol>
+<p>エイリアス的な関数がいくつかあるのでちょっとこんがらがるが、整理してみたらよく分かった。</p>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2019-10-18</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2019-10-18</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

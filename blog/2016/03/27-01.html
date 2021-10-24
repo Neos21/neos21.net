@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>ADODB.Stream で BOM なし UTF-8 のテキストファイルを書き出す - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2016/03/27-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2016/index.html">2016年</a></li>
+            <li><a href="/blog/2016/03/index.html">03月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2016-03-27</time></div>
+        <h1 id="page-title">ADODB.Stream で BOM なし UTF-8 のテキストファイルを書き出す</h1>
+
+<p>前回、ADODB.Stream を使って UTF-8 でファイルの読み書きを行った。しかしこのとき書き出されるテキストファイルは BOM 付き UTF-8 になってしまう。</p>
+<ul>
+  <li><a href="25-01.html">VBScript で UTF-8 のテキストファイルを読み込む・書き出す</a></li>
+</ul>
+<p>そこで今回は、BOM なし UTF-8 のテキストファイルを書き出すよう、前回の VBScript を改善してみる。</p>
+<pre class="language-vb"><code class="language-vb"><span class="token comment">' 読み込みファイルの指定 (相対パスなのでこのスクリプトと同じフォルダに置いておくこと)</span>
+<span class="token keyword">Dim</span> input
+<span class="token keyword">Set</span> input <span class="token operator">=</span> CreateObject<span class="token punctuation">(</span><span class="token string">"ADODB.Stream"</span><span class="token punctuation">)</span>
+input<span class="token punctuation">.</span><span class="token keyword">Type</span> <span class="token operator">=</span> <span class="token number">2</span>    <span class="token comment">' 1：バイナリ・2：テキスト</span>
+input<span class="token punctuation">.</span>Charset <span class="token operator">=</span> <span class="token string">"UTF-8"</span>    <span class="token comment">' 文字コード指定</span>
+input<span class="token punctuation">.</span>Open    <span class="token comment">' Stream オブジェクトを開く</span>
+input<span class="token punctuation">.</span>LoadFromFile <span class="token string">"inputText.txt"</span>    <span class="token comment">' ファイルを読み込む</span>
+
+<span class="token comment">' 一時書き出しファイルの指定 (テキストモードで BOM 付き UTF-8 を一時的に保持しておく)</span>
+<span class="token keyword">Dim</span> preOut
+<span class="token keyword">Set</span> preOut <span class="token operator">=</span> CreateObject<span class="token punctuation">(</span><span class="token string">"ADODB.Stream"</span><span class="token punctuation">)</span>
+preOut<span class="token punctuation">.</span><span class="token keyword">Type</span> <span class="token operator">=</span> <span class="token number">2</span>
+preOut<span class="token punctuation">.</span>Charset <span class="token operator">=</span> <span class="token string">"UTF-8"</span>
+preOut<span class="token punctuation">.</span>Open
+
+<span class="token comment">' 読み込みファイルから1行ずつ読み込み、一時書き出しファイルに書き出すのを最終行まで繰り返す</span>
+<span class="token keyword">Dim</span> records
+<span class="token keyword">Do</span> <span class="token keyword">Until</span> input<span class="token punctuation">.</span>EOS
+  <span class="token keyword">Dim</span> lineStr
+  lineStr <span class="token operator">=</span> input<span class="token punctuation">.</span>ReadText<span class="token punctuation">(</span><span class="token operator">-</span><span class="token number">2</span><span class="token punctuation">)</span>    <span class="token comment">' -1：全行読み込み・-2：一行読み込み</span>
+  preOut<span class="token punctuation">.</span>WriteText lineStr<span class="token punctuation">,</span> <span class="token number">1</span>    <span class="token comment">' 0：文字列のみ書き込み・1：文字列 + 改行を書き込み</span>
+<span class="token keyword">Loop</span>
+
+<span class="token comment">' バイナリモードにする</span>
+preOut<span class="token punctuation">.</span>Position <span class="token operator">=</span> <span class="token number">0</span>
+preOut<span class="token punctuation">.</span><span class="token keyword">Type</span> <span class="token operator">=</span> <span class="token number">1</span>    <span class="token comment">'バイナリモードにする</span>
+preOut<span class="token punctuation">.</span>Position <span class="token operator">=</span> <span class="token number">3</span>    <span class="token comment">' 先頭3バイト = BOM をスキップする</span>
+
+<span class="token comment">' バイナリデータを読み込む</span>
+<span class="token keyword">Dim</span> bin
+bin <span class="token operator">=</span> preOut<span class="token punctuation">.</span>Read    <span class="token comment">' バイナリモードでないと Read できない</span>
+
+<span class="token comment">' 書き出しファイルの指定 (読み込んだバイナリデータをバイナリデータとしてファイルに出力する)</span>
+<span class="token keyword">Dim</span> output
+<span class="token keyword">Set</span> output <span class="token operator">=</span> CreateObject<span class="token punctuation">(</span><span class="token string">"ADODB.Stream"</span><span class="token punctuation">)</span>
+output<span class="token punctuation">.</span><span class="token keyword">Type</span> <span class="token operator">=</span> <span class="token number">1</span>
+output<span class="token punctuation">.</span>Open
+output<span class="token punctuation">.</span>Write<span class="token punctuation">(</span>bin<span class="token punctuation">)</span>
+
+<span class="token comment">' 書き出しファイルの保存</span>
+output<span class="token punctuation">.</span>SaveToFile <span class="token string">"outputText.txt"</span><span class="token punctuation">,</span> <span class="token number">2</span>    <span class="token comment">' 1：指定ファイルがなければ新規作成・2：ファイルがある場合は上書き</span>
+
+<span class="token comment">' Stream を閉じる</span>
+input<span class="token punctuation">.</span>Close
+preOut<span class="token punctuation">.</span>Close
+output<span class="token punctuation">.</span>Close
+</code></pre>
+<p>大きな変更点は、テキストデータを書き込む対象を変数 <code>output</code> から <code>preOut</code> というものに変えた。そしてテキストモードでテキストを書き込んでいた <code>preOut</code> を最後にバイナリモードに変え、BOM を飛ばすために <code>preOut</code> の <code>Position</code> を <code>3</code> ズラしている。この状態で変数 <code>output</code> にバイナリデータのまま書き出し、ファイルを保存している。</p>
+<p>これで BOM なし UTF-8 が書き出せる。本当に BOM なしになっているかどうか確かめたい場合は、以下のような方法で検証可能。</p>
+<ul>
+  <li><a href="26-01.html">UTF-8 で書かれたテキストファイルが BOM 付きかどうかを「メモ帳」で調べる簡単な方法</a></li>
+</ul>
+<h2 id="参考"><a class="header-link" href="#参考"><span class="header-link-mark"></span></a>参考</h2>
+<ul>
+  <li><a href="http://d.hatena.ne.jp/replication/20091117/1258418243">ADODB.Streamオブジェクトを使ってBOMなしUTF-8のファイルを作成する方法 - 大人になったら肺呼吸</a></li>
+</ul>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2016-03-27</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2016-03-27</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

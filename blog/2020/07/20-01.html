@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>PostgreSQL は SQL 文をケースインセンシティブに解釈する。TypeORM での調整方法 - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2020/07/20-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2020/index.html">2020年</a></li>
+            <li><a href="/blog/2020/07/index.html">07月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2020-07-20</time></div>
+        <h1 id="page-title">PostgreSQL は SQL 文をケースインセンシティブに解釈する。TypeORM での調整方法</h1>
+
+<p>TypeORM と PostgreSQL の組み合わせで軽くつまづいた…。</p>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#%E7%B5%8C%E7%B7%AF">経緯</a></li>
+  <li><a href="#psql-%E3%81%A7%E5%95%8F%E9%A1%8C%E7%99%BA%E7%94%9F"><code>psql</code> で問題発生</a></li>
+  <li><a href="#postgresql-%E3%81%AF%E3%82%B1%E3%83%BC%E3%82%B9%E3%82%A4%E3%83%B3%E3%82%BB%E3%83%B3%E3%82%B7%E3%83%86%E3%82%A3%E3%83%96">PostgreSQL はケースインセンシティブ</a></li>
+  <li><a href="#%E5%9B%9E%E9%81%BF%E7%AD%96--%E3%83%80%E3%83%96%E3%83%AB%E3%82%AF%E3%82%A9%E3%83%BC%E3%83%88%E3%81%A7%E5%9B%B2%E3%82%80">回避策 : ダブルクォートで囲む</a></li>
+  <li><a href="#typeorm-%E3%81%8C%E4%BB%98%E3%81%91%E3%82%8B%E5%90%8D%E5%89%8D%E3%82%92%E4%BF%AE%E6%AD%A3%E3%81%99%E3%82%8B">TypeORM が付ける名前を修正する</a></li>
+  <li><a href="#%E3%81%BE%E3%81%A8%E3%82%81">まとめ</a></li>
+</ul>
+<h2 id="経緯"><a class="header-link" href="#経緯"><span class="header-link-mark"></span></a>経緯</h2>
+<p>TypeORM を作って、次のようなエンティティを定義した。</p>
+<pre class="language-typescript"><code class="language-typescript">@<span class="token function"><span class="token maybe-class-name">Entity</span></span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+<span class="token keyword">export</span> <span class="token keyword">default</span> <span class="token keyword">class</span> <span class="token class-name"><span class="token maybe-class-name">MyCustomer</span></span> <span class="token punctuation">{</span>
+  @<span class="token function"><span class="token maybe-class-name">PrimaryColumn</span></span><span class="token punctuation">(</span><span class="token punctuation">{</span> <span class="token keyword">type</span><span class="token operator">:</span> <span class="token string">'varchar'</span> <span class="token punctuation">}</span><span class="token punctuation">)</span>
+  userName<span class="token operator">:</span> <span class="token builtin">string</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>コレを PostgreSQL に対して Sync すると、次のようなテーブルとカラムが自動生成される。</p>
+<table>
+  <thead>
+    <tr>
+      <th>項目</th>
+      <th>名前</th>
+      <th>ケース</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>テーブル名</td>
+      <td><code>my_customer</code></td>
+      <td>スネークケース</td>
+    </tr>
+    <tr>
+      <td>カラム名</td>
+      <td><code>userName</code></td>
+      <td>キャメルケース</td>
+    </tr>
+  </tbody>
+</table>
+<ul>
+  <li>クラス名から生成されるテーブル名は、パスカルケースからスネークケースに。</li>
+  <li>フィールド名から生成されるカラム名は、そのままキャメルケース。</li>
+</ul>
+<p>…ケースが統一されていなくて違和感があるが、まぁ良いだろう。テーブルのことを考えたくなくて Sync したんだし。</p>
+<h2 id="psql-で問題発生"><a class="header-link" href="#psql-で問題発生"><span class="header-link-mark"></span></a><code>psql</code> で問題発生</h2>
+<p>そう思ったのも束の間、テストのために <code>psql</code> で PostgreSQL に繋いで <code>UPDATE</code> 文を書いてみると、なぜかうまくいかなかった。</p>
+<pre class="language-sql"><code class="language-sql">admin<span class="token operator">=</span><span class="token comment"># SELECT userName from my_customer;</span>
+
+ERROR:  <span class="token keyword">column</span> <span class="token string">"userName"</span> does <span class="token operator">not</span> exist
+</code></pre>
+<p><strong>そんなカラム存在しないよ</strong>、だと…？</p>
+<p><code>SELECT * FROM my_customer;</code> と叩けばちゃんと <code>userName</code> カラムが見えているのに、何故だ…。</p>
+<h2 id="postgresql-はケースインセンシティブ"><a class="header-link" href="#postgresql-はケースインセンシティブ"><span class="header-link-mark"></span></a>PostgreSQL はケースインセンシティブ</h2>
+<p>そこで調べてみると、<strong>PostgreSQL は SQL 文をケースインセンシティブ、つまり大文字・小文字の区別をせずに解釈する</strong>ことが分かった。</p>
+<ul>
+  <li>参考：<a href="https://qiita.com/yuba/items/3c4326e1f171a80543c8">PostgreSQLでは識別子に大文字を使ってはいけない - Qiita</a></li>
+</ul>
+<p>内部的には大文字・小文字を区別して <code>userName</code> カラムを作っているけど、SQL 文の中で <code>userName</code> と書いても、<em><code>username</code></em> と解釈されてしまうワケだ。</p>
+<h2 id="回避策--ダブルクォートで囲む"><a class="header-link" href="#回避策--ダブルクォートで囲む"><span class="header-link-mark"></span></a>回避策 : ダブルクォートで囲む</h2>
+<p>回避策はあって、</p>
+<pre class="language-sql"><code class="language-sql"><span class="token keyword">SELECT</span> <span class="token string">"userName"</span> <span class="token keyword">from</span> my_customer<span class="token punctuation">;</span>
+</code></pre>
+<p>このように<strong>カラム名やテーブル名をダブルクォートで囲む</strong>ことで、大文字・小文字を区別して認識させられる。</p>
+<pre class="language-sql"><code class="language-sql"><span class="token comment"># テーブル名も囲んだりして UPDATE する例</span>
+<span class="token keyword">UPDATE</span> <span class="token string">"AdminUsers"</span>
+<span class="token keyword">SET</span> <span class="token string">"userName"</span> <span class="token operator">=</span> <span class="token string">'John Doe'</span>
+<span class="token keyword">WHERE</span> <span class="token string">"userId"</span> <span class="token operator">=</span> <span class="token number">1</span><span class="token punctuation">;</span>
+</code></pre>
+<h2 id="typeorm-が付ける名前を修正する"><a class="header-link" href="#typeorm-が付ける名前を修正する"><span class="header-link-mark"></span></a>TypeORM が付ける名前を修正する</h2>
+<p>TypeORM が内部的に生成する SQL 文にはダブルクォートが書かれるようなので、TypeORM だけ使う上ではコレでも別に問題にならない。</p>
+<p>しかし、自分で PostgreSQL を直で触ったりする時に面倒臭いし、何よりテーブル名とカラム名でケースに統一感がないのもキモいので、調整することにする。</p>
+<p>一番手っ取り早いのは、デコレータ内で名前を渡してやること。</p>
+<pre class="language-typescript"><code class="language-typescript"><span class="token comment">// ↓ 実際のテーブル名は複数形に</span>
+@<span class="token function"><span class="token maybe-class-name">Entity</span></span><span class="token punctuation">(</span><span class="token string">'my_customers'</span><span class="token punctuation">)</span>
+<span class="token keyword">export</span> <span class="token keyword">default</span> <span class="token keyword">class</span> <span class="token class-name"><span class="token maybe-class-name">MyCustomer</span></span> <span class="token punctuation">{</span>
+  <span class="token comment">// ↓ name プロパティで実際のカラム名をスネークケースに</span>
+  @<span class="token function"><span class="token maybe-class-name">PrimaryColumn</span></span><span class="token punctuation">(</span><span class="token punctuation">{</span> name<span class="token operator">:</span> <span class="token string">'user_name'</span><span class="token punctuation">,</span> <span class="token keyword">type</span><span class="token operator">:</span> <span class="token string">'varchar'</span> <span class="token punctuation">}</span><span class="token punctuation">)</span>
+  userName<span class="token operator">:</span> <span class="token builtin">string</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>こんな感じで指定できる。</p>
+<p>以下の記事で紹介されているように、名前付けルールを自分で調整し、<code>pluralize</code> パッケージを使って複数形を導いて自動適用したりもできる。</p>
+<ul>
+  <li>参考：<a href="https://qiita.com/techneconn/items/cd8b7c5a973771d46489">TypeORMのmigrationで作成されるテーブル名をカスタマイズする - Qiita</a></li>
+  <li>参考：<a href="https://www.wakuwakubank.com/posts/730-typeorm-custom-naming/">TypeORM｜テーブル名、カラム名をカスタマイズ - わくわくBank</a></li>
+</ul>
+<h2 id="まとめ"><a class="header-link" href="#まとめ"><span class="header-link-mark"></span></a>まとめ</h2>
+<p>TypeORM に限らず、O/R マッパーを使う際は、バックエンドとなる DB の仕様もちゃんと意識しておかないと、やっぱりコケるところがありますね…。</p>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2020-07-20</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2020-07-20</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

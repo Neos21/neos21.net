@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>とある社内業務システムで起こったバグの話 3 - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2018/08/07-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2018/index.html">2018年</a></li>
+            <li><a href="/blog/2018/08/index.html">08月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2018-08-07</time></div>
+        <h1 id="page-title">とある社内業務システムで起こったバグの話 3</h1>
+
+<h2 id="前回までのあらすじ"><a class="header-link" href="#前回までのあらすじ"><span class="header-link-mark"></span></a>前回までのあらすじ</h2>
+<ul>
+  <li><a href="03-01.html">とある社内業務システムで起こったバグの話 1</a></li>
+  <li><a href="06-01.html">とある社内業務システムで起こったバグの話 2</a></li>
+</ul>
+<p>…</p>
+<ul>
+  <li>社内システム「マハーカーラ」を利用中、不定期に強制ログアウトさせられる不具合が発生する</li>
+  <li>原因は、ある利用者が見つけた「ログインボタンを連打するとマハーカーラの動作が速くなる」という「裏技」によるモノだった</li>
+  <li>しかし、ログインボタンの連打と、ログインユーザがログアウトさせられることの関係性が見つけられない</li>
+  <li>マハーカーラの開発ベンダが残した <code>ReallyPoorCompanyFramework.jar</code> に隠蔽されている処理が怪しい…</li>
+</ul>
+<h2 id="jar-ファイルをデコンパイルしたかった"><a class="header-link" href="#jar-ファイルをデコンパイルしたかった"><span class="header-link-mark"></span></a>JAR ファイルをデコンパイルしたかった</h2>
+<p>マハーカーラのソースコード中に怪しい点が見当たらないとなると、残るはマハーカーラのシステムをラップしている <code>ReallyPoorCompanyFramework.jar</code> の中身に疑いがかけられる。</p>
+<p>しかし、この JAR ファイルはマハーカーラの Java プロジェクトに埋め込まれた状態で引き継がれており、元のソースコードがなかったようなのだ。当時の引き継ぎ担当、何やってんだ…。</p>
+<p>JAR ファイルからソースコードを取得する方法がないか調べると、JD-GUI なる「デコンパイル」を行うツールが見つかった。なるほどデコンパイルとな。便利なツールもあるんだなぁ。しかし問題があり、このお客さんの会社は、ベンダはインターネットに接続できず、ツールをダウンロード・インストールすることは許可されていなかった。確かに、本番サーバを開発者のデスクから触れたらセキュリティリスクがあるし、それと同様で、開発者が好きにインターネットに接続できちゃうと、色んなウイルスを落としてくることは必至だし、自由にツールを入れさせたら<em>悪いことをするに決まっている</em>からね。僕のような悪知恵の働くエンジニアはきっと悪さをするはずだからね。信用しなくて正解だよ。</p>
+<p>システム主担当の中では、プログラム的な原因は分からないものの、ログインボタンの連打をしていた部署には一喝したし、もうほとんど再発していないことから、「終わった問題」と見られていたこともあり、「調査のためにデコンパイラをインストールさせてください」と申請しづらかった。「大体デコンパイラって何なの？」「コンパイル済みの JAR ファイルからソースコードを抽出・復元するツールのことですよ」「何ぃ！？そんな危険なことができるツールを入れさせるワケにはいかん！<em>ウイルスだろ！</em>」と突き返されることが明らかだった。</p>
+<h2 id="reallypoorcompanyframework-を掘り起こす"><a class="header-link" href="#reallypoorcompanyframework-を掘り起こす"><span class="header-link-mark"></span></a>ReallyPoorCompanyFramework を掘り起こす</h2>
+<p>そんな時、当初 ReallyPoorCompany 社からマハーカーラを引き継いだ先輩社員が、こんな一言を発した。</p>
+<p>「あれ？ ReallyPoorCompanyFramework のソースって見たことある気がするんだけど…」</p>
+<p>あー、はいはい、月報の提出が毎月遅れる、忘れっぽい先輩のことだから、どうせマハーカーラの <code>LoginAction</code> のコードでも思い出して、それを JAR ファイルの中身のコードだと勘違いしているんでしょう。そんな中途半端な記憶ならキッパリ忘れてしまって、代わりに来月の月報提出日をしっかり覚えておいたらいいのに。</p>
+<p>「確か本番サーバの中にあったんだよね」</p>
+<p>「もう少し詳しく思い出せます？」</p>
+<p>コイツは何か知っているようだった。</p>
+<p>「確かねぇ、引き継いだ直後ぐらいに本番サーバの中身を見てた時に見たんだよねぇ。本番作業の度に作業フォルダを作るじゃない？『<code>20140711_障害対応リリース作業</code>』なんて名前でさ、そのときリリースする WAR ファイルを置いたりするじゃん？あの作業フォルダの中で、JAR ファイルをビルドする前のコードが置いてあったんだよね」</p>
+<p>「いつ頃の作業フォルダか思い出せます？」</p>
+<p>「いやぁ〜分かんないなぁ〜…」</p>
+<p>ならば、と、本番稼動している AP サーバに接続して (もちろん忌々しい申請フローを回した上で！)、歴代の作業フォルダを見てみた。マハーカーラがリリースされた2005年の最初の作業フォルダは、「<code>20050329_本番作業</code>」というフォルダ名だった。コイツが本番サーバなんだから「本番作業」に決まっているだろう。他にも「パッチ作業」とか「修正対応」とか、中身が分からないフォルダ名が続く。目視確認を諦めた僕は、<code>ReallyPoorCompanyFramework</code> という文字列を含むファイルがないか grep した。</p>
+<p>しかし、見当たらない。先輩が消したのか？</p>
+<p>…いや、待て、いくら忘れっぽい先輩でも、それはなかろう。あの人はファイルの存在は覚えていたけど、ファイルの在処は忘れているんだ。ということは、AP サーバではない場所でファイルを見たのかも知れない。</p>
+<p>思い付いたのは、マハーカーラの DB サーバだった。マハーカーラは、Tomcat が動作する AP サーバと、Oracle DB が動作する DB サーバの2台が連携して動作していた。すぐさま DB サーバにアクセスする申請書を作ってやんややんやして、DB サーバの方にある作業フォルダを grep してみた。</p>
+<p>ビンゴ。2007年の<em>何かの対応</em>のときに、なぜか DB サーバ側に WAR ファイルを持ち込んでいた。そしてそれと一緒に、<code>ReallyPoorCompanyFramework.zip</code> があり、解凍されたらしき <code>ReallyPoorCompanyFramework</code> ディレクトリがあり、中には <code>.java</code> ファイルが転がっていて、これらをコンパイルしたと思われる <code>ReallyPoorCompanyFramework.jar</code> ファイルも見つかった。</p>
+<p>これらのファイルを個人の開発端末に持ち帰り、中身を検証してみたところ、確かにこの <code>.zip</code> を解凍したものが <code>ReallyPoorCompanyFramework</code> ディレクトリで、コイツから生成したのが、作業ディレクトリに置かれていた JAR ファイルだった。そしてこの JAR ファイルは、現在稼動しているマハーカーラが WAR ファイルに同梱している <code>ReallyPoorCompanyFramework.jar</code> と、全く同じモノであることが分かった。つまり、本番 DB サーバから掘り起こしたこの <code>ReallyPoorCompanyFramework.zip</code> の中にあるソースコードが、現在稼動しているマハーカーラに影響を与えているコードと一致するワケだ。</p>
+<p>早速、ソースコードを見てみた。</p>
+<h2 id="loginaction-用の特別な処理"><a class="header-link" href="#loginaction-用の特別な処理"><span class="header-link-mark"></span></a><code>LoginAction</code> 用の特別な処理</h2>
+<p><code>ReallyPoorCompanyFramework.zip</code> の中にある <code>ReallyPoorCompanyBaseAction</code> クラス (マハーカーラの全ての Action クラスが継承する親クラス) から、何やらかんやらコードを辿って調べてみると、こんなコードを見つけた。このコードは、各 Action クラスが実処理を開始する直前に、必ず呼び出されるコードとして実装されていた。</p>
+<pre class="language-java"><code class="language-java"><span class="token keyword">if</span><span class="token punctuation">(</span><span class="token string">"LoginAction"</span><span class="token punctuation">.</span><span class="token function">equals</span><span class="token punctuation">(</span>currentActionClassName<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token keyword">try</span> <span class="token punctuation">{</span>
+    <span class="token class-name">MasterUserBkService</span> masterUserBkService <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">MasterUserBkService</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    masterUserBkService<span class="token punctuation">.</span><span class="token function">delete</span><span class="token punctuation">(</span>request<span class="token punctuation">.</span><span class="token function">getParameter</span><span class="token punctuation">(</span><span class="token string">"userId"</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    masterUserBkService<span class="token punctuation">.</span><span class="token function">insert</span><span class="token punctuation">(</span>request<span class="token punctuation">.</span><span class="token function">getParameter</span><span class="token punctuation">(</span><span class="token string">"userId"</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  <span class="token keyword">catch</span><span class="token punctuation">(</span><span class="token class-name">Exception</span> e<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>コメントが一切ないコードなので、解説を付けよう。</p>
+<pre class="language-java"><code class="language-java"><span class="token comment">// これから実行される Action クラスが LoginAction である場合に処理を行う</span>
+<span class="token keyword">if</span><span class="token punctuation">(</span><span class="token string">"LoginAction"</span><span class="token punctuation">.</span><span class="token function">equals</span><span class="token punctuation">(</span>currentActionClassName<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token keyword">try</span> <span class="token punctuation">{</span>
+    <span class="token comment">// 「MasterUserBkService」は、マハーカーラのコードによく見られる命名規則で、</span>
+    <span class="token comment">// MASTER_USER_BK という名前の、マスタテーブルに対して DB 操作を行うためのサービスクラスのことだ</span>
+    <span class="token class-name">MasterUserBkService</span> masterUserBkService <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">MasterUserBkService</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    
+    <span class="token comment">// リクエストから "userId" パラメータを取得して、それを引数に MASTER_USER_BK テーブルに DELETE クエリを投げている</span>
+    masterUserBkService<span class="token punctuation">.</span><span class="token function">delete</span><span class="token punctuation">(</span>request<span class="token punctuation">.</span><span class="token function">getParameter</span><span class="token punctuation">(</span><span class="token string">"userId"</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    
+    <span class="token comment">// 同様に、MASTER_USER_BK テーブルに "userId" パラメータを INSERT しているようだ</span>
+    masterUserBkService<span class="token punctuation">.</span><span class="token function">insert</span><span class="token punctuation">(</span>request<span class="token punctuation">.</span><span class="token function">getParameter</span><span class="token punctuation">(</span><span class="token string">"userId"</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  <span class="token keyword">catch</span><span class="token punctuation">(</span><span class="token class-name">Exception</span> e<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token comment">// 悪名高き Pokemon Exception Handling だ！</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>なんと、各 Action クラスが継承する、その大元である<em>親クラスの方で、「その子クラスが特定の○○クラスだった場合のみ行う処理」を書いていた</em>のだ。今回は <code>LoginAction</code>、つまりログインボタン押下時に実行される Action クラスだった時に、<code>LoginAction</code> クラスに書いたコードの手前に、以上の処理を行っていたのだった。</p>
+<p>さらに、<code>MASTER_USER_BK</code> という名前のマスタテーブルに対し、<code>DELETE</code> と <code>INSERT</code> を実施していることも分かった。引数にはリクエストから <code>"userId"</code> パラメータを渡していて、どうやらこのマスタテーブルに対し、ユーザ ID 情報を登録しているようなのだ。</p>
+<p><code>MASTER_USER_BK</code> というマスタテーブルが本番 DB に存在することは把握していたが、他にも <code>BK</code> と名の付くテーブルは数多く存在し、そのどれもが DB パッチ作業時のバックアップとして作られた、テーブルのコピーの残骸だったのだ。しかしこの <code>MASTER_USER_BK</code> テーブルは、「BK (バックアップ)」と名付けておきながらそうしたバックアップ用のテーブルではなく、「MASTER (マスタ)」と名付けておきながらログインのたびに頻繁に DELETE や INSERT を行う、<em>バリバリ使われているテーブル</em>だったのだ。</p>
+<p><code>MASTER_USER_BK</code> テーブルのフィールドを見てみると、<code>USER_ID</code> (ユーザ ID)、<code>NUM</code> (何かの連番)、<code>LOGIN_DATE</code> (ログイン日時の情報) というフィールドが定義されていた。つまり、そのユーザがログインした日時を記録していたようである。</p>
+<p>コードを見ていると、さらにエグいモノが見つかった。<code>MasterUserBkService#delete()</code> メソッドは別の箇所でも使用されていて、<em>8時40分から8時50分の間に最初にログインをしようとしてきたユーザがいた時のみ、前日以前の <code>LOGIN_DATE</code> のレコードを全て削除する</em>という作りになっていた。</p>
+<p>8時40分というのは、マハーカーラを利用するお客さんの会社の始業時間のことだ。つまり、始業時間から10分以内にマハーカーラにログインした人がいたら、<strong>その人に日次バッチのトリガーとなってもらい</strong>、「前日分までの <code>MASTER_USER_BK</code> テーブルのデータ」を全て削除していたのだ。</p>
+<p>ログインユーザの ID を何故保存していたのかというと、各ページに遷移するタイミングで動作する共通処理の中で、<em>そのリクエストが「ログインしているユーザによるリクエストかどうか」</em>を確認するために使っていたようだった。つまり、<code>MASTER_USER_BK</code> に今日日付の <code>LOGIN_DATE</code> が登録されていない <code>USER_ID</code> からのリクエストで Action が動いたら、それは不正なアクセスだと判断して、ログイン画面に飛ばす作りになっていたのである。だから例えば、午前0時、日付をまたいだ時にマハーカーラを利用していたユーザがいたら、そのユーザは一度ログアウト扱いになってしまう、ということだ。日付をまたぐまで残業してマハーカーラを使う人が少なかったか、残業で疲弊していて、0時前後にマハーカーラからログアウトさせられたことに注意が向いていなかったか、理由は分からないが、そうした残業時間の長い人からの問合せはこれまでなかったので、気付かなかった。</p>
+<h2 id="master_user_bk-テーブルの更新タイミング"><a class="header-link" href="#master_user_bk-テーブルの更新タイミング"><span class="header-link-mark"></span></a><code>MASTER_USER_BK</code> テーブルの更新タイミング</h2>
+<p>段々混乱してきた。<code>MASTER_USER_BK</code> テーブルとは何であり、いつデータが登録され、いつ削除されるのか、もう一度まとめてみよう。</p>
+<ol>
+  <li><code>MASTER_USER_BK</code> テーブルは、ログインした日時とユーザ ID が記録されている。</li>
+  <li>ログインボタンを押した時に、<code>MASTER_USER_BK</code> テーブルに登録されている自分のユーザ ID のデータを DELETE している。自分の過去のログイン情報のレコードを消すためだ。</li>
+  <li>同じくログインボタンを押した時に、<code>MASTER_USER_BK</code> テーブルに自分のユーザ ID とログイン日時を登録している。連番はこのタイミングで雑に採番していて、特に使っていないようだった。</li>
+  <li>ログインしたユーザが画面遷移を行う度に、<code>MASTER_USER_BK</code> テーブルを SELECT し、そのユーザが今日ログインしていることを確認する。これにより不正アクセスを見極めるつもりだったようで、<strong><code>MASTER_USER_BK</code> テーブルからそのユーザの今日日付のログイン情報が見つからない場合はログイン画面にリダイレクトしている。</strong>要するにこれが「画面遷移時にログイン画面に戻された」動きを引き起こす処理だったワケだ。</li>
+  <li>始業時間直後に最初にログインしてきたユーザには、<code>MASTER_USER_BK</code> テーブルに溜まった前日分までの全てのデータを DELETE させる。「人力日次バッチ」と呼べなくもない仕組みだ。</li>
+</ol>
+<p>全体的には、<em><code>MASTER_USER_BK</code> テーブルはその日1日分のログインユーザの情報さえ残してあればよく、同一ユーザが複数回ログインした履歴や、前日までのログイン履歴の情報は残したくないがために、DELETE 処理を呼んでいた</em>ようである。</p>
+<p>いや〜しかし、<code>MASTER</code> や <code>BK</code> という紛らわしい名前もそうだし、「毎朝1名様に当たる人力日次バッチ」処理も、とにかく乱暴で無茶苦茶だ。横着しようとして面倒なことになっている。どういう設計をしたらこうなるんだろう？いや、アプリログは日付ローテで吐き続けているだけだし、<strong>設計なんてしてなかった</strong>んだろうな。</p>
+<p>さて、これらの更新処理の中身をもう少し詳しく見ていこう。</p>
+<h2 id="master_user_bk-テーブルを-delete-する-sql"><a class="header-link" href="#master_user_bk-テーブルを-delete-する-sql"><span class="header-link-mark"></span></a><code>MASTER_USER_BK</code> テーブルを DELETE する SQL</h2>
+<p>上述のように、<code>MASTER_USER_BK</code> テーブルにはログインしたタイミングでのユーザ情報が INSERT される作りになっていて、これを放っておくと、<code>MASTER_USER_BK</code> テーブルは膨大なレコードを抱えることになる (要はログイン履歴テーブルの状態だ)。そこで、先程掲載したコードのように、ログイン処理時に <code>MASTER_USER_BK</code> テーブルから自分のユーザ ID に合致するレコードを一旦 DELETE し、その後で INSERT を実施している。</p>
+<p>この DELETE 処理が怪しそうなので、<code>MasterUserBkService#delete()</code> の中身を見てみよう。</p>
+<pre class="language-java"><code class="language-java"><span class="token comment">// MASTER_USER_BK テーブルを CRUD 操作するエンティティクラス</span>
+<span class="token keyword">class</span> <span class="token class-name">MasterUserBkService</span> <span class="token punctuation">{</span>
+  <span class="token comment">// delete() メソッドのみ抜粋して掲載</span>
+  <span class="token keyword">public</span> <span class="token keyword">void</span> <span class="token function">delete</span><span class="token punctuation">(</span><span class="token class-name">String</span> paramStr<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token keyword">try</span> <span class="token punctuation">{</span>
+      <span class="token comment">// SQL 文の構築</span>
+      <span class="token class-name">String</span> sql <span class="token operator">=</span> <span class="token string">"DELETE FROM MASTER_USER_BK "</span><span class="token punctuation">;</span>
+      
+      <span class="token comment">// 引数 paramStr が6文字だった場合、引数をユーザ ID と見なし、USER_ID との完全一致で絞り込む</span>
+      <span class="token keyword">if</span><span class="token punctuation">(</span>paramStr<span class="token punctuation">.</span><span class="token function">length</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">==</span> <span class="token number">6</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        sql <span class="token operator">+=</span> <span class="token string">"WHERE USER_ID = '"</span> <span class="token operator">+</span> paramStr <span class="token operator">+</span> <span class="token string">"'"</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span>
+      
+      <span class="token comment">// 引数 paramStr が8文字だった場合、引数を日付情報 (yyyyMMdd) と見なし、ログイン日付が古いデータを絞り込む</span>
+      <span class="token keyword">if</span><span class="token punctuation">(</span>paramStr<span class="token punctuation">.</span><span class="token function">length</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">==</span> <span class="token number">8</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        sql <span class="token operator">+=</span> <span class="token string">"WHERE LOGIN_DATE &#x3C; '"</span> <span class="token operator">+</span> paramStr <span class="token operator">+</span> <span class="token string">"'"</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span>
+      
+      <span class="token comment">// オレオレフレームワークが持っている DB 実行ユーティリティクラスを利用して SQL を実行する</span>
+      <span class="token class-name">ReallyPoorCompanyDBUil</span><span class="token punctuation">.</span><span class="token function">executeQuery</span><span class="token punctuation">(</span>sql<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+    <span class="token keyword">catch</span><span class="token punctuation">(</span><span class="token class-name">Exception</span> e<span class="token punctuation">)</span> <span class="token punctuation">{</span> <span class="token comment">/* 当然のようにエラーは握り潰す */</span> <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>処理全体を乱暴に囲み、エラーを握り潰す <code>try / catch</code> にはもはや何も感じなくなった。</p>
+<p>引数の文字列の長さに応じて、<code>WHERE</code> 句で絞り込むフィールドを振り分けるという恐ろしい実装になっている。</p>
+<p>前述の更新タイミングの「2.」、ログイン時にそのユーザの古い情報を削除する場合は、1つ目の <code>if</code> 文を通り、SQL 文を構築する。ユーザ ID は必ず6桁なので、こういう <code>if</code> 文になっている。コレで <code>USER_ID</code> カラムを条件にして、</p>
+<pre class="language-sql"><code class="language-sql"><span class="token keyword">DELETE</span> <span class="token keyword">FROM</span> MASTER_USER_BK <span class="token keyword">WHERE</span> USER_ID <span class="token operator">=</span> <span class="token string">'999999'</span><span class="token punctuation">;</span>
+</code></pre>
+<p>といった SQL が生成されるワケだ。</p>
+<p>一方、前述の更新タイミングの「5.」、始業時間直後にログインしたユーザに日次バッチのような処理を行わせる時は、2つ目の <code>if</code> 文を通り、</p>
+<pre class="language-sql"><code class="language-sql"><span class="token keyword">DELETE</span> <span class="token keyword">FROM</span> MASTER_USER_BK <span class="token keyword">WHERE</span> LOGIN_DATE <span class="token operator">&#x3C;</span> <span class="token string">'20150711'</span><span class="token punctuation">;</span>
+</code></pre>
+<p>といった SQL を生成する。日付 (DATE) 型のカラムだが、Oracle DB の暗黙的な型変換を利用して比較していたようだ。</p>
+<p>PreparedStatement を使わず引数を直接 SQL 文字列に組み込んでいるとか、スメルを感じる部分はあるものの、これならとりあえず意図したとおりに動きそうな気がする。</p>
+<p>一旦このコードから頭を離して、「なぜログアウトさせられる人が生まれるか」を考え直そう。</p>
+<h2 id="「強制ログアウトされた」ではなく、「ログインしていない」とみなされている？"><a class="header-link" href="#「強制ログアウトされた」ではなく、「ログインしていない」とみなされている？"><span class="header-link-mark"></span></a>「強制ログアウトされた」ではなく、「ログインしていない」とみなされている？</h2>
+<p>「<code>MASTER_USER_BK</code> テーブルに、そのユーザ ID がその日にログインしたレコードがない場合に、不正アクセスと見なしてログイン画面にリダイレクトする」という動きが、ログイン画面にいきなり戻される「強制ログアウト」を引き起こしていたことは分かった。</p>
+<p>しかし、なぜログインボタンを連打する人がいると、<code>MASTER_USER_BK</code> テーブルの関係ないユーザ ID のレコードまで削除されてしまうのだろうか。<code>MASTER_USER_BK</code> テーブルの <code>DELETE</code> 処理の時に何かが起こったとして、どういう状態になると、「ログインしていた人たちがログアウトさせられる」だろうか。</p>
+<p>例えば、「5.」の、前日分のデータを DELETE する「人力日次バッチ処理」において、パラメータに取る日付が何らかの理由でズレて、今日日付のレコード (≒ 今ログインしている人たち) まで削除する SQL が生まれたとしたら？</p>
+<pre class="language-sql"><code class="language-sql"><span class="token comment"># 「2015年7月11日」の始業時に削除すべきなのは、7月10日以前のデータなので、本来は「LOGIN_DATE &#x3C; '20150711'」となるべきだが、</span>
+<span class="token comment"># もしもパラメータの日付が1日後にズレたとしたら、7月11日のデータも削除されることになる</span>
+<span class="token keyword">DELETE</span> <span class="token keyword">FROM</span> MASTER_USER_BK <span class="token keyword">WHERE</span> LOGIN_DATE <span class="token operator">&#x3C;</span> <span class="token string">'20150712'</span><span class="token punctuation">;</span>
+</code></pre>
+<p>ログイン処理が動作している時刻が始業時間直後、8時40分から8時50分の間かどうかを検証する際に参照しているのは、この Java プログラムが配置されている AP サーバのシステム時刻だ。つまり、何かの拍子にシステム時刻が翌日の8時45分にズレたら、なんでもない日中にログインしようとした人によって、「早朝の人力日次バッチ処理」が動作することになる。</p>
+<p>この誤動作が起こったとして、<strong><code>MASTER_USER_BK</code> テーブルのレコードが削除されると、前述の「4.」のタイミング、つまり画面遷移時に必ず走る「不正アクセスチェック」時に、<code>MASTER_USER_BK</code> テーブルからログインユーザの情報が取得できず、不正アクセスとみなされてログイン画面に戻される</strong>という動きが起こりうるのだ。</p>
+<p>しかし、システム時刻がズレることは考えにくい。事実、同じシステム時刻を参照して出力しているログファイルの方は、時分秒にズレがなく、正確に出力されていた。ということは、「人力日次バッチ」向けに呼び出された <code>MasterUserBkService#delete()</code> メソッドが誤作動したとは考えにくい。</p>
+<h2 id="全てのユーザを対象にログイン履歴を削除した？"><a class="header-link" href="#全てのユーザを対象にログイン履歴を削除した？"><span class="header-link-mark"></span></a>全てのユーザを対象にログイン履歴を削除した？</h2>
+<p><code>MasterUserBkService#delete()</code> の誤作動によって、ログイン中のユーザのレコードまで削除される他の方法というと、ログイン時に自身の過去のレコードを削除しようとしている箇所がおかしな動きをした可能性が考えられる。</p>
+<p>つまり、</p>
+<pre class="language-sql"><code class="language-sql"><span class="token keyword">DELETE</span> <span class="token keyword">FROM</span> MASTER_USER_BK <span class="token keyword">WHERE</span> USER_ID <span class="token operator">&#x3C;></span> <span class="token string">'999999'</span><span class="token punctuation">;</span>
+</code></pre>
+<p>もしこんな SQL が発行されたとしたら、<code>USER_ID</code> が <code>'999999'</code> 以外のレコードが全て削除されることになる。</p>
+<p>しかし、前述の Java コードを見ても、<code>USER_ID</code> の絞込条件は <code>=</code>、つまり完全一致でベタ書きされているので、複数のユーザ ID のレコードをヒットさせて削除する方法は考えにくいのだ。</p>
+<p>…長くなってきた。今回はココマデ。</p>
+<h2 id="次回予告"><a class="header-link" href="#次回予告"><span class="header-link-mark"></span></a>次回予告</h2>
+<ul>
+  <li>推測を止めて観測する</li>
+  <li>デバッグログから発覚した衝撃の事実</li>
+</ul>
+<p>→ <a href="08-01.html">とある社内業務システムで起こったバグの話 4</a></p>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2018-08-07</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2018-08-07</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

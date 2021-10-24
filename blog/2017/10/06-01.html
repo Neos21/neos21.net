@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>cordova-plugin-bluetoothle を使って iOS 同士で Bluetooth 通信する Cordova アプリを作る : 1 仕組み・準備編 - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2017/10/06-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2017/index.html">2017年</a></li>
+            <li><a href="/blog/2017/10/index.html">10月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2017-10-06</time></div>
+        <h1 id="page-title">cordova-plugin-bluetoothle を使って iOS 同士で Bluetooth 通信する Cordova アプリを作る : 1 仕組み・準備編</h1>
+
+<p>以前 cordova-plugin-bluetooth-serial という Cordova プラグインを紹介した。</p>
+<ul>
+  <li><a href="/blog/2017/08/02-02.html">Cordova アプリで Bluetooth 通信ができる cordova-plugin-bluetooth-serial を試した</a></li>
+</ul>
+<p>この時は Bluetooth 通信の仕組みがよく分かっていなかったのでプラグインが使えていなかったが、今回紹介する <strong>cordova-plugin-bluetoothle</strong> を使うと、iOS デバイス同士で Bluetooth 通信が行える Cordova アプリを作ることができる。</p>
+<ul>
+  <li><a href="https://github.com/randdusing/cordova-plugin-bluetoothle">GitHub - randdusing/cordova-plugin-bluetoothle: Bluetooth Low Energy Phonegap Plugin</a></li>
+</ul>
+<h2 id="bluetooth-通信の仕組み"><a class="header-link" href="#bluetooth-通信の仕組み"><span class="header-link-mark"></span></a>Bluetooth 通信の仕組み</h2>
+<p>そもそも Bluetooth 通信の仕組みを勘違いしていたので、そこからおさらいする。</p>
+<p>普段自分たちが使っている Bluetooth 通信の感覚からすると、1対1で対等に通信していると考えがちだが、実は<em>「ペリフェラル」という役割と「セントラル」という役割に別れて、サーバとクライアントのような関係で通信を行っている</em>。</p>
+<p>ペリフェラルはサーバ側。クライアントであるセントラルを待ち受けており、セントラルからの要求に応答する形でやり取りを行う。</p>
+<p>例えば、iPhone で Bluetooth 接続する場合を考えてみる。iPhone の「設定」アプリから「Bluetooth」メニューを選ぶと、接続できる Bluetooth デバイスが一覧表示されるが、ここに表示されている端末が「ペリフェラル」である。<br>サーバであるペリフェラルは自分から相手に接続しに行くことはなく、自分が存在していることを周辺に示す「アドバタイジング」という信号を発信して待機しているだけなのである。ペリフェラルが発信するアドバタイジングを取得し、接続可能なデバイスとして表示しているのが「設定」の「Bluetooth」画面、といえる。</p>
+<p>ここで特定の Bluetooth デバイスを選択し、通信が開始するので、iPhone 側は「セントラル」、クライアントとして接続していることになる。</p>
+<p>例えば、ゲームのコントローラが Bluetooth 接続できる場合を考えると、パソコン本体からゲームのコントローラを特定しに行く。つまりパソコン本体がセントラルで、ゲームコントローラがペリフェラルなのである。</p>
+<p>cordova-plugin-ble-central プラグインの <em>Central</em> とはこのことで、iOS がセントラル端末として動作するための実装を提供するプラグインだったワケである。つまり、ペリフェラル端末としての実装はなく、それは別途用意する必要があったのだ。クライアント側だけ実装してもそりゃ接続先がないから通信なんかできないよね、と…。</p>
+<p>さて、<em>cordova-plugin-bluetoothle</em> プラグインは、このペリフェラルとセントラルの両方の役割をこなせるよう、両方の実装が用意されている。つまり iPhone 同士で片方がペリフェラル、もう片方がセントラルとなって通信ができるワケである。</p>
+<ul>
+  <li>参考：<a href="https://gist.github.com/PhilOwen/822202081d278ee07c286d1697eca58c">https://gist.github.com/PhilOwen/822202081d278ee07c286d1697eca58c</a></li>
+</ul>
+<h2 id="bluetooth-low-energy"><a class="header-link" href="#bluetooth-low-energy"><span class="header-link-mark"></span></a>Bluetooth Low Energy</h2>
+<p>これは Bluetooth 通信の規格の話で、iOS の場合は Bluetooth 4.0、通称「Bluetooth Low Energy」という規格で通信する。今回は iPhone 同士でペリフェラルもセントラルもやろうとしているが、例えば既存の Bluetooth デバイスに向けて iPhone から接続しようとする場合は、対象のデバイスが Bluetooth Low Energy 規格で通信できないといけない。最近は大体対応しているので心配要らないとは思うが…。</p>
+<p>この Bluetooth Low Energy の頭文字を取って <em>BLE</em> と言ったりする。cordova-plugin-ble-central の BLE とか、cordova-plugin-bluetoothle の BluetoothLE とかが、この Low Energy の意味である。</p>
+<p>この他、Bluetooth 接続の中で「サービス」「キャラクタリスティック」「ディスクリプタ」とかいう単語が出てくるが、別途紹介していく。</p>
+<h2 id="今回の実装方針"><a class="header-link" href="#今回の実装方針"><span class="header-link-mark"></span></a>今回の実装方針</h2>
+<p>今回は Cordova アプリとして iOS 同士の Bluetooth 通信を実現しようと思うので、実装に使う言語は基本的に JavaScript のみ。</p>
+<p>cordova-plugin-bluetoothle プラグインはそのまま使うとコールバック地獄に陥りやすいので、各 API を Promise 化して使おうと思う。そのため、ES2015 もしくは TypeScript あたりを使うと良い。今回は Angular4 系を使って実装しようと思う。Ionic Native プラグインがないので、Promise 化は手作業になる。</p>
+<p>Angular4・TypeScript を使うが、特定のフレームワークに依存した実装にはならないので、応用が利くと思う。</p>
+<p>対象とするモバイルの OS は iOS のみ。Android も対応しているプラグインなので、参考にはなると思う。</p>
+<h2 id="雛形プロジェクトの用意・cordova-plugin-bluetoothle-のインストール"><a class="header-link" href="#雛形プロジェクトの用意・cordova-plugin-bluetoothle-のインストール"><span class="header-link-mark"></span></a>雛形プロジェクトの用意・cordova-plugin-bluetoothle のインストール</h2>
+<p>それでは、まず Angular4 + Cordova なアプリの雛形を用意する。以下に拙作の <strong>angular-cordova</strong> ボイラープレートを置いておくので、こちらをベースにしていただけると良いだろう。</p>
+<ul>
+  <li><a href="https://github.com/Neos21/boilerplate-angular-cordova">GitHub - Neos21/angular-cordova: Angular + Cordova iOS App Boilerplate</a></li>
+</ul>
+<p>次にプロジェクトに cordova-plugin-bluetoothle プラグインをインストールする。</p>
+<pre class="language-bash"><code class="language-bash">$ cordova plugin <span class="token function">add</span> cordova-plugin-bluetoothle
+</code></pre>
+<p>インストールに際して特に設定は要らない。</p>
+<hr>
+<p>これでプロジェクトの準備ができた。次回はペリフェラル側の実装を行おうと思う。</p>
+<ul>
+  <li><a href="/blog/2017/10/11-01.html">cordova-plugin-bluetoothle を使って iOS 同士で Bluetooth 通信する Cordova アプリを作る : 2 ペリフェラル編 (前編)</a></li>
+</ul>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2017-10-06</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2017-10-06</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>iOS アプリで動画撮影する際手ブレ補正を効かせる Swift コード - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2021/05/27-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2021/index.html">2021年</a></li>
+            <li><a href="/blog/2021/05/index.html">05月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2021-05-27</time></div>
+        <h1 id="page-title">iOS アプリで動画撮影する際手ブレ補正を効かせる Swift コード</h1>
+
+<p>過去2回、<em>AVFoundation</em> を利用して動画を撮影する iOS アプリを実装するための Swift コードの断片を紹介した。</p>
+<ul>
+  <li>過去記事：<a href="/blog/2018/06/04-01.html">iOS アプリで 120fps・240fps のスローモーション動画を撮るための Swift 4 実装</a></li>
+  <li>過去記事：<a href="/blog/2019/01/11-02.html">撮影した動画ファイルを iOS アプリ内に保存し、任意のタイミングでフォトライブラリに書き出す Swift コード</a></li>
+</ul>
+<p>その中で調査したことで書いていなかったことがあったので、今回久々に紹介。Swift 4 以降で、iOS 13・14 の iPhone 11 Pro Max にて検証した。</p>
+<p>今回紹介するのは、動画撮影時の<em>「手ブレ補正」</em>の指定を行う方法。<code>AVCaptureVideoStabilizationMode</code> という項目があるので、コレを指定してやると「映画レベルのビデオ手ブレ補正」を有効にできる。前回の記事で紹介したコード片のうち、動画を録画する処理の前段で指定してやる。</p>
+<ul>
+  <li><code>ViewController.swift</code></li>
+</ul>
+<pre class="language-swift"><code class="language-swift"><span class="token keyword">import</span> <span class="token builtin">UIKit</span>
+<span class="token keyword">import</span> <span class="token builtin">AVFoundation</span>
+<span class="token keyword">import</span> <span class="token builtin">Photos</span>
+
+<span class="token keyword">class</span> <span class="token class-name">ViewController</span><span class="token punctuation">:</span> <span class="token builtin">UIViewController</span><span class="token punctuation">,</span> <span class="token builtin">AVCaptureFileOutputRecordingDelegate</span> <span class="token punctuation">{</span>
+  <span class="token comment">/// セッション</span>
+  <span class="token keyword">var</span> session<span class="token punctuation">:</span> <span class="token builtin">AVCaptureSession</span><span class="token operator">!</span>
+  <span class="token comment">/// ビデオデバイス</span>
+  <span class="token keyword">var</span> videoDevice<span class="token punctuation">:</span> <span class="token builtin">AVCaptureDevice</span><span class="token operator">!</span>
+  <span class="token comment">/// オーディオデバイス</span>
+  <span class="token keyword">var</span> audioDevice<span class="token punctuation">:</span> <span class="token builtin">AVCaptureDevice</span><span class="token operator">!</span>
+  <span class="token comment">/// ファイル出力</span>
+  <span class="token keyword">var</span> fileOutput<span class="token punctuation">:</span> <span class="token builtin">AVCaptureMovieFileOutput</span><span class="token operator">!</span>
+  
+  <span class="token comment">// …… (中略) ……</span>
+  
+  <span class="token comment">/// 録画を開始する : ボタンからこの関数を呼び出してあげる</span>
+  <span class="token keyword">private</span> <span class="token keyword">func</span> <span class="token function">startRecording</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token comment">// Documents ディレクトリ直下にファイルを生成する</span>
+    <span class="token keyword">let</span> paths <span class="token operator">=</span> <span class="token function">NSSearchPathForDirectoriesInDomains</span><span class="token punctuation">(</span><span class="token punctuation">.</span>documentDirectory<span class="token punctuation">,</span> <span class="token punctuation">.</span>userDomainMask<span class="token punctuation">,</span> <span class="token boolean">true</span><span class="token punctuation">)</span>
+    <span class="token keyword">let</span> documentsDirectory <span class="token operator">=</span> paths<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span> <span class="token keyword">as</span> <span class="token builtin">String</span>
+    
+    <span class="token comment">// 現在時刻をファイル名に付与することでファイル重複を防ぐ : "myvideo-20190101125900999.mp4" な形式になる</span>
+    <span class="token keyword">let</span> formatter <span class="token operator">=</span> <span class="token function">DateFormatter</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+    formatter<span class="token punctuation">.</span>dateFormat <span class="token operator">=</span> <span class="token string">"yyyyMMddHHmmssSSS"</span>
+    <span class="token keyword">let</span> filePath<span class="token punctuation">:</span> <span class="token builtin">String</span><span class="token operator">?</span> <span class="token operator">=</span> <span class="token string">"<span class="token interpolation"><span class="token delimiter variable">\(</span>documentsDirectory<span class="token delimiter variable">)</span></span>/myvideo-<span class="token interpolation"><span class="token delimiter variable">\(</span>formatter<span class="token punctuation">.</span><span class="token function">string</span><span class="token punctuation">(</span>from<span class="token punctuation">:</span> <span class="token function">Date</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token delimiter variable">)</span></span>).mp4"</span>
+    <span class="token keyword">let</span> fileURL <span class="token operator">=</span> <span class="token function">NSURL</span><span class="token punctuation">(</span>fileURLWithPath<span class="token punctuation">:</span> filePath<span class="token operator">!</span><span class="token punctuation">)</span>
+    
+    <span class="token comment">// 今回追加したコード : 「ビデオ手ブレ補正」がサポートされているかどうか確認する</span>
+    <span class="token keyword">if</span><span class="token punctuation">(</span>fileOutput<span class="token punctuation">.</span><span class="token function">connection</span><span class="token punctuation">(</span>with<span class="token punctuation">:</span> <span class="token builtin">AVMediaType</span><span class="token punctuation">.</span>video<span class="token punctuation">)</span><span class="token operator">?</span><span class="token punctuation">.</span>isVideoStabilizationSupported<span class="token punctuation">)</span><span class="token operator">!</span> <span class="token punctuation">{</span>
+      <span class="token keyword">if</span> #<span class="token function">available</span><span class="token punctuation">(</span>iOS <span class="token number">13.0</span><span class="token punctuation">,</span> <span class="token operator">*</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        <span class="token comment">// iOS v13 以降だと「cinematicExtended」というさらなる手ブレ補正モードが存在する</span>
+        fileOutput<span class="token punctuation">.</span><span class="token function">connection</span><span class="token punctuation">(</span>with<span class="token punctuation">:</span> <span class="token builtin">AVMediaType</span><span class="token punctuation">.</span>video<span class="token punctuation">)</span><span class="token operator">?</span><span class="token punctuation">.</span>preferredVideoStabilizationMode <span class="token operator">=</span> <span class="token builtin">AVCaptureVideoStabilizationMode</span><span class="token punctuation">.</span>cinematicExtended
+      <span class="token punctuation">}</span> <span class="token keyword">else</span> <span class="token punctuation">{</span>
+        <span class="token comment">// そうでなければ「cinematic」モードを指定する</span>
+        fileOutput<span class="token punctuation">.</span><span class="token function">connection</span><span class="token punctuation">(</span>with<span class="token punctuation">:</span> <span class="token builtin">AVMediaType</span><span class="token punctuation">.</span>video<span class="token punctuation">)</span><span class="token operator">?</span><span class="token punctuation">.</span>preferredVideoStabilizationMode <span class="token operator">=</span> <span class="token builtin">AVCaptureVideoStabilizationMode</span><span class="token punctuation">.</span>cinematic
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span>
+    
+    <span class="token function">print</span><span class="token punctuation">(</span><span class="token string">"録画開始 : <span class="token interpolation"><span class="token delimiter variable">\(</span>filePath<span class="token operator">!</span><span class="token delimiter variable">)</span></span>"</span><span class="token punctuation">)</span>
+    fileOutput<span class="token operator">?</span><span class="token punctuation">.</span><span class="token function">startRecording</span><span class="token punctuation">(</span>to<span class="token punctuation">:</span> fileURL <span class="token keyword">as</span> <span class="token constant">URL</span><span class="token punctuation">,</span> recordingDelegate<span class="token punctuation">:</span> <span class="token keyword">self</span><span class="token punctuation">)</span>
+    <span class="token comment">// XXX : あとココでプレビュー表示とか…</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p><code>isVideoStabilizationSupported</code> で手ブレ補正がサポートされているか確認し、<code>preferredVideoStabilizationMode</code> にモードを指定してやる。通常手ブレ補正というと <code>AVCaptureVideoStabilizationMode.cinematic</code> を指定すれば良いが、iOS 13 以降・iPhone 11 Pro 辺りの機種からは、<code>AVCaptureVideoStabilizationMode.cinematicExtended</code> というさらに強力な手ブレ補正モードが選択できる。</p>
+<ul>
+  <li>次記事：<a href="/blog/2021/05/28-01.html">iOS アプリで動画撮影する際オートフォーカスモードを指定する Swift コード</a></li>
+</ul>
+<hr>
+<ul>
+  <li>参考：<a href="https://developer.apple.com/documentation/avfoundation/avcapturevideostabilizationmode">AVCaptureVideoStabilizationMode | Apple Developer Documentation</a></li>
+  <li>参考：<a href="https://gist.github.com/kazz12211/3c8b7aa4c05260298130ba89dde2b22a">AVCaptureVideoOutputDataを使ってキャプチャーしたビデオに文字を合成する方法 (iOS &#x26; Swift)</a></li>
+</ul><div class="ad-amazon">
+  <div class="ad-amazon-image">
+    <a href="https://www.amazon.co.jp/dp/B08KWQ34WF?tag=neos21-22&amp;linkCode=osi&amp;th=1&amp;psc=1">
+      <img src="https://m.media-amazon.com/images/I/51fOBZJHdjL._SL160_.jpg" width="121" height="160">
+    </a>
+  </div>
+  <div class="ad-amazon-info">
+    <div class="ad-amazon-title">
+      <a href="https://www.amazon.co.jp/dp/B08KWQ34WF?tag=neos21-22&amp;linkCode=osi&amp;th=1&amp;psc=1">Programming iOS 14: Dive Deep into Views, View Controllers, and Frameworks (English Edition)</a>
+    </div>
+  </div>
+</div>
+<div class="ad-amazon">
+  <div class="ad-amazon-image">
+    <a href="https://www.amazon.co.jp/dp/0596154054?tag=neos21-22&amp;linkCode=osi&amp;th=1&amp;psc=1">
+      <img src="https://m.media-amazon.com/images/I/41TUxAS++yL._SL160_.jpg" width="123" height="160">
+    </a>
+  </div>
+  <div class="ad-amazon-info">
+    <div class="ad-amazon-title">
+      <a href="https://www.amazon.co.jp/dp/0596154054?tag=neos21-22&amp;linkCode=osi&amp;th=1&amp;psc=1">iPhone SDK Application Development: Building Applications for the AppStore</a>
+    </div>
+  </div>
+</div>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2021-05-27</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2021-05-27</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

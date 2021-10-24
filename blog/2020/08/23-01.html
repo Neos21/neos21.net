@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>リポジトリの変更を Glitch に転送する GitHub Actions - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2020/08/23-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2020/index.html">2020年</a></li>
+            <li><a href="/blog/2020/08/index.html">08月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2020-08-23</time></div>
+        <h1 id="page-title">リポジトリの変更を Glitch に転送する GitHub Actions</h1>
+
+<p><em>Glitch</em> という、Node.js アプリが動かせる Heroku みたいな PaaS がある。</p>
+<p>Glitch は GitHub リポジトリからのインポート、および GitHub へのエクスポートは出来るが、自動的な同期には対応していない。</p>
+<p>そこで、GitHub リポジトリへの Push をトリガーに、Glitch へ資材を自動転送する GitHub Actions を作った。</p>
+<p>事前準備が若干複雑なので紹介。</p>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#glitch-%E3%81%AE%E3%83%97%E3%83%AD%E3%82%B8%E3%82%A7%E3%82%AF%E3%83%88-id-%E3%81%A8-auth-token-%E3%82%92%E5%8F%96%E5%BE%97%E3%81%99%E3%82%8B">Glitch のプロジェクト ID と Auth Token を取得する</a></li>
+  <li><a href="#github-actions-workflow-%E3%82%92%E5%AE%9F%E8%A3%85%E3%81%99%E3%82%8B">GitHub Actions Workflow を実装する</a></li>
+</ul>
+<h2 id="glitch-のプロジェクト-id-と-auth-token-を取得する"><a class="header-link" href="#glitch-のプロジェクト-id-と-auth-token-を取得する"><span class="header-link-mark"></span></a>Glitch のプロジェクト ID と Auth Token を取得する</h2>
+<p>Glitch への同期を行う際、Glitch API という API を使用するのだが、その時に<em>「プロジェクト ID」</em>と<strong>「Auth Token」</strong>が必要になる。</p>
+<p>Glitch API はドキュメントが公開されておらず、トークンなどの情報についても一般的には取得できないので、少し特殊な操作が必要になる。</p>
+<p>まず Glitch のアプリ画面に移動したら、左下の「Tools」を選択し、「Import and Export」から「Import from GitHub」を選ぶ。</p>
+<p>GitHub のユーザ名とリポジトリ名を入力し、GitHub 連携と資材のインポートができたところで、<strong>ブラウザの開発者ツールを開く。</strong></p>
+<p>Chrome の場合、開発者ツールの「Application」タブから「Local Storage」を開き、次のキーを見ていく。</p>
+<ul>
+  <li>プロジェクト ID : <code>editor.user.XXXXX.recentFiles</code>
+    <ul>
+      <li>配下にある <code>projectId</code> キーの値</li>
+    </ul>
+  </li>
+</ul>
+<p>
+  <img src="23-01-01.png" alt="ココから抜く">
+</p>
+<ul>
+  <li>Auth Token : <code>cachedUser</code>
+    <ul>
+      <li><code>persistentToken</code> キーの値</li>
+    </ul>
+  </li>
+</ul>
+<p>
+  <img src="23-01-02.png" alt="ココにある">
+</p>
+<p>これらを控えたら、それぞれ GitHub の Secret に登録する。</p>
+<ul>
+  <li>参考：<a href="https://github.com/jarvis394/glitch-api">GitHub - jarvis394/glitch-api: Library for using Glitch API ⚙️</a></li>
+  <li>参考：<a href="https://support.glitch.com/t/how-can-i-find-glitch-api-project-id-and-token/16901/5">How Can I Find Glitch API Project ID And Token - Glitch Help - Glitch Support</a></li>
+</ul>
+<h2 id="github-actions-workflow-を実装する"><a class="header-link" href="#github-actions-workflow-を実装する"><span class="header-link-mark"></span></a>GitHub Actions Workflow を実装する</h2>
+<p>ワークフローは単純な作りだ。次のとおり。</p>
+<ul>
+  <li><code>./.github/workflows/deploy-to-glitch.yaml</code></li>
+</ul>
+<pre class="language-yaml"><code class="language-yaml"><span class="token key atrule">name</span><span class="token punctuation">:</span> Deploy To Glitch
+<span class="token key atrule">on</span><span class="token punctuation">:</span>
+  <span class="token key atrule">push</span><span class="token punctuation">:</span>
+    <span class="token key atrule">branches</span><span class="token punctuation">:</span>
+      <span class="token punctuation">-</span> master
+    <span class="token key atrule">workflow_dispatch</span><span class="token punctuation">:</span>
+<span class="token key atrule">jobs</span><span class="token punctuation">:</span>
+  <span class="token key atrule">deploy</span><span class="token punctuation">:</span>
+    <span class="token key atrule">runs-on</span><span class="token punctuation">:</span> ubuntu<span class="token punctuation">-</span>latest
+    <span class="token key atrule">steps</span><span class="token punctuation">:</span>
+      <span class="token punctuation">-</span> <span class="token key atrule">name</span><span class="token punctuation">:</span> Deploy To Glitch
+        <span class="token key atrule">uses</span><span class="token punctuation">:</span> kanadgupta/glitch<span class="token punctuation">-</span>sync@master
+        <span class="token key atrule">with</span><span class="token punctuation">:</span>
+          <span class="token key atrule">project-id</span><span class="token punctuation">:</span> <span class="token string">'${{ secrets.PROJECT_ID }}'</span>
+          <span class="token key atrule">auth-token</span><span class="token punctuation">:</span> <span class="token string">'${{ secrets.AUTH_TOKEN }}'</span>
+</code></pre>
+<p>コレで master ブランチへの Push 時に Glitch へ資材が自動転送される。</p>
+<p>以上。</p>
+<ul>
+  <li>参考：<a href="https://github.com/marketplace/actions/glitch-project-sync">Glitch Project Sync · Actions · GitHub Marketplace · GitHub</a></li>
+</ul>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2020-08-23</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2020-08-23</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

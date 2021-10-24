@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>OCI ことはじめ : OCIR に Push した Docker イメージを OKE クラスタ上で動かしてブラウザからアクセスするまで - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2019/03/28-02.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2019/index.html">2019年</a></li>
+            <li><a href="/blog/2019/03/index.html">03月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2019-03-28</time></div>
+        <h1 id="page-title">OCI ことはじめ : OCIR に Push した Docker イメージを OKE クラスタ上で動かしてブラウザからアクセスするまで</h1>
+
+<p><strong>OCI : Oracle Cloud Infrastructure</strong> という IaaS を使ってみる。OCI には <em>OCIR : Oracle Cloud Infrastructure Registry</em> と呼ばれるプライベート Docker レジストリと、<em>OKE : Oracle Container Engine for Kubernetes</em> という Kubernetes マネージド・サービスが提供されているので、DockerHub には Push したくないプライベートな Docker イメージを置いておけるし、その Docker イメージを使って Kubernetes クラスタに Pod をデプロイしたりできる。</p>
+<p>今回はこの OCI が提供する OKE と OCIR を活用して、最終的にブラウザからアクセスできる Web サーバを立ち上げてみたいと思う。</p>
+<p>事前準備が多いので、順を追って説明する。今回は <em>MacOS Mojave</em> 環境で構築した。</p>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#docker-%E3%81%AE%E3%82%A4%E3%83%B3%E3%82%B9%E3%83%88%E3%83%BC%E3%83%AB">Docker のインストール</a></li>
+  <li><a href="#kubernetes-%E3%81%AE%E3%82%A4%E3%83%B3%E3%82%B9%E3%83%88%E3%83%BC%E3%83%AB">Kubernetes のインストール</a></li>
+  <li><a href="#oci-%E7%AE%A1%E7%90%86%E3%82%B3%E3%83%B3%E3%82%BD%E3%83%BC%E3%83%AB%E3%81%AB%E7%A7%BB%E5%8B%95%E3%81%99%E3%82%8B">OCI 管理コンソールに移動する</a></li>
+  <li><a href="#compartment%E3%83%BBgroup%E3%83%BBuser%E3%83%BBpolicy-%E3%82%92%E4%BD%9C%E6%88%90%E3%81%99%E3%82%8B">Compartment・Group・User・Policy を作成する</a>
+    <ul>
+      <li><a href="#%E5%91%BD%E5%90%8D%E8%A6%8F%E5%89%87%E3%81%AE%E3%82%AA%E3%82%B9%E3%82%B9%E3%83%A1">命名規則のオススメ</a></li>
+    </ul>
+  </li>
+  <li><a href="#oci-cli-%E3%81%AE%E3%82%A4%E3%83%B3%E3%82%B9%E3%83%88%E3%83%BC%E3%83%AB">OCI CLI のインストール</a></li>
+  <li><a href="#oci-cli-%E3%81%AE%E5%88%9D%E6%9C%9F%E8%A8%AD%E5%AE%9A">OCI CLI の初期設定</a></li>
+  <li><a href="#%E4%BD%9C%E6%88%90%E3%81%97%E3%81%9F-user-%E3%81%AB-api-%E3%82%AD%E3%83%BC%E3%81%AE%E5%85%AC%E9%96%8B%E9%8D%B5%E3%82%92%E7%99%BB%E9%8C%B2%E3%81%99%E3%82%8B">作成した User に API キーの公開鍵を登録する</a></li>
+  <li><a href="#oke-cluster-%E3%82%92%E4%BD%9C%E6%88%90%E3%81%99%E3%82%8B">OKE Cluster を作成する</a></li>
+  <li><a href="#kubernetes-%E7%92%B0%E5%A2%83%E3%82%92%E8%A8%AD%E5%AE%9A%E3%81%99%E3%82%8B">Kubernetes 環境を設定する</a></li>
+  <li><a href="#docker-%E3%82%A4%E3%83%A1%E3%83%BC%E3%82%B8%E3%82%92-ocir-%E3%81%B8-push-%E3%81%99%E3%82%8B%E3%81%9F%E3%82%81%E3%81%AE%E6%BA%96%E5%82%99">Docker イメージを OCIR へ Push するための準備</a></li>
+  <li><a href="#docker-%E3%82%A4%E3%83%A1%E3%83%BC%E3%82%B8%E3%82%92-ocir-%E3%81%B8-push-%E3%81%99%E3%82%8B">Docker イメージを OCIR へ Push する</a></li>
+  <li><a href="#oke-cluster-%E3%81%A7-ocir-%E4%B8%8A%E3%81%AE-docker-%E3%82%A4%E3%83%A1%E3%83%BC%E3%82%B8%E3%82%92%E4%BD%BF%E3%81%88%E3%82%8B%E3%82%88%E3%81%86%E3%81%AB%E8%A8%AD%E5%AE%9A%E3%81%99%E3%82%8B">OKE Cluster で OCIR 上の Docker イメージを使えるように設定する</a></li>
+  <li><a href="#oke-cluster-%E3%81%AB-docker-%E3%82%A4%E3%83%A1%E3%83%BC%E3%82%B8%E3%82%92%E3%83%87%E3%83%97%E3%83%AD%E3%82%A4%E3%81%99%E3%82%8B">OKE Cluster に Docker イメージをデプロイする</a></li>
+  <li><a href="#load-balancer-%E3%82%92%E4%BD%9C%E6%88%90%E3%81%99%E3%82%8B">Load Balancer を作成する</a></li>
+  <li><a href="#%E4%BB%A5%E4%B8%8A">以上</a></li>
+</ul>
+<h2 id="docker-のインストール"><a class="header-link" href="#docker-のインストール"><span class="header-link-mark"></span></a>Docker のインストール</h2>
+<p>開発マシンに Docker Desktop をインストールしておく。今回は細かな手順は省略。</p>
+<p>ターミナルで <code>$ docker</code> コマンドを実行し、Docker が利用可能な状態にしておく。</p>
+<h2 id="kubernetes-のインストール"><a class="header-link" href="#kubernetes-のインストール"><span class="header-link-mark"></span></a>Kubernetes のインストール</h2>
+<p>コチラも細かな手順は省略。以下のサイトより、OS に合う方法でインストールする。</p>
+<ul>
+  <li>参考：<a href="https://kubernetes.io/docs/tasks/tools/install-kubectl/">Install and Set Up kubectl | Kubernetes</a></li>
+</ul>
+<p>MacOS の場合、Homebrew を利用してインストールできたので、<code>$ brew install kubernetes-cli</code> だけで OK。ターミナルで <code>$ kubectl</code> コマンドが叩ける状態にしておく。</p>
+<h2 id="oci-管理コンソールに移動する"><a class="header-link" href="#oci-管理コンソールに移動する"><span class="header-link-mark"></span></a>OCI 管理コンソールに移動する</h2>
+<p>Oracle Cloud My Services ダッシュボードにログインしたら、左メニューから「サービス」→「Compute」と進む。</p>
+<h2 id="compartment・group・user・policy-を作成する"><a class="header-link" href="#compartment・group・user・policy-を作成する"><span class="header-link-mark"></span></a>Compartment・Group・User・Policy を作成する</h2>
+<ul>
+  <li>OCI における、各種<em>「リソース」</em>を管理する枠となるのが <em>Compartment (コンパートメント)</em>。</li>
+  <li>「リソース」というのは、VM のインスタンスとか、VCN とか、Kubernetes クラスタとか、OCI 内で操作できるモノの総称。</li>
+  <li>そのリソースをどこまで操作できるようにするか、という権限設定が <strong>Policy (ポリシー)</strong> で、Policy の適用範囲は <em>Group (グループ)</em> 単位などで指定できる。</li>
+  <li>その Group には <strong>User (ユーザ)</strong> が属する。この User は、OCI 用のアカウントとして発行して普通に人間がログインして利用することもできるが、プログラム内でリソースを操作する際にも、この作成した User を使ったりする。「SYSTEM」ユーザ、みたいな感覚かな。</li>
+</ul>
+<p>そんなワケで、OCIR や OKE を使うためのアレコレを作っていく。</p>
+<ol>
+  <li>Compartment を作成する
+    <ul>
+      <li>OCI コンソールの左上ハンバーガーメニューアイコン → Identify → Compartments を選択する</li>
+      <li>「Create Compartment」ボタンを押下する</li>
+      <li>Name : コンパート名を設定する・あとで変更可能 (命名については後述)</li>
+      <li>Description : 任意・あとで変更可能</li>
+      <li>Tags : 任意・今回は指定しない</li>
+      <li>入力したら「Create Compartment」ボタンを押下する</li>
+    </ul>
+  </li>
+  <li>OKE・OCIR を使用するユーザ向けの Group を作成する
+    <ul>
+      <li>OCI コンソールメニュー → Identify → Groups と移動する</li>
+      <li>「Create Group」ボタンを押下する</li>
+      <li>Name : グループ名を設定する・あとでの変更は不可</li>
+      <li>Description : 任意・変更不可</li>
+      <li>入力したら「Submit」ボタンを押下する</li>
+    </ul>
+  </li>
+  <li>OKE・OCIR 操作時に使用する API キー設定および Auth Token 発行用の User を作成する
+    <ul>
+      <li>OCI コンソールメニュー → Identify → Users と移動する</li>
+      <li>「Create User」ボタンを押下する</li>
+      <li>Name : ユーザ名を設定する・変更不可。以降では分かりやすくするため <strong><code>my-app-manager-user</code></strong> と呼ぶことにする。</li>
+      <li>Description : 任意・あとで変更可能</li>
+      <li>入力したら「Create」ボタンを押下する</li>
+    </ul>
+  </li>
+  <li>作成した User を先程の Group に所属させる
+    <ul>
+      <li>作成した User (<code>my-app-manager-user</code>) の詳細画面に移動する</li>
+      <li>左カラム Resources メニュー → Groups を選択する</li>
+      <li>「Add User to Group」ボタンを押下する</li>
+      <li>Groups : 「Select a Group」セレクトボックスより、先程作成した Group を選択する</li>
+      <li>「Add」ボタンを押下する</li>
+      <li>別の操作手順 (どちらでも同じ)</li>
+      <li>Group 詳細画面に移動し、「Add User to Group」ボタンを押下する</li>
+      <li>User : 「Select a User」セレクトボックスより User (<code>my-app-manager-user</code>) を選択し「Add」ボタンを押下する</li>
+    </ul>
+  </li>
+  <li>OKE を使用するための Policy を作成する
+    <ul>
+      <li>OCI コンソールメニュー → Identify → Policies と移動する</li>
+      <li>左カラム Compartment メニュー → 「Pick a compartment」セレクトボックスより、ルート Compartment を選択する</li>
+      <li>「Create Policy」ボタンを押下する</li>
+      <li>Name : ポリシー名を設定する・変更不可</li>
+      <li>Description : 任意・変更不可</li>
+      <li>Policy Versioning : Keep Policy Current を選択 (初期状態のまま)</li>
+      <li><em>Policy Statements : 以下のとおりに入力する</em>
+        <ul>
+          <li><code>allow service OKE to manage all-resources in tenancy</code></li>
+        </ul>
+      </li>
+      <li>入力したら「Create」ボタンを押下する</li>
+    </ul>
+  </li>
+  <li>作成した Group に所属する User が OCIR を使用するための Policy を作成する
+    <ul>
+      <li>先程と同様の手順で、ルート Compartment を選択した状態で「Create Policy」ボタンを押下する</li>
+      <li>Name : ポリシー名を設定する</li>
+      <li>Description : 任意</li>
+      <li>Policy Versionin : Keep Policy Current を選択 (初期状態のまま)</li>
+      <li>Policy Statements : 以下の要領で入力する
+        <ul>
+          <li><code>allow group 【作成した Group 名】 to manage repos in tenancy</code></li>
+        </ul>
+      </li>
+      <li>入力したら「Create」ボタンを押下する</li>
+    </ul>
+  </li>
+</ol>
+<h3 id="命名規則のオススメ"><a class="header-link" href="#命名規則のオススメ"><span class="header-link-mark"></span></a>命名規則のオススメ</h3>
+<p>Compartment・Group・User・Policy の名称は、半角英数字とハイフンあたりが使える。大文字も使えるが、個人的なオススメは<em>小文字のみのハイフンケース</em>。この時点で4種類のリソースが登場しているので、何のリソースに名前を付けたのか分かるように、リソース種別も名前に含めてしまうと後で分かりやすいかも。</p>
+<p>要するにこんな感じ。</p>
+<ul>
+  <li>システム名を <code>my-app</code> とする</li>
+  <li>Compartment : <code>my-app-compartment</code></li>
+  <li>Group : <code>my-app-managers-group</code>
+    <ul>
+      <li>あとで付与する Policy の <em>Verb</em> 部分に沿った <em>Target User</em> の種別として <code>managers</code> を使ってみた。</li>
+      <li>参考：<a href="https://docs.cloud.oracle.com/iaas/Content/Identity/Reference/policyreference.htm#Verbs">Policy Reference</a> … Policy Statement の構文説明の中の、Verb 部分の解説。
+        <ul>
+          <li><code>inspect</code>・<code>read</code> → <code>auditors</code> あたり、<code>use</code> → <code>users</code> あたり、<code>manage</code> → <code>managers</code>・<code>administrators</code> あたりが分かりやすいかと</li>
+        </ul>
+      </li>
+    </ul>
+  </li>
+  <li>User : <code>my-app-manager-user</code>
+    <ul>
+      <li>複数ユーザ作る時は「どんなマネージャーなの？」が分かるように工夫…</li>
+    </ul>
+  </li>
+  <li>Policy : <code>my-app-managers-policy</code></li>
+</ul>
+<p>Policy の Statement は、普通の英文に見えるかもしれないが、決まった構文がある。以下を参考にされたし。</p>
+<ul>
+  <li>参考：<a href="http://charleysdiary.hatenablog.com/entry/2018/12/21/214543">OKE、OCIRを使うときに権限制御するための設定まとめ - チャーリー！のテクメモ</a></li>
+  <li>参考：<a href="https://qiita.com/shakiyam/items/ff36c27b31b42835263e#%E4%BA%8B%E5%89%8D%E6%BA%96%E5%82%99">Oracle Cloud Infrastructure Registry (OCIR)を使ってみよう - Qiita</a></li>
+</ul>
+<h2 id="oci-cli-のインストール"><a class="header-link" href="#oci-cli-のインストール"><span class="header-link-mark"></span></a>OCI CLI のインストール</h2>
+<p>OKE で構成した kubernetes クラスタの操作には、<code>kubectl</code> コマンドを使うワケだが、その接続に必要な環境情報を得るため、まずは <strong>OCI CLI</strong> というコマンドラインツールをインストールする。</p>
+<p>OCI CLI のインストールに際しては Python3・pip3 が必要になるため、未インストールの場合は Homebrew などでインストールしておく。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># Homebrew で Python3 をインストールする</span>
+$ brew <span class="token function">install</span> python
+
+<span class="token comment"># Python3 がインストールされたことを確認する</span>
+$ python3 -V
+Python <span class="token number">3.7</span>.2
+
+<span class="token comment"># pip3 も同時にインストールされたことを確認する</span>
+$ pip3 -V
+pip <span class="token number">18.1</span> from /usr/local/lib/python3.7/site-packages/pip <span class="token punctuation">(</span>python <span class="token number">3.7</span><span class="token punctuation">)</span>
+
+<span class="token comment"># `python` コマンドで v3 系が使用されるよう PATH を設定する (brew info python で紹介されている)</span>
+<span class="token builtin class-name">echo</span> <span class="token string">'PATH="/usr/local/opt/python/libexec/bin:<span class="token environment constant">$PATH</span>"'</span> <span class="token operator">>></span> ~/.bash_profile
+</code></pre>
+<p>続いて、以下のコマンドで OCI CLI のインストールを開始する。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">bash</span> -c <span class="token string">"<span class="token variable"><span class="token variable">$(</span><span class="token function">curl</span> -L https://raw.githubusercontent.com/oracle/oci-cli/master/scripts/install/install.sh<span class="token variable">)</span></span>"</span>
+<span class="token comment"># 色々質問されるので、それぞれ次のように回答して進めていく</span>
+
+<span class="token operator">==</span><span class="token operator">=</span><span class="token operator">></span> In what directory would you like to place the install? <span class="token punctuation">(</span>leave blank to use <span class="token string">'/Users/【ユーザ】/lib/oracle-cli'</span><span class="token punctuation">)</span>:  <span class="token comment"># ★</span>
+  <span class="token comment"># → 空白のまま Enter を押下する。ライブラリが `~/lib/oracle-cli/` 配下にインストールされる</span>
+
+<span class="token operator">==</span><span class="token operator">=</span><span class="token operator">></span> In what directory would you like to place the <span class="token string">'oci'</span> executable? <span class="token punctuation">(</span>leave blank to use <span class="token string">'/Users/【ユーザ】/bin'</span><span class="token punctuation">)</span>:  <span class="token comment"># ★</span>
+  <span class="token comment"># → 空白のまま Enter を押下する。コマンドが `~/bin/` 配下にインストールされる</span>
+
+<span class="token operator">==</span><span class="token operator">=</span><span class="token operator">></span> In what directory would you like to place the OCI scripts? <span class="token punctuation">(</span>leave blank to use <span class="token string">'/Users/【ユーザ】/bin/oci-cli-scripts'</span><span class="token punctuation">)</span>: <span class="token comment"># ★</span>
+  <span class="token comment"># → 空白のまま Enter を押下する。OCI CLI スクリプトが `~/bin/oci-cli-scripts/` 配下にインストールされる</span>
+
+<span class="token operator">==</span><span class="token operator">=</span><span class="token operator">></span> Modify profile to update your <span class="token environment constant">$PATH</span> and <span class="token builtin class-name">enable</span> shell/tab completion now? <span class="token punctuation">(</span>Y/n<span class="token punctuation">)</span>: Y  <span class="token comment"># ★</span>
+  <span class="token comment"># → PATH にタブ補完用のスクリプトを追記するかどうか。指示どおり `Y` を入力する</span>
+
+<span class="token operator">==</span><span class="token operator">=</span><span class="token operator">></span> Enter a path to an rc <span class="token function">file</span> to update <span class="token punctuation">(</span>leave blank to use <span class="token string">'/Users/【ユーザ】/.bash_profile'</span><span class="token punctuation">)</span>:  <span class="token comment"># ★</span>
+  <span class="token comment"># → タブ補完用の PATH を追記するファイルを問われている。空白のまま Enter を押下し、`~/.bash_profile` に追記させる</span>
+</code></pre>
+<p>ターミナルを再起動 (<code>$ exec -l $SHELL</code>) し、<code>oci</code> コマンドが動作することを確認する。</p>
+<p><code>~/.bash_profile</code> 末尾には以下のような1行が追記されている。コレは、OCI CLI コマンドの Tab 補完用のスクリプト読み込み処理。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token punctuation">[</span><span class="token punctuation">[</span> -e <span class="token string">"/Users/【ユーザ】/lib/oracle-cli/lib/python3.7/site-packages/oci_cli/bin/oci_autocomplete.sh"</span> <span class="token punctuation">]</span><span class="token punctuation">]</span> <span class="token operator">&#x26;&#x26;</span> <span class="token builtin class-name">source</span> <span class="token string">"/Users/【ユーザ】/lib/oracle-cli/lib/python3.7/site-packages/oci_cli/bin/oci_autocomplete.sh"</span>
+</code></pre>
+<p>インストール中、<code>command 'clang' failed with exit status 1</code> みたいなエラーが発生してインストールに失敗した場合は、以下のような対処で何とかなるかも。</p>
+<ul>
+  <li><code>brew install ta-lib</code> を実行してみる</li>
+  <li><code>~/.bash_profile</code> に以下の行を追記してやり直す</li>
+</ul>
+<pre class="language-bash"><code class="language-bash"><span class="token builtin class-name">export</span> <span class="token assign-left variable">LDFLAGS</span><span class="token operator">=</span><span class="token string">"-L/usr/local/opt/openssl/lib"</span>
+<span class="token builtin class-name">export</span> <span class="token assign-left variable">CPPFLAGS</span><span class="token operator">=</span><span class="token string">"-I/usr/local/opt/openssl/include"</span>
+<span class="token builtin class-name">export</span> <span class="token assign-left variable">PKG_CONFIG_PATH</span><span class="token operator">=</span><span class="token string">"/usr/local/opt/openssl/lib/pkgconfig"</span>
+</code></pre>
+<ul>
+  <li>参考 : <a href="https://github.com/pyca/cryptography/issues/2692#issuecomment-372036756">https://github.com/pyca/cryptography/issues/2692#issuecomment-372036756</a></li>
+</ul>
+<p>この他にも、環境によってインストール時にエラーが発生しやすい。<code>python</code> コマンドで Python3、<code>pip</code> コマンドで pip3 が利用できるよう PATH を通してあるかを中心に環境を確認すると良い。</p>
+<h2 id="oci-cli-の初期設定"><a class="header-link" href="#oci-cli-の初期設定"><span class="header-link-mark"></span></a>OCI CLI の初期設定</h2>
+<p>ターミナルで <code>$ oci setup config</code> コマンドを実行し、OCI CLI の初期設定を行う。</p>
+<p>途中、OKE・OCIR 使用時の API キーを生成する。</p>
+<p><code>oci</code> コマンドから対象のテナンシーにアクセスできるよう初期設定する。</p>
+<pre class="language-bash"><code class="language-bash">$ oci setup config
+<span class="token comment"># またいくつか質問されるので答えていく</span>
+
+Enter a location <span class="token keyword">for</span> your config <span class="token punctuation">[</span>/Users/【ユーザ】/.oci/config<span class="token punctuation">]</span>:  <span class="token comment"># ★</span>
+  <span class="token comment"># → 空白のまま Enter</span>
+
+Enter a user OCID: ocid1.user.xxxxxxxxxx  <span class="token comment"># ★</span>
+  <span class="token comment"># → 先程作成した User (my-app-manager-user) の OCID を入力する</span>
+
+Enter a tenancy OCID: ocid1.tenancy.xxxxxxxxxx  <span class="token comment"># ★</span>
+  <span class="token comment"># → Tenancy の OCID</span>
+
+Enter a region <span class="token punctuation">(</span>e.g. eu-frankfurt-1, uk-london-1, us-ashburn-1, us-phoenix-1<span class="token punctuation">)</span>: us-ashburn-1  <span class="token comment"># ★</span>
+  <span class="token comment"># → Tenancy のホームリージョンを指定する。ココでは us-ashburn-1 を指定したテイ</span>
+
+Do you want to generate a new RSA key pair? <span class="token punctuation">(</span>If you decline you will be asked to supply the path to an existing key.<span class="token punctuation">)</span> <span class="token punctuation">[</span>Y/n<span class="token punctuation">]</span>: Y  <span class="token comment"># ★</span>
+  <span class="token comment"># → API キー (秘密鍵) を生成するため `Y` を入力する</span>
+
+Enter a directory <span class="token keyword">for</span> your keys to be created <span class="token punctuation">[</span>/Users/【ユーザ】/.oci<span class="token punctuation">]</span>:  <span class="token comment"># ★</span>
+  <span class="token comment"># → 空白のまま Enter・生成先ディレクトリパスの指定</span>
+
+Enter a name <span class="token keyword">for</span> your key <span class="token punctuation">[</span>oci_api_key<span class="token punctuation">]</span>:  <span class="token comment"># ★</span>
+  <span class="token comment"># → 空白のまま Enter・生成する API キーのファイル名</span>
+Public key written to: /Users/【ユーザ】/.oci/oci_api_key_public.pem
+
+Enter a passphrase <span class="token keyword">for</span> your private key <span class="token punctuation">(</span>empty <span class="token keyword">for</span> no passphrase<span class="token punctuation">)</span>:  <span class="token comment"># ★</span>
+  <span class="token comment"># → 空白のまま Enter・API キーにパスフレーズを付けられるが、今回は付けない</span>
+Private key written to: /Users/【ユーザ】/.oci/oci_api_key.pem
+Fingerprint: xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx
+Config written to /Users/【ユーザ】/.oci/config
+</code></pre>
+<p>以上の初期設定で、以下の3ファイルが生成された。</p>
+<ul>
+  <li><code>~/.oci/config</code> : <code>oci</code> コマンドが接続する先を示す設定ファイル</li>
+  <li><code>~/.oci/oci_api_key.pem</code> : <code>oci</code> コマンドで使用する API 秘密鍵。コレを後で OKE・OCIR 利用時にも流用することにする</li>
+  <li><code>~/.oci/oci_api_key_public.pem</code> : API 秘密鍵に対応する公開鍵</li>
+</ul>
+<h2 id="作成した-user-に-api-キーの公開鍵を登録する"><a class="header-link" href="#作成した-user-に-api-キーの公開鍵を登録する"><span class="header-link-mark"></span></a>作成した User に API キーの公開鍵を登録する</h2>
+<p>先程作成した <code>my-app-manager-user</code> に、<code>~/.oci/oci_api_key_public.pem</code> ファイルに書き出された API 公開鍵を紐付ける。</p>
+<ol>
+  <li>User の詳細画面に移動する</li>
+  <li>左カラム Resources メニュー → API Keys を選択する</li>
+  <li>「Add Public Key」ボタンを押下する</li>
+  <li>Public Key 欄に、前述の公開鍵 <code>oci_api_key_public.pem</code> の内容をコピー &#x26; ペーストする
+    <ul>
+      <li><code>BEGIN PUBLIC KEY</code> から <code>END PUBLIC KEY</code> の記載がある行まで全てを貼り付ける</li>
+    </ul>
+  </li>
+  <li>貼り付けたら「Add」ボタンを押下する</li>
+  <li>登録した API キーの「Fingerprint」を確認する。<code>oci setup config</code> コマンドの最後や、<code>~/.oci/config</code> ファイルの中に記載の Fingerprint と一致していることが確認できる</li>
+</ol>
+<h2 id="oke-cluster-を作成する"><a class="header-link" href="#oke-cluster-を作成する"><span class="header-link-mark"></span></a>OKE Cluster を作成する</h2>
+<p>いよいよ Kubernetes クラスタを作成する。</p>
+<ol>
+  <li>OCI コンソールメニュー → Developer Services → Container Clusters (OKE) と選択する</li>
+  <li>左カラム Compartment メニュー → セレクトボックスより作成した Compartment を選択する</li>
+  <li>「Create Cluster」ボタンを押下する
+    <ul>
+      <li>Name : 任意で決める</li>
+      <li>Kubernetes Version : v1.11.5 (初期状態のまま)</li>
+      <li>ラジオボタン : Quick Create を選択 (初期状態のまま) → コレによりインスタンスや VCN などを自動生成してくれる</li>
+      <li>その他 : 初期状態のまま</li>
+    </ul>
+  </li>
+  <li>入力したら「Create」ボタンを押下する</li>
+  <li>VCN や Subnet などが自動生成されるので、「Close」ボタンを押下する</li>
+  <li>Cluster 詳細画面に移動し、「Cluster Status」が「Creating」から「Active」になるまで10分程度待つ</li>
+</ol>
+<h2 id="kubernetes-環境を設定する"><a class="header-link" href="#kubernetes-環境を設定する"><span class="header-link-mark"></span></a>Kubernetes 環境を設定する</h2>
+<p>先程作成した OKE クラスタに、<code>kubectl</code> コマンドでアクセスできるようにするための設定。</p>
+<ol>
+  <li>作成した Cluster の詳細画面に移動する</li>
+  <li>「Access Kubeconfig」ボタンを押下する</li>
+  <li>表示された次のようなスクリプトをコピーする</li>
+</ol>
+<pre class="language-bash"><code class="language-bash"><span class="token function">mkdir</span> -p <span class="token environment constant">$HOME</span>/.kube
+oci ce cluster create-kubeconfig --cluster-id ocid1.cluster.xxxxxxxxxx --file <span class="token environment constant">$HOME</span>/.kube/config --region us-ashburn-1
+</code></pre>
+<p>このスクリプトをターミナルで実行すると、<code>~/.kube/config</code> ファイルが生成され、<code>kubectl</code> コマンドで OKE クラスタに接続できるようになる。この <em>KubeConfig</em> と呼ばれるファイルの中身は YAML 形式の設定ファイルだ。</p>
+<p>次のコマンドで、<code>kubectl</code> を用いて実際に OKE Cluster にアクセスできるか確認する</p>
+<pre class="language-bash"><code class="language-bash">$ kubectl get all
+NAME                 TYPE        CLUSTER-IP   EXTERNAL-IP   PORT<span class="token punctuation">(</span>S<span class="token punctuation">)</span>   AGE
+service/kubernetes   ClusterIP   <span class="token number">10.96</span>.0.1    <span class="token operator">&#x3C;</span>none<span class="token operator">></span>        <span class="token number">443</span>/TCP   11m
+</code></pre>
+<h2 id="docker-イメージを-ocir-へ-push-するための準備"><a class="header-link" href="#docker-イメージを-ocir-へ-push-するための準備"><span class="header-link-mark"></span></a>Docker イメージを OCIR へ Push するための準備</h2>
+<p>OKE クラスタが構築でき、コマンドラインから操作できるようになったので、次は OCIR (プライベートレジストリ) にオリジナルの Docker イメージをプッシュしておこう。あとでコレを OKE クラスタにデプロイする。</p>
+<ol>
+  <li>作成した User <code>my-app-manager-user</code> より、OCIR に Docker イメージを Push するための Auth Token を発行する
+    <ul>
+      <li>OCI コンソールにて、User の詳細画面に移動する</li>
+      <li>左カラム Resources メニュー → Auth Tokens を選択する</li>
+      <li>「Generate Token」ボタンを押下する</li>
+      <li>Description : 任意</li>
+      <li>入力したら「Generate」ボタンを押下する</li>
+      <li>次画面の「Generated Token」欄に表示されているトークン文字列をコピーする。<strong>この画面を閉じると二度と確認できないため、必ずコピーして控えておく。</strong></li>
+      <li>トークン文字列がコピーできたら「Close」ボタンを押下する</li>
+    </ul>
+  </li>
+  <li>Docker コマンドで OCIR にログインする
+    <ul>
+      <li>以下のように、<code>echo</code> コマンドに Auth Token を指定し、<code>docker login</code> コマンドの <code>--password-stdin</code> オプションにパイプで渡す</li>
+      <li><code>docker login</code> コマンドでログインするドメイン名は、リージョンにあわせて指定する</li>
+      <li><code>-u</code> オプションで指定するユーザ名は、<code>Tenancy/User</code> の形式で指定する</li>
+    </ul>
+  </li>
+</ol>
+<pre class="language-bash"><code class="language-bash">$ <span class="token builtin class-name">echo</span> <span class="token string">'XXXxxx(XXXX#00XXXXXX'</span> <span class="token operator">|</span> docker login iad.ocir.io -u my-app-tenancy/my-app-manager-user --password-stdin
+Login Succeeded
+</code></pre>
+<h2 id="docker-イメージを-ocir-へ-push-する"><a class="header-link" href="#docker-イメージを-ocir-へ-push-する"><span class="header-link-mark"></span></a>Docker イメージを OCIR へ Push する</h2>
+<p>任意の <code>Dockerfile</code> を用意して、<code>docker build</code> コマンドで Docker イメージを作成しておこう。今回は詳しい説明は省略するが、とりあえず何か Web サーバっぽいモノが動いている想定。</p>
+<p>コレを OCIR にプッシュするには、Push 用のタグを付けてから Push する必要がある。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># Push 用のタグを付与する : 規則は 【リージョン別ドメイン】/【Tenancy】/【任意のリポジトリ名】/【任意の Docker イメージ名】</span>
+$ docker image tag my-app-docker-image:v1 iad.ocir.io/my-app-tenancy/my-app-repository/my-app-docker-image:v1
+
+<span class="token comment"># タグ付けした Docker イメージを Push する</span>
+$ docker push iad.ocir.io/my-app-tenancy/my-app-repository/my-app-docker-image:v1
+</code></pre>
+<p>Push できたら、OCI コンソールより、OCIR に Docker イメージが Push されているか確認してみよう。</p>
+<p>OCI コンソールメニュー → Developer Services → Registry (OCIR) に移動し、一覧にリポジトリとイメージが存在していれば OK。</p>
+<h2 id="oke-cluster-で-ocir-上の-docker-イメージを使えるように設定する"><a class="header-link" href="#oke-cluster-で-ocir-上の-docker-イメージを使えるように設定する"><span class="header-link-mark"></span></a>OKE Cluster で OCIR 上の Docker イメージを使えるように設定する</h2>
+<p>OKE クラスタで、OCIR 上の Docker イメージを使えるようにするには、<em>Docker Registry Secret</em> という<strong>クレデンシャル情報 (秘密情報)</strong> を Kubernetes に登録する必要がある。秘密情報は開発マシンに保存されるのではなく、Kubernetes クラスタ内に保持される。</p>
+<ul>
+  <li>参考：<a href="https://ubiteku.oinker.me/2017/03/01/kubernetes-secrets/">Kubernetes Secrets の紹介 – データベースのパスワードやその他秘密情報をどこに保存するか？ – ゆびてく</a></li>
+  <li>参考：<a href="https://qiita.com/sh-miyoshi/items/a81b5cc6182a62c87a80">KubernetesのSecretは本当に安全か - Qiita</a></li>
+</ul>
+<p>ではその登録手順。ターミナルで、以下のようにコマンドを実行する。</p>
+<pre class="language-bash"><code class="language-bash">$ kubectl create secret docker-registry my-app-ocir-secret <span class="token punctuation">\</span>
+  --docker-server<span class="token operator">=</span>iad.ocir.io <span class="token punctuation">\</span>
+  --docker-username<span class="token operator">=</span><span class="token string">'my-app-tenancy/my-app-manager-user'</span> <span class="token punctuation">\</span>
+  --docker-password<span class="token operator">=</span><span class="token string">'XXXxxx(XXXX#00XXXXXX'</span> <span class="token punctuation">\</span>
+  --docker-email<span class="token operator">=</span><span class="token string">'example@example.com'</span>
+
+secret/my-app-ocir-secret created
+</code></pre>
+<ul>
+  <li><code>kubectl create secret docker-registry</code> の後に、任意の Docker Registry Secret 名を指定する。この Docker Secret Registry 名は、この後 Kubernetes の <code>deployment.yaml</code> に記載する</li>
+  <li><code>--docker-server</code> はホームリージョンに合わせて指定する</li>
+  <li><code>--docker-username</code> は <code>Tenancy/User</code> の形式で記述する</li>
+  <li><code>--docker-password</code> は先程 User から発行した Auth Token を指定する</li>
+  <li><code>--docker-email</code> は、使用しないが必須入力であるため、適当に入力する</li>
+</ul>
+<p>Secret が生成できたら、以下のコマンドで確認できる。</p>
+<pre class="language-bash"><code class="language-bash">$ kubectl get secret
+NAME                            TYPE                                  DATA   AGE
+default-token-hrv9f             kubernetes.io/service-account-token   <span class="token number">3</span>      41m
+my-app-ocir-secret              kubernetes.io/dockerconfigjson        <span class="token number">1</span>      5s
+</code></pre>
+<h2 id="oke-cluster-に-docker-イメージをデプロイする"><a class="header-link" href="#oke-cluster-に-docker-イメージをデプロイする"><span class="header-link-mark"></span></a>OKE Cluster に Docker イメージをデプロイする</h2>
+<p>Kubernetes に Docker イメージを冗長構成でデプロイするための <code>deployment.yaml</code> を作成する。</p>
+<pre class="language-yaml"><code class="language-yaml"><span class="token key atrule">apiVersion</span><span class="token punctuation">:</span> apps/v1  <span class="token comment"># Kubernetes のバージョンに依存して決まる</span>
+<span class="token key atrule">kind</span><span class="token punctuation">:</span> Deployment
+<span class="token key atrule">metadata</span><span class="token punctuation">:</span>
+  <span class="token key atrule">name</span><span class="token punctuation">:</span> my<span class="token punctuation">-</span>app<span class="token punctuation">-</span>deployment
+<span class="token key atrule">spec</span><span class="token punctuation">:</span>
+  <span class="token key atrule">selector</span><span class="token punctuation">:</span>  <span class="token comment"># Label Selector : 指定の labels と完全一致した Pods が紐付く</span>
+    <span class="token key atrule">matchLabels</span><span class="token punctuation">:</span>  <span class="token comment"># 完全一致なので、spec.template.metadata.labels: セクションと全く同じ内容を書く</span>
+      <span class="token key atrule">app</span><span class="token punctuation">:</span> my<span class="token punctuation">-</span>app
+  <span class="token key atrule">replicas</span><span class="token punctuation">:</span> <span class="token number">2</span>  <span class="token comment"># レプリカ数</span>
+  <span class="token key atrule">template</span><span class="token punctuation">:</span>  <span class="token comment"># Pod Template</span>
+    <span class="token key atrule">metadata</span><span class="token punctuation">:</span>
+      <span class="token key atrule">labels</span><span class="token punctuation">:</span>
+        <span class="token key atrule">app</span><span class="token punctuation">:</span> my<span class="token punctuation">-</span>app  <span class="token comment"># Pod 名。Key・Value 形式で、Key は何でも良い</span>
+    <span class="token key atrule">spec</span><span class="token punctuation">:</span>
+      <span class="token key atrule">containers</span><span class="token punctuation">:</span>
+      <span class="token punctuation">-</span> <span class="token key atrule">name</span><span class="token punctuation">:</span> my<span class="token punctuation">-</span>app
+        <span class="token key atrule">image</span><span class="token punctuation">:</span> iad.ocir.io/my<span class="token punctuation">-</span>tenancy/my<span class="token punctuation">-</span>app<span class="token punctuation">-</span>repository/my<span class="token punctuation">-</span>app<span class="token punctuation">-</span>docker<span class="token punctuation">-</span>image<span class="token punctuation">:</span>v1  <span class="token comment"># 使用する Docker イメージ名</span>
+        <span class="token key atrule">imagePullPolicy</span><span class="token punctuation">:</span> Always
+        <span class="token key atrule">ports</span><span class="token punctuation">:</span>
+        <span class="token punctuation">-</span> <span class="token key atrule">containerPort</span><span class="token punctuation">:</span> <span class="token number">8080</span>  <span class="token comment"># コンテナが公開したいポート・Dockerfile の EXPOSE 命令に書いたポートと合わせておく</span>
+      <span class="token key atrule">imagePullSecrets</span><span class="token punctuation">:</span>
+      <span class="token punctuation">-</span> <span class="token key atrule">name</span><span class="token punctuation">:</span> my<span class="token punctuation">-</span>app<span class="token punctuation">-</span>ocir<span class="token punctuation">-</span>secret  <span class="token comment"># Docker Registry Secret 名を記述する</span>
+</code></pre>
+<p><code>deployment.yaml</code> の書き方は Kubernetes の使い方の中で調べてみてほしい。ココでは、Docker イメージ内で動作する Web サーバが 8080 ポートを使っている前提で <code>containerPort</code> を指定している。Node.js Express サーバなんかだと、80番のようないわゆる「Well-known Port」を使用するにはひと手間必要だったりするので、こんな風にした次第。</p>
+<p>そしたらこのファイルを適用して、Pod をデプロイさせる。</p>
+<pre class="language-bash"><code class="language-bash">$ kubectl apply -f deployment.yaml
+deployment.apps/my-app-deployment created
+
+<span class="token comment"># 少し待って Pod が生成されていることを確認する</span>
+$ kubectl get pod
+NAME                                        READY   STATUS    RESTARTS   AGE
+my-app-deployment-xxxxxxxxxx-yyyyy   <span class="token number">1</span>/1     Running   <span class="token number">0</span>          37s
+my-app-deployment-xxxxxxxxxx-zzzzz   <span class="token number">1</span>/1     Running   <span class="token number">0</span>          1m
+
+<span class="token comment"># 各 Pod の直近の標準出力を確認して、起動しているか見てみる</span>
+$ kubectl logs -lapp<span class="token operator">=</span>my-app
+</code></pre>
+<p>コレで、Kubernetes クラスタ内で Pod が稼動し始めた。</p>
+<h2 id="load-balancer-を作成する"><a class="header-link" href="#load-balancer-を作成する"><span class="header-link-mark"></span></a>Load Balancer を作成する</h2>
+<p>このままでは稼動している Pod に外部からアクセスできないので、<em>Load Balancer</em> を作成する。</p>
+<p>以下のような <code>service.yaml</code> を用意する。</p>
+<pre class="language-yaml"><code class="language-yaml"><span class="token key atrule">apiVersion</span><span class="token punctuation">:</span> v1
+<span class="token key atrule">kind</span><span class="token punctuation">:</span> Service
+<span class="token key atrule">metadata</span><span class="token punctuation">:</span>
+  <span class="token key atrule">name</span><span class="token punctuation">:</span> my<span class="token punctuation">-</span>app<span class="token punctuation">-</span>service
+  <span class="token key atrule">labels</span><span class="token punctuation">:</span>
+    <span class="token key atrule">app</span><span class="token punctuation">:</span> my<span class="token punctuation">-</span>app
+<span class="token key atrule">spec</span><span class="token punctuation">:</span>
+  <span class="token key atrule">type</span><span class="token punctuation">:</span> LoadBalancer
+  <span class="token key atrule">selector</span><span class="token punctuation">:</span>
+    <span class="token key atrule">app</span><span class="token punctuation">:</span> my<span class="token punctuation">-</span>app
+  <span class="token key atrule">ports</span><span class="token punctuation">:</span>
+  <span class="token punctuation">-</span> <span class="token key atrule">name</span><span class="token punctuation">:</span> http
+    <span class="token key atrule">port</span><span class="token punctuation">:</span> <span class="token number">8080</span>
+    <span class="token key atrule">targetPort</span><span class="token punctuation">:</span> <span class="token number">8080</span>
+  <span class="token punctuation">-</span> <span class="token key atrule">name</span><span class="token punctuation">:</span> httpwell
+    <span class="token key atrule">port</span><span class="token punctuation">:</span> <span class="token number">80</span>
+    <span class="token key atrule">targetPort</span><span class="token punctuation">:</span> <span class="token number">8080</span>
+</code></pre>
+<p>先程も書いたとおり、Docker イメージが実際に使用するのは 8080 ポートなので、8080 ポートで直接アクセスできる口も作ってあって、さらに80番ポートでアクセスした時に Pod には 8080 ポートで転送されるような <code>name: httpwell</code> 指定も入れている。あんまりやたらとポートを開けておかない方が安全なので、本番利用時は80番 (HTTP) と443番 (HTTPS) くらいに絞った方が良いかと。</p>
+<p>さて、コレを次のようなコマンドで実行し、Load Balancer を生成させる。</p>
+<pre class="language-bash"><code class="language-bash">$ kubectl apply -f service.yaml 
+service/my-app-service created
+
+<span class="token comment"># Load Balancer 作成中。パブリック IP (`EXTERNAL-IP`) の発行を数分待つ</span>
+$ kubectl get <span class="token function">service</span>
+NAME                    TYPE           CLUSTER-IP     EXTERNAL-IP   PORT<span class="token punctuation">(</span>S<span class="token punctuation">)</span>                       AGE
+kubernetes              ClusterIP      <span class="token number">10.96</span>.0.1      <span class="token operator">&#x3C;</span>none<span class="token operator">></span>        <span class="token number">443</span>/TCP                       49m
+my-app-service          LoadBalancer   <span class="token number">10.96</span>.200.00   <span class="token operator">&#x3C;</span>pending<span class="token operator">></span>     <span class="token number">8080</span>:31779/TCP,80:32202/TCP   5s
+
+<span class="token comment"># パブリック IP が発行された</span>
+$ kubectl get <span class="token function">service</span>
+NAME                    TYPE           CLUSTER-IP     EXTERNAL-IP      PORT<span class="token punctuation">(</span>S<span class="token punctuation">)</span>                       AGE
+kubernetes              ClusterIP      <span class="token number">10.96</span>.0.1      <span class="token operator">&#x3C;</span>none<span class="token operator">></span>           <span class="token number">443</span>/TCP                       50m
+my-app-service          LoadBalancer   <span class="token number">10.96</span>.200.00   <span class="token number">128.200</span>.190.10   <span class="token number">8080</span>:31779/TCP,80:32202/TCP   57s
+</code></pre>
+<p>ココで確認できる <em><code>EXTERNAL-IP</code></em> が、実際に外部から接続できる<em>パブリック IP アドレス</em>である。というワケで、<code>http://128.200.190.10/</code> といった URL でブラウザからアクセスしてみよう。実際に疎通できるようになっているはずだ。</p>
+<p>ココで生成した Load Balancer や Public IP は、OCI コンソールメニュー → Networking → Load Balancers および Public IPs で確認できる。<code>kubectl</code> の <code>service</code> を変更しても上手く反映されていないように見える場合は、OCI コンソールで状況を確認してみよう。</p>
+<h2 id="以上"><a class="header-link" href="#以上"><span class="header-link-mark"></span></a>以上</h2>
+<p>初期設定が物凄く長かった…。Terraform とか使ったらもう少しスクリプト化できるのかな…。</p>
+<p>ひとまずこんな流れで、OCI を初めて触った人間が、OKE と OCIR を活用して、ブラウザからアクセスできる Web サーバを構築できた。</p>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2019-03-28</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2019-03-28</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

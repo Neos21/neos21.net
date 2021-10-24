@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>IE で日本語を含むパスにあるローカル HTML からクッキーを保存すると保存されたクッキーを取得できない件 - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2016/07/03-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2016/index.html">2016年</a></li>
+            <li><a href="/blog/2016/07/index.html">07月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2016-07-03</time></div>
+        <h1 id="page-title">IE で日本語を含むパスにあるローカル HTML からクッキーを保存すると保存されたクッキーを取得できない件</h1>
+
+<p>なんのこっちゃという感じだろうから順に説明する。</p>
+<ul>
+  <li>対象ブラウザは IE11。クッキーはデフォルトなら「インターネットオプション」から辿れる、<code>C:\Users\(ユーザ名)\AppData\Local\Microsoft\Windows\INetCache\</code> に保存される。</li>
+  <li>ローカルにある HTML ファイルから JavaScript でクッキーを登録したい。</li>
+  <li>当該 HTML ファイルまでのパスに日本語がなければ、問題なくクッキーを登録でき、ブラウザを閉じて再度開いてからも、そのクッキーを取得できる。
+    <ul>
+      <li>例えば、<code>C:\Hoge\Fuga\Test.html</code> といったフルパスになる HTML ファイルからなら、クッキーの読み書きが正しくできる。</li>
+    </ul>
+  </li>
+  <li>しかし、HTML ファイルまでのパスに日本語が交じると、クッキーは保存でき、ブラウザを閉じるまでは有効なのだが、ブラウザを開き直した時にそのクッキーが取得できない。
+    <ul>
+      <li>例えば、<code>C:\クッキー\取得\Test.html</code> といったフルパスだと、クッキーの読み込みに失敗する。</li>
+    </ul>
+  </li>
+</ul>
+<p>原因を探ったところ、<code>C:\Users\(ユーザ名)\AppData\Local\Microsoft\Windows\INetCache\</code> に保存されているクッキーファイルで、パスの日本語が文字化けしていた。「名前」列と「インターネットアドレス」の列に現れるパスの日本語部分が、文字化けしていたのだ。</p>
+<p>なかなか良い方法が見つからなかったのだが、暫定的に、一旦、とりあえず、解決する方法を見つけたので紹介する。</p>
+<h2 id="クッキーの-path-属性にドライブレターだけを指定する"><a class="header-link" href="#クッキーの-path-属性にドライブレターだけを指定する"><span class="header-link-mark"></span></a>クッキーの path 属性にドライブレターだけを指定する</h2>
+<p>解決方法は、<strong>path 属性に日本語を含まないように、その HTML ファイルがあるドライブのドライブレターだけを指定する</strong>。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token comment">/* この JavaScript を実行する HTML は C:\クッキー\取得\Test.html (C ドライブ内) であると仮定する */</span>
+
+<span class="token comment">// 登録する値。エスケープ処理などは適宜行っておく</span>
+<span class="token keyword">var</span> value <span class="token operator">=</span> <span class="token function">$</span><span class="token punctuation">(</span><span class="token string">"#msg"</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">val</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// msg という名前で value を登録する。</span>
+<span class="token comment">// 「path=/C:/」 とし、パスに日本語のフォルダ名を含めない。</span>
+<span class="token comment">// expires 属性は有効期限。2030年1月まで有効とする (第2引数の 0 は1月を表す)。</span>
+<span class="token dom variable">document</span><span class="token punctuation">.</span><span class="token property-access">cookie</span> <span class="token operator">=</span> <span class="token string">"msg="</span> <span class="token operator">+</span> value <span class="token operator">+</span> <span class="token string">"; path=/C:/; expires="</span> <span class="token operator">+</span> <span class="token keyword">new</span> <span class="token class-name">Date</span><span class="token punctuation">(</span><span class="token number">2030</span><span class="token punctuation">,</span> <span class="token number">0</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">toUTCString</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>こうすると、保存されるクッキーファイルの「名前」が <code>file:///C:/</code> になり、「インターネットアドレス」列も <code>Cookie:(ユーザ名)@~~local~~/C:/</code> となり、<em>文字化けする箇所がなくなる</em>ので、ブラウザを一度閉じたあとでもクッキーを読み取ることができた。</p>
+<p>当然、副作用がある。C ドライブ直下の HTML ファイル全てで有効なクッキー情報になってしまうので、同じドライブの他の HTML ファイルからも、同じクッキー情報を読み取ることができてしまう。名前が重複すれば意図しない上書きも発生しうるので、あまりそのドライブ内でクッキーを多用するローカル HTML ファイルがない場合にのみ、なんとか有効な方法といえる。</p>
+<h2 id="試したけどうまくいかなかった方法"><a class="header-link" href="#試したけどうまくいかなかった方法"><span class="header-link-mark"></span></a>試したけどうまくいかなかった方法</h2>
+<p>色々な文献を漁ったが、IE で、ローカルファイルからクッキーを発行して、かつ日本語を含むパスで文字化けが発生して…、といったニッチな環境でのトラブルシューティングは見つからず。</p>
+<ul>
+  <li>HTML 文書のエンコードは Shift-JIS や UTF-8 など関係なし。
+    <ul>
+      <li>ただ、登録されるクッキーの「インターネットアドレス」列で文字化けしている様子は、UTF-8 エンコードされた日本語を Shift-JIS 解釈したときの文字列に似ている (UTF-8 のページのエンコードを Shift-JIS に変えた時に似ている)。だが、HTML 文書の、ファイル自体のエンコード、および meta 要素の charset 指定は影響しなかった。</li>
+    </ul>
+  </li>
+  <li>domain 属性を指定してみる … どういう値でも関係なし。</li>
+  <li>path 属性に、Punycode 変換したパスを指定してみる … 日本語は Punycode 変換されたが、異なるアドレスとみなされて読み取れなかった。</li>
+</ul>
+<p>他に良い解決策をご存じの方がいましたら教えてください。</p>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2016-07-03</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2016-07-03</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

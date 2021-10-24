@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>マルコフ連鎖で「しゅうまい君」的な文章を自動生成してみた - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2020/03/07-02.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2020/index.html">2020年</a></li>
+            <li><a href="/blog/2020/03/index.html">03月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2020-03-07</time></div>
+        <h1 id="page-title">マルコフ連鎖で「しゅうまい君」的な文章を自動生成してみた</h1>
+
+<p>もうやり尽くされたネタだろうけど、自分でもやってみたくなったので…。</p>
+<p>Twitter で長年人気の「しゅうまい君」は、自分をフォローしているユーザのツイートをランダムに収集し、それを基に文章を自動生成してツイートしている。今回はこのような「文章自動生成」を簡単に行えるアルゴリズムとして、「マルコフ連鎖」というモノを使って、似たようなことをやってみる。</p>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#%E5%AE%9F%E8%A3%85%E3%81%AE%E3%82%B9%E3%83%86%E3%83%83%E3%83%97%E3%82%92%E8%80%83%E3%81%88%E3%82%8B">実装のステップを考える</a></li>
+  <li><a href="#mecab--markovify-%E3%82%92%E4%BD%BF%E3%81%A3%E3%81%A6%E3%81%BF%E3%82%8B">MeCab + Markovify を使ってみる</a></li>
+  <li><a href="#mecab-%E3%82%92%E3%82%A4%E3%83%B3%E3%82%B9%E3%83%88%E3%83%BC%E3%83%AB%E3%81%99%E3%82%8B">MeCab をインストールする</a></li>
+  <li><a href="#python-%E3%83%97%E3%83%AD%E3%82%B8%E3%82%A7%E3%82%AF%E3%83%88%E3%82%92%E7%94%A8%E6%84%8F%E3%81%99%E3%82%8B">Python プロジェクトを用意する</a></li>
+  <li><a href="#mecab-%E3%81%AE%E3%81%BF%E8%A9%A6%E3%81%97%E3%81%A6%E3%81%BF%E3%82%8B">MeCab のみ試してみる</a></li>
+  <li><a href="#%E3%83%86%E3%82%AD%E3%82%B9%E3%83%88%E3%83%95%E3%82%A1%E3%82%A4%E3%83%AB%E3%82%92%E7%94%A8%E6%84%8F%E3%81%99%E3%82%8B">テキストファイルを用意する</a></li>
+  <li><a href="#markovify-%E3%81%A7%E8%AA%AD%E3%81%BF%E8%BE%BC%E3%82%81%E3%82%8B%E5%BD%A2%E5%BC%8F%E3%81%AB%E5%A4%89%E6%8F%9B%E3%81%99%E3%82%8B">Markovify で読み込める形式に変換する</a></li>
+  <li><a href="#markovify-%E3%81%A7%E3%83%9E%E3%83%AB%E3%82%B3%E3%83%95%E9%80%A3%E9%8E%96%E3%82%92%E7%94%A8%E3%81%84%E3%81%9F%E6%96%87%E7%AB%A0%E8%87%AA%E5%8B%95%E7%94%9F%E6%88%90%E3%82%92%E8%A1%8C%E3%81%86">Markovify でマルコフ連鎖を用いた文章自動生成を行う</a></li>
+  <li><a href="#%E8%87%AA%E5%8B%95%E7%94%9F%E6%88%90%E3%81%95%E3%82%8C%E3%81%9F%E6%96%87%E7%AB%A0%E3%82%92%E8%A6%8B%E3%81%A6%E3%81%BF%E3%82%8B">自動生成された文章を見てみる</a></li>
+  <li><a href="#%E3%82%B3%E3%83%AC%E3%82%92%E3%83%99%E3%83%BC%E3%82%B9%E3%81%AB%E4%BD%9C%E3%82%8A%E8%BE%BC%E3%82%93%E3%81%A7%E3%81%84%E3%81%93%E3%81%86">コレをベースに作り込んでいこう</a></li>
+  <li><a href="#%E3%81%9D%E3%81%AE%E4%BB%96%E5%8F%82%E8%80%83%E6%96%87%E7%8C%AE">その他参考文献</a></li>
+</ul>
+<h2 id="実装のステップを考える"><a class="header-link" href="#実装のステップを考える"><span class="header-link-mark"></span></a>実装のステップを考える</h2>
+<p>実装のステップは次のようになるだろうか。</p>
+<ol>
+  <li>文章を集めてきてテキストファイルにまとめる
+    <ul>
+      <li>スクレイピングでもいいし手動でも良い。後述する <code>input.txt</code> に相当</li>
+    </ul>
+  </li>
+  <li>集めたテキストファイルを基に、マルコフ連鎖のチェーンを作成し DB ファイルにまとめる
+    <ul>
+      <li>(後述する <code>split_for_markovify.py</code> スクリプトによって生成した <code>splitted.txt</code> が相当)</li>
+    </ul>
+  </li>
+  <li>DB ファイルを基に、マルコフ連鎖を用いて文章を自動生成する
+    <ul>
+      <li>(後述する <code>exec_markovify.py</code> スクリプトが相当)</li>
+    </ul>
+  </li>
+</ol>
+<p>あとはどうやって実現していくかだ。</p>
+<h2 id="mecab--markovify-を使ってみる"><a class="header-link" href="#mecab--markovify-を使ってみる"><span class="header-link-mark"></span></a>MeCab + Markovify を使ってみる</h2>
+<p>今回、主に参考にするのは以下の記事。</p>
+<ul>
+  <li><a href="https://www.pc-koubou.jp/magazine/4238/amp">マルコフ連鎖を使って〇〇っぽい文章を自動生成してみた | パソコン工房 NEXMAG</a>
+    <ul>
+      <li><a href="https://gist.github.com/kakakaya/141838e738a2fd9667b5e4fd2b79c4c7">Learn from aozora bunko and output markov chain · GitHub</a></li>
+    </ul>
+  </li>
+</ul>
+<p>Python ベースのコードだ。<em>形態素解析の「MeCab」</em>と、<strong>マルコフ連鎖を用いた文章生成ライブラリ「Markovify」</strong>を使用する。</p>
+<h2 id="mecab-をインストールする"><a class="header-link" href="#mecab-をインストールする"><span class="header-link-mark"></span></a>MeCab をインストールする</h2>
+<p>まずは形態素解析を行う <strong>MeCab</strong> ライブラリをインストールする必要がある。以下は MacOS で Homebrew を使って簡単にインストールしている。</p>
+<ul>
+  <li><a href="https://www.wakuwakubank.com/posts/272-python-mecab/">Python｜MeCabで形態素解析 - わくわくBank</a></li>
+  <li><a href="https://qiita.com/hisawa/items/e0a5592e8f7c0dcda430">MeCabでの形態素解析 on Mac - Qiita</a></li>
+  <li><a href="https://taku910.github.io/mecab/">MeCab: Yet Another Part-of-Speech and Morphological Analyzer</a></li>
+  <li><a href="https://oita.oika.me/2018/05/03/python3-mecab-on-windows/">Python3でMeCab on Windows - OITA: Oika's Information Technological Activities</a> … Windows の場合はコチラなどを参照</li>
+</ul>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># MeCab 本体と辞書ファイルをインストールする</span>
+$ brew <span class="token function">install</span> mecab mecab-ipadic
+
+<span class="token comment"># コマンドラインで試しに使ってみる</span>
+$ mecab
+こんにちは、私はNeoです。
+こん  名詞,固有名詞,人名,名,*,*,こん,コン,コン
+に 助詞,格助詞,一般,*,*,*,に,ニ,ニ
+私 名詞,代名詞,一般,*,*,*,私,ワタシ,ワタシ
+は 助詞,係助詞,*,*,*,*,は,ハ,ワ
+Neo 名詞,一般,*,*,*,*,*
+です  助動詞,*,*,*,特殊・デス,基本形,です,デス,デス
+。 記号,句点,*,*,*,*,。,。,。
+EOS
+<span class="token comment"># Ctrl + C で終了する</span>
+</code></pre>
+<p>まずはコマンドラインで MeCab が動作することを確認した。</p>
+<p>ipadic というのが標準のシステム辞書だが、<em>mecab-ipadic-NEologd</em> というカスタム辞書もある。固有名詞などの情報が追加されているので、より精度が高まると思われる。今回は一旦省略。</p>
+<ul>
+  <li><a href="https://github.com/neologd/mecab-ipadic-neologd/blob/master/README.ja.md">mecab-ipadic-neologd/README.ja.md at master · neologd/mecab-ipadic-neologd · GitHub</a></li>
+</ul>
+<h2 id="python-プロジェクトを用意する"><a class="header-link" href="#python-プロジェクトを用意する"><span class="header-link-mark"></span></a>Python プロジェクトを用意する</h2>
+<p>続いて pipenv でプロジェクトを作ってみる。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># Pipfile を生成する</span>
+$ pipenv --python <span class="token number">3.7</span>
+
+<span class="token comment"># 必要なライブラリをインストールする</span>
+$ pipenv <span class="token function">install</span> mecab-python3 markovify
+</code></pre>
+<h2 id="mecab-のみ試してみる"><a class="header-link" href="#mecab-のみ試してみる"><span class="header-link-mark"></span></a>MeCab のみ試してみる</h2>
+<p>Python コードから MeCab のみを使ってみる。</p>
+<ul>
+  <li><code>mecab_ex1.py</code></li>
+</ul>
+<pre class="language-python"><code class="language-python"><span class="token keyword">import</span> MeCab
+
+text <span class="token operator">=</span> <span class="token string">'こんにちは、私はNeoといいます。'</span>
+
+<span class="token comment"># 通常の解析結果</span>
+mecab <span class="token operator">=</span> MeCab<span class="token punctuation">.</span>Tagger<span class="token punctuation">(</span><span class="token punctuation">)</span>
+<span class="token keyword">print</span><span class="token punctuation">(</span>mecab<span class="token punctuation">.</span>parse<span class="token punctuation">(</span>text<span class="token punctuation">)</span><span class="token punctuation">)</span>
+
+<span class="token comment"># ChaSen 互換形式</span>
+mecab_chasen <span class="token operator">=</span> MeCab<span class="token punctuation">.</span>Tagger<span class="token punctuation">(</span><span class="token string">'-Ochasen'</span><span class="token punctuation">)</span>
+<span class="token keyword">print</span><span class="token punctuation">(</span>mecab_chasen<span class="token punctuation">.</span>parse<span class="token punctuation">(</span>text<span class="token punctuation">)</span><span class="token punctuation">)</span>
+
+<span class="token comment"># 分かち書きのみ出力する</span>
+mecab_wakati <span class="token operator">=</span> MeCab<span class="token punctuation">.</span>Tagger<span class="token punctuation">(</span><span class="token string">'-Owakati'</span><span class="token punctuation">)</span>
+<span class="token keyword">print</span><span class="token punctuation">(</span>mecab_wakati<span class="token punctuation">.</span>parse<span class="token punctuation">(</span>text<span class="token punctuation">)</span><span class="token punctuation">)</span>
+
+<span class="token comment"># 読みのみ出力する</span>
+mecab_yomi <span class="token operator">=</span> MeCab<span class="token punctuation">.</span>Tagger<span class="token punctuation">(</span><span class="token string">'-Oyomi'</span><span class="token punctuation">)</span>
+<span class="token keyword">print</span><span class="token punctuation">(</span>mecab_yomi<span class="token punctuation">.</span>parse<span class="token punctuation">(</span>text<span class="token punctuation">)</span><span class="token punctuation">)</span>
+</code></pre>
+<p><code>MeCab.Tagger()</code> というのがパーサインスタンスの生成。引数で分かち書きを出力するなどのオプションが指定できる。</p>
+<ul>
+  <li><a href="https://sleepless-se.net/2018/08/24/python-mecab-wakatigaki/">Python MeCabで誰でも簡単に分かち書きをする方法 | エンジニアの眠れない夜</a></li>
+</ul>
+<p>実行結果は次のとおり。</p>
+<pre class="language-bash"><code class="language-bash">$ pipenv run python mecab_ex1.py
+こんにちは 感動詞,*,*,*,*,*,こんにちは,コンニチハ,コンニチワ
+、 記号,読点,*,*,*,*,、,、,、
+私 名詞,代名詞,一般,*,*,*,私,ワタシ,ワタシ
+は 助詞,係助詞,*,*,*,*,は,ハ,ワ
+Neo 名詞,一般,*,*,*,*,*
+と 助詞,格助詞,引用,*,*,*,と,ト,ト
+いい  動詞,自立,*,*,五段・ワ行促音便,連用形,いう,イイ,イイ
+ます  助動詞,*,*,*,特殊・マス,基本形,ます,マス,マス
+。 記号,句点,*,*,*,*,。,。,。
+EOS
+
+こんにちは コンニチハ こんにちは 感動詞
+、 、 、 記号-読点
+私 ワタシ   私 名詞-代名詞-一般
+は ハ は 助詞-係助詞
+Neo Neo Neo 名詞-一般
+と ト と 助詞-格助詞-引用
+いい  イイ  いう  動詞-自立   五段・ワ行促音便    連用形
+ます  マス  ます  助動詞   特殊・マス 基本形
+。 。 。 記号-句点
+EOS
+
+こんにちは 、 私 は Neo と いい ます 。
+
+コンニチハ、ワタシハNeoトイイマス。
+</code></pre>
+<p>なるほど、こうやって解析結果が得られるワケだ。面白い。</p>
+<h2 id="テキストファイルを用意する"><a class="header-link" href="#テキストファイルを用意する"><span class="header-link-mark"></span></a>テキストファイルを用意する</h2>
+<p>それでは、文章自動生成を実装していこう。</p>
+<p>まずは見本に利用する、何らかのプレーンテキストを用意する。ココは参考にしたいモノに応じて、スクレイピングしたり、手集計したりと様々なので割愛。今回は手動で、名言集のサイトから適当な文章を集めてみた。</p>
+<ul>
+  <li><a href="https://iyashitour.com/meigen/theme/life">人生の名言・格言集。人生を変える、支えとなる言葉 | 癒しツアー</a></li>
+</ul>
+<p>集めたテキストを <em><code>input.txt</code></em> とする。</p>
+<ul>
+  <li><code>input.txt</code> : こんな感じでできるだけ多くの文章を用意すると良い</li>
+</ul>
+<pre><code>お前がいつの日か出会う禍は、お前がおろそかにしたある時間の報いだ。
+じっくり考えろ。しかし、行動する時が来たなら、考えるのをやめて、進め。
+人生という試合で最も重要なのは、休憩時間の得点である。
+戦術とは、一点に全ての力をふるうことである。
+リーダーとは「希望を配る人」のことだ。
+一頭の狼に率いられた百頭の羊の群れは、一頭の羊に率いられた百頭の狼の群れにまさる。
+会議を重ねすぎると、いつの時代にも起こったことが起こる。すなわち、ついには最悪の策が採られるということである。
+最悪の策とは、ほとんど常に、もっとも臆病な策である。
+勝利は、わが迅速果敢な行動にあり。
+勝利は、もっとも忍耐強い人にもたらされる。
+不可能は、小心者の幻影であり、権力者の無能の証であり、卑怯者の避難所である。
+有能の士は、どんな足枷をはめられていようとも飛躍する。
+重大な状況において、ほんのちょっとしたことが、最も大きな出来事をつねに決定する。
+状況？何が状況だ。俺が状況を作るのだ。
+戦闘の翌日に備えて新鮮な部隊を取っておく将軍はほとんど常に敗れる。
+戦争においては、一つの大きな失敗があると、常に誰かが大きな罪ありとされる。
+指揮の統一は戦争において最も重要なものである。二つの軍隊は決して同じ舞台の上におかれてはならない。
+兵法に複雑な策略などはいらない。最も単純なものが最良なのだ。偉大な将軍達が間違いを犯してしまうのは、難しい戦略を立て、賢く振る舞おうとするからだ。
+決して落胆しないこと。それが将軍としての第一の素質である。
+最も大きな危険は、勝利の瞬間にある。
+私は何事も最悪の事態を想定することから始める。
+最善のものを希望せよ。しかし最悪のものに備えよ。
+柔軟性を持っている者は、いくら年をとっても若い者だ。
+間違いをせずに生きるものは、それほど賢くない。
+忍耐は運命を左右する。
+ロバが旅に出かけたところで馬になって帰ってくるわけではない。
+学問なき経験は、経験なき学問に勝る。
+食べるために生きるな。生きるために食べよ。
+神は荷物を負うように、人の背中をつくる。
+一日だけ幸せでいたいならば床屋にいけ。一週間だけ幸せでいたいなら車を買え。一か月だけ幸せでいたいなら結婚をしろ。一年だけ幸せでいたいなら家を買え。一生幸せでいたいなら正直でいることだ。
+チェスが終われば、王様も歩兵も同じ箱に帰る。
+幸せは去ったあとに光を放つ。
+機会が人を見捨てるよりも、人が機会を見捨てるほうが多い。
+「神様お願いします」より「神様のおかげです」がいい。
+不幸な人は希望をもて。幸福な人は用心せよ。
+ある男が初めて君を欺いたときには彼を辱めるがいい。しかし、その男がもう一度君を欺いたのであれば君自身を恥じるがいい
+</code></pre>
+<h2 id="markovify-で読み込める形式に変換する"><a class="header-link" href="#markovify-で読み込める形式に変換する"><span class="header-link-mark"></span></a>Markovify で読み込める形式に変換する</h2>
+<p>Markovify については以下。</p>
+<ul>
+  <li><a href="https://github.com/jsvine/markovify">GitHub - jsvine/markovify: A simple, extensible Markov chain generator.</a></li>
+  <li><a href="https://githubja.com/jsvine/markovify">markovify – シンプルで拡張可能なマルコフチェーンジェネレータ – GitHubじゃ！Pythonじゃ！</a></li>
+  <li><a href="https://qiita.com/shge/items/fbfce6b54d2e0cc1b382">Python MeCab とマルコフ連鎖ライブラリ markovify を使い、文章を学習して自動生成する方法 - Qiita</a></li>
+  <li><a href="https://qiita.com/kakakaya/items/38042e807f3410b88b2d">markovifyで日本語の文章を学習して、マルコフ連鎖により文章生成を行う - Qiita</a></li>
+</ul>
+<p>元々英文用のライブラリなので、分かち書きがない日本語はそのまま解釈できなかったり、句点 <code>。</code> を認識できなかったりする。</p>
+<p>そこで、事前に <code>input.txt</code> を編集して、Markovify で上手くマルコフ連鎖が実現できるようにテキストを編集しておくワケである。</p>
+<ul>
+  <li><a href="https://gist.github.com/kakakaya/141838e738a2fd9667b5e4fd2b79c4c7">Learn from aozora bunko and output markov chain · GitHub</a></li>
+</ul>
+<p>↑このコードの <code>split_for_markovify()</code> 関数を独立させて、<code>input.txt</code> から <code>splitted.txt</code> を作るファイルにした。</p>
+<ul>
+  <li><code>split_for_markovify.py</code></li>
+</ul>
+<pre class="language-python"><code class="language-python"><span class="token comment"># テキストを一文ごとに改行し、一文の語句をスペースで分割する</span>
+
+<span class="token keyword">import</span> MeCab
+
+<span class="token comment"># Markovify で上手く解釈できない文字列を定義しておく : https://github.com/jsvine/markovify/issues/84</span>
+breaking_chars <span class="token operator">=</span> <span class="token punctuation">[</span><span class="token string">'('</span><span class="token punctuation">,</span> <span class="token string">')'</span><span class="token punctuation">,</span> <span class="token string">'['</span><span class="token punctuation">,</span> <span class="token string">']'</span><span class="token punctuation">,</span> <span class="token string">'"'</span><span class="token punctuation">,</span> <span class="token string">"'"</span><span class="token punctuation">]</span>
+
+<span class="token comment"># 基となるテキストをファイルから読み込む</span>
+text <span class="token operator">=</span> <span class="token builtin">open</span><span class="token punctuation">(</span><span class="token string">'./input.txt'</span><span class="token punctuation">,</span> <span class="token string">'r'</span><span class="token punctuation">)</span><span class="token punctuation">.</span>read<span class="token punctuation">(</span><span class="token punctuation">)</span>
+
+mecab <span class="token operator">=</span> MeCab<span class="token punctuation">.</span>Tagger<span class="token punctuation">(</span><span class="token punctuation">)</span>
+
+<span class="token comment"># 1行ごとに処理する</span>
+splitted_text <span class="token operator">=</span> <span class="token string">''</span>
+<span class="token keyword">for</span> line <span class="token keyword">in</span> text<span class="token punctuation">.</span>split<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">:</span>
+  <span class="token keyword">print</span><span class="token punctuation">(</span><span class="token string">'Line : '</span><span class="token punctuation">,</span> line<span class="token punctuation">)</span>
+  parsed_nodes <span class="token operator">=</span> mecab<span class="token punctuation">.</span>parseToNode<span class="token punctuation">(</span>line<span class="token punctuation">)</span>
+  <span class="token keyword">while</span> parsed_nodes<span class="token punctuation">:</span>
+    <span class="token keyword">print</span><span class="token punctuation">(</span><span class="token string">'Surface : '</span><span class="token punctuation">,</span> parsed_nodes<span class="token punctuation">.</span>surface<span class="token punctuation">)</span>
+    <span class="token keyword">try</span><span class="token punctuation">:</span>
+      <span class="token comment"># 上手く解釈できない文字列は飛ばす</span>
+      <span class="token keyword">if</span> parsed_nodes<span class="token punctuation">.</span>surface <span class="token keyword">not</span> <span class="token keyword">in</span> breaking_chars<span class="token punctuation">:</span>
+        <span class="token keyword">print</span><span class="token punctuation">(</span><span class="token string">'  OK'</span><span class="token punctuation">)</span>
+        splitted_text <span class="token operator">+=</span> parsed_nodes<span class="token punctuation">.</span>surface
+      <span class="token comment"># 句読点でなければスペースで分かち書きする</span>
+      <span class="token keyword">if</span> parsed_nodes<span class="token punctuation">.</span>surface <span class="token operator">!=</span> <span class="token string">'。'</span> <span class="token keyword">and</span> parsed_nodes<span class="token punctuation">.</span>surface <span class="token operator">!=</span> <span class="token string">'、'</span><span class="token punctuation">:</span>
+        <span class="token keyword">print</span><span class="token punctuation">(</span><span class="token string">'  スペース付与'</span><span class="token punctuation">)</span>
+        splitted_text <span class="token operator">+=</span> <span class="token string">' '</span>
+      <span class="token comment"># 句点が登場したら改行で文章を分割する</span>
+      <span class="token keyword">if</span> parsed_nodes<span class="token punctuation">.</span>surface <span class="token operator">==</span> <span class="token string">'。'</span><span class="token punctuation">:</span>
+        <span class="token keyword">print</span><span class="token punctuation">(</span><span class="token string">'  改行付与'</span><span class="token punctuation">)</span>
+        splitted_text <span class="token operator">+=</span> <span class="token string">'\n'</span>
+    <span class="token keyword">except</span> UnicodeDecodeError <span class="token keyword">as</span> error<span class="token punctuation">:</span>
+      <span class="token keyword">print</span><span class="token punctuation">(</span><span class="token string">'Error : '</span><span class="token punctuation">,</span> line<span class="token punctuation">)</span>
+    <span class="token keyword">finally</span><span class="token punctuation">:</span>
+      parsed_nodes <span class="token operator">=</span> parsed_nodes<span class="token punctuation">.</span><span class="token builtin">next</span>
+
+<span class="token keyword">print</span><span class="token punctuation">(</span><span class="token string">'Result :\n'</span><span class="token punctuation">,</span> splitted_text<span class="token punctuation">)</span>
+
+<span class="token keyword">with</span> <span class="token builtin">open</span><span class="token punctuation">(</span><span class="token string">'./splitted.txt'</span><span class="token punctuation">,</span> <span class="token string">'w'</span><span class="token punctuation">)</span> <span class="token keyword">as</span> <span class="token builtin">file</span><span class="token punctuation">:</span>
+  <span class="token builtin">file</span><span class="token punctuation">.</span>write<span class="token punctuation">(</span>splitted_text<span class="token punctuation">)</span>
+
+<span class="token keyword">print</span><span class="token punctuation">(</span><span class="token string">'End'</span><span class="token punctuation">)</span>
+</code></pre>
+<p><code>input.txt</code> を用意しておき、このコードを次のように実行する。</p>
+<pre class="language-bash"><code class="language-bash">$ pipenv run python split_for_markovify.py
+</code></pre>
+<p>結果ファイルは次のようになった。</p>
+<ul>
+  <li><code>splitted.txt</code>
+    <ul>
+      <li>行頭に余計にスペースが入ったりしているが、気にしなくて良い</li>
+    </ul>
+  </li>
+</ul>
+<pre><code>お前 が いつ の 日 か 出会う 禍 は 、お前 が おろそか に し た ある 時間 の 報い だ 。
+  じっくり 考えろ 。
+しかし 、行動 する 時 が 来 た なら 、考える の を やめ て 、進め 。
+  人生 という 試合 で 最も 重要 な の は 、休憩 時間 の 得点 で ある 。
+  戦術 と は 、一 点 に 全て の 力 を ふるう こと で ある 。
+  リーダー と は 「 希望 を 配る 人 」 の こと だ 。
+  一 頭 の 狼 に 率い られ た 百 頭 の 羊 の 群れ は 、一 頭 の 羊 に 率い られ た 百 頭 の 狼 の 群れ に まさる 。
+  会議 を 重ね すぎる と 、いつ の 時代 に も 起こっ た こと が 起こる 。
+すなわち 、ついに は 最悪 の 策 が 採ら れる という こと で ある 。
+  最悪 の 策 と は 、ほとんど 常に 、もっとも 臆病 な 策 で ある 。
+  勝利 は 、わが 迅速 果敢 な 行動 に あり 。
+  勝利 は 、もっとも 忍耐 強い 人 に もたらさ れる 。
+  不可能 は 、小心 者 の 幻影 で あり 、権力 者 の 無能 の 証 で あり 、卑怯 者 の 避難 所 で ある 。
+  有能 の 士 は 、どんな 足枷 を はめ られ て いよ う と も 飛躍 する 。
+  重大 な 状況 において 、ほんの ちょっとした こと が 、最も 大きな 出来事 を つねに 決定 する 。
+  状況 ？ 何 が 状況 だ 。
+俺 が 状況 を 作る の だ 。
+  戦闘 の 翌日 に 備え て 新鮮 な 部隊 を 取っ て おく 将軍 は ほとんど 常に 敗れる 。
+  戦争 において は 、一つ の 大きな 失敗 が ある と 、常に 誰 か が 大きな 罪 あり と さ れる 。
+  指揮 の 統一 は 戦争 において 最も 重要 な もの で ある 。
+二つ の 軍隊 は 決して 同じ 舞台 の 上 に おか れ て は なら ない 。
+  兵法 に 複雑 な 策略 など は いら ない 。
+最も 単純 な もの が 最良 な の だ 。
+偉大 な 将軍 達 が 間違い を 犯し て しまう の は 、難しい 戦略 を 立て 、賢く 振る舞お う と する から だ 。
+  決して 落胆 し ない こと 。
+それ が 将軍 として の 第 一 の 素質 で ある 。
+  最も 大きな 危険 は 、勝利 の 瞬間 に ある 。
+  私 は 何事 も 最悪 の 事態 を 想定 する こと から 始める 。
+  最善 の もの を 希望 せよ 。
+しかし 最悪 の もの に 備え よ 。
+  柔軟 性 を 持っ て いる 者 は 、いくら 年 を とっても 若い 者 だ 。
+  間違い を せ ず に 生きる もの は 、それほど 賢く ない 。
+  忍耐 は 運命 を 左右 する 。
+  ロバ が 旅 に 出かけ た ところ で 馬 に なっ て 帰っ て くる わけ で は ない 。
+  学問 なき 経験 は 、経験 なき 学問 に 勝る 。
+  食べる ため に 生きる な 。
+生きる ため に 食べよ 。
+  神 は 荷物 を 負う よう に 、人 の 背中 を つくる 。
+  一 日 だけ 幸せ で いたい なら ば 床屋 に いけ 。
+一 週間 だけ 幸せ で いたい なら 車 を 買え 。
+一 か月 だけ 幸せ で いたい なら 結婚 を しろ 。
+一 年 だけ 幸せ で いたい なら 家 を 買え 。
+一生 幸せ で いたい なら 正直 で いる こと だ 。
+  チェス が 終われ ば 、王様 も 歩兵 も 同じ 箱 に 帰る 。
+  幸せ は 去っ た あと に 光 を 放つ 。
+  機会 が 人 を 見捨てる より も 、人 が 機会 を 見捨てる ほう が 多い 。
+  「 神様 お願い し ます 」 より 「 神様 の おかげ です 」 が いい 。
+  不幸 な 人 は 希望 を もて 。
+幸福 な 人 は 用心 せよ 。
+  ある 男 が 初めて 君 を 欺い た とき に は 彼 を 辱める が いい 。
+しかし 、その 男 が もう一度 君 を 欺い た の で あれ ば 君 自身 を 恥じる が いい 。
+</code></pre>
+<h2 id="markovify-でマルコフ連鎖を用いた文章自動生成を行う"><a class="header-link" href="#markovify-でマルコフ連鎖を用いた文章自動生成を行う"><span class="header-link-mark"></span></a>Markovify でマルコフ連鎖を用いた文章自動生成を行う</h2>
+<p>ようやく文章自動生成である。</p>
+<ul>
+  <li><a href="https://gist.github.com/kakakaya/141838e738a2fd9667b5e4fd2b79c4c7">Learn from aozora bunko and output markov chain · GitHub</a></li>
+</ul>
+<p>↑このコードの <code>main()</code> 関数を参考に、次のように実装した。</p>
+<ul>
+  <li><code>exec_markovify.py</code></li>
+</ul>
+<pre class="language-python"><code class="language-python"><span class="token keyword">import</span> os
+<span class="token keyword">import</span> sys
+
+<span class="token keyword">import</span> markovify
+
+<span class="token comment"># モデルを生成する</span>
+model <span class="token operator">=</span> <span class="token boolean">None</span>
+<span class="token keyword">if</span> os<span class="token punctuation">.</span>path<span class="token punctuation">.</span>exists<span class="token punctuation">(</span><span class="token string">'./learned.json'</span><span class="token punctuation">)</span><span class="token punctuation">:</span>
+  <span class="token comment"># 既に学習済モデルがあればそれを利用する</span>
+  <span class="token keyword">print</span><span class="token punctuation">(</span><span class="token string">'Use Learned JSON Data'</span><span class="token punctuation">)</span>
+  <span class="token keyword">with</span> <span class="token builtin">open</span><span class="token punctuation">(</span><span class="token string">'./learned.json'</span><span class="token punctuation">,</span> <span class="token string">'r'</span><span class="token punctuation">)</span> <span class="token keyword">as</span> <span class="token builtin">file</span><span class="token punctuation">:</span>
+    model <span class="token operator">=</span> markovify<span class="token punctuation">.</span>NewlineText<span class="token punctuation">.</span>from_json<span class="token punctuation">(</span><span class="token builtin">file</span><span class="token punctuation">.</span>read<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+<span class="token keyword">else</span><span class="token punctuation">:</span>
+  <span class="token comment"># 学習済モデルがなければテキストファイルからモデルを生成する</span>
+  <span class="token keyword">print</span><span class="token punctuation">(</span><span class="token string">'Use Text File'</span><span class="token punctuation">)</span>
+  text <span class="token operator">=</span> <span class="token builtin">open</span><span class="token punctuation">(</span><span class="token string">'./splitted.txt'</span><span class="token punctuation">,</span> <span class="token string">'r'</span><span class="token punctuation">)</span><span class="token punctuation">.</span>read<span class="token punctuation">(</span><span class="token punctuation">)</span>
+  model <span class="token operator">=</span> markovify<span class="token punctuation">.</span>NewlineText<span class="token punctuation">(</span>text<span class="token punctuation">,</span> state_size <span class="token operator">=</span> <span class="token number">3</span><span class="token punctuation">)</span>
+
+<span class="token comment"># 文章を生成する</span>
+sentence <span class="token operator">=</span> model<span class="token punctuation">.</span>make_sentence<span class="token punctuation">(</span>tries <span class="token operator">=</span> <span class="token number">100</span><span class="token punctuation">)</span>
+
+<span class="token comment"># 文章生成に失敗したら None が返る</span>
+<span class="token keyword">if</span> sentence <span class="token keyword">is</span> <span class="token boolean">None</span><span class="token punctuation">:</span>
+  <span class="token keyword">print</span><span class="token punctuation">(</span><span class="token string">'上手く生成できませんでした'</span><span class="token punctuation">)</span>
+  sys<span class="token punctuation">.</span>exit<span class="token punctuation">(</span><span class="token punctuation">)</span>
+
+<span class="token comment"># 分かち書きされているのを結合して出力する</span>
+<span class="token keyword">print</span><span class="token punctuation">(</span><span class="token string">'----------'</span><span class="token punctuation">)</span>
+<span class="token keyword">print</span><span class="token punctuation">(</span><span class="token string">''</span><span class="token punctuation">.</span>join<span class="token punctuation">(</span>sentence<span class="token punctuation">.</span>split<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+<span class="token keyword">print</span><span class="token punctuation">(</span><span class="token string">'----------'</span><span class="token punctuation">)</span>
+
+<span class="token keyword">if</span> <span class="token keyword">not</span> os<span class="token punctuation">.</span>path<span class="token punctuation">.</span>exists<span class="token punctuation">(</span><span class="token string">'./learned.json'</span><span class="token punctuation">)</span><span class="token punctuation">:</span>
+  <span class="token keyword">print</span><span class="token punctuation">(</span><span class="token string">'Write Learned JSON Data'</span><span class="token punctuation">)</span>
+  <span class="token keyword">with</span> <span class="token builtin">open</span><span class="token punctuation">(</span><span class="token string">'./learned.json'</span><span class="token punctuation">,</span> <span class="token string">'w'</span><span class="token punctuation">)</span> <span class="token keyword">as</span> <span class="token builtin">file</span><span class="token punctuation">:</span>
+    <span class="token builtin">file</span><span class="token punctuation">.</span>write<span class="token punctuation">(</span>model<span class="token punctuation">.</span>to_json<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+
+<span class="token keyword">print</span><span class="token punctuation">(</span><span class="token string">'End'</span><span class="token punctuation">)</span>
+</code></pre>
+<ul>
+  <li>初回は、<code>splitted.txt</code> を読み込んでモデルを新規生成し文章を作成。学習モデルを <code>learned.json</code> というファイルに保存する</li>
+  <li>2回目以降は、<code>learned.json</code> が存在していればそれを利用してモデルを生成し文章を作成する</li>
+</ul>
+<p>という動きをするようになっている。</p>
+<p>モデル生成時の <code>state_size = 3</code> というところで、文章の長さが決まるので、コレを <code>2</code> とすればより短文を、<code>5</code> などとすればより長文を作ろうとしてくれる。</p>
+<p>次のように実行してみよう。</p>
+<pre class="language-bash"><code class="language-bash">$ pipenv run python exec_markovify.py
+</code></pre>
+<p><code>input.txt</code> (およびそれを整形した <code>splitted.txt</code>) が少なかったりすると、<code>make_sentence()</code> 関数でうまく文章を生成できず、<code>None</code> が返ることがある。何回か実行すれば結果が得られるが、内容が似通ってくるので、利用するテキストは多い方が良いだろう。</p>
+<h2 id="自動生成された文章を見てみる"><a class="header-link" href="#自動生成された文章を見てみる"><span class="header-link-mark"></span></a>自動生成された文章を見てみる</h2>
+<p>以下は、何度かコレを実行して得られた文章たちである。</p>
+<ul>
+  <li><code>state_size = 3</code></li>
+</ul>
+<pre><code>指揮の統一は戦争において最も重要なのは、休憩時間の得点である。
+人生という試合で最も重要なものである。
+しかし、その男がもう一度君を欺いたときには彼を辱めるがいい。
+</code></pre>
+<ul>
+  <li><code>state_size = 2</code></li>
+</ul>
+<pre><code>状況？何が状況を作るのだ
+最も単純なものである。
+リーダーとは「希望をもて。
+機会が人を見捨てるほうが多い。
+</code></pre>
+<p>…なかなかセンスのある文章が出てきた。</p>
+<p>学習させるテキストが少なく、文章の広がりがなかなか得られなかったので、何度も生成に失敗したり、<code>state_size = 5</code> では全く文章が生成できなかったりした。ここらへんは入力の質と量によると思われる。</p>
+<h2 id="コレをベースに作り込んでいこう"><a class="header-link" href="#コレをベースに作り込んでいこう"><span class="header-link-mark"></span></a>コレをベースに作り込んでいこう</h2>
+<p>学習させるテキストをどこからどのように取得してくるか、という部分をもっと作り込んで、多種多様な文章を取り込んでいきたい。</p>
+<p>Markovify を使うための分かち書き処理も、もう少し効率的な手法もありそうだ。</p>
+<p>学習モデルを JSON に出力して再利用できるようなコードにしてみたが、DB に出力しても良いだろう。<code>state_size</code> 部分をランダムに変化させて複数件出してみたり、色々なことができそう。</p>
+<p>とりあえずそれっぽい人工無能を作る初歩の初歩が出来て良き良き。</p>
+<h2 id="その他参考文献"><a class="header-link" href="#その他参考文献"><span class="header-link-mark"></span></a>その他参考文献</h2>
+<ul>
+  <li><a href="http://h1dia.hateblo.jp/entry/2016/04/26/235154">マルコフ連鎖で文章を自動生成してめぐるちゃんの召喚を試みた話 - 因幡のミックスジュース</a>
+    <ul>
+      <li>Python 製。Mecab と独自のマルコフ連鎖実装</li>
+    </ul>
+  </li>
+  <li><a href="http://o-tomox.hatenablog.com/entry/2014/11/14/190632">Pythonリハビリのために文章自動生成プログラムを作ってみた - ともっくす alloc init</a>
+    <ul>
+      <li><a href="https://github.com/ohshige15/TextGenerator">GitHub - ohshige15/TextGenerator: マルコフ連鎖を使った文章自動生成プログラム</a></li>
+      <li><code>o-tomox/TextGenerator</code> の作者</li>
+    </ul>
+  </li>
+  <li><a href="https://qiita.com/hitsumabushi845/items/647f8bbe8d399f76825c">マルコフ連鎖を使って自分らしい文章をツイートする - Qiita</a>
+    <ul>
+      <li>Python 製。<code>o-tomox/TextGenerator</code> を Python3 系に修正</li>
+    </ul>
+  </li>
+  <li><a href="https://takuti.me/note/twitter-bot/">マルコフ連鎖でTwitter Botをつくりました | takuti.me</a>
+    <ul>
+      <li><a href="https://github.com/takuti/twitter-bot">GitHub - takuti/twitter-bot: Markov chain-based Japanese twitter bot</a></li>
+      <li>Ruby 製</li>
+    </ul>
+  </li>
+  <li><a href="https://tondol.hatenablog.jp/entry/20120311/1331470586">マルコフ連鎖でTwitter BOTを作る - FLYING</a>
+    <ul>
+      <li>Ruby 製</li>
+    </ul>
+  </li>
+</ul>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2020-03-07</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2020-03-07</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

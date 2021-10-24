@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>はてなブログを更新したら Mastodon に投稿する IFTTT を作る → mstdn.jp 対策に GAS も併用 - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2020/04/08-02.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2020/index.html">2020年</a></li>
+            <li><a href="/blog/2020/04/index.html">04月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2020-04-08</time></div>
+        <h1 id="page-title">はてなブログを更新したら Mastodon に投稿する IFTTT を作る → mstdn.jp 対策に GAS も併用</h1>
+
+<p>はてなブログに限らずだが、RSS フィードを発行するブログ等の媒体を更新した時に、その RSS フィードの更新を検知して IFTTT の Webhook が発火し、Mastodon API を使ってブログの更新内容をトゥートする、そんな仕組みを作ってみた。</p>
+<p>前半は通常のマストドン・インスタンスで成功するであろう構成で、後半は <code>mstdn.jp</code> 固有の問題を解消するための対策版を紹介する。</p>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#%E6%BA%96%E5%82%99%E3%81%99%E3%82%8B%E3%83%A2%E3%83%8E">準備するモノ</a></li>
+  <li><a href="#mastodon-api-%E3%81%AE%E6%BA%96%E5%82%99%E3%82%92%E3%81%99%E3%82%8B">Mastodon API の準備をする</a></li>
+  <li><a href="#ifttt-%E3%81%AE-applet-%E3%82%92%E4%BD%9C%E6%88%90%E3%81%99%E3%82%8B">IFTTT の Applet を作成する</a></li>
+  <li><a href="#mstdnjp-%E3%81%AF-ifttt-%E3%81%8B%E3%82%89%E3%81%AE%E3%83%AA%E3%82%AF%E3%82%A8%E3%82%B9%E3%83%88%E3%82%92%E6%8B%92%E5%90%A6%E3%81%97%E3%81%A6%E3%81%84%E3%82%8B%E6%A8%A1%E6%A7%98"><code>mstdn.jp</code> は IFTTT からのリクエストを拒否している模様</a></li>
+  <li><a href="#gas-%E3%82%92%E7%B5%8C%E7%94%B1%E3%81%97%E3%81%A6%E9%80%81%E4%BF%A1%E3%81%99%E3%82%8B">GAS を経由して送信する</a></li>
+  <li><a href="#%E5%8F%82%E8%80%83%E6%96%87%E7%8C%AE">参考文献</a></li>
+</ul>
+<h2 id="準備するモノ"><a class="header-link" href="#準備するモノ"><span class="header-link-mark"></span></a>準備するモノ</h2>
+<ul>
+  <li>Mastodon のアカウント : 以降の例では <code>mstdn.jp</code> のテイで記載している → <strong><code>mstdn.jp</code> は IFTTT 連携不可能 (後述)</strong></li>
+  <li>IFTTT のアカウント</li>
+  <li>トゥートしたい RSS フィードの URL : はてなブログの場合、<code>https://【ブログ URL】/rss</code> に該当する</li>
+  <li><code>mstdn.jp</code> の場合のみ : Google Apps Script を作成するための環境 (Gmail アカウントを持っておけば良い)</li>
+</ul>
+<h2 id="mastodon-api-の準備をする"><a class="header-link" href="#mastodon-api-の準備をする"><span class="header-link-mark"></span></a>Mastodon API の準備をする</h2>
+<p>何やら Mastodon の管理画面に「アプリ」という画面があり、ココで作ったアプリでも Access Token とかが発行できたのだけど、コレとは違うやり方で Access Token を発行しようと思う。多分結果は同じだと思う。</p>
+<p>まず、次のようなパラメータを組み立てて <code>curl</code> する。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">curl</span> -X POST -d <span class="token string">'client_name=【任意のアプリ名】&#x26;redirect_uris=urn:ietf:wg:oauth:2.0:oob&#x26;scopes=read write follow'</span> https://mstdn.jp/api/v1/apps
+
+<span class="token comment"># 以下のような内容がレスポンスされる</span>
+<span class="token punctuation">{</span>
+  <span class="token string">"id"</span><span class="token builtin class-name">:</span> <span class="token string">"000000"</span>,
+  <span class="token string">"name"</span><span class="token builtin class-name">:</span> <span class="token string">"【先程入力した「任意のアプリ名」】"</span>,
+  <span class="token string">"website"</span><span class="token builtin class-name">:</span> null,
+  <span class="token string">"redirect_uri"</span><span class="token builtin class-name">:</span> <span class="token string">"urn:ietf:wg:oauth:2.0:oob"</span>,
+  <span class="token string">"client_id"</span><span class="token builtin class-name">:</span> <span class="token string">"【クライアント ID】"</span>,
+  <span class="token string">"client_secret"</span><span class="token builtin class-name">:</span> <span class="token string">"【クライアント・シークレット】"</span>,
+  <span class="token string">"vapid_key"</span><span class="token builtin class-name">:</span> <span class="token string">"【Vapid Key・特に使わないので無視】"</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>続いて、レスポンス内容を組み合わせて次のような URL を構築し、その URL に<em>ブラウザでアクセス</em>する。</p>
+<pre><code>https://mstdn.jp/oauth/authorize?client_id=【クライアント ID】&#x26;redirect_uri=urn:ietf:wg:oauth:2.0:oob&#x26;response_type=code&#x26;scope=read%20write%20follow
+</code></pre>
+<p>表示されたページで「承認」を押すと、<em>「認証コード」</em>が発行されるので控えておく。</p>
+<p>そしたら次のような URL を組み立てて、再度 <code>curl</code> を叩く。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">curl</span> -X POST -d <span class="token string">'grant_type=authorization_code&#x26;redirect_uri=urn:ietf:wg:oauth:2.0:oob&#x26;client_id=【クライアント ID】&#x26;client_secret=【クライアント・シークレット】&#x26;code=【ブラウザで発行した「認証コード」】'</span> https://mstdn.jp/oauth/token
+
+<span class="token comment"># 次のような内容がレスポンスされる</span>
+<span class="token punctuation">{</span>
+  <span class="token string">"access_token"</span><span class="token builtin class-name">:</span> <span class="token string">"【Access Token】"</span>,
+  <span class="token string">"token_type"</span><span class="token builtin class-name">:</span> <span class="token string">"Bearer"</span>,
+  <span class="token string">"scope"</span><span class="token builtin class-name">:</span> <span class="token string">"read write follow"</span>,
+  <span class="token string">"created_at"</span><span class="token builtin class-name">:</span> <span class="token number">1500000000</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>こうして <em>Access Token</em> が発行できたので、コレを控えておく。</p>
+<p>ココまでやると、マストドンの設定画面の「アカウント」→「認証済アプリ」に、作成したアプリの情報が表示される。「開発」の「アプリ」の方には何も表示されない。</p>
+<h2 id="ifttt-の-applet-を作成する"><a class="header-link" href="#ifttt-の-applet-を作成する"><span class="header-link-mark"></span></a>IFTTT の Applet を作成する</h2>
+<p>Access Token が用意できたら、IFTTT の Applet を作成していく。</p>
+<ul>
+  <li>If That
+    <ul>
+      <li>「RSS Feed」→「New feed item」を選択し、RSS フィードの URL を指定する</li>
+    </ul>
+  </li>
+  <li>Then This
+    <ul>
+      <li>「Webhooks」→「Make a web request」を選択する</li>
+      <li>URL : <code>https://mstdn.jp/api/v1/statuses</code></li>
+      <li>Method : POST</li>
+      <li>Content Type : <code>application/x-www-form-urlencoded</code></li>
+      <li>Body : <em><code>access_token=【Access Token】&#x26;status=&#x3C;&#x3C;&#x3C;{{EntryTitle}}>>> {{EntryUrl}}&#x26;visibility=public</code></em></li>
+    </ul>
+  </li>
+</ul>
+<p>IFTTT の画面上は <em><code>&#x3C;&#x3C; >></code> (2重の山カッコ)</em> で囲むと URI エンコード (エスケープ) できる、といった記載があるが、<strong>実際は <code>&#x3C;&#x3C;&#x3C; >>></code> (3重の山カッコ)</strong> でないといけないらしい。</p>
+<h2 id="mstdnjp-は-ifttt-からのリクエストを拒否している模様"><a class="header-link" href="#mstdnjp-は-ifttt-からのリクエストを拒否している模様"><span class="header-link-mark"></span></a><code>mstdn.jp</code> は IFTTT からのリクエストを拒否している模様</h2>
+<p>本来はこのように設定すれば、RSS フィードが更新された時に、Mastodon API を使ってトゥートされるはずなのだが、<code>mstdn.jp</code> へのリクエストは <em>403</em> エラーになってしまい、うまくいかなかった。</p>
+<p>どうやら <strong><code>mstdn.jp</code> 側が IFTTT からのリクエストを拒否している</strong>ようで、避けられない。同じ Access Token を使って <code>curl</code> で投げたり iOS ショートカットに組み込んだりする分には正常に動作するので、IFTTT だけが拒否されているようだ。</p>
+<h2 id="gas-を経由して送信する"><a class="header-link" href="#gas-を経由して送信する"><span class="header-link-mark"></span></a>GAS を経由して送信する</h2>
+<p>ということで、<code>mstdn.jp</code> にトゥートする場合は、</p>
+<ul>
+  <li>RSS フィードの更新 → IFTTT で検知 → GAS に情報連携 → GAS から Mastodon API をコールしてトゥート</li>
+</ul>
+<p>という手順にしてみる。</p>
+<p>まず GAS を作成し、次のようなコードを作成する。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword">function</span> <span class="token function">doPost</span><span class="token punctuation">(</span><span class="token parameter">e</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token keyword control-flow">try</span> <span class="token punctuation">{</span>
+    <span class="token comment">// JSON パースする (パラメータがない場合はココで例外が発生する)</span>
+    <span class="token keyword">const</span> params <span class="token operator">=</span> <span class="token known-class-name class-name">JSON</span><span class="token punctuation">.</span><span class="token method function property-access">parse</span><span class="token punctuation">(</span>e<span class="token punctuation">.</span><span class="token property-access">postData</span><span class="token punctuation">.</span><span class="token method function property-access">getDataAsString</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    
+    <span class="token comment">// IFTTT からの連携フラグがない場合、投稿文字列がない場合は何もしない</span>
+    <span class="token keyword control-flow">if</span><span class="token punctuation">(</span>params<span class="token punctuation">.</span><span class="token property-access">post_from</span> <span class="token operator">!==</span> <span class="token string">'ifttt'</span> <span class="token operator">||</span> params<span class="token punctuation">.</span><span class="token property-access">status</span> <span class="token operator">==</span> <span class="token keyword null nil">null</span> <span class="token operator">||</span> params<span class="token punctuation">.</span><span class="token property-access">status</span> <span class="token operator">===</span> <span class="token string">''</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token keyword control-flow">return</span> <span class="token maybe-class-name">ContentService</span><span class="token punctuation">.</span><span class="token method function property-access">createTextOutput</span><span class="token punctuation">(</span><span class="token known-class-name class-name">JSON</span><span class="token punctuation">.</span><span class="token method function property-access">stringify</span><span class="token punctuation">(</span><span class="token punctuation">{</span> error<span class="token operator">:</span> <span class="token string">'Invalid Parameter'</span> <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">setMimeType</span><span class="token punctuation">(</span><span class="token maybe-class-name">ContentService</span><span class="token punctuation">.</span><span class="token property-access"><span class="token maybe-class-name">MimeType</span></span><span class="token punctuation">.</span><span class="token known-class-name class-name">JSON</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+    
+    <span class="token keyword">const</span> result <span class="token operator">=</span> <span class="token maybe-class-name">UrlFetchApp</span><span class="token punctuation">.</span><span class="token method function property-access">fetch</span><span class="token punctuation">(</span><span class="token string">'https://mstdn.jp/api/v1/statuses'</span><span class="token punctuation">,</span> <span class="token punctuation">{</span>
+      <span class="token string">'method'</span><span class="token operator">:</span> <span class="token string">'POST'</span><span class="token punctuation">,</span>
+      <span class="token string">'payload'</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+        <span class="token string">'access_token'</span><span class="token operator">:</span> <span class="token string">'【アクセストークンを指定する】'</span><span class="token punctuation">,</span>
+        <span class="token string">'status'</span>      <span class="token operator">:</span> params<span class="token punctuation">.</span><span class="token property-access">status</span><span class="token punctuation">,</span>
+        <span class="token string">'visibility'</span>  <span class="token operator">:</span> <span class="token string">'public'</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    
+    <span class="token maybe-class-name">Logger</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span>result<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword control-flow">return</span> <span class="token maybe-class-name">ContentService</span><span class="token punctuation">.</span><span class="token method function property-access">createTextOutput</span><span class="token punctuation">(</span><span class="token known-class-name class-name">JSON</span><span class="token punctuation">.</span><span class="token method function property-access">stringify</span><span class="token punctuation">(</span>result<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">setMimeType</span><span class="token punctuation">(</span><span class="token maybe-class-name">ContentService</span><span class="token punctuation">.</span><span class="token property-access"><span class="token maybe-class-name">MimeType</span></span><span class="token punctuation">.</span><span class="token known-class-name class-name">JSON</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  <span class="token keyword control-flow">catch</span><span class="token punctuation">(</span>error<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token maybe-class-name">Logger</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span>error<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword control-flow">return</span> <span class="token maybe-class-name">ContentService</span><span class="token punctuation">.</span><span class="token method function property-access">createTextOutput</span><span class="token punctuation">(</span><span class="token known-class-name class-name">JSON</span><span class="token punctuation">.</span><span class="token method function property-access">stringify</span><span class="token punctuation">(</span><span class="token punctuation">{</span> error<span class="token operator">:</span> error <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">setMimeType</span><span class="token punctuation">(</span><span class="token maybe-class-name">ContentService</span><span class="token punctuation">.</span><span class="token property-access"><span class="token maybe-class-name">MimeType</span></span><span class="token punctuation">.</span><span class="token known-class-name class-name">JSON</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>コードを記述したら「公開」→「ウェブアプリケーションとして導入」を選択し、次のように指定する。</p>
+<ul>
+  <li>Execute the app as: 「Me (【自分の Gmail アドレス】)」</li>
+  <li>Who has access to the app: <em>「Anyone, even anonymous」</em></li>
+</ul>
+<p>初回のみ謎のダイアログが出るが、気にせず承認し、URL を発行する。</p>
+<p>そしたら IFTTT の Applet を次のように設定する。</p>
+<ul>
+  <li>If That
+    <ul>
+      <li>「RSS Feed」→「New feed item」を選択し、RSS フィードの URL を指定する</li>
+    </ul>
+  </li>
+  <li>Then This
+    <ul>
+      <li>「Webhooks」→「Make a web request」を選択する</li>
+      <li>URL : <strong>【先程発行した GAS の URL】</strong></li>
+      <li>Method : POST</li>
+      <li>Content Type : <em><code>application/json</code></em></li>
+      <li>Body : <strong><code>{ "post_from": "ifttt", "status": "{{EntryTitle}} {{EntryUrl}}" }</code></strong></li>
+    </ul>
+  </li>
+</ul>
+<p>GAS の URL に向けて JSON を POST するよう書き換えている。その際、自分で用意した <code>post_from</code> というパラメータによって、一応余計な POST を拒否するように GAS 側で制御している。</p>
+<p>コレで IFTTT 側も準備 OK。ただ、<em>GAS はスクリプト実行後に 302 をレスポンスする</em>ので、IFTTT の Activity 的にはエラー扱いになってしまうのが残念なところ。まぁトゥートは正常にできているし、コレで良しとする。</p>
+<h2 id="参考文献"><a class="header-link" href="#参考文献"><span class="header-link-mark"></span></a>参考文献</h2>
+<ul>
+  <li><a href="https://www.nigauri.me/tech/others/mastodon/mastodon_oauth">ブログの記事を投稿したらMastodonでトゥートする（IFTTT使用） - ぼくにがうりくん。</a> … 主にコチラが参考になった</li>
+  <li><a href="https://gist.github.com/haru-ake/a0e52d81271cf91dc5882a5a60768d5c">How to toot via IFTTT webhook · GitHub</a></li>
+  <li><a href="https://www.antun.net/tips/api/mastodon.html">Atsushi's Homepage 〜 Mastodon API を使ってみる</a></li>
+  <li><a href="https://docs.joinmastodon.org/methods/apps/">apps - Mastodon documentation</a></li>
+  <li><a href="https://qiita.com/yukimochi/items/f80a50a4486d0cb770dc">Twitter の投稿を IFTTT で Mastodon へ転送する。 - Qiita</a></li>
+  <li><a href="https://qiita.com/n-noguchi/items/cc1c53e59e652cd0b93e">IFTTTでif `Google Assistant` then `Webhook`でBad Requestが発生したときの対応メモ - Qiita</a>&#x3C; >>>` が正しいらしい</li>
+  <li><a href="https://www.pnkts.net/2019/09/23/ifttt-to-gas">IFTTTとGASを連携させると夢が広がる！今すぐ連携させるぞ - ポンコツエンジニアのごじゃっぺ開発日記。</a></li>
+  <li><a href="https://www.egao-inc.co.jp/programming/ifttt-gas-pushbullet/">IFTTT→GAS→PushBulletで通知を受け取る | 株式会社イーガオ</a></li>
+  <li><a href="https://qiita.com/shocho0101/items/6293974b7e61f0c9261d">IFTTTのアクションをGoogle Apps ScriptにしてIFTTTを拡張する。 - Qiita</a></li>
+  <li><a href="https://qiita.com/k_keisuke/items/e65f40173327fd2503c8">IFTTTのWebhookをGASのPOSTで受け取るときのパラメータ覚書 - Qiita</a></li>
+  <li><a href="https://qiita.com/nkitgamesake/items/9e66ef60831d51105bc0">GASのdoPost関数をcurlでテストする時リダイレクトが必要なら-Xオプションを使わない - Qiita</a></li>
+  <li><a href="https://teratail.com/questions/204612">Google Apps Script - GASへのアクセスに対してJSONをコールバック｜teratail</a></li>
+  <li><a href="http://kbn1053.hatenablog.com/entry/2017/12/25/192204">GASへデータをPOSTし結果をjsonで受け取る時はリダイレクトされる - なんも分からないのでしらべた</a></li>
+</ul>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2020-04-08</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2020-04-08</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

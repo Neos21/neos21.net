@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>OCI 上に OKE クラスタと踏み台サーバを構築する Terraform スクリプトを作った - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2019/06/12-02.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2019/index.html">2019年</a></li>
+            <li><a href="/blog/2019/06/index.html">06月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2019-06-12</time></div>
+        <h1 id="page-title">OCI 上に OKE クラスタと踏み台サーバを構築する Terraform スクリプトを作った</h1>
+
+<p>Oracle Cloud Infrastructure (OCI) 上に、プライベートサブネットに配置した Oracle Container Engine for Kubernetes (OKE) クラスタを作り、そこに SSH 接続するための踏み台サーバも構築する、という Terraform スクリプトを作った。</p>
+<p>ソースコードは以下の<strong>「Terraform Private OKE Cluster With Bastion」</strong>リポジトリよりドウゾ。</p>
+<ul>
+  <li><a href="https://github.com/Neos21/boilerplate-terraform-private-oke-cluster-with-bastion">Neos21/boilerplate-terraform-private-oke-cluster-with-bastion</a></li>
+</ul>
+<p>Load Balancer や踏み台サーバは、インターネットからのアクセスを受け付けるため Internet Gateway を適用した。</p>
+<p>OKE クラスタの Worker Node にはインターネットから直接侵入されたくないので、パブリック IP を持たないプライベートサブネットに作った。Worker Node やその上で動く Pod、Docker コンテナに通信が到達するには、Load Balancer か踏み台サーバからしかアクセスできない、ということだ。</p>
+<p>プライベートサブネットからインターネットに通信したいことはあると思うので、NAT Gateway を適用することで、プライベートサブネットから外 (インターネット) に出る通信は邪魔しないようになっている。後は Object Storage とか Oracle Management Cloud の Cloud Agent とかを使っていれば、Service Gateway を組み合わせても良いかも。Service Gateway については今回適用していない。</p>
+<p>ソースコードの一部を修正すれば、<strong>OCI Resource Manager</strong> でも実行できるようにしてある。OCI Resource Manager で Terraform スクリプトを実行する際、<code>provider "oci"</code> ブロックでユーザ情報を指定していると、</p>
+<pre><code>provider.oci: user credentials user_ocid, fingerprint, private_key_path should be removed from the configuration
+</code></pre>
+<p>というエラーが発生してしまうので、OCI Provider に対するユーザ情報の設定を削ることになる。</p>
+<p>それに付随して、KubeConfig を取得する DataSource も実行できなくなることに注意。<code>oci_containerengine_cluster_kube_config</code> データソースは、OCI Provider に設定したユーザ情報を利用して KubeConfig ファイルを生成しているためだ。当然、Resource Manager で実行した場合は <code>local_file</code> の出力場所もないので、<em>OCI Resource Manager 利用時は KubeConfig の出力は諦めよう。</em></p>
+<p>OKE クラスタを3つの AD に分散させる前提で実装しているので、本稿執筆時点で1つの Availability Domain しかない東京リージョンに対してはこのソースコードは使えないので注意。あくまで「よくある OKE クラスタのインフラ構成」を Terraform で実装する際の参考程度に留めていただければ。</p>
+<p>何か不具合、改善要望などあれば GitHub Issues にてドウゾ。</p>
+<ul>
+  <li><a href="https://github.com/Neos21/boilerplate-terraform-private-oke-cluster-with-bastion">GitHub - Neos21/terraform-private-oke-cluster-with-bastion: Terraform OCI Provider を使用して OKE クラスタと踏み台サーバを立てるボイラープレート</a></li>
+</ul>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2019-06-12</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2019-06-12</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

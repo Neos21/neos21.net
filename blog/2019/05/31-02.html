@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>Wercker を使ってみた感想 - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2019/05/31-02.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2019/index.html">2019年</a></li>
+            <li><a href="/blog/2019/05/index.html">05月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2019-05-31</time></div>
+        <h1 id="page-title">Wercker を使ってみた感想</h1>
+
+<p>Oracle Container Pipelines として取り込まれた CI・CD ツールである <strong>Wercker</strong> を使ってみたので紹介。</p>
+<ul>
+  <li><a href="https://app.wercker.com/">wercker</a>
+    <ul>
+      <li>参考：<a href="https://orablogs-jp.blogspot.com/2018/11/new-in-developer-cloud-fn-support-and.html">Oracle Blogs 日本語のまとめ: Cloud New in Developer Cloud - Fn Support and Wercker Integration</a></li>
+    </ul>
+  </li>
+</ul>
+<h2 id="wercker-ってどんなもの？僕が感じた特徴まとめ"><a class="header-link" href="#wercker-ってどんなもの？僕が感じた特徴まとめ"><span class="header-link-mark"></span></a>Wercker ってどんなもの？僕が感じた特徴まとめ</h2>
+<p>Wercker とはどんなものなのか。Jenkins を知っていればイメージはしやすいと思う。</p>
+<ul>
+  <li>Git リポジトリへの Push をトリガーに発火する
+    <ul>
+      <li>Git リポジトリ1つに対し、1つの Wercker プロジェクトを作る</li>
+    </ul>
+  </li>
+  <li>実行するジョブ定義は Git リポジトリ内に格納した <code>wercker.yml</code> に記述する</li>
+  <li>ジョブ (Wercker では Pipeline と表現) の<strong>実行環境 (Box) は指定したコンテナが使われる</strong>
+    <ul>
+      <li>ココが Jenkins との大きな違い。Jenkins の場合は「Jenkins をインストールしてあるサーバ」が実行環境になるので、Jenkins サーバに Python 入れといて Node.js 入れといて…といった手間が発生する</li>
+      <li>Wercker はジョブ全体 (Workflows) もしくはジョブ単体 (Pipeline) ごとに仮想環境を立てられるので、環境がクリーンになる</li>
+    </ul>
+  </li>
+  <li>Pipeline の定義、Pipeline 同士の実行順序を決める Workflow は Wercker の管理画面 (ブラウザ) 上でしか定義できない
+    <ul>
+      <li><code>wercker.yml</code> は各 Pipeline の処理しか書けず、「次にどれを実行するか」といった指定はできない。ちょっと不便</li>
+    </ul>
+  </li>
+  <li>環境変数は管理画面と <code>wercker.yml</code> のどちらでも指定可能
+    <ul>
+      <li>クレデンシャル情報は <code>wercker.yml</code> (Git リポジトリ) に含めない方が良いので管理画面で指定した方が良いと思うが、なんかこう、疎結合過ぎて関係性がフワッとしがち</li>
+    </ul>
+  </li>
+  <li><code>wercker.yml</code> 内に記述する処理 (Step) は任意のコマンドを実行したりできる他、誰かが作った独自 Step や自作の Step を用意したりできる
+    <ul>
+      <li>Wercker 管理画面右上から<em>「Steps Store」</em>というページに飛べるが、ココが DockerHub みたいな感じで、Wercker Step のリポジトリになっている</li>
+      <li>Step 自体も Wercker で作成・構築できるので、複雑化してきた <code>wercker.yml</code> から Step を切り出して Publish しやすいだろう</li>
+      <li><code>wercker.yml</code> にはいきなりどこぞの Step 名を書いて良い。Steps Store で確認できる公開済の Step を自動的に特定し実行してくれる</li>
+    </ul>
+  </li>
+</ul>
+<h2 id="その他特徴をトピックごとに"><a class="header-link" href="#その他特徴をトピックごとに"><span class="header-link-mark"></span></a>その他特徴をトピックごとに</h2>
+<p>実行環境がコンテナになる点、Step という概念が難しい。また、Workflow と環境変数が <code>wercker.yml</code> と別れてしまうので、それぞれの関連性が把握しづらい感じがある。下手すると「作った人しか理解できない」Workflow になりそうなので、小さく作ろう。</p>
+<p>Pipeline の名称は任意に決められるが、Wercker CLI は <code>build</code> と <code>deploy</code> という名前の Pipeline だけ特別に実行できたりするので、メインはこの2つ、<em>ビルドしてデプロイする</em>、という CD (Continuous Delivery) を意識したツールになっている。ココでいう「デプロイ」は、Docker コンテナイメージを成果物として Docker リポジトリに Push するまでにしたり、もしくは Kubernetes クラスタへのデプロイまでを行わせたりもできる (<code>kubectl</code> コマンドを実行するための Step もある)。</p>
+<p>各 Pipeline をまたいだ時、成果物ファイルはどうなるかというと、<em>Workflow 全体でボリュームを共用している</em>ので、「手前の <code>build</code> Pipeline でビルドしたファイルを使って <code>deploy</code> Pipeline を実行する」といった処理が可能。一つの Pipeline で全部をやる必要はない。しかし、<code>npm install</code> のようにモジュールをインストールするような Pipeline の場合、次の Pipeline に移行した時に<em>シンボリックリンクが破損することがあるようなので</em>、Pipeline をまたいで使用するファイルは静的なファイルである方が安全。</p>
+<p>あと、Wercker サービス全体としては<em>ユーザ管理が微妙</em>だ。Jenkins の場合、ジョブ定義は全メンバで共用でき、権限さえあれば誰でも編集できる関係だった。しかし Wercker は、Git リポジトリと Wercker アカウントが1対1で紐付いたような関係になってしまっている。</p>
+<p>プライベートな Git リポジトリを紐付けたい時、ユーザ名とパスワードをアカウント設定に記述するため、そのユーザがパスワード変更を行うと認証が通らなくなり Pipeline が実行できなくなったりする。</p>
+<p>Organization というグループを作る機能があるものの、コレに参加していない人は、<code>wercker.yml</code> は変更できるのに、Workflows は変更できない、という中途半端な状態になる。<code>Jenkinsfile</code> だったらこうはならないのだが…。</p>
+<p>いずれにしても、「人」が作ったアカウントに紐付くため、「Jenkins 用アカウント」みたいなシステム利用するアカウントで逃げる方法が取れず、同じ考え方では不便するところが出てくると思う。</p>
+<h2 id="自分が作ってみた-werckeryml"><a class="header-link" href="#自分が作ってみた-werckeryml"><span class="header-link-mark"></span></a>自分が作ってみた <code>wercker.yml</code></h2>
+<p>感想はココまで。以降は、最初とっつきづらい <code>wercker.yml</code> のイメージを知ってもらうため、自分が作ってみた <code>wercker.yml</code> を紹介する。</p>
+<p>以下の例は、</p>
+<ul>
+  <li>Node.js アプリを Lint → UT → コンパイルする <code>build</code> Pipeline と、</li>
+  <li>Docker ビルドしてプライベートな Docker レジストリにイメージを Push する <code>deploy</code> Pipeline</li>
+</ul>
+<p>の2つから構成されている。</p>
+<pre class="language-yaml"><code class="language-yaml"><span class="token key atrule">box</span><span class="token punctuation">:</span>
+  <span class="token key atrule">id</span><span class="token punctuation">:</span> node<span class="token punctuation">:</span>10<span class="token punctuation">-</span>stretch
+
+<span class="token key atrule">build</span><span class="token punctuation">:</span>
+  <span class="token key atrule">steps</span><span class="token punctuation">:</span>
+    <span class="token punctuation">-</span> npm<span class="token punctuation">-</span>install
+    <span class="token punctuation">-</span> <span class="token key atrule">script</span><span class="token punctuation">:</span>
+        <span class="token key atrule">name</span><span class="token punctuation">:</span> lint
+        <span class="token key atrule">code</span><span class="token punctuation">:</span> npm run lint
+    <span class="token punctuation">-</span> npm<span class="token punctuation">-</span>test
+    <span class="token punctuation">-</span> <span class="token key atrule">script</span><span class="token punctuation">:</span>
+        <span class="token key atrule">name</span><span class="token punctuation">:</span> build
+        <span class="token key atrule">code</span><span class="token punctuation">:</span> npm run build
+
+<span class="token key atrule">deploy</span><span class="token punctuation">:</span>
+  <span class="token key atrule">steps</span><span class="token punctuation">:</span>
+    <span class="token punctuation">-</span> <span class="token key atrule">internal/docker-build</span><span class="token punctuation">:</span>
+        <span class="token key atrule">name</span><span class="token punctuation">:</span> build image
+        <span class="token key atrule">dockerfile</span><span class="token punctuation">:</span> ./Dockerfile
+        <span class="token key atrule">image-name</span><span class="token punctuation">:</span> my<span class="token punctuation">-</span>container
+    <span class="token punctuation">-</span> <span class="token key atrule">internal/docker-push</span><span class="token punctuation">:</span>
+        <span class="token key atrule">name</span><span class="token punctuation">:</span> push image
+        <span class="token key atrule">image-name</span><span class="token punctuation">:</span> my<span class="token punctuation">-</span>container
+        <span class="token key atrule">username</span><span class="token punctuation">:</span> $REGISTRY_USERNAME
+        <span class="token key atrule">password</span><span class="token punctuation">:</span> $REGISTRY_TOKEN
+        <span class="token key atrule">repository</span><span class="token punctuation">:</span> iad.ocir.io/my<span class="token punctuation">-</span>tenancy/my<span class="token punctuation">-</span>ocir/my<span class="token punctuation">-</span>project
+        <span class="token key atrule">tag</span><span class="token punctuation">:</span> v1
+</code></pre>
+<p>各行にコメントを足してみた詳説版。</p>
+<pre class="language-yaml"><code class="language-yaml"><span class="token comment"># Box</span>
+<span class="token comment"># </span>
+<span class="token comment"># 各 Pipeline の実行環境となる Docker イメージ。DockerHub から自動的に取得してくれる</span>
+<span class="token key atrule">box</span><span class="token punctuation">:</span>
+  <span class="token comment"># ココでは Node.js v10 系が動作するイメージを選択した</span>
+  <span class="token key atrule">id</span><span class="token punctuation">:</span> node<span class="token punctuation">:</span>10<span class="token punctuation">-</span>stretch
+
+<span class="token comment"># Build</span>
+<span class="token comment"># </span>
+<span class="token comment"># - Lint・UT を実施する</span>
+<span class="token comment"># - 成果物ファイルをビルドする</span>
+<span class="token key atrule">build</span><span class="token punctuation">:</span>
+  <span class="token key atrule">steps</span><span class="token punctuation">:</span>
+    <span class="token comment"># この「npm-install」Step は Wercker 公式が提供する Step</span>
+    <span class="token comment"># - 参考 : https://app.wercker.com/steps/wercker/npm-install</span>
+    <span class="token comment"># - 参考 : https://github.com/wercker/step-npm-install</span>
+    <span class="token punctuation">-</span> npm<span class="token punctuation">-</span>install
+    <span class="token comment"># 「script」Step は、シェルスクリプトで任意のコマンドを実行できる</span>
+    <span class="token comment"># npm コマンドが使える Box を指定しているので、以下のように「npm run」が叩ける</span>
+    <span class="token comment"># package.json の scripts で定義した「lint」という npm-run-scripts を実行して Lint している</span>
+    <span class="token punctuation">-</span> <span class="token key atrule">script</span><span class="token punctuation">:</span>
+        <span class="token key atrule">name</span><span class="token punctuation">:</span> lint
+        <span class="token key atrule">code</span><span class="token punctuation">:</span> npm run lint
+    <span class="token comment"># 「npm run test」「npm test」と同義</span>
+    <span class="token punctuation">-</span> npm<span class="token punctuation">-</span>test
+    <span class="token comment"># ソースファイルのビルド。「dist」ディレクトリにでも成果物が吐かれているテイ</span>
+    <span class="token punctuation">-</span> <span class="token key atrule">script</span><span class="token punctuation">:</span>
+        <span class="token key atrule">name</span><span class="token punctuation">:</span> build
+        <span class="token key atrule">code</span><span class="token punctuation">:</span> npm run build
+
+<span class="token comment"># Deploy</span>
+<span class="token comment"># </span>
+<span class="token comment"># - Docker イメージをビルドする</span>
+<span class="token comment"># - プライベート Docker レジストリに Push する</span>
+<span class="token key atrule">deploy</span><span class="token punctuation">:</span>
+  <span class="token key atrule">steps</span><span class="token punctuation">:</span>
+    <span class="token comment"># Docker ビルドを行う</span>
+    <span class="token punctuation">-</span> <span class="token key atrule">internal/docker-build</span><span class="token punctuation">:</span>
+        <span class="token key atrule">name</span><span class="token punctuation">:</span> build image
+        <span class="token key atrule">dockerfile</span><span class="token punctuation">:</span> ./Dockerfile
+        <span class="token comment"># 「image-name」は、次の「internal/docker-push」Step で対象イメージを紐付けのための一時的な名前</span>
+        <span class="token key atrule">image-name</span><span class="token punctuation">:</span> my<span class="token punctuation">-</span>container
+    <span class="token comment"># Docker Push を行う</span>
+    <span class="token punctuation">-</span> <span class="token key atrule">internal/docker-push</span><span class="token punctuation">:</span>
+        <span class="token key atrule">name</span><span class="token punctuation">:</span> push image
+        <span class="token comment"># 前述の「image-name」を指定する</span>
+        <span class="token key atrule">image-name</span><span class="token punctuation">:</span> my<span class="token punctuation">-</span>container
+        <span class="token comment"># 以下の環境変数は管理画面で設定しておく</span>
+        <span class="token key atrule">username</span><span class="token punctuation">:</span> $REGISTRY_USERNAME
+        <span class="token key atrule">password</span><span class="token punctuation">:</span> $REGISTRY_TOKEN
+        <span class="token comment"># Docker レジストリの URL を指定する。以下は Oracle Cloud Infrastructure Registry を使うテイ</span>
+        <span class="token key atrule">repository</span><span class="token punctuation">:</span> iad.ocir.io/my<span class="token punctuation">-</span>tenancy/my<span class="token punctuation">-</span>ocir/my<span class="token punctuation">-</span>project
+        <span class="token comment"># Docker イメージのタグ名</span>
+        <span class="token key atrule">tag</span><span class="token punctuation">:</span> v1
+</code></pre>
+<p>実装してみたのはこんな感じ。</p>
+<h2 id="docker-タグ名を変更したい時のアイデア"><a class="header-link" href="#docker-タグ名を変更したい時のアイデア"><span class="header-link-mark"></span></a>Docker タグ名を変更したい時のアイデア</h2>
+<p>上述の <code>wercker.yml</code> の最終行を見ると、<code>tag: v1</code> と、Push する Docker イメージのタグ名がベタ書きになっている。このままだと、イメージ名を変更したい場合はこの <code>wercker.yml</code> のベタ書きな行を変更して <code>git push</code> しないといけなくなってしまう。少々面倒で、忘れてしまいやすい。</p>
+<p>そこでアイデアとして考えられるのは、Git のブランチ名からバージョン番号を抜き出して利用する、という方法。例えば <code>release/v1</code>・<code>release/v2</code> といったブランチを必ず作るルールにしていれば、この <code>release/</code> 以降の文字列を抜き出して使用できれば良いワケだ。</p>
+<p>Wercker の実行環境には、Wercker が自動的に設定してくれる環境変数がいくつかあり、トリガーとなった Git ブランチ名は <code>$WERCKER_GIT_BRANCH</code> という環境変数で読み取れる。コレで取得したブランチ名を整形してタグ名を作り、<code>export</code> コマンドで環境変数として残してやれば、次の Step で参照できる。</p>
+<p>以下にサンプルを掲載する。</p>
+<pre class="language-yaml"><code class="language-yaml"><span class="token key atrule">deploy</span><span class="token punctuation">:</span>
+  <span class="token key atrule">steps</span><span class="token punctuation">:</span>
+    <span class="token comment"># 環境変数 $WERCKER_GIT_BRANCH から「release/」部分を除去し、Docker タグ名として使えるように環境変数 $TAG_NAME に設定する</span>
+    <span class="token comment"># ブランチ名が「release/」始まりでないブランチはそもそもこの Step を実行しなくて良いので異常終了とする</span>
+    <span class="token punctuation">-</span> <span class="token key atrule">script</span><span class="token punctuation">:</span>
+        <span class="token key atrule">name</span><span class="token punctuation">:</span> create image tag name
+        <span class="token comment"># コードを複数行に渡って書きたい場合は、以下のようにパイプ記号を入れてから改行していけば書ける</span>
+        <span class="token key atrule">code</span><span class="token punctuation">:</span> <span class="token punctuation">|</span><span class="token scalar string">
+          if $(echo "${WERCKER_GIT_BRANCH}" | grep '^release\/*' > /dev/null) ; then
+            echo "This is release branch ... ${WERCKER_GIT_BRANCH}"
+          else
+            echo "This is not release branch. Abort ... ${WERCKER_GIT_BRANCH}"
+            exit 1
+          fi
+          export TAG_NAME=$(echo "${WERCKER_GIT_BRANCH}" | sed -e 's:^release/::')
+          echo "Tag name ... ${TAG_NAME}"</span>
+    <span class="token punctuation">-</span> <span class="token key atrule">internal/docker-build</span><span class="token punctuation">:</span>
+        <span class="token comment"># Docker Build : 中略</span>
+    <span class="token punctuation">-</span> <span class="token key atrule">internal/docker-push</span><span class="token punctuation">:</span>
+        <span class="token comment"># 他の項目は中略</span>
+        <span class="token comment"># Docker イメージのタグ名として、先ほど export した環境変数 $TAG_NAME を使用する</span>
+        <span class="token key atrule">tag</span><span class="token punctuation">:</span> $TAG_NAME
+</code></pre>
+<p>この <code>deploy</code> Pipeline は <code>release/</code> で始まるブランチに対する Push 時のみ実行できれば良いので、Wercker 管理画面の Workflows 定義にて、実行するブランチの条件を設定しておく。シェルスクリプトでの異常終了処理はあくまで安全のため。</p>
+<p>なお、GitHub 以外の Git リポジトリと接続している場合、<strong>ブランチ名に含まれるスラッシュ以前の文字列が欠落する不具合</strong>を確認しているので、Wercker の挙動に合わせて、スラッシュではなくハイフンで繋ぐなど、ブランチ命名規則は要検討。</p>
+<h2 id="kubernetes-クラスタにデプロイするには"><a class="header-link" href="#kubernetes-クラスタにデプロイするには"><span class="header-link-mark"></span></a>Kubernetes クラスタにデプロイするには</h2>
+<p><code>wercker.yml</code> から Kubernetes クラスタにデプロイするにはどうしたらいいかというと、以下のページに掲載されているコードが参考になるだろう。</p>
+<ul>
+  <li>参考：<a href="https://oracle-japan.github.io/paasdocs/documents/containers/handson/integrated-cicd/">OKEとWerckerによるCI/CD - Oracle Cloud - PaaS ドキュメント</a></li>
+</ul>
+<pre class="language-yaml"><code class="language-yaml"><span class="token key atrule">deploy</span><span class="token punctuation">:</span>
+  <span class="token key atrule">steps</span><span class="token punctuation">:</span>
+    <span class="token punctuation">-</span> <span class="token key atrule">kubectl</span><span class="token punctuation">:</span>
+        <span class="token key atrule">name</span><span class="token punctuation">:</span> apply deployment
+        <span class="token key atrule">server</span><span class="token punctuation">:</span> $KUBERNETES_MASTER
+        <span class="token key atrule">token</span><span class="token punctuation">:</span> $KUBERNETES_TOKEN
+        <span class="token key atrule">insecure-skip-tls-verify</span><span class="token punctuation">:</span> <span class="token boolean important">true</span>
+        <span class="token key atrule">command</span><span class="token punctuation">:</span> apply <span class="token punctuation">-</span>f $WERCKER_ROOT/kubernetes/deployment.yaml
+</code></pre>
+<p>こんなノリで <code>kubectl</code> コマンドが叩ける。ココで使っている <code>kubectl</code> Step も Wercker 公式。</p>
+<ul>
+  <li>参考：<a href="https://github.com/wercker/step-kubectl">GitHub - wercker/step-kubectl</a></li>
+</ul>
+<p><code>server</code> プロパティに指定するのは <code>kubeconfig</code> ファイル中の <code>clusters.cluster.server</code> の値 (URL)、<code>token</code> プロパティに指定するのは <code>kubeconfig</code> 中の <code>users.user.token</code> の値。単純に <code>kubectl</code> コマンドが叩けるユーザのクレデンシャル情報を引っ張ってきているだけ。これらの値は環境変数として退避しておく。</p>
+<p><code>deployment.yaml</code> の中には、デプロイしたい Docker イメージ名を書くことになる。予め書いておいて <code>git push</code> するでも良いが、ベタ書きだと <code>wercker.yml</code> の中の値と一致させないといけないので、オペミスの危険がある。そこで、先程環境変数 <code>$TAG_NAME</code> を編み出したコードを活用して、<strong><code>deploy</code> Pipeline 中で <code>deployment.yaml</code> を置換してしまう</strong>という方法が取れるだろう。</p>
+<p><code>deployment.yaml</code> の記述は、以下の状態で固定しておく。</p>
+<pre class="language-yaml"><code class="language-yaml"><span class="token key atrule">apiVersion</span><span class="token punctuation">:</span> apps/v1
+<span class="token key atrule">kind</span><span class="token punctuation">:</span> Deployment
+<span class="token key atrule">metadata</span><span class="token punctuation">:</span>
+  <span class="token key atrule">name</span><span class="token punctuation">:</span> my<span class="token punctuation">-</span>deployment
+<span class="token key atrule">spec</span><span class="token punctuation">:</span>
+  <span class="token key atrule">selector</span><span class="token punctuation">:</span>
+    <span class="token key atrule">matchLabels</span><span class="token punctuation">:</span>
+      <span class="token key atrule">app</span><span class="token punctuation">:</span> my<span class="token punctuation">-</span>app
+  <span class="token key atrule">replicas</span><span class="token punctuation">:</span> <span class="token number">3</span>
+  <span class="token key atrule">template</span><span class="token punctuation">:</span>
+    <span class="token key atrule">metadata</span><span class="token punctuation">:</span>
+      <span class="token key atrule">labels</span><span class="token punctuation">:</span>
+        <span class="token key atrule">app</span><span class="token punctuation">:</span> my<span class="token punctuation">-</span>app
+    <span class="token key atrule">spec</span><span class="token punctuation">:</span>
+      <span class="token key atrule">containers</span><span class="token punctuation">:</span>
+        <span class="token punctuation">-</span> <span class="token key atrule">name</span><span class="token punctuation">:</span> my<span class="token punctuation">-</span>container
+          <span class="token comment"># ダミーのタグ名を記述しておく</span>
+          <span class="token key atrule">image</span><span class="token punctuation">:</span> iad.ocir.io/my<span class="token punctuation">-</span>tenancy/my<span class="token punctuation">-</span>ocir/my<span class="token punctuation">-</span>project<span class="token punctuation">:</span>__TAG_NAME__
+<span class="token comment"># 以下略……</span>
+</code></pre>
+<p>タグ名の部分は後で置換するので、<em>ダミー文字列</em> <code>__TAG_NAME__</code> と書いておく。</p>
+<p>続いて <code>wercker.yml</code>。</p>
+<pre class="language-yaml"><code class="language-yaml"><span class="token key atrule">deploy</span><span class="token punctuation">:</span>
+  <span class="token key atrule">steps</span><span class="token punctuation">:</span>
+    <span class="token comment"># 環境変数 $TAG_NAME を作っておく</span>
+    <span class="token punctuation">-</span> <span class="token key atrule">script</span><span class="token punctuation">:</span>
+        <span class="token key atrule">name</span><span class="token punctuation">:</span> create image tag name
+        <span class="token key atrule">code</span><span class="token punctuation">:</span> <span class="token punctuation">|</span><span class="token scalar string">
+          if $(echo "${WERCKER_GIT_BRANCH}" | grep '^release\/*' > /dev/null) ; then
+            echo "This is release branch ... ${WERCKER_GIT_BRANCH}"
+          else
+            echo "This is not release branch. Abort ... ${WERCKER_GIT_BRANCH}"
+            exit 1
+          fi
+          export TAG_NAME=$(echo "${WERCKER_GIT_BRANCH}" | sed -e 's:^release/::')
+          echo "Tag name ... ${TAG_NAME}"</span>
+    <span class="token punctuation">-</span> <span class="token key atrule">internal/docker-build</span><span class="token punctuation">:</span>
+        <span class="token comment"># Docker Build : 中略</span>
+    <span class="token punctuation">-</span> <span class="token key atrule">internal/docker-push</span><span class="token punctuation">:</span>
+        <span class="token comment"># Docker Push : 中略</span>
+    <span class="token comment"># 環境変数 $TAG_NAME を利用して deployment.yaml を置換・上書き保存する</span>
+    <span class="token punctuation">-</span> <span class="token key atrule">script</span><span class="token punctuation">:</span>
+        <span class="token key atrule">name</span><span class="token punctuation">:</span> edit deployment file
+        <span class="token key atrule">code</span><span class="token punctuation">:</span> <span class="token punctuation">|</span><span class="token scalar string">
+          sed -i -e "s/__TAG_NAME__/$TAG_NAME/" $WERCKER_ROOT/kubernetes/deployment.yaml</span>
+    <span class="token comment"># 置換したファイルを使って Kubernetes クラスタにデプロイする</span>
+    <span class="token punctuation">-</span> <span class="token key atrule">kubectl</span><span class="token punctuation">:</span>
+        <span class="token key atrule">name</span><span class="token punctuation">:</span> apply deployment
+        <span class="token key atrule">server</span><span class="token punctuation">:</span> $KUBERNETES_MASTER
+        <span class="token key atrule">token</span><span class="token punctuation">:</span> $KUBERNETES_TOKEN
+        <span class="token key atrule">insecure-skip-tls-verify</span><span class="token punctuation">:</span> <span class="token boolean important">true</span>
+        <span class="token key atrule">command</span><span class="token punctuation">:</span> apply <span class="token punctuation">-</span>f $WERCKER_ROOT/kubernetes/deployment.yaml
+</code></pre>
+<p>こんな感じで、<code>deployment.yaml</code> を <code>sed</code> で置換し、それを使って <code>kubectl apply</code> を叩けば良いだろう。</p>
+<p>じゃあブルー・グリーン・デプロイをするには？<code>service.yaml</code> も置換して <code>kubectl apply</code> しようか。その後残った古い Deployment をどう消そうか？…考え出すとつらい。そもそも「時代は CI・CD だ！」と言いながら「リリース予定日」を決めないと動けなかったりするのが実際のところなので、<code>kubectl</code> を叩くような <code>wercker.yml</code> は書かないことにした。手動でやろう。</p>
+<p>Docker ビルドと Push だけにするにしても、コレも高頻度でやられてしまうと困る、という場合は、<em>「Docker ビルドを行うためのブランチ名規則」</em>を決めておいて、ビルドしたい時だけそのブランチ名で <code>git push</code> してやる、という方法が取れるだろう。Werkcer は <code>git tag</code> の Push にも対応しているのだが、現状は連携先が GitHub リポジトリの場合しか使えないので、仕方なく「ビルド用ブランチ」という考え方を取ることにした。</p>
+<ul>
+  <li>参考：<a href="https://qiita.com/hnw/items/f54ece825261fd3a0ab8">CIするためだけに一時的なブランチ名でgit pushする - Qiita</a></li>
+</ul>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># こんな風にリモートに Push するブランチ名を変える</span>
+$ <span class="token function">git</span> push origin master:build-v1.2
+
+<span class="token comment"># リモートブランチが要らなくなったら以下のようにすれば消せる</span>
+$ <span class="token function">git</span> push origin :build-v1.2
+</code></pre>
+<h2 id="以上"><a class="header-link" href="#以上"><span class="header-link-mark"></span></a>以上</h2>
+<p>Wercker にしても Jenkins にしても、「自動化できる」といえばできるんだけど、それは「技術的には出来る」までの意味でしかない。自動化するための手順を作っていくにはやっぱり人が作る必要があって、何度実行してもおかしくならないような冪等性を担保したり、特定のエラーをハンドリングしたり、といったことを始めると物凄く大変になる。そうして作り上げた「匠の技盛り合わせスクリプト」は、Jenkinsfile だろうと YAML だろうとシェルスクリプトだろうと、言語に限らず肥大化・複雑化していき、管理しきれなくなる。</p>
+<p>チーム開発では特に問題になりがちなので、「まずどんな業務があるか」を洗い出し、できればその時点で不要な業務を「やらない」選択を取れるよう、業務を整理した方が良い。その上で、「実装コスト・その後のメンテナンスのコストを加味しても自動化するに値する業務」のみ自動化した方が良いだろう。条件が定量化できなくて自動化しづらいような業務は、潔く「自動化しない」という選択を取ることも重要。</p>
+<p>自動化した後に本当に「楽」を感じられるように、小さく CI・CD 環境を作ろう。</p>
+<ul>
+  <li>参考：<a href="https://tekunabe.hatenablog.jp/entry/2018/06/18/163310">自動化を考える前に読んでおきたいプレゼン資料たち - てくなべ (tekunabe)</a></li>
+  <li>参考：<a href="https://gist.github.com/sunaot/4055d7fb95534efca5ce57cbe2ec74d8">自動化をしていくときに大切なこと · GitHub</a></li>
+</ul>
+<h2 id="参考文献"><a class="header-link" href="#参考文献"><span class="header-link-mark"></span></a>参考文献</h2>
+<ul>
+  <li><a href="https://qiita.com/moaikids/items/d770eace281010724072">Wercker で Java をビルドする - Qiita</a></li>
+  <li><a href="http://charleysdiary.hatenablog.com/entry/2019/01/24/183130">Werckerのパイプライン内でDockerfileからコンテナをビルドする方法 - チャーリー！のテクメモ</a></li>
+  <li><a href="http://charleysdiary.hatenablog.com/entry/2018/12/17/011731">WerckerでオリジナルのStepを導入する - チャーリー！のテクメモ</a></li>
+  <li><a href="https://allabout-tech.hatenablog.com/entry/2016/08/04/092700">Wercker+deployerで始める新リリース生活 - オールアバウトTech Blog</a></li>
+  <li><a href="https://keithyokoma.hatenablog.com/entry/2017/06/29/144928">Wercker での Android アプリの CI を速くするポイント - Infinito Nirone 7</a></li>
+</ul>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2019-05-31</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2019-05-31</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

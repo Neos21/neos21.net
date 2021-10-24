@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>nc と ssh config ファイルを使って多段 SSH 接続する - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2019/05/01-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2019/index.html">2019年</a></li>
+            <li><a href="/blog/2019/05/index.html">05月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2019-05-01</time></div>
+        <h1 id="page-title">nc と ssh config ファイルを使って多段 SSH 接続する</h1>
+
+<p>2019年5月より、毎日更新を止めようと思います。ハッキリとは決めていませんが、2日に1度とか、週1とか、不定期更新とかにしようかと。</p>
+<p>お知らせまで。</p>
+<hr>
+<p>本題。</p>
+<p>本番稼動するサーバは、セキュリティ上の観点から、SSH 接続できる通信元が限られている場合がある。そんな時に、<em>踏み出しサーバ</em>に一度 SSH 接続してから、目的のサーバにさらに SSH 接続したりすることがある。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># ローカル端末のターミナル</span>
+$ <span class="token function">whoami</span>
+Neos21
+
+<span class="token comment"># ローカル端末から踏み台サーバに SSH 接続する</span>
+$ <span class="token function">ssh</span> -i /Users/Neos21/.ssh/id_rsa myadmin@128.200.100.10
+
+<span class="token comment"># 踏み台サーバに SSH 接続した</span>
+<span class="token variable">$$</span> <span class="token function">whoami</span>
+myadmin
+
+<span class="token comment"># 踏み台サーバから目的のサーバに SSH 接続する</span>
+<span class="token variable">$$</span> <span class="token function">ssh</span> -i /home/myadmin/.ssh/id_rsa myuser@128.200.200.55
+
+<span class="token comment"># 目的のサーバに SSH 接続した</span>
+<span class="token variable">$$</span>$ <span class="token function">whoami</span>
+myuser
+</code></pre>
+<p>しかし、こんな風に何回も <code>ssh</code> コマンドを叩くのは面倒だし、踏み台サーバに秘密鍵ファイル (<code>.ssh/id_rsa</code>) を用意したりしないといけなくて大変だ。</p>
+<p>そこで、<strong><code>nc</code> (NetCat)</strong> というコマンドと、<strong><code>~/.ssh/config</code></strong> という設定ファイルを組み合わせて、<strong>多段 SSH 接続</strong>を行ってみる。</p>
+<h2 id="nc-コマンドの準備"><a class="header-link" href="#nc-コマンドの準備"><span class="header-link-mark"></span></a><code>nc</code> コマンドの準備</h2>
+<p>まずは、踏み台サーバに <code>nc</code> コマンドをインストールする。CentOS の場合はデフォルトではインストールされていないと思うので、Yum で以下のようにインストールする。</p>
+<pre class="language-bash"><code class="language-bash">$ yum <span class="token function">install</span> -y nmap-ncat
+
+$ <span class="token function">nc</span> --version
+</code></pre>
+<p>コレで準備 OK。</p>
+<ul>
+  <li>参考：<a href="http://www.gadgets-today.net/?p=3041">yum で CentOS に nc(netcat) をさくっとインストールする手順 | 僕とガジェット</a></li>
+</ul>
+<h2 id="sshconfig-ファイルを作る"><a class="header-link" href="#sshconfig-ファイルを作る"><span class="header-link-mark"></span></a><code>~/.ssh/config</code> ファイルを作る</h2>
+<p>続いて、ローカル端末の <code>~/.ssh/</code> 配下に <code>config</code> という名前のファイルを作り、以下のように書く。インデントのスペースの数は一応4つにしたが、適当で良いっぽい。</p>
+<pre><code># 踏み台サーバ
+Host mybastion
+    HostName        128.200.100.10
+    User            myadmin
+    IdentityFile    ~/.ssh/id_rsa
+
+# 踏み台サーバを経由して接続したいサーバ
+Host myprivate
+    Hostname        128.200.200.55
+    User            myuser
+    IdentityFile    ~/.ssh/id_rsa
+    ProxyCommand    ssh mybastion nc -w 10 %h %p
+</code></pre>
+<ul>
+  <li><code>Host 【名前】</code> の区切りで、一つの接続先の情報を記す。名前は適当に決められる。</li>
+  <li><code>HostName</code>・<code>User</code>・<code>IdentityFile</code> は <code>ssh</code> コマンドの内容を分解して記しているだけ。
+    <ul>
+      <li>よく 「Identi<strong>f</strong>yFile」と間違えて「Bad configuration option」とかいうエラーが出てしまうので、つづりに注意。</li>
+      <li>参考：<a href="https://ubuntuforums.org/showthread.php?t=2137189">ubuntu SSH Config + Github</a></li>
+    </ul>
+  </li>
+</ul>
+<p><code>mybastion</code> と名付けた接続先定義は、特に問題ないだろう。</p>
+<p>少々分かりづらいのは、<code>myprivate</code> と名付けた、「踏み台を経由して接続したいサーバ」の定義情報だろう。</p>
+<ul>
+  <li><code>IdentifyFile</code> は、ローカル端末にある SSH 鍵ファイルを指定する。</li>
+  <li><code>ProxyCommand</code> は、<strong><code>ssh 【踏み台サーバのホスト名】 nc -w 10 %h %p</code></strong> と書く。コレはもうおまじないと捉えてしまって良い。</li>
+</ul>
+<p>ProxyCommand という項目名のとおり、踏み台サーバを経由するよう、<code>nc</code> コマンドを指定している。<code>%h</code> や <code>%p</code> は ProxyCommand 用のオプションで、ホスト名とポート番号を表す。<code>-w 10</code> は接続に失敗した場合のタイムアウト秒数。</p>
+<p>ココで踏み台サーバがプロキシ的に機能するために、<code>nc</code> コマンドが踏み台サーバにインストールされている必要がある。</p>
+<ul>
+  <li>参考：<a href="http://hirose31.hatenablog.jp/entry/20070419/1176968993">ncある限りぼくはどこまででもいけるッ！ - （ひ）メモ</a></li>
+  <li>参考：<a href="https://qiita.com/_level5/items/c51740d61f9e9d3385fe">２段階SSH接続を，ProxyCommandを使って一度のsshコマンドで接続する - Qiita</a></li>
+  <li>参考：<a href="http://superbrothers.hatenablog.com/entry/20090730/1248971671">~/.ssh/config で簡単に複数ホストへのSSH接続を管理する - すぱぶろ</a></li>
+</ul>
+<h2 id="実際に接続してみる"><a class="header-link" href="#実際に接続してみる"><span class="header-link-mark"></span></a>実際に接続してみる</h2>
+<p><code>~/.ssh/config</code> に定義した情報を参照して接続するには、以下のように <code>Host</code> 名を指定すれば良い。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">ssh</span> mybastion
+
+<span class="token comment"># 踏み台サーバに SSH 接続した</span>
+<span class="token variable">$$</span> <span class="token function">whoami</span>
+myadmin
+</code></pre>
+<p>さて、多段 SSH の真価、あたかも直接お目当てのサーバに繋いだかのように、コマンド1発で <code>myprivate</code> サーバに接続してみせよう。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">ssh</span> myprivate
+
+<span class="token comment"># 目的のサーバに SSH 接続している</span>
+<span class="token variable">$$</span> <span class="token function">whoami</span>
+myuser
+</code></pre>
+<p>このとおり、見た目上は <code>mybastion</code> サーバを経由していないようにすら見える。</p>
+<h2 id="3段以上の多段-ssh-も原理上は可能"><a class="header-link" href="#3段以上の多段-ssh-も原理上は可能"><span class="header-link-mark"></span></a>3段以上の多段 SSH も原理上は可能</h2>
+<p>さて、仕組みが分かれば、<code>Host myprivate</code> 的な書き方をして中継サーバを間に3つも4つも作ることは、原理上できる。</p>
+<ul>
+  <li>参考：<a href="https://blog.glidenote.com/blog/2012/02/19/ssh-proxycommand/">多段SSHで4段先のサーバに一発ログイン - Glide Note</a></li>
+</ul>
+<h2 id="理解が合ってるかしら"><a class="header-link" href="#理解が合ってるかしら"><span class="header-link-mark"></span></a>理解が合ってるかしら…</h2>
+<p>自分が試した環境ではコレでうまく動いたのだが、ProxyCommand あたりは自分の理解が合っているか怪しい気がする…。</p>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2019-05-01</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2019-05-01</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

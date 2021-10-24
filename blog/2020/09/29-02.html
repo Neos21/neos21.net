@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>axios を使わず Node.js 標準モジュールの http・https だけでリクエストを投げる - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2020/09/29-02.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2020/index.html">2020年</a></li>
+            <li><a href="/blog/2020/09/index.html">09月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2020-09-29</time></div>
+        <h1 id="page-title">axios を使わず Node.js 標準モジュールの http・https だけでリクエストを投げる</h1>
+
+<p>request・request-promise・axios・node-fetch などに頼らず、Node.js スクリプトから外部 API をコールするリクエストを投げてみたくなった。</p>
+<p>Node.js においては、<code>http</code> モジュールおよび <code>https</code> モジュールを利用すればリクエストを投げられる。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword">const</span> http  <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'http'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">const</span> https <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'https'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token doc-comment comment">/**
+ * リクエストする
+ * 
+ * <span class="token keyword">@param</span> <span class="token class-name"><span class="token punctuation">{</span>string<span class="token punctuation">}</span></span> <span class="token parameter">url</span> URL
+ * <span class="token keyword">@param</span> <span class="token class-name"><span class="token punctuation">{</span>object<span class="token punctuation">}</span></span> <span class="token parameter">options</span> オプション
+ * <span class="token keyword">@return</span> <span class="token class-name"><span class="token punctuation">{</span>Promise<span class="token punctuation">&#x3C;</span><span class="token operator">*</span><span class="token punctuation">></span><span class="token punctuation">}</span></span> Promise
+ */</span>
+<span class="token keyword">function</span> <span class="token function">request</span><span class="token punctuation">(</span><span class="token parameter">url<span class="token punctuation">,</span> options</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token keyword control-flow">return</span> <span class="token keyword">new</span> <span class="token class-name">Promise</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token parameter">resolve<span class="token punctuation">,</span> reject</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+    <span class="token comment">// 引数の確認・調整</span>
+    <span class="token keyword control-flow">if</span><span class="token punctuation">(</span><span class="token operator">!</span>url <span class="token operator">||</span> <span class="token keyword">typeof</span> url <span class="token operator">!==</span> <span class="token string">'string'</span><span class="token punctuation">)</span> <span class="token punctuation">{</span> <span class="token keyword control-flow">return</span> <span class="token function">reject</span><span class="token punctuation">(</span><span class="token string">'Invalid URL Argument'</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token punctuation">}</span>
+    options <span class="token operator">=</span> options <span class="token operator">||</span> <span class="token punctuation">{</span><span class="token punctuation">}</span><span class="token punctuation">;</span>
+    
+    <span class="token comment">// タイムアウト指定があれば控える</span>
+    <span class="token keyword">const</span> timeout <span class="token operator">=</span> options<span class="token punctuation">.</span><span class="token property-access">timeout</span> <span class="token operator">||</span> <span class="token keyword null nil">null</span><span class="token punctuation">;</span>
+    <span class="token keyword control-flow">if</span><span class="token punctuation">(</span>options<span class="token punctuation">.</span><span class="token property-access">timeout</span><span class="token punctuation">)</span> <span class="token punctuation">{</span> <span class="token keyword">delete</span> options<span class="token punctuation">.</span><span class="token property-access">timeout</span><span class="token punctuation">;</span> <span class="token punctuation">}</span>
+    
+    <span class="token comment">// リクエストボディがあれば控える</span>
+    <span class="token keyword">const</span> body <span class="token operator">=</span> options<span class="token punctuation">.</span><span class="token property-access">body</span> <span class="token operator">||</span> <span class="token keyword null nil">null</span><span class="token punctuation">;</span>
+    <span class="token keyword control-flow">if</span><span class="token punctuation">(</span>options<span class="token punctuation">.</span><span class="token property-access">body</span><span class="token punctuation">)</span> <span class="token punctuation">{</span> <span class="token keyword">delete</span> options<span class="token punctuation">.</span><span class="token property-access">body</span><span class="token punctuation">;</span> <span class="token punctuation">}</span>
+    
+    <span class="token comment">// レスポンスエンコーディング指定があれば控える</span>
+    <span class="token keyword">const</span> responseEncoding <span class="token operator">=</span> options<span class="token punctuation">.</span><span class="token property-access">responseEncoding</span> <span class="token operator">||</span> <span class="token string">'utf8'</span><span class="token punctuation">;</span>
+    <span class="token keyword control-flow">if</span><span class="token punctuation">(</span>options<span class="token punctuation">.</span><span class="token property-access">responseEncoding</span><span class="token punctuation">)</span> <span class="token punctuation">{</span> <span class="token keyword">delete</span> options<span class="token punctuation">.</span><span class="token property-access">responseEncoding</span><span class="token punctuation">;</span> <span class="token punctuation">}</span>
+    
+    <span class="token comment">// プロトコルに合わせて使用するモジュールを決める</span>
+    <span class="token keyword">const</span> agent <span class="token operator">=</span> url<span class="token punctuation">.</span><span class="token method function property-access">startsWith</span><span class="token punctuation">(</span><span class="token string">'https:'</span><span class="token punctuation">)</span> <span class="token operator">?</span> https <span class="token operator">:</span> http<span class="token punctuation">;</span>
+    
+    <span class="token keyword">const</span> req <span class="token operator">=</span> agent<span class="token punctuation">.</span><span class="token method function property-access">request</span><span class="token punctuation">(</span>url<span class="token punctuation">,</span> options<span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token parameter">res</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+      res<span class="token punctuation">.</span><span class="token method function property-access">setEncoding</span><span class="token punctuation">(</span>responseEncoding<span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token keyword">let</span> data <span class="token operator">=</span> <span class="token string">''</span><span class="token punctuation">;</span>
+      res<span class="token punctuation">.</span><span class="token method function property-access">on</span><span class="token punctuation">(</span><span class="token string">'data'</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token parameter">chunk</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+        data <span class="token operator">+=</span> chunk<span class="token punctuation">;</span>
+      <span class="token punctuation">}</span><span class="token punctuation">)</span>
+        <span class="token punctuation">.</span><span class="token method function property-access">on</span><span class="token punctuation">(</span><span class="token string">'end'</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+          <span class="token function">resolve</span><span class="token punctuation">(</span>data<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span><span class="token punctuation">)</span>
+      <span class="token punctuation">.</span><span class="token method function property-access">on</span><span class="token punctuation">(</span><span class="token string">'error'</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token parameter">error</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+        <span class="token function">reject</span><span class="token punctuation">(</span>error<span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span><span class="token punctuation">)</span>
+      <span class="token punctuation">.</span><span class="token method function property-access">on</span><span class="token punctuation">(</span><span class="token string">'timeout'</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+        req<span class="token punctuation">.</span><span class="token method function property-access">abort</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token function">reject</span><span class="token punctuation">(</span><span class="token string">'Request Timeout'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    
+    <span class="token comment">// プロパティがあれば指定する</span>
+    <span class="token keyword control-flow">if</span><span class="token punctuation">(</span>timeout<span class="token punctuation">)</span> <span class="token punctuation">{</span> req<span class="token punctuation">.</span><span class="token method function property-access">setTimeout</span><span class="token punctuation">(</span>timeout<span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token punctuation">}</span>
+    <span class="token keyword control-flow">if</span><span class="token punctuation">(</span>body<span class="token punctuation">)</span> <span class="token punctuation">{</span> req<span class="token punctuation">.</span><span class="token method function property-access">write</span><span class="token punctuation">(</span>body<span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token punctuation">}</span>
+    req<span class="token punctuation">.</span><span class="token method function property-access">end</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>こんな関数を作れば良い。</p>
+<p>使用する時はこんな感じで。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token punctuation">(</span><span class="token keyword">async</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token comment">// 通常の GET リクエスト</span>
+  <span class="token keyword">const</span> getResult <span class="token operator">=</span> <span class="token keyword control-flow">await</span> <span class="token function">request</span><span class="token punctuation">(</span><span class="token string">'http://example.com/'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  
+  <span class="token comment">// API に POST リクエストする</span>
+  <span class="token keyword">const</span> postResult <span class="token operator">=</span> <span class="token keyword control-flow">await</span> <span class="token function">request</span><span class="token punctuation">(</span><span class="token string">'https://example.com/api/write'</span><span class="token punctuation">,</span> <span class="token punctuation">{</span>
+    method<span class="token operator">:</span> <span class="token string">'POST'</span><span class="token punctuation">,</span>
+    headers<span class="token operator">:</span> <span class="token punctuation">{</span>
+      <span class="token string">'Accept'</span>      <span class="token operator">:</span> <span class="token string">'application/json'</span><span class="token punctuation">,</span>
+      <span class="token string">'Content-Type'</span><span class="token operator">:</span> <span class="token string">'application/json;charset=utf-8'</span><span class="token punctuation">,</span>
+      <span class="token string">'User-Agent'</span>  <span class="token operator">:</span> <span class="token string">'my-node-js-script'</span>
+    <span class="token punctuation">}</span><span class="token punctuation">,</span>
+    <span class="token comment">// タイムアウトを指定する</span>
+    timeout<span class="token operator">:</span> <span class="token number">5000</span><span class="token punctuation">,</span>
+    <span class="token comment">// リクエストボディは以下のように書く</span>
+    body<span class="token operator">:</span> <span class="token known-class-name class-name">JSON</span><span class="token punctuation">.</span><span class="token method function property-access">stringify</span><span class="token punctuation">(</span><span class="token punctuation">{</span>
+      id  <span class="token operator">:</span> <span class="token string">'HOGE'</span><span class="token punctuation">,</span>
+      name<span class="token operator">:</span> <span class="token string">'FUGA'</span>
+    <span class="token punctuation">}</span><span class="token punctuation">)</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token comment">// レスポンスは文字列なので、JSON 文字列の場合は適宜パースする</span>
+  <span class="token keyword">const</span> jsonResult <span class="token operator">=</span> <span class="token known-class-name class-name">JSON</span><span class="token punctuation">.</span><span class="token method function property-access">parse</span><span class="token punctuation">(</span>postResult<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>なんで <code>http</code> モジュールと <code>https</code> モジュールを使い分けないといけないのかというと、エラーが出るから。</p>
+<ul>
+  <li><code>http.request()</code> に <code>https://</code> な URL を渡すと…
+    <ul>
+      <li><code>TypeError [ERR_INVALID_PROTOCOL]: Protocol "https:" not supported. Expected "http:"</code></li>
+    </ul>
+  </li>
+  <li><code>https.request()</code> に <code>http://</code> な URL を渡すと…
+    <ul>
+      <li><code>TypeError [ERR_INVALID_PROTOCOL]: Protocol "http:" not supported. Expected "https:"</code></li>
+    </ul>
+  </li>
+</ul>
+<p>モジュールが別れているとおり、メソッドの作りなんかは似ているものの、内部的には完全に別物のようだ。</p>
+<p>オプションの連想配列は、<code>http</code> や <code>https</code> モジュールの <code>request()</code> メソッドにほぼそのまま渡している。タイムアウトとリクエストボディを渡すために、独自に <code>timeout</code>・<code>body</code> プロパティを受け付けてハンドリングするように記述している。</p>
+<p>一応レスポンスエンコーディングも指定できるようにしてみたが、UTF-8 以外は未検証。</p>
+<p>HTTP ステータスコードは見ていないので、401 などでレスポンスされても Reject はされない。その辺凝り始めると axios の再発明だなーと思って止めた。ハンドリングしたければ <code>res.on('end')</code> 内で判定ロジックを実装するか、<code>resolve({ req, res, data })</code> と全部ぶん投げちゃって外でやることにすれば良いかと。</p>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2020-09-29</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2020-09-29</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

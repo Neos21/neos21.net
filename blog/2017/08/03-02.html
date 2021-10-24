@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>AngularJS と Angular4 とで非同期処理のユニットテストのやり方を比較した - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2017/08/03-02.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2017/index.html">2017年</a></li>
+            <li><a href="/blog/2017/08/index.html">08月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2017-08-03</time></div>
+        <h1 id="page-title">AngularJS と Angular4 とで非同期処理のユニットテストのやり方を比較した</h1>
+
+<p>AngularJS から Angular4 にバージョンアップして、Jasmine における非同期処理のユニットテストのやり方が違ったので、比較してみようと思う。</p>
+<h2 id="rootscopedigest-→-fakeasync・flushmicrotasks"><a class="header-link" href="#rootscopedigest-→-fakeasync・flushmicrotasks"><span class="header-link-mark"></span></a><code>$rootScope.$digest()</code> → <code>fakeAsync</code>・<code>flushMicrotasks</code></h2>
+<p>AngularJS では <em><code>$rootScope.$digest();</code> を使って非同期処理を実行</em>していた。<strong>Angular4 でこれに相当することをやるには、<code>fakeAsync</code> と <code>flushMicrotasks</code> を使う。</strong></p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token comment">// AngularJS</span>
+
+<span class="token function">it</span><span class="token punctuation">(</span><span class="token string">'非同期処理を絡めたテスト'</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token comment">// 非同期処理の中でログ出力している箇所を監視する</span>
+  <span class="token function">spyOn</span><span class="token punctuation">(</span>sut<span class="token punctuation">.</span><span class="token property-access">logger</span><span class="token punctuation">,</span> <span class="token string">'info'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  
+  <span class="token comment">// 内部で非同期処理をしている関数を叩く</span>
+  sut<span class="token punctuation">.</span><span class="token method function property-access">someFunc</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  
+  <span class="token comment">// 非同期処理を実行する</span>
+  $rootScope<span class="token punctuation">.</span><span class="token method function property-access">$digest</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  
+  <span class="token comment">// 非同期処理を実行したことで検証できるモノを検証する</span>
+  <span class="token comment">// (ココでは非同期処理完了時のログが出力されたか確認している)</span>
+  <span class="token function">expect</span><span class="token punctuation">(</span>sut<span class="token punctuation">.</span><span class="token property-access">logger</span><span class="token punctuation">.</span><span class="token property-access">info</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">toHaveBeenCalledWith</span><span class="token punctuation">(</span><span class="token string">'非同期処理が完了しました'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<pre class="language-typescript"><code class="language-typescript"><span class="token comment">// Angular4</span>
+
+<span class="token comment">// fakeAsync と flushMicrotasks を Import しておく</span>
+<span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">TestBed</span><span class="token punctuation">,</span> inject<span class="token punctuation">,</span> fakeAsync<span class="token punctuation">,</span> flushMicrotasks <span class="token punctuation">}</span></span> <span class="token keyword">from</span> <span class="token string">'@angular/core/testing'</span><span class="token punctuation">;</span>
+
+<span class="token function">it</span><span class="token punctuation">(</span><span class="token string">'非同期処理を絡めたテスト'</span><span class="token punctuation">,</span> <span class="token function">fakeAsync</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token comment">// アクセス修飾子が書かれているメンバ変数の場合は以下のように回避する</span>
+  <span class="token function">spyOn</span><span class="token punctuation">(</span><span class="token punctuation">(</span>sut <span class="token keyword">as</span> <span class="token builtin">any</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token property-access">logger</span><span class="token punctuation">,</span> <span class="token string">'info'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  
+  <span class="token comment">// 内部で非同期処理をしている関数を叩く</span>
+  sut<span class="token punctuation">.</span><span class="token method function property-access">someFunc</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  
+  <span class="token comment">// 非同期処理を実行する</span>
+  <span class="token function">flushMicrotasks</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  
+  <span class="token comment">// 非同期処理を実行したことで検証できるモノを検証する</span>
+  <span class="token function">expect</span><span class="token punctuation">(</span>sut<span class="token punctuation">.</span><span class="token property-access">logger</span><span class="token punctuation">.</span><span class="token property-access">info</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">toHaveBeenCalledWith</span><span class="token punctuation">(</span><span class="token string">'非同期処理が完了しました'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p><code>flushMicrotasks()</code> と同様に <strong><code>tick()</code></strong> という関数もある (Import 元も同じ Testing)。こちらは <code>tick(200);</code> のように引数にミリ秒を取り、<code>setTimeout()</code> などを評価する。<code>tick()</code> を使うと、<em>指定の秒数だけ進める前に <code>flushMicrotasks()</code> 相当のことを行う</em>のでそこも注意。</p>
+<ul>
+  <li>参考：<a href="https://angular.io/api/core/testing/fakeAsync">Angular Docs</a></li>
+  <li>参考：<a href="http://qiita.com/Quramy/items/83f4fbc6755309f78ad2">Angular 2とZone.jsとテストの話 - Qiita</a></li>
+</ul>
+<h2 id="done・donefail-→-actuallydone・fail"><a class="header-link" href="#done・donefail-→-actuallydone・fail"><span class="header-link-mark"></span></a><code>done()</code>・<code>done.fail()</code> → <code>"actuallyDone"</code>・<code>fail()</code></h2>
+<p>非同期処理が絡まず、通常どおり <code>done</code> のみ使用するテストであれば、これは Jasmine が用意する API なのでそのまま動く。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token comment">// AngularJS でも Angular4 でも同じように動くパターン</span>
+
+<span class="token function">it</span><span class="token punctuation">(</span><span class="token string">'単純に Promise を返す関数の場合は以下のように実行可能'</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token parameter">done</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  sut<span class="token punctuation">.</span><span class="token method function property-access">func</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+    <span class="token punctuation">.</span><span class="token method function property-access">then</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+      <span class="token function">expect</span><span class="token punctuation">(</span>sut<span class="token punctuation">.</span><span class="token property-access">result</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">toBe</span><span class="token punctuation">(</span><span class="token boolean">true</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token function">done</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span><span class="token punctuation">)</span>
+    <span class="token punctuation">.</span><span class="token keyword control-flow">catch</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+      done<span class="token punctuation">.</span><span class="token method function property-access">fail</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p><code>done()</code> と <code>$rootScope.$digest()</code> を併用するテストでは、<code>$rootScope.$digest()</code> の代用として <code>fakeAsync</code>・<code>flushMicrotasks</code> を使用するため、<code>done</code> を引数に取る関数がうまく作れない。</p>
+<p>そこで、<strong><code>done()</code> 相当は自前で変数を用意し、<code>done.fail()</code> は <code>fail()</code> で代用する。</strong></p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token comment">// AngularJS</span>
+
+<span class="token function">it</span><span class="token punctuation">(</span><span class="token string">'spec'</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token parameter">done</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token comment">// sut.func() 内で呼ばれる innerFunc() 関数を検証しつつ、モック化した Promise を返す</span>
+  <span class="token function">spyOn</span><span class="token punctuation">(</span>sut<span class="token punctuation">,</span> <span class="token string">'innerFunc'</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token property-access">and</span><span class="token punctuation">.</span><span class="token method function property-access">callFake</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token parameter">someProperty</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+    <span class="token function">expect</span><span class="token punctuation">(</span>someProperty<span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">toBe</span><span class="token punctuation">(</span><span class="token string">'Something Data'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword control-flow">return</span> <span class="token known-class-name class-name">Promise</span><span class="token punctuation">.</span><span class="token method function property-access">resolve</span><span class="token punctuation">(</span><span class="token string">'OK'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment">// $q.resolve() でも OK</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  
+  <span class="token comment">// テスト対象関数を実行し検証する</span>
+  sut<span class="token punctuation">.</span><span class="token method function property-access">func</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+    <span class="token punctuation">.</span><span class="token method function property-access">then</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+      <span class="token function">expect</span><span class="token punctuation">(</span>sut<span class="token punctuation">.</span><span class="token property-access">result</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">toBe</span><span class="token punctuation">(</span><span class="token boolean">true</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token function">done</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span><span class="token punctuation">)</span>
+    <span class="token punctuation">.</span><span class="token keyword control-flow">catch</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+      done<span class="token punctuation">.</span><span class="token method function property-access">fail</span><span class="token punctuation">(</span><span class="token string">'成功しなければならない'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  
+  <span class="token comment">// 非同期処理を実行</span>
+  $rootScope<span class="token punctuation">.</span><span class="token method function property-access">$digest</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  
+  <span class="token comment">// テスト対象関数の中で呼ばれたログ出力の検証など…</span>
+  <span class="token function">expect</span><span class="token punctuation">(</span>sut<span class="token punctuation">.</span><span class="token property-access">logger</span><span class="token punctuation">.</span><span class="token property-access">info</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">toHaveBeenCalledWith</span><span class="token punctuation">(</span><span class="token string">'Info Log'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<pre class="language-typescript"><code class="language-typescript"><span class="token comment">// Angular4</span>
+
+<span class="token function">it</span><span class="token punctuation">(</span><span class="token string">'spec'</span><span class="token punctuation">,</span> <span class="token function">fakeAsync</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token comment">// sut.func() 内で呼ばれる innerFunc() 関数の検証は同じ</span>
+  <span class="token function">spyOn</span><span class="token punctuation">(</span>sut<span class="token punctuation">,</span> <span class="token string">'innerFunc'</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token property-access">and</span><span class="token punctuation">.</span><span class="token method function property-access">callFake</span><span class="token punctuation">(</span><span class="token punctuation">(</span>someProperty<span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+    <span class="token function">expect</span><span class="token punctuation">(</span>someProperty<span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">toBe</span><span class="token punctuation">(</span><span class="token string">'Something Data'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">return</span> <span class="token known-class-name class-name">Promise</span><span class="token punctuation">.</span><span class="token method function property-access">resolve</span><span class="token punctuation">(</span><span class="token string">'OK'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  
+  <span class="token comment">// done() に相当する検証用の変数を用意しておく</span>
+  <span class="token keyword">let</span> actuallyDone <span class="token operator">=</span> <span class="token boolean">false</span><span class="token punctuation">;</span>
+  
+  <span class="token comment">// テスト対象関数を実行し検証する</span>
+  sut<span class="token punctuation">.</span><span class="token method function property-access">func</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+    <span class="token punctuation">.</span><span class="token method function property-access">then</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+      <span class="token function">expect</span><span class="token punctuation">(</span>sut<span class="token punctuation">.</span><span class="token property-access">result</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">toBe</span><span class="token punctuation">(</span><span class="token boolean">true</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      
+      <span class="token comment">// 検証用の変数を更新する</span>
+      actuallyDone <span class="token operator">=</span> <span class="token boolean">true</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span><span class="token punctuation">)</span>
+    <span class="token punctuation">.</span><span class="token keyword">catch</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+      <span class="token comment">// done.fail() を fail() にする</span>
+      <span class="token function">fail</span><span class="token punctuation">(</span><span class="token string">'成功しなければならない'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  
+  <span class="token comment">// 非同期処理を実行する</span>
+  <span class="token function">flushMicrotasks</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  
+  <span class="token comment">// 検証用の変数を検証することで、done() 相当のチェックを行う</span>
+  <span class="token function">expect</span><span class="token punctuation">(</span>actuallyDone<span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">toBe</span><span class="token punctuation">(</span><span class="token boolean">true</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  
+  <span class="token comment">// テスト対象関数の中で呼ばれたログ出力の検証など…</span>
+  <span class="token function">expect</span><span class="token punctuation">(</span>sut<span class="token punctuation">.</span><span class="token property-access">logger</span><span class="token punctuation">.</span><span class="token property-access">info</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">toHaveBeenCalledWith</span><span class="token punctuation">(</span><span class="token string">'Info Log'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<ul>
+  <li>参考：<a href="https://github.com/angular/angular/issues/10127">testing: async test fails if SUT calls an observable with a delay operator (fakeAsync too) · Issue #10127 · angular/angular · GitHub</a> … この GitHub Issue 内のコードを参考にした。</li>
+</ul>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2017-08-03</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2017-08-03</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>Docker コンテナに注入する環境変数、どれが優先される？適用のされ方を実際に調べてみた - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2020/07/26-02.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2020/index.html">2020年</a></li>
+            <li><a href="/blog/2020/07/index.html">07月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2020-07-26</time></div>
+        <h1 id="page-title">Docker コンテナに注入する環境変数、どれが優先される？適用のされ方を実際に調べてみた</h1>
+
+<p>最終的に Kubernetes 上で動かすつもりのアプリを作っていると、環境変数を注入してアプリに使用させることが多々ある。</p>
+<p>Node.js 製のアプリでは、<strong>dotenv</strong> という npm パッケージで <code>.env</code> ファイルを読み込んだりできるので、開発環境ではコレを使って環境変数を擬似的に設定したりもする。</p>
+<ul>
+  <li>参考：<a href="https://www.npmjs.com/package/dotenv">dotenv - npm</a></li>
+</ul>
+<p>そんなアプリを Docker イメージ化して、開発環境で動作確認したいな、という時に、どうやって環境変数を注入するか、手段がいくつか存在する。</p>
+<p>今回はそれらを確認し、<em>どのように Docker コンテナに環境変数を注入できるか</em>、<strong>複数の手法を併用したらどの環境変数設定が優先されるのか</strong>、といったことをまとめていく。</p>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#%E3%82%B5%E3%83%B3%E3%83%97%E3%83%AB%E3%82%B3%E3%83%BC%E3%83%89">サンプルコード</a></li>
+  <li><a href="#%E7%92%B0%E5%A2%83%E5%A4%89%E6%95%B0%E3%81%AE%E6%B3%A8%E5%85%A5%E6%96%B9%E6%B3%95%E3%82%92%E7%9F%A5%E3%82%8B">環境変数の注入方法を知る</a>
+    <ul>
+      <li><a href="#1-%E3%81%9D%E3%81%AE%E3%81%BE%E3%81%BE%E5%AE%9F%E8%A1%8C-%E2%86%92-env-%EF%BC%9C-env">1. そのまま実行 → <code>.env</code> ＜ <code>ENV</code></a></li>
+      <li><a href="#2-env-%E3%83%95%E3%82%A1%E3%82%A4%E3%83%AB%E3%82%92%E3%83%9C%E3%83%AA%E3%83%A5%E3%83%BC%E3%83%A0%E3%83%9E%E3%82%A6%E3%83%B3%E3%83%88%E3%81%A7%E5%B7%AE%E6%9B%BF-%E2%86%92-%E3%82%A4%E3%83%A1%E3%83%BC%E3%82%B8%E5%86%85%E3%81%AE%E3%83%95%E3%82%A1%E3%82%A4%E3%83%AB-%EF%BC%9C-%E3%83%9C%E3%83%AA%E3%83%A5%E3%83%BC%E3%83%A0%E3%83%9E%E3%82%A6%E3%83%B3%E3%83%88%E3%81%97%E3%81%9F%E3%83%95%E3%82%A1%E3%82%A4%E3%83%AB">2. <code>.env</code> ファイルをボリュームマウントで差替 → イメージ内のファイル ＜ ボリュームマウントしたファイル</a></li>
+      <li><a href="#3---env-file-%E3%82%AA%E3%83%97%E3%82%B7%E3%83%A7%E3%83%B3-%E2%86%92-dotenv-%EF%BC%9C-env-%E5%91%BD%E4%BB%A4-%EF%BC%9C---env-file">3. <code>--env-file</code> オプション → <code>dotenv</code> ＜ <code>ENV</code> 命令 ＜ <code>--env-file</code></a></li>
+      <li><a href="#4---env-%E3%82%AA%E3%83%97%E3%82%B7%E3%83%A7%E3%83%B3-%E2%86%92-dotenv-%EF%BC%9C-env-%E5%91%BD%E4%BB%A4-%EF%BC%9C---env">4. <code>--env</code> オプション → <code>dotenv</code> ＜ <code>ENV</code> 命令 ＜ <code>--env</code></a></li>
+    </ul>
+  </li>
+  <li><a href="#%E3%82%AA%E3%83%97%E3%82%B7%E3%83%A7%E3%83%B3%E3%82%92%E4%BD%B5%E7%94%A8%E3%81%97%E3%81%9F%E3%82%89%E3%81%A9%E3%81%86%E3%81%AA%E3%82%8B%E3%81%8B%EF%BC%9F">オプションを併用したらどうなるか？</a>
+    <ul>
+      <li><a href="#1-%E3%83%9C%E3%83%AA%E3%83%A5%E3%83%BC%E3%83%A0%E3%83%9E%E3%82%A6%E3%83%B3%E3%83%88--%E3%83%95%E3%82%A1%E3%82%A4%E3%83%AB%E3%81%8B%E3%82%89%E6%B3%A8%E5%85%A5-%E2%86%92-%E3%83%9C%E3%83%AA%E3%83%A5%E3%83%BC%E3%83%A0%E3%83%9E%E3%82%A6%E3%83%B3%E3%83%88-%EF%BC%9C-%E3%83%95%E3%82%A1%E3%82%A4%E3%83%AB%E3%81%8B%E3%82%89%E6%B3%A8%E5%85%A5">1. ボリュームマウント + ファイルから注入 → ボリュームマウント ＜ ファイルから注入</a></li>
+      <li><a href="#2-%E3%83%9C%E3%83%AA%E3%83%A5%E3%83%BC%E3%83%A0%E3%83%9E%E3%82%A6%E3%83%B3%E3%83%88--%E3%82%AA%E3%83%97%E3%82%B7%E3%83%A7%E3%83%B3%E5%BC%95%E6%95%B0%E3%81%8B%E3%82%89%E6%B3%A8%E5%85%A5-%E2%86%92-%E3%83%9C%E3%83%AA%E3%83%A5%E3%83%BC%E3%83%A0%E3%83%9E%E3%82%A6%E3%83%B3%E3%83%88-%EF%BC%9C-%E3%82%AA%E3%83%97%E3%82%B7%E3%83%A7%E3%83%B3%E5%BC%95%E6%95%B0%E3%81%8B%E3%82%89%E6%B3%A8%E5%85%A5">2. ボリュームマウント + オプション引数から注入 → ボリュームマウント ＜ オプション引数から注入</a></li>
+      <li><a href="#3-%E3%83%95%E3%82%A1%E3%82%A4%E3%83%AB%E3%81%8B%E3%82%89%E6%B3%A8%E5%85%A5--%E3%82%AA%E3%83%97%E3%82%B7%E3%83%A7%E3%83%B3%E5%BC%95%E6%95%B0%E3%81%8B%E3%82%89%E6%B3%A8%E5%85%A5-%E2%86%92-%E3%83%95%E3%82%A1%E3%82%A4%E3%83%AB%E3%81%8B%E3%82%89%E6%B3%A8%E5%85%A5-%EF%BC%9C-%E3%82%AA%E3%83%97%E3%82%B7%E3%83%A7%E3%83%B3%E5%BC%95%E6%95%B0%E3%81%8B%E3%82%89%E6%B3%A8%E5%85%A5">3. ファイルから注入 + オプション引数から注入 → ファイルから注入 ＜ オプション引数から注入</a></li>
+      <li><a href="#4-%E3%83%9C%E3%83%AA%E3%83%A5%E3%83%BC%E3%83%A0%E3%83%9E%E3%82%A6%E3%83%B3%E3%83%88--%E3%83%95%E3%82%A1%E3%82%A4%E3%83%AB%E3%81%8B%E3%82%89%E6%B3%A8%E5%85%A5--%E3%82%AA%E3%83%97%E3%82%B7%E3%83%A7%E3%83%B3%E5%BC%95%E6%95%B0%E3%81%8B%E3%82%89%E6%B3%A8%E5%85%A5-%E2%86%92-%E3%83%9C%E3%83%AA%E3%83%A5%E3%83%BC%E3%83%A0%E3%83%9E%E3%82%A6%E3%83%B3%E3%83%88-%EF%BC%9C-%E3%83%95%E3%82%A1%E3%82%A4%E3%83%AB%E3%81%8B%E3%82%89%E6%B3%A8%E5%85%A5-%EF%BC%9C-%E3%82%AA%E3%83%97%E3%82%B7%E3%83%A7%E3%83%B3%E5%BC%95%E6%95%B0%E3%81%8B%E3%82%89%E6%B3%A8%E5%85%A5">4. ボリュームマウント + ファイルから注入 + オプション引数から注入 → ボリュームマウント ＜ ファイルから注入 ＜ オプション引数から注入</a></li>
+    </ul>
+  </li>
+  <li><a href="#%E3%81%BE%E3%81%A8%E3%82%81">まとめ</a></li>
+</ul>
+<h2 id="サンプルコード"><a class="header-link" href="#サンプルコード"><span class="header-link-mark"></span></a>サンプルコード</h2>
+<p>今回は <em>dotenv</em> を使用した Node.js 製のアプリを想定し、簡単なサンプルコードを用意した。</p>
+<ul>
+  <li><code>package.json</code>
+    <ul>
+      <li><code>dotenv</code> をインストールしてある</li>
+    </ul>
+  </li>
+</ul>
+<pre class="language-json"><code class="language-json"><span class="token punctuation">{</span>
+  <span class="token property">"name"</span><span class="token operator">:</span> <span class="token string">"practice-env"</span><span class="token punctuation">,</span>
+  <span class="token property">"private"</span><span class="token operator">:</span> <span class="token boolean">true</span><span class="token punctuation">,</span>
+  <span class="token property">"scripts"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+    <span class="token property">"start"</span><span class="token operator">:</span> <span class="token string">"node index.js"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token property">"dependencies"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+    <span class="token property">"dotenv"</span><span class="token operator">:</span> <span class="token string">"8.2.0"</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<ul>
+  <li><code>index.js</code>
+    <ul>
+      <li><code>ENV_1</code>・<code>ENV_2</code>・<code>ENV_3</code> という環境変数を3秒ごとに出力している</li>
+      <li>自分で試す場合は、ココで用意する環境変数をいくつか増やしたりしてやると、バリエーション確認がしやすいだろう</li>
+    </ul>
+  </li>
+</ul>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword">const</span> envFilePath <span class="token operator">=</span> <span class="token template-string"><span class="token template-punctuation string">`</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>__dirname<span class="token interpolation-punctuation punctuation">}</span></span><span class="token string">/env-dir/.env</span><span class="token template-punctuation string">`</span></span><span class="token punctuation">;</span>
+<span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'dotenv'</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">config</span><span class="token punctuation">(</span><span class="token punctuation">{</span> path<span class="token operator">:</span> envFilePath <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token function">setInterval</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">Env : [</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>envFilePath<span class="token interpolation-punctuation punctuation">}</span></span><span class="token string">]
+    ENV_1 : [</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>process<span class="token punctuation">.</span><span class="token property-access">env</span><span class="token punctuation">.</span><span class="token constant">ENV_1</span><span class="token interpolation-punctuation punctuation">}</span></span><span class="token string">]
+    ENV_2 : [</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>process<span class="token punctuation">.</span><span class="token property-access">env</span><span class="token punctuation">.</span><span class="token constant">ENV_2</span><span class="token interpolation-punctuation punctuation">}</span></span><span class="token string">]
+    ENV_3 : [</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>process<span class="token punctuation">.</span><span class="token property-access">env</span><span class="token punctuation">.</span><span class="token constant">ENV_3</span><span class="token interpolation-punctuation punctuation">}</span></span><span class="token string">]</span><span class="token template-punctuation string">`</span></span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">,</span> <span class="token number">3000</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<ul>
+  <li><em><code>./env-dir/.env</code></em>
+    <ul>
+      <li><code>dotenv</code> で読み込む環境変数ファイル</li>
+      <li>今回は調査のため、プロジェクト直下ではなく、専用の階層を設けてファイルを用意している</li>
+      <li>中身はデタラメに用意しておけば良い。全ての環境変数に値を与えず、一部だけ定義してやっても良いだろう</li>
+    </ul>
+  </li>
+</ul>
+<pre class="language-bash"><code class="language-bash"><span class="token assign-left variable">ENV_1</span><span class="token operator">=</span>This is from .env <span class="token function">file</span> <span class="token number">1</span>
+<span class="token assign-left variable">ENV_2</span><span class="token operator">=</span>This is from .env <span class="token function">file</span> <span class="token number">2</span>
+<span class="token assign-left variable">ENV_3</span><span class="token operator">=</span>This is from .env <span class="token function">file</span> <span class="token number">3</span>
+</code></pre>
+<ul>
+  <li><code>Dockerfile</code>
+    <ul>
+      <li>今回は検証のため、Dockerfile の中で <code>ENV_1</code> のみ値を設定してやっている</li>
+    </ul>
+  </li>
+</ul>
+<pre class="language-dockerfile"><code class="language-dockerfile"><span class="token keyword">FROM</span> node<span class="token punctuation">:</span>14<span class="token punctuation">-</span>alpine3.12
+
+<span class="token keyword">WORKDIR</span> /app/
+
+<span class="token comment"># 環境変数を直接指定する</span>
+<span class="token keyword">ENV</span> ENV_1=<span class="token string">'From Dockerfile'</span>
+<span class="token comment"># dotenv で参照する環境変数ファイルをコピーする</span>
+<span class="token keyword">COPY</span> ./env<span class="token punctuation">-</span>dir/.env             /app/env<span class="token punctuation">-</span>dir/
+
+<span class="token keyword">COPY</span> ./package.json ./index.js  /app/
+<span class="token keyword">RUN</span> npm install
+
+<span class="token keyword">CMD</span> <span class="token punctuation">[</span><span class="token string">"npm"</span><span class="token punctuation">,</span> <span class="token string">"start"</span><span class="token punctuation">]</span>
+</code></pre>
+<p>ココまで用意できたら、</p>
+<pre class="language-bash"><code class="language-bash">$ docker build -t practice-env:0 ./
+</code></pre>
+<p>というコマンドで Docker イメージをビルドしてやる。ココまでで環境変数に対して値を注入しているのは2ヶ所である。</p>
+<ol>
+  <li><code>.env</code> ファイルを <code>dotenv</code> で読み込む</li>
+  <li><code>ENV</code> で環境変数を設定する</li>
+</ol>
+<p>準備はココまで。</p>
+<h2 id="環境変数の注入方法を知る"><a class="header-link" href="#環境変数の注入方法を知る"><span class="header-link-mark"></span></a>環境変数の注入方法を知る</h2>
+<p>こうして作成した Docker イメージを元に、色々な方法で環境変数を注入していく。</p>
+<p>その際、<strong>同じ名前の環境変数</strong>に対して、異なる値を注入しようとした時に、<em>どのやり方で渡した値が優先されるのか</em>、検証する。</p>
+<p>優先順位は不等号記号で表現する。例えば <em><code>A ＜ B</code></em> と書いたら、「A の方法で注入した値より、B の方法で注入した値の方が優先された」という表現になる。</p>
+<h3 id="1-そのまま実行-→-env-＜-env"><a class="header-link" href="#1-そのまま実行-→-env-＜-env"><span class="header-link-mark"></span></a>1. そのまま実行 → <code>.env</code> ＜ <code>ENV</code></h3>
+<p>まずはそのまま実行してみる。</p>
+<pre class="language-bash"><code class="language-bash">$ docker run --rm practice-env:0
+</code></pre>
+<p>出力を確認すると、<code>COPY</code> した <code>.env</code> ファイルを <code>dotenv</code> が読み込んでいることは確認できる。</p>
+<p>しかし、環境変数 <code>ENV_1</code> については、Dockerfile で <code>ENV</code> 命令にて設定した値の方が優先されていた。</p>
+<p><strong><code>dotenv</code> は、既に値が設定されている場合は <code>.env</code> ファイルの内容を適用しない</strong>ことが分かる。コレは実際のコードを見ても明らかである。</p>
+<ul>
+  <li>参考：<a href="https://github.com/motdotla/dotenv/blob/master/lib/main.js#L98-L104">dotenv/main.js at master · motdotla/dotenv · GitHub</a></li>
+</ul>
+<p>ということで、<code>.env</code> ファイルとシステム環境変数とでは、常にシステム環境変数の方が優先され、<code>.env</code> ファイルに書いても上書きはできないことを押さえておこう。</p>
+<h3 id="2-env-ファイルをボリュームマウントで差替-→-イメージ内のファイル-＜-ボリュームマウントしたファイル"><a class="header-link" href="#2-env-ファイルをボリュームマウントで差替-→-イメージ内のファイル-＜-ボリュームマウントしたファイル"><span class="header-link-mark"></span></a>2. <code>.env</code> ファイルをボリュームマウントで差替 → イメージ内のファイル ＜ ボリュームマウントしたファイル</h3>
+<p>次は <code>docker run</code> コマンド時に <code>--volume</code> (<code>-v</code>) オプションを使ってみる。</p>
+<pre class="language-bash"><code class="language-bash">$ docker run --rm --volume<span class="token operator">=</span><span class="token string">"<span class="token variable"><span class="token variable">$(</span><span class="token builtin class-name">pwd</span><span class="token variable">)</span></span>/docker-volume:/app/env-dir"</span> practice-env:0
+</code></pre>
+<p>このようにして、Docker イメージに取り込み済みの <code>.env</code> ファイルを、別の内容の <code>.env</code> ファイルに差し替えてみる。コレをやるために、環境変数ファイル用のディレクトリ <code>env-dir/</code> を設けていたワケ。</p>
+<p><code>--volume</code> オプションは、Docker イメージ内に既に同名のファイルがあっても、ディレクトリごと差し替える形で中身を入れ替えてしまう。というワケで、Docker イメージ内に <code>COPY</code> しておいた <code>.env</code> ファイルの内容は全て破棄され、ボリュームマウントした <code>.env</code> ファイルを <code>dotenv</code> が解釈する形となる。</p>
+<h3 id="3---env-file-オプション-→-dotenv-＜-env-命令-＜---env-file"><a class="header-link" href="#3---env-file-オプション-→-dotenv-＜-env-命令-＜---env-file"><span class="header-link-mark"></span></a>3. <code>--env-file</code> オプション → <code>dotenv</code> ＜ <code>ENV</code> 命令 ＜ <code>--env-file</code></h3>
+<p>次は、<code>dotenv</code> とよく似てはいるが、Docker 自身が指定のファイルをシステム環境変数として注入してくれる、<code>--env-file</code> オプションを使ってみる。</p>
+<pre class="language-bash"><code class="language-bash">$ docker run --rm --env-file<span class="token operator">=</span><span class="token string">'./docker-env-file/ENV-FILE'</span> practice-env:0
+</code></pre>
+<p><code>--env-file</code> オプションは <code>dotenv</code> などとは関係なく、システム環境変数として注入されるので、シェルの世界で <code>$ env</code> コマンドを実行しても確認できるモノとなる。</p>
+<p>このオプションを使うと、<code>dotenv</code> で注入した値は勿論、<code>Dockerfile</code> の <code>ENV</code> 命令で定義した環境変数であっても、上書き適用できる。</p>
+<h3 id="4---env-オプション-→-dotenv-＜-env-命令-＜---env"><a class="header-link" href="#4---env-オプション-→-dotenv-＜-env-命令-＜---env"><span class="header-link-mark"></span></a>4. <code>--env</code> オプション → <code>dotenv</code> ＜ <code>ENV</code> 命令 ＜ <code>--env</code></h3>
+<p>次は <code>.env</code> ファイルを渡すのではなく、コマンドライン上で環境変数の Key・Value を渡してやる、<strong><code>--env</code> (<code>-e</code>)</strong> オプションを使ってみる。</p>
+<pre class="language-bash"><code class="language-bash">$ docker run --rm --env 'ENV_1<span class="token operator">=</span>from <span class="token function">env</span> option`
+</code></pre>
+<p>コチラも <code>--env-file</code> と同様、<code>dotenv</code> で読み込む値、<code>ENV</code> 命令で指定した値よりも優先された。</p>
+<p>全体的にいえるのは、</p>
+<ul>
+  <li><code>dotenv</code> は一番優先度が低い (定義済のシステム環境変数を優先する・<code>dotenv</code> の仕様どおり)</li>
+  <li>Docker イメージ作成時に指定した値より、Docker コンテナ生成・実行時に注入する値の方が優先される</li>
+</ul>
+<p>ということであろう。</p>
+<h2 id="オプションを併用したらどうなるか？"><a class="header-link" href="#オプションを併用したらどうなるか？"><span class="header-link-mark"></span></a>オプションを併用したらどうなるか？</h2>
+<p>ココまでで大体分かってきた気はするが、もう少し検証。次は <code>docker run</code> 時に複数のオプションを併用した場合にどうなるか、見てみる。</p>
+<h3 id="1-ボリュームマウント--ファイルから注入-→-ボリュームマウント-＜-ファイルから注入"><a class="header-link" href="#1-ボリュームマウント--ファイルから注入-→-ボリュームマウント-＜-ファイルから注入"><span class="header-link-mark"></span></a>1. ボリュームマウント + ファイルから注入 → ボリュームマウント ＜ ファイルから注入</h3>
+<pre class="language-bash"><code class="language-bash">$ docker run --rm --volume<span class="token operator">=</span><span class="token string">"<span class="token variable"><span class="token variable">$(</span><span class="token builtin class-name">pwd</span><span class="token variable">)</span></span>/docker-volume:/app/env-dir"</span> --env-file<span class="token operator">=</span><span class="token string">'./docker-env-file/ENV-FILE'</span> practice-env:0`
+</code></pre>
+<p><code>--volume</code> と <code>--env-file</code>。コレは <code>dotenv</code> 仕様のとおり、ボリュームマウントされた <code>.env</code> も読み込まれはするが、<code>--env-file</code> の値の方が優先される。</p>
+<h3 id="2-ボリュームマウント--オプション引数から注入-→-ボリュームマウント-＜-オプション引数から注入"><a class="header-link" href="#2-ボリュームマウント--オプション引数から注入-→-ボリュームマウント-＜-オプション引数から注入"><span class="header-link-mark"></span></a>2. ボリュームマウント + オプション引数から注入 → ボリュームマウント ＜ オプション引数から注入</h3>
+<pre class="language-bash"><code class="language-bash">$ docker run --rm --volume<span class="token operator">=</span><span class="token string">"<span class="token variable"><span class="token variable">$(</span><span class="token builtin class-name">pwd</span><span class="token variable">)</span></span>/docker-volume:/app/env-dir"</span> --env <span class="token string">'ENV_1=from env option'</span> practice-env:0
+</code></pre>
+<p><code>--volume</code> と <code>--env</code> の比較。結果は <code>--env-file</code> の時と同じく、<code>--env</code> で指定した値の方が優先される。</p>
+<h3 id="3-ファイルから注入--オプション引数から注入-→-ファイルから注入-＜-オプション引数から注入"><a class="header-link" href="#3-ファイルから注入--オプション引数から注入-→-ファイルから注入-＜-オプション引数から注入"><span class="header-link-mark"></span></a>3. ファイルから注入 + オプション引数から注入 → ファイルから注入 ＜ オプション引数から注入</h3>
+<pre class="language-bash"><code class="language-bash">$ docker run --rm --env-file<span class="token operator">=</span><span class="token string">'./docker-env-file/ENV-FILE'</span> --env <span class="token string">'ENV_1=from env option'</span> practice-env:0
+</code></pre>
+<p><strong><code>--env-file</code> と <code>--env</code> を併用した場合は、<code>--env</code> で指定した値の方が上書き優先される。</strong></p>
+<p>オプション引数の指定順は関係なく、<code>--env-file</code> よりも <code>--env</code> の方が優先された。コレは Docker の仕様どおりである。</p>
+<blockquote>
+  <ul>
+    <li>参考：<a href="http://docs.docker.jp/engine/reference/commandline/run.html#e-env-env-file">run — Docker-docs-ja 17.06 ドキュメント</a></li>
+  </ul>
+  <p>これらの3つのフラグに関係なく、<code>--env-file</code> が始めに処理され、その後 <code>-e</code> と <code>--env</code> フラグが処理されます。この方法は、必要な時に <code>-e</code> と <code>--env</code> で変数を上書きするために使えます。</p>
+</blockquote>
+<p>大部分は <code>--env-file</code> で指定したファイルから読み込ませたいが、一部だけ変えたい、という時に、ファイルを書き換えるのではなく実行時のコマンドで上書きできるようにしてあるワケだ。</p>
+<h3 id="4-ボリュームマウント--ファイルから注入--オプション引数から注入-→-ボリュームマウント-＜-ファイルから注入-＜-オプション引数から注入"><a class="header-link" href="#4-ボリュームマウント--ファイルから注入--オプション引数から注入-→-ボリュームマウント-＜-ファイルから注入-＜-オプション引数から注入"><span class="header-link-mark"></span></a>4. ボリュームマウント + ファイルから注入 + オプション引数から注入 → ボリュームマウント ＜ ファイルから注入 ＜ オプション引数から注入</h3>
+<p>全てを併用した時も一応確認。</p>
+<pre class="language-bash"><code class="language-bash">$ docker run --rm --volume<span class="token operator">=</span><span class="token string">"<span class="token variable"><span class="token variable">$(</span><span class="token builtin class-name">pwd</span><span class="token variable">)</span></span>/docker-volume:/app/env-dir"</span> --env-file<span class="token operator">=</span><span class="token string">'./docker-env-file/ENV-FILE'</span> --env <span class="token string">'ENV_1=from env option'</span> practice-env:0
+</code></pre>
+<p>それぞれの手法で、別々の名前の環境変数を設定しているのであれば、いずれも正しく適用される。</p>
+<p>同じ名前の環境変数に対する設定が衝突する場合は、<code>--volume</code> より <code>--env-file</code>、<code>--env-file</code> より <code>--env</code> の値の方が優先される。</p>
+<h2 id="まとめ"><a class="header-link" href="#まとめ"><span class="header-link-mark"></span></a>まとめ</h2>
+<p>というワケで、Docker + <code>dotenv</code> における環境変数の適用順は、次の順番で順に定義され、上書きされていくモノと思うと良いだろう。</p>
+<ol>
+  <li><code>dotenv</code> が読み込む、Docker イメージ内の <code>.env</code> ファイル</li>
+  <li><code>dotenv</code> が読み込む、ボリュームマウントして差し替えた <code>.env</code> ファイル
+    <ul>
+      <li>「1.」の <code>.env</code> ファイルと完全差し替え</li>
+      <li>実際には「<code>dotenv</code> が指定した値が上書きされる」のではなく、「システム環境変数が存在したら <code>dotenv</code> が上書きしないように処理している」ワケだが…</li>
+    </ul>
+  </li>
+  <li>Dockerfile 中に書いた <code>ENV</code> 命令</li>
+  <li><code>--env-file</code> オプション</li>
+  <li><code>--env</code> オプション</li>
+</ol>
+<p><code>dotenv</code> による注入を抜きにすれば、<strong><code>ENV</code> 命令 ＜ <code>--env-file</code> ＜ <code>--env</code></strong> の順で上書きされることを覚えておけば良い。</p>
+<p>全体的には、<em>「イメージ内に含まれるモノ」＜「コマンド実行時の指定」</em>な順だが、その中でも <code>--env-file</code> と <code>--env</code> は、より「その場限り感が強い方」の値を優先されるワケだ。</p>
+<p>コレで覚えましたし。</p>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2020-07-26</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2020-07-26</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

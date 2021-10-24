@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>Jenkins Declarative Pipeline で複数行の Windows コマンド or シェルスクリプトを実行する - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2018/02/25-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2018/index.html">2018年</a></li>
+            <li><a href="/blog/2018/02/index.html">02月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2018-02-25</time></div>
+        <h1 id="page-title">Jenkins Declarative Pipeline で複数行の Windows コマンド or シェルスクリプトを実行する</h1>
+
+<p>Declarative Pipeline v1.2 以降で検証。最近 Jenkins づいている。</p>
+<p>Declarative Pipeline の <code>sh</code> や <code>bat</code> コマンドは、<strong>シングルクォートを3つ <code>'''</code></strong> ずつ使って行を囲むことで、<em>複数行の Windows コマンドやシェルスクリプトを実行できる</em>。</p>
+<pre class="language-groovy"><code class="language-groovy">pipeline <span class="token punctuation">{</span>
+  agent any
+  stages <span class="token punctuation">{</span>
+    <span class="token function">stage</span><span class="token punctuation">(</span><span class="token string">'複数行の Windows コマンド'</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      steps <span class="token punctuation">{</span>
+        <span class="token comment">// シングルクォート3つで囲む</span>
+        bat <span class="token string">'''
+          Setlocal EnableDelayedExpansion
+          some_cmd.bat
+          If Not !ERRORLEVEL! == 0 (
+            Echo 失敗 !ERRORLEVEL!
+          ) Else (
+            Echo 成功: !ERRORLEVEL!
+          )
+        '''</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span>
+    <span class="token function">stage</span><span class="token punctuation">(</span><span class="token string">'複数行のシェルスクリプト'</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      steps <span class="token punctuation">{</span>
+        sh <span class="token string">'''
+          sh ./some_shell.sh
+          echo HogeFuga
+        '''</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>Windows コマンドで <code>%ERRORLEVEL%</code> などの変数を参照する際は、<code>Setlocal EnableDelayedExpansion</code> で<em>遅延展開</em>を有効にし、<code>!ERRORLEVEL!</code> を使うようにする。パイプラインに記述したコマンドは複数行全てを展開してから実行されるので、遅延展開させる必要がある。</p>
+<p>組み合わせるコマンドによっては、複数行で書くと後続のコマンドがうまく実行されないことがあった。そういう時は</p>
+<pre class="language-groovy"><code class="language-groovy">bat <span class="token string">'echo ほげ'</span>
+bat <span class="token string">'echo ふが'</span>
+</code></pre>
+<p>というように、1行ごとに <code>bat</code> コマンドを分けて書いてやるしかない。</p>
+<ul>
+  <li>参考：<a href="https://qiita.com/cs_sonar/items/0190d68c3856b6fd6878">Jenkinsビルドの「シェルで実行」の失敗/成功を操作する - Qiita</a></li>
+  <li>参考：<a href="https://stackoverflow.com/questions/43293501/jenkins-pipeline-try-catch-for-particular-stage-and-subsequent-conditional-ste/43303039">Jenkins pipeline - try catch for particular stage and subsequent conditional step - Stack Overflow</a></li>
+  <li>参考：<a href="https://stackoverflow.com/questions/19355114/jenkins-and-return-code-from-windows-batch">Jenkins and return code from windows batch - Stack Overflow</a></li>
+</ul>
+<p>実行する Jenkins サーバが Windows Server なのか Linux サーバなのか、つまり実行環境の OS が Unix 系なのかどうかは、<code>isUnix()</code> という関数で判定できる。これを利用する際は <code>script</code> ブロックを使うことになるようだ。</p>
+<pre class="language-groovy"><code class="language-groovy">pipeline <span class="token punctuation">{</span>
+  agent any
+  stages <span class="token punctuation">{</span>
+    <span class="token function">stage</span><span class="token punctuation">(</span><span class="token string">'Unix 系 OS 判定'</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      steps <span class="token punctuation">{</span>
+        script <span class="token punctuation">{</span>
+          <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token function">isUnix</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+            sh <span class="token string">'ls'</span>
+          <span class="token punctuation">}</span>
+          <span class="token keyword">else</span> <span class="token punctuation">{</span>
+            bat <span class="token string">'dir'</span>
+          <span class="token punctuation">}</span>
+        <span class="token punctuation">}</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>ブレースとインデントがエグくなりがち…。</p>
+<p>ちなみに、以前も書いたが、Windows 環境で日本語を含むジョブ名 = ワークスペースディレクトリ名にすると、<code>bat</code> コマンド実行後に止まり続けるので止めよう。</p>
+<ul>
+  <li><a href="/blog/2018/02/07-02.html">Jenkins の Declarative Pipeline を触ってみた</a></li>
+  <li>参考：<a href="http://kazuhito-m.github.io/tech/2016/12/05/jenkins-jobstop-by-japanesename">NBM2 - Jenkinsで「パイプラインスクリプトでWindowsのコマンド叩く」時ジョブが延々と止まる感じになる場合</a></li>
+</ul>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2018-02-25</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2018-02-25</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>iOS アプリで 120fps・240fps のスローモーション動画を撮るための Swift 4 実装 - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2018/06/04-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2018/index.html">2018年</a></li>
+            <li><a href="/blog/2018/06/index.html">06月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2018-06-04</time></div>
+        <h1 id="page-title">iOS アプリで 120fps・240fps のスローモーション動画を撮るための Swift 4 実装</h1>
+
+<p>ふと「iOS のカメラアプリでスローモーションが撮れるヤツって極端に少ないな？」と思い、Swift での実装の仕方を調べてみた。</p>
+<p>iOS アプリにおけるスローモーション動画撮影に関して解説されている日本語文献は、以下の <em><code>@shu223</code> さん</em>の文献ぐらいしか見当たらなかった。</p>
+<ul>
+  <li>参考：<a href="https://qiita.com/shu223/items/51f764101e6fd5c2161b">AV Foundationで240fpsスローモーション動画撮影を実装する</a></li>
+  <li>参考：<a href="http://d.hatena.ne.jp/shu223/20131217/1387257304">AV Foundationで120fpsスローモーション動画撮影を実装する - Over&#x26;Out その後</a></li>
+  <li>参考：<a href="https://github.com/shu223/SlowMotionVideoRecorder">GitHub - shu223/SlowMotionVideoRecorder: 120/240 fps SLO-MO video recorder using AVFoundation. Including convenient wrapper class.</a></li>
+</ul>
+<p>コチラは Objective-C で書かれているようだったので、<em>同様の処理を Swift 4 に移植</em>してみようと思う。</p>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#%E7%92%B0%E5%A2%83%E6%83%85%E5%A0%B1">環境情報</a></li>
+  <li><a href="#%E5%85%83%E3%81%AE%E3%82%B3%E3%83%BC%E3%83%89%E3%81%AE%E4%BB%95%E7%B5%84%E3%81%BF">元のコードの仕組み</a></li>
+  <li><a href="#%E7%A7%BB%E6%A4%8D%E3%81%97%E3%81%9F%E3%82%B3%E3%83%BC%E3%83%89">移植したコード</a></li>
+  <li><a href="#%E8%A9%B3%E7%B4%B0">詳細</a>
+    <ul>
+      <li><a href="#%E3%83%90%E3%83%83%E3%82%AF%E3%82%AB%E3%83%A1%E3%83%A9%E3%82%92%E9%81%B8%E6%8A%9E%E3%81%99%E3%82%8B%E3%82%84%E3%82%8A%E6%96%B9%E3%81%8C%E5%A4%89%E3%82%8F%E3%81%A3%E3%81%A6%E3%81%84%E3%81%9F">バックカメラを選択するやり方が変わっていた</a></li>
+      <li><a href="#%E5%85%A5%E5%8A%9B%E3%81%AE%E5%88%9D%E6%9C%9F%E5%8C%96%E5%87%A6%E7%90%86%E3%81%A7%E4%BE%8B%E5%A4%96%E3%83%81%E3%82%A7%E3%83%83%E3%82%AF">入力の初期化処理で例外チェック</a></li>
+      <li><a href="#%E3%83%95%E3%83%AC%E3%83%BC%E3%83%A0%E3%83%AC%E3%83%BC%E3%83%88%E8%A8%AD%E5%AE%9A%E3%82%92%E3%81%99%E3%82%8B%E3%81%AB%E3%81%AF-avcapturesession-%E3%81%AB-avcapturedeviceinput-%E3%82%92%E8%BF%BD%E5%8A%A0%E3%81%97%E3%81%A6%E3%81%8A%E3%81%84%E3%81%A6%E3%81%8B%E3%82%89">フレームレート設定をするには AVCaptureSession に AVCaptureDeviceInput を追加しておいてから</a></li>
+      <li><a href="#lockforconfiguration-%E3%81%AE%E4%BB%95%E6%A7%98%E3%81%8C%E5%A4%89%E3%82%8F%E3%81%A3%E3%81%9F"><code>lockForConfiguration</code> の仕様が変わった</a></li>
+      <li><a href="#cmformatdescription-%E3%81%AE-vide-%E3%81%A3%E3%81%A6%E4%BD%95%EF%BC%9F"><code>CMFormatDescription</code> の <code>vide</code> って何？</a></li>
+      <li><a href="#cmformatdescription-%E3%81%AE-binned-%E3%81%A3%E3%81%A6%E4%BD%95%EF%BC%9F%E3%83%93%E3%83%8B%E3%83%B3%E3%82%B0%E3%81%AE%E8%A9%B1"><code>CMFormatDescription</code> の <code>binned</code> って何？ビニングの話</a></li>
+      <li><a href="#%E3%82%BB%E3%83%83%E3%82%B7%E3%83%A7%E3%83%B3%E3%81%AB%E5%87%BA%E5%8A%9B%E3%82%92%E8%BF%BD%E5%8A%A0%E3%81%99%E3%82%8B%E6%99%82%E3%80%81%E8%BF%BD%E5%8A%A0%E3%81%A7%E3%81%8D%E3%82%8B%E3%81%8B%E7%A2%BA%E8%AA%8D%E3%81%99%E3%82%8B">セッションに出力を追加する時、追加できるか確認する</a></li>
+    </ul>
+  </li>
+  <li><a href="#%E4%BB%A5%E4%B8%8A">以上</a></li>
+</ul>
+<h2 id="環境情報"><a class="header-link" href="#環境情報"><span class="header-link-mark"></span></a>環境情報</h2>
+<ul>
+  <li>対象 iOS バージョン：v11.3
+    <ul>
+      <li>実機：iPhoneSE … iOS v11.3 (15E216)</li>
+    </ul>
+  </li>
+  <li>Xcode：v9.3 (9E145)</li>
+  <li>Swift：v4.1 (swiftlang-902.0.48 clang-902.0.37.1)</li>
+</ul>
+<h2 id="元のコードの仕組み"><a class="header-link" href="#元のコードの仕組み"><span class="header-link-mark"></span></a>元のコードの仕組み</h2>
+<p>今回参考とする元コードは以下。</p>
+<ul>
+  <li>参考：<a href="https://github.com/shu223/SlowMotionVideoRecorder/blob/master/TTMCaptureManager/TTMCaptureManager.m#L383-L415">SlowMotionVideoRecorder/TTMCaptureManager.m at master · shu223/SlowMotionVideoRecorder · GitHub</a></li>
+</ul>
+<p>バックカメラを使うビデオ用の <code>AVCaptureDevice</code> を作り、その中から利用できるフォーマット情報 <code>AVCaptureDeviceFormat</code> の一覧を取り出している。フォーマット情報をループで1つずつ見ていって、指定のフレームレート (FPS) で解像度が一番大きいフォーマットを拾い上げている。期待するフォーマットが取得できたら、最初に生成した <code>AVCaptureDevice</code> の <code>activeFormat</code> に設定し、フレームレートを設定して完了、という流れだ。</p>
+<h2 id="移植したコード"><a class="header-link" href="#移植したコード"><span class="header-link-mark"></span></a>移植したコード</h2>
+<p>この処理を Swift 4・iOS 11 向けに実装し直したコードは以下。</p>
+<pre class="language-swift"><code class="language-swift"><span class="token comment">// 適当な ViewController で実装してみた</span>
+
+<span class="token keyword">import</span> <span class="token builtin">UIKit</span>
+<span class="token keyword">import</span> <span class="token builtin">AVFoundation</span>
+<span class="token keyword">import</span> <span class="token builtin">Photos</span>
+
+<span class="token keyword">class</span> <span class="token class-name">ViewController</span><span class="token punctuation">:</span> <span class="token builtin">UIViewController</span><span class="token punctuation">,</span> <span class="token builtin">AVCaptureFileOutputRecordingDelegate</span> <span class="token punctuation">{</span>
+  <span class="token comment">// セッション</span>
+  <span class="token keyword">var</span> session<span class="token punctuation">:</span> <span class="token builtin">AVCaptureSession</span><span class="token operator">!</span>
+  <span class="token comment">// ビデオデバイス</span>
+  <span class="token keyword">var</span> videoDevice<span class="token punctuation">:</span> <span class="token builtin">AVCaptureDevice</span><span class="token operator">!</span>
+  <span class="token comment">// オーディオデバイス</span>
+  <span class="token keyword">var</span> audioDevice<span class="token punctuation">:</span> <span class="token builtin">AVCaptureDevice</span><span class="token operator">!</span>
+  <span class="token comment">// ファイル出力</span>
+  <span class="token keyword">var</span> fileOutput<span class="token punctuation">:</span> <span class="token builtin">AVCaptureMovieFileOutput</span><span class="token operator">!</span>
+  
+  <span class="token comment">// 初期処理</span>
+  <span class="token keyword">func</span> <span class="token function">initSession</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token comment">// セッション生成</span>
+    session <span class="token operator">=</span> <span class="token function">AVCaptureSession</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+    
+    <span class="token comment">// 入力 : 背面カメラ</span>
+    videoDevice <span class="token operator">=</span> <span class="token builtin">AVCaptureDevice</span><span class="token punctuation">.</span><span class="token keyword">default</span><span class="token punctuation">(</span><span class="token punctuation">.</span>builtInWideAngleCamera<span class="token punctuation">,</span> <span class="token keyword">for</span><span class="token punctuation">:</span> <span class="token punctuation">.</span>video<span class="token punctuation">,</span> position<span class="token punctuation">:</span> <span class="token punctuation">.</span>back<span class="token punctuation">)</span>
+    <span class="token keyword">let</span> videoInput <span class="token operator">=</span> <span class="token keyword">try</span><span class="token operator">!</span> <span class="token builtin">AVCaptureDeviceInput</span><span class="token punctuation">.</span><span class="token keyword">init</span><span class="token punctuation">(</span>device<span class="token punctuation">:</span> videoDevice<span class="token punctuation">)</span>
+    session<span class="token punctuation">.</span><span class="token function">addInput</span><span class="token punctuation">(</span>videoInput<span class="token punctuation">)</span>
+    
+    <span class="token comment">// ↓ココ重要！！！！！</span>
+    <span class="token comment">// 120fps のフォーマットを探索して設定する</span>
+    <span class="token function">switchFormat</span><span class="token punctuation">(</span>desiredFps<span class="token punctuation">:</span> <span class="token number">120.0</span><span class="token punctuation">)</span>
+    
+    <span class="token comment">// 入力 : マイク</span>
+    audioDevice <span class="token operator">=</span> <span class="token builtin">AVCaptureDevice</span><span class="token punctuation">.</span><span class="token keyword">default</span><span class="token punctuation">(</span><span class="token keyword">for</span><span class="token punctuation">:</span> <span class="token punctuation">.</span>audio<span class="token punctuation">)</span>
+    <span class="token keyword">let</span> audioInput <span class="token operator">=</span> <span class="token keyword">try</span><span class="token operator">!</span> <span class="token builtin">AVCaptureDeviceInput</span><span class="token punctuation">.</span><span class="token keyword">init</span><span class="token punctuation">(</span>device<span class="token punctuation">:</span> audioDevice<span class="token punctuation">)</span>
+    session<span class="token punctuation">.</span><span class="token function">addInput</span><span class="token punctuation">(</span>audioInput<span class="token punctuation">)</span>
+    
+    <span class="token comment">// ファイル出力設定</span>
+    fileOutput <span class="token operator">=</span> <span class="token function">AVCaptureMovieFileOutput</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+    session<span class="token punctuation">.</span><span class="token function">addOutput</span><span class="token punctuation">(</span>fileOutput<span class="token punctuation">)</span>
+    
+    <span class="token comment">// セッションを開始する (録画開始とは別)</span>
+    session<span class="token punctuation">.</span><span class="token function">startRunning</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+  <span class="token punctuation">}</span>
+  
+  <span class="token comment">// 指定の FPS のフォーマットに切り替える (その FPS で最大解像度のフォーマットを選ぶ)</span>
+  <span class="token comment">// </span>
+  <span class="token comment">// - Parameters:</span>
+  <span class="token comment">//   - desiredFps: 切り替えたい FPS (AVFrameRateRange.maxFrameRate が Double なので合わせる)</span>
+  <span class="token keyword">func</span> <span class="token function">switchFormat</span><span class="token punctuation">(</span>desiredFps<span class="token punctuation">:</span> <span class="token builtin">Double</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token comment">// セッションが始動しているかどうか</span>
+    <span class="token keyword">let</span> isRunning <span class="token operator">=</span> session<span class="token punctuation">.</span>isRunning
+    
+    <span class="token comment">// セッションが始動中なら止める</span>
+    <span class="token keyword">if</span> isRunning <span class="token punctuation">{</span>
+      session<span class="token punctuation">.</span><span class="token function">stopRunning</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+    <span class="token punctuation">}</span>
+    
+    <span class="token comment">// 取得したフォーマットを格納する変数</span>
+    <span class="token keyword">var</span> selectedFormat<span class="token punctuation">:</span> <span class="token builtin">AVCaptureDevice</span><span class="token punctuation">.</span><span class="token builtin">Format</span><span class="token operator">!</span> <span class="token operator">=</span> <span class="token constant">nil</span>
+    <span class="token comment">// そのフレームレートの中で一番大きい解像度を取得する</span>
+    <span class="token keyword">var</span> maxWidth<span class="token punctuation">:</span> <span class="token builtin">Int32</span> <span class="token operator">=</span> <span class="token number">0</span>
+    
+    <span class="token comment">// フォーマットを探る</span>
+    <span class="token keyword">for</span> format <span class="token keyword">in</span> videoDevice<span class="token punctuation">.</span>formats <span class="token punctuation">{</span>
+      <span class="token comment">// フォーマット内の情報を抜き出す (for in と書いているが1つの format につき1つの range しかない)</span>
+      <span class="token keyword">for</span> range<span class="token punctuation">:</span> <span class="token builtin">AVFrameRateRange</span> <span class="token keyword">in</span> format<span class="token punctuation">.</span>videoSupportedFrameRateRanges <span class="token punctuation">{</span>
+        <span class="token keyword">let</span> description <span class="token operator">=</span> format<span class="token punctuation">.</span>formatDescription <span class="token keyword">as</span> <span class="token builtin">CMFormatDescription</span>    <span class="token comment">// フォーマットの説明</span>
+        <span class="token keyword">let</span> dimensions <span class="token operator">=</span> <span class="token function">CMVideoFormatDescriptionGetDimensions</span><span class="token punctuation">(</span>description<span class="token punctuation">)</span>  <span class="token comment">// 幅・高さ情報を抜き出す</span>
+        <span class="token keyword">let</span> width <span class="token operator">=</span> dimensions<span class="token punctuation">.</span>width                                         <span class="token comment">// 幅</span>
+        <span class="token function">print</span><span class="token punctuation">(</span><span class="token string">"フォーマット情報 : <span class="token interpolation"><span class="token delimiter variable">\(</span>description<span class="token delimiter variable">)</span></span>"</span><span class="token punctuation">)</span>
+        
+        <span class="token comment">// 指定のフレームレートで一番大きな解像度を得る</span>
+        <span class="token keyword">if</span> desiredFps <span class="token operator">==</span> range<span class="token punctuation">.</span>maxFrameRate <span class="token operator">&#x26;&#x26;</span> width <span class="token operator">>=</span> maxWidth <span class="token punctuation">{</span>
+          <span class="token function">print</span><span class="token punctuation">(</span><span class="token string">"このフォーマットを候補にする"</span><span class="token punctuation">)</span>
+          selectedFormat <span class="token operator">=</span> format
+          maxWidth <span class="token operator">=</span> width
+        <span class="token punctuation">}</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span>
+    
+    <span class="token comment">// フォーマットが取得できていれば設定する</span>
+    <span class="token keyword">if</span> selectedFormat <span class="token operator">!=</span> <span class="token constant">nil</span> <span class="token punctuation">{</span>
+      <span class="token keyword">do</span> <span class="token punctuation">{</span>
+        <span class="token keyword">try</span> videoDevice<span class="token punctuation">.</span><span class="token function">lockForConfiguration</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+        videoDevice<span class="token punctuation">.</span>activeFormat <span class="token operator">=</span> selectedFormat
+        videoDevice<span class="token punctuation">.</span>activeVideoMinFrameDuration <span class="token operator">=</span> <span class="token function">CMTimeMake</span><span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">,</span> <span class="token function">Int32</span><span class="token punctuation">(</span>desiredFps<span class="token punctuation">)</span><span class="token punctuation">)</span>
+        videoDevice<span class="token punctuation">.</span>activeVideoMaxFrameDuration <span class="token operator">=</span> <span class="token function">CMTimeMake</span><span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">,</span> <span class="token function">Int32</span><span class="token punctuation">(</span>desiredFps<span class="token punctuation">)</span><span class="token punctuation">)</span>
+        videoDevice<span class="token punctuation">.</span><span class="token function">unlockForConfiguration</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+        <span class="token function">print</span><span class="token punctuation">(</span><span class="token string">"フォーマット・フレームレートを設定 : <span class="token interpolation"><span class="token delimiter variable">\(</span>desiredFps<span class="token delimiter variable">)</span></span> fps・<span class="token interpolation"><span class="token delimiter variable">\(</span>maxWidth<span class="token delimiter variable">)</span></span> px"</span><span class="token punctuation">)</span>
+      <span class="token punctuation">}</span>
+      <span class="token keyword">catch</span> <span class="token punctuation">{</span>
+        <span class="token function">print</span><span class="token punctuation">(</span><span class="token string">"フォーマット・フレームレートが指定できなかった"</span><span class="token punctuation">)</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span>
+    <span class="token keyword">else</span> <span class="token punctuation">{</span>
+      <span class="token function">print</span><span class="token punctuation">(</span><span class="token string">"指定のフォーマットが取得できなかった"</span><span class="token punctuation">)</span>
+    <span class="token punctuation">}</span>
+    
+    <span class="token comment">// セッションが始動中だったら再開する</span>
+    <span class="token keyword">if</span> isRunning <span class="token punctuation">{</span>
+      session<span class="token punctuation">.</span><span class="token function">startRunning</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p><strong>本質は <code>switchFormat()</code> 関数。</strong><code>switchFormat(desiredFps: 120.0)</code> と叩けば 120FPS、<code>switchFormat(desiredFps: 240.0)</code> と叩けば 240FPS のフォーマットを探し出して設定してくれる。<code>60.0</code> で 60FPS とかも可能。</p>
+<p>僕が移植したコードは、フォーマット判定の条件文をちょっと変えてある。手元の iPhoneSE と iPhone7Plus ではコレで動いたが、機種によってもし上手く挙動しない場合は、適宜調整して欲しい。</p>
+<h2 id="詳細"><a class="header-link" href="#詳細"><span class="header-link-mark"></span></a>詳細</h2>
+<p>Swift に移植するにあたって勉強した細々とした情報を書いていこうと思う。Objective-C の癖を Swift に直し、かつ古い API を最新のモノに書き直すのに苦労した…。</p>
+<h3 id="バックカメラを選択するやり方が変わっていた"><a class="header-link" href="#バックカメラを選択するやり方が変わっていた"><span class="header-link-mark"></span></a>バックカメラを選択するやり方が変わっていた</h3>
+<p>巷の文献を見ていると、VideoDevice の取得方法が違って、手元で書いてみると非推奨だの何だのとエラーが出てしまった。どうも <code>AVCaptureDevice.devices()</code> が非推奨になって、<code>.default()</code> でいきなり取得できるようになったようだ。</p>
+<ul>
+  <li>↓Swift 4・iOS 11 で正しいやり方</li>
+</ul>
+<pre class="language-swift"><code class="language-swift">videoDevice <span class="token operator">=</span> <span class="token builtin">AVCaptureDevice</span><span class="token punctuation">.</span><span class="token keyword">default</span><span class="token punctuation">(</span><span class="token punctuation">.</span>builtInWideAngleCamera<span class="token punctuation">,</span> <span class="token keyword">for</span><span class="token punctuation">:</span> <span class="token punctuation">.</span>video<span class="token punctuation">,</span> position<span class="token punctuation">:</span> <span class="token punctuation">.</span>back<span class="token punctuation">)</span>
+<span class="token function">print</span><span class="token punctuation">(</span><span class="token string">"<span class="token interpolation"><span class="token delimiter variable">\(</span>videoDevice<span class="token operator">!</span><span class="token punctuation">.</span>localizedName<span class="token delimiter variable">)</span></span> found!"</span><span class="token punctuation">)</span>
+</code></pre>
+<ul>
+  <li>↓古いやり方</li>
+</ul>
+<pre class="language-swift"><code class="language-swift"><span class="token keyword">for</span> d <span class="token keyword">in</span> <span class="token builtin">AVCaptureDevice</span><span class="token punctuation">.</span><span class="token function">devices</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token keyword">if</span> <span class="token punctuation">(</span>d <span class="token keyword">as</span> <span class="token builtin">AnyObject</span><span class="token punctuation">)</span><span class="token punctuation">.</span>position <span class="token operator">==</span> <span class="token builtin">AVCaptureDevice</span><span class="token punctuation">.</span><span class="token builtin">Position</span><span class="token punctuation">.</span>back <span class="token punctuation">{</span>
+    videoDevice <span class="token operator">=</span> d <span class="token keyword">as</span> <span class="token builtin">AVCaptureDevice</span>
+    <span class="token function">print</span><span class="token punctuation">(</span><span class="token string">"<span class="token interpolation"><span class="token delimiter variable">\(</span>device<span class="token operator">!</span><span class="token punctuation">.</span>localizedName<span class="token delimiter variable">)</span></span> found."</span><span class="token punctuation">)</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<h3 id="入力の初期化処理で例外チェック"><a class="header-link" href="#入力の初期化処理で例外チェック"><span class="header-link-mark"></span></a>入力の初期化処理で例外チェック</h3>
+<p>マイク入力などを準備する際に例外チェックする実装もできる。</p>
+<ul>
+  <li>↓例外チェックなし <em>(例外が発生した場合はクラッシュする)</em></li>
+</ul>
+<pre class="language-swift"><code class="language-swift">audioDevice <span class="token operator">=</span> <span class="token builtin">AVCaptureDevice</span><span class="token punctuation">.</span><span class="token keyword">default</span><span class="token punctuation">(</span><span class="token keyword">for</span><span class="token punctuation">:</span> <span class="token punctuation">.</span>audio<span class="token punctuation">)</span>
+<span class="token keyword">let</span> audioInput <span class="token operator">=</span> <span class="token keyword">try</span><span class="token operator">!</span> <span class="token builtin">AVCaptureDeviceInput</span><span class="token punctuation">.</span><span class="token keyword">init</span><span class="token punctuation">(</span>device<span class="token punctuation">:</span> audioDevice<span class="token punctuation">)</span>
+session<span class="token punctuation">.</span><span class="token function">addInput</span><span class="token punctuation">(</span>audioInput<span class="token punctuation">)</span>
+</code></pre>
+<ul>
+  <li>↓例外チェックあり</li>
+</ul>
+<pre class="language-swift"><code class="language-swift"><span class="token keyword">do</span> <span class="token punctuation">{</span>
+  <span class="token keyword">let</span> audioInput <span class="token operator">=</span> <span class="token keyword">try</span> <span class="token builtin">AVCaptureDeviceInput</span><span class="token punctuation">.</span><span class="token keyword">init</span><span class="token punctuation">(</span>device<span class="token punctuation">:</span> audioDevice<span class="token punctuation">)</span>
+  session<span class="token punctuation">.</span><span class="token function">addInput</span><span class="token punctuation">(</span>audioInput<span class="token punctuation">)</span>
+<span class="token punctuation">}</span>
+<span class="token keyword">catch</span> <span class="token punctuation">{</span>
+  <span class="token function">print</span><span class="token punctuation">(</span><span class="token string">"音声録音開始できず"</span><span class="token punctuation">)</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<ul>
+  <li>参考：<a href="https://stackoverflow.com/a/36170148">ios - AVCaptureSession Record Video With Audio - Stack Overflow</a></li>
+</ul>
+<h3 id="フレームレート設定をするには-avcapturesession-に-avcapturedeviceinput-を追加しておいてから"><a class="header-link" href="#フレームレート設定をするには-avcapturesession-に-avcapturedeviceinput-を追加しておいてから"><span class="header-link-mark"></span></a>フレームレート設定をするには AVCaptureSession に AVCaptureDeviceInput を追加しておいてから</h3>
+<p>コレ重要。<code>session.addInput(videoInput)</code> した後でないと、今回の <code>switchFormat()</code> 関数によるフレームレート設定が有効にならない。</p>
+<ul>
+  <li>参考：<a href="http://yskmanabe.blogspot.jp/2014/05/avcapturedevice.html">AVCaptureDeviceのフレームレートを設定したのに反映されないキミへ | S4U -smile for you-</a></li>
+</ul>
+<h3 id="lockforconfiguration-の仕様が変わった"><a class="header-link" href="#lockforconfiguration-の仕様が変わった"><span class="header-link-mark"></span></a><code>lockForConfiguration</code> の仕様が変わった</h3>
+<p>これまでは <code>videoDevice.lockForConfiguration()</code> は、ロックできたら (できていたら) <code>true</code> を返す、という API だったが、最近は<strong>ロックできなかった時に例外を投げる</strong>という API に変わったようだ。</p>
+<ul>
+  <li>↓Swift 4・iOS 11 で正しいやり方</li>
+</ul>
+<pre class="language-swift"><code class="language-swift"><span class="token keyword">try</span> videoDevice<span class="token punctuation">.</span><span class="token function">lockForConfiguration</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+videoDevice<span class="token punctuation">.</span>activeFormat <span class="token operator">=</span> selectedFormat
+</code></pre>
+<ul>
+  <li>↓古いやり方</li>
+</ul>
+<pre class="language-swift"><code class="language-swift"><span class="token keyword">if</span> videoDevice<span class="token punctuation">.</span><span class="token function">lockForConfiguration</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  videoDevice<span class="token punctuation">.</span>activeFormat <span class="token operator">=</span> selectedFormat
+<span class="token punctuation">}</span>
+</code></pre>
+<ul>
+  <li>参考：<a href="https://teratail.com/questions/31711">Xcode - swift lockForConfigurationの扱いについて(31711)｜teratail</a></li>
+</ul>
+<h3 id="cmformatdescription-の-vide-って何？"><a class="header-link" href="#cmformatdescription-の-vide-って何？"><span class="header-link-mark"></span></a><code>CMFormatDescription</code> の <code>vide</code> って何？</h3>
+<p>上述のコードでいう変数 <code>description</code>、<code>CMFormatDescription</code> を見てみると、<em><code>vide</code></em> という項目があり、<code>420v</code> とか <code>420f</code> とかいう値が入っている。コレは何かというと、ビデオフレームのデータの並び順のことらしい。</p>
+<p><code>420v</code> は値域がビデオレンジ。<code>420f</code> はフルレンジ。フルレンジである <code>420f</code> の方が画質としては綺麗なのだが、そこまで大差はない様子。</p>
+<p>両者の区別をしたいが上手くできなかった。<code>for ... in</code> ループの中で <code>420f</code> の方が後に来ていたので、<code>selectedFormat</code> は2回更新されて <code>420f</code> の方のフォーマットが設定されるので、このままほっといていいかな。</p>
+<h3 id="cmformatdescription-の-binned-って何？ビニングの話"><a class="header-link" href="#cmformatdescription-の-binned-って何？ビニングの話"><span class="header-link-mark"></span></a><code>CMFormatDescription</code> の <code>binned</code> って何？ビニングの話</h3>
+<p><code>CMFormatDescription</code> の中に、<code>binned</code> という項目が遭った。コレは<strong>ビニング</strong>という仕組みを利用したフォーマットか否かを示している。</p>
+<p>ビニングとは、隣接するピクセルをひとまとめにすることで暗所で画質の劣化をおさえたりする技術のこと。60fps までは、同一の解像度とフレームレートで、ビニングするフォーマットとビニングしないフォーマットが用意されており、120fps 以上はビニングするフォーマットしかない。</p>
+<p><code>format.isVideoBinned</code> でも拾える。</p>
+<ul>
+  <li>参考：<a href="https://qiita.com/hkato193/items/0553206f197ebd1d4f57%20">AVFoundationのビデオ撮影に出てくる「ビニング」って何？</a></li>
+</ul>
+<h3 id="セッションに出力を追加する時、追加できるか確認する"><a class="header-link" href="#セッションに出力を追加する時、追加できるか確認する"><span class="header-link-mark"></span></a>セッションに出力を追加する時、追加できるか確認する</h3>
+<p>セッションに出力を設定できるか確認するための <code>canAddOutput()</code> というメソッドがあったりする。</p>
+<ul>
+  <li>↓特に確認しない場合、出力を用意したらそのまま <code>addOutput()</code> する</li>
+</ul>
+<pre class="language-swift"><code class="language-swift">fileOutput <span class="token operator">=</span> <span class="token function">AVCaptureMovieFileOutput</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+session<span class="token punctuation">.</span><span class="token function">addOutput</span><span class="token punctuation">(</span>fileOutput<span class="token punctuation">)</span>
+</code></pre>
+<ul>
+  <li>↓確認する場合</li>
+</ul>
+<pre class="language-swift"><code class="language-swift">fileOutput <span class="token operator">=</span> <span class="token function">AVCaptureMovieFileOutput</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+<span class="token keyword">if</span> session<span class="token punctuation">.</span><span class="token function">canAddOutput</span><span class="token punctuation">(</span>fileOutput<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  session<span class="token punctuation">.</span><span class="token function">addOutput</span><span class="token punctuation">(</span>fileOutput<span class="token punctuation">)</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<ul>
+  <li>参考：<a href="https://developer.apple.com/library/content/samplecode/AVCam/Listings/Swift_AVCam_CameraViewController_swift.html">Swift/AVCam/CameraViewController.swift</a></li>
+</ul>
+<h2 id="以上"><a class="header-link" href="#以上"><span class="header-link-mark"></span></a>以上</h2>
+<p>コレで、Swift アプリに手軽にスーパースロー動画撮影の仕組みを組み込めるようになったかと思う。</p>
+<p>カメラアプリとしての機能拡充は皆様に別途やっていただくとしよう…。</p>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2018-06-04</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2018-06-04</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

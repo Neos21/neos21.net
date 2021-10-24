@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>Ubuntu 18.04 に nginx を入れたら外部からアクセスできなくて iptables を編集した - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2020/08/02-02.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2020/index.html">2020年</a></li>
+            <li><a href="/blog/2020/08/index.html">08月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2020-08-02</time></div>
+        <h1 id="page-title">Ubuntu 18.04 に nginx を入れたら外部からアクセスできなくて iptables を編集した</h1>
+
+<p>Oracle Cloud で Ubuntu 18.04 イメージの Compute Instance を立てた。Compute には Public IP が付与されており、Security List などクラウド側のファイアウォール設定は正しく開いていて、80番ポートで Web サーバを立ち上げれば、外部からアクセスできるはずだった。</p>
+<p>nginx をインストールし、サービスを起動。<code>localhost</code> ではきちんと nginx の HTML が返ってきていることを確認。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">sudo</span> <span class="token function">apt</span> <span class="token function">install</span> -y nginx
+$ nginx -v
+$ <span class="token function">sudo</span> systemctl <span class="token builtin class-name">enable</span> nginx
+$ <span class="token function">sudo</span> systemctl status nginx
+$ <span class="token function">curl</span> http://localhost/
+</code></pre>
+<ul>
+  <li>参考：<a href="https://xn--o9j8h1c9hb5756dt0ua226amc1a.com/?p=3100">nginx の最新版を Ubuntu 18.04 に apt インストールする - サーバー構築と設定 ～初心者にも分かりやすく解説～</a></li>
+</ul>
+<p>しかし、この Compute に付与した Public IP をブラウザで叩いてみても、nginx のページが開かない。</p>
+<p>はて、なんでだろう。というのを解決するまでの記事。</p>
+<hr>
+<p>はじめ、ファイアウォールを設定する <strong><code>ufw</code> (Uncomplicated FireWall)</strong> の設定かな？と思い色々試して、必要なポートはきちんと開放したのに、状況は変わらず。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">sudo</span> ufw app list
+$ <span class="token function">sudo</span> ufw <span class="token builtin class-name">enable</span>
+<span class="token comment"># SSH は切れずに済んだ</span>
+$ <span class="token function">sudo</span> ufw allow <span class="token string">'Nginx Full'</span>
+$ <span class="token function">sudo</span> ufw status
+</code></pre>
+<ul>
+  <li>参考：<a href="https://qiita.com/siida36/items/be21d361cf80d664859c">Ubuntuのポート開放方法（ファイアウォールを設定する） - Qiita</a></li>
+  <li>参考：<a href="https://qiita.com/shimakaze_soft/items/c3cce2bfb7d584e1fbce">iptablesが難しいためufwでWEBサーバーのファイアウォール設定 - Qiita</a></li>
+</ul>
+<p>何してもダメだったので <code>ufw</code> を無効化してみたが、それでもダメ。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">sudo</span> ufw disable
+</code></pre>
+<p>試しに Compute 自身から Public IP を指定して叩いてみると、面白いエラーが出た。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># 念のため自分の Public IP を確認する</span>
+$ <span class="token function">curl</span> http://globalip.me/
+
+$ <span class="token function">curl</span> http://【自分の Public IP】/
+</code></pre>
+<ul>
+  <li><code>No route to host</code></li>
+  <li><code>ホストへの経路がありません</code></li>
+</ul>
+<p>なんだこれー？</p>
+<hr>
+<p>色々調べてみると、<code>ufw</code> が隠蔽してくれていた、大本の <em><code>iptables</code></em> の内容に問題がありそうだと分かった。</p>
+<ul>
+  <li>参考：<a href="https://qiita.com/webmedi/items/a55bbe91e6950f22fdc6">curl: (7) Failed to connect to x.x.x.x port xxxx: ホストへの経路がありません - Qiita</a></li>
+  <li>参考：<a href="https://blog.hidekiy.com/2012/09/linux-ping-no-route-to-host.html">hidekiy blog: linux ping は通るのに No route to host と言われる</a></li>
+  <li>参考：<a href="https://qiita.com/egoa56/items/c932a627e54e626a2b97">curl: (7) Failed to connectではまった話 - Qiita</a></li>
+</ul>
+<p>既存の <code>iptables</code> に設定されているルールを見てみる。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">sudo</span> iptables -L --line-numbers
+</code></pre>
+<ul>
+  <li>参考：<a href="http://y0m0r.hateblo.jp/entry/20130227/1361977348">pingが通るけどNo route to host - 雑多なメモ置き場</a></li>
+</ul>
+<p>何やらアレコレ <code>ACCEPT</code> だの <code>REJECT</code> だの <code>DROP</code> だの、大量の設定らしき文言が出てきた。細かいところは読み方が分からないが、おおよそファイアウォール設定があるなー、何かを <code>REJECT</code>、つまり拒否したりしていることは察しがついた。</p>
+<hr>
+<p>同じ OCI 上で動いている、Oracle Linux ベースの Compute Instance の内容も見てみると、コチラはほぼ何も制限していないようだった。クラウド側で制御するからインスタンス側は別に制御しなくてもいいかなー、という気分。</p>
+<p>じゃあ <em><code>iptables</code> を初期化して、とりあえず全部許可してみるか</em>、ということで、以下を参考にした。</p>
+<ul>
+  <li>参考：<a href="https://qiita.com/suin/items/5c4e21fa284497782f71">俺史上最強のiptablesをさらす - Qiita</a></li>
+</ul>
+<p>コチラは必要な設定をキチンと入れているスクリプトなのだが、その冒頭部分をパクって、ひとまず設定のリセットと全許可だけ入れてみることにした。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># 各種初期化・それぞれの意味はよく知らんｗ</span>
+$ <span class="token function">sudo</span> iptables -F  <span class="token comment"># テーブル初期化</span>
+$ <span class="token function">sudo</span> iptables -X  <span class="token comment"># チェーンを削除</span>
+$ <span class="token function">sudo</span> iptables -Z  <span class="token comment"># パケットカウンタ・バイトカウンタをクリア</span>
+
+<span class="token comment"># とりあえず全許可</span>
+$ <span class="token function">sudo</span> iptables -P INPUT   ACCEPT
+$ <span class="token function">sudo</span> iptables -P OUTPUT  ACCEPT
+$ <span class="token function">sudo</span> iptables -P FORWARD ACCEPT
+</code></pre>
+<p>ひとまずコレで外部からアクセスできるか試したら、正常にアクセスができた。よかつたよかつた。</p>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2020-08-02</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2020-08-02</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

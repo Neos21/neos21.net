@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>Mac 内蔵の Apache で Perl CGI を動かせるようにするまで - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2019/01/26-02.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2019/index.html">2019年</a></li>
+            <li><a href="/blog/2019/01/index.html">01月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2019-01-26</time></div>
+        <h1 id="page-title">Mac 内蔵の Apache で Perl CGI を動かせるようにするまで</h1>
+
+<p>MacOS には Apache が最初から含まれており、Perl や PHP を CGI としてすぐに動かせる。</p>
+<p>今回は、Perl スクリプトを CGI として動かせるようにするため、この Apache の設定をいじってみようと思う。</p>
+<p>(昔ワケも分からず色んなところからコードをコピペして作った Perl CGI のスクリプトが出てきたので、動かしてみたいと思った次第ｗ)</p>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#apache-%E3%81%AE%E8%B5%B7%E5%8B%95%E3%83%BB%E5%81%9C%E6%AD%A2%E3%83%BB%E5%86%8D%E8%B5%B7%E5%8B%95%E3%83%BB%E3%82%B9%E3%83%86%E3%83%BC%E3%82%BF%E3%82%B9%E7%A2%BA%E8%AA%8D">Apache の起動・停止・再起動・ステータス確認</a></li>
+  <li><a href="#httpdconf-%E3%81%AE%E8%A8%AD%E5%AE%9A%E3%82%92%E5%A4%89%E6%9B%B4%E3%81%97%E3%81%A6-perl-cgi-%E3%82%92%E6%9C%89%E5%8A%B9%E3%81%AB%E3%81%99%E3%82%8B"><code>httpd.conf</code> の設定を変更して Perl CGI を有効にする</a></li>
+  <li><a href="#%E3%82%B5%E3%83%B3%E3%83%97%E3%83%AB%E7%94%A8-perl-cgi-%E3%82%B9%E3%82%AF%E3%83%AA%E3%83%97%E3%83%88%E3%82%92%E4%BD%9C%E6%88%90%E3%83%BB%E6%A0%BC%E7%B4%8D%E3%81%99%E3%82%8B">サンプル用 Perl CGI スクリプトを作成・格納する</a></li>
+  <li><a href="#apache-%E3%81%AE%E3%82%A2%E3%82%AF%E3%82%BB%E3%82%B9%E3%83%AD%E3%82%B0%E3%83%BB%E3%82%A8%E3%83%A9%E3%83%BC%E3%83%AD%E3%82%B0%E3%82%92%E7%A2%BA%E8%AA%8D%E3%81%99%E3%82%8B">Apache のアクセスログ・エラーログを確認する</a></li>
+  <li><a href="#%E4%BB%A5%E4%B8%8A">以上</a></li>
+  <li><a href="#%E5%8F%82%E8%80%83%E6%96%87%E7%8C%AE">参考文献</a></li>
+</ul>
+<h2 id="apache-の起動・停止・再起動・ステータス確認"><a class="header-link" href="#apache-の起動・停止・再起動・ステータス確認"><span class="header-link-mark"></span></a>Apache の起動・停止・再起動・ステータス確認</h2>
+<p>Apache の操作は、<code>sudo</code> を付けて、<code>apachectl</code> コマンドから行える。</p>
+<ul>
+  <li>起動 : <code>$ sudo apachectl start</code></li>
+  <li>停止 : <code>$ sudo apachectl stop</code></li>
+  <li>再起動 : <code>$ sudo apachectl restart</code></li>
+  <li>ステータス確認 : <code>$ sudo apachectl</code></li>
+</ul>
+<p>ステータス確認は、<code>sudo apachectl status</code> だとよく分からなかった。<code>sudo apachectl</code> だと以下のように表示される。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">sudo</span> apachectl
+AH00558: httpd: Could not reliably determine the server<span class="token string">'s fully qualified domain name, using neos21.local. Set the '</span>ServerName' directive globally to suppress this message
+httpd <span class="token punctuation">(</span>pid <span class="token number">1146</span><span class="token punctuation">)</span> already running
+</code></pre>
+<p>とりあえず「already running」なら大丈夫だろう。</p>
+<p>Apache が起動していれば、ブラウザで <code>http://localhost/</code> もしくは <code>http://【ホスト名】.local/</code> にアクセスして「It works!」というテキストが表示されるはずだ。コレはどこのファイルが参照されているかというと、</p>
+<ul>
+  <li><code>/Library/WebServer/Documents/index.html.en</code></li>
+</ul>
+<p>というパスのファイルが参照されている。この <code>/Library/WebServer/Documents/</code> ディレクトリ配下が、<code>http://localhost/</code> のルート直下となる。</p>
+<h2 id="httpdconf-の設定を変更して-perl-cgi-を有効にする"><a class="header-link" href="#httpdconf-の設定を変更して-perl-cgi-を有効にする"><span class="header-link-mark"></span></a><code>httpd.conf</code> の設定を変更して Perl CGI を有効にする</h2>
+<p>次に、Apache に対して Perl CGI を有効にする各種設定変更を入れていく。以下のコマンドで、Apache の設定ファイルである <code>httpd.conf</code> を開き、編集する。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">sudo</span> <span class="token function">vi</span> /etc/apache2/httpd.conf
+</code></pre>
+<p>編集した箇所は以下のとおり。…なのだが、<em>正直このあたりどれがどのぐらい必要なのかハッキリ分かっていない</em>ので、無駄もあるかも。</p>
+<ul>
+  <li>L164 付近 : <code>LoadModule cgi_module libexec/apache2/mod_cgi.so</code> をアンコメント (行頭のコメントアウト <code>#</code> を消して有効化する)
+    <ul>
+      <li>CGI の有効化？後述の <code>php7_module</code>・<code>perl_module</code> との違いがよく分かっていない</li>
+    </ul>
+  </li>
+  <li>L173 付近 : <code>LoadModule userdir_module libexec/apache2/mod_userdir.so</code> をアンコメント
+    <ul>
+      <li>ユーザディレクトリ (<code>/Library/WebServer/Documents/</code> 以下のサブディレクトリ) を認識させるために必要</li>
+    </ul>
+  </li>
+  <li>L175 付近 : <code>LoadModule rewrite_module libexec/apache2/mod_rewrite.so</code> をアンコメント
+    <ul>
+      <li>リダイレクトや URL の書き換えに使う。なくても良いのかしら？CGI で実現する機能による？</li>
+    </ul>
+  </li>
+  <li>L176 付近 : <code>LoadModule php7_module libexec/apache2/libphp7.so</code> をアンコメント
+    <ul>
+      <li>PHP を使えるようにする (ついでに…)</li>
+    </ul>
+  </li>
+  <li>L177 付近 : <code>LoadModule perl_module libexec/apache2/mod_perl.so</code> をアンコメント
+    <ul>
+      <li>Perl を使えるようにする (今回の本命)</li>
+    </ul>
+  </li>
+  <li>L258 付近 : L245 あたりから始まる <code>&#x3C;Directory "/Library/WebServer/Documents"></code> の中の <code>Options FollowSymLinks Multiviews</code> 部分に <code>ExecCGI</code> を加えて、<code>Options FollowSymLinks Multiviews ExecCGI</code> にする
+    <ul>
+      <li>前述の <code>index.html.en</code> があったディレクトリ配下に <code>.cgi</code> ファイルを置いて、CGI が動作するようにする</li>
+    </ul>
+  </li>
+  <li>L436 付近 : L403 あたりから始まる <code>&#x3C;IfModule mime_module></code> の中の <code>AddHandler cgi-script .cgi</code> をアンコメントし、Ruby と Perl も動くように <code>AddHandler cgi-script .cgi .rb .pl</code> とする
+    <ul>
+      <li><code>.rb</code> (Ruby) はとりあえず追加したまで。<code>.cgi</code> なファイルしか扱わないならアンコメントだけで十分かも</li>
+    </ul>
+  </li>
+  <li>L510 付近 : <code>Include /private/etc/apache2/extra/httpd-userdir.conf</code> をアンコメント
+    <ul>
+      <li>ユーザディレクトリを認識させるため</li>
+    </ul>
+  </li>
+  <li>ファイル最終行 : <code>AddHandler cgi-script .cgi .rb .pl</code> を追記する
+    <ul>
+      <li>L436 で対応したモノと同じ内容を書くのだが、コレが要るのかイマイチ分からん</li>
+    </ul>
+  </li>
+</ul>
+<p>参考にした各種文献は古いモノが多く、PHP Module のバージョンに違いがあったりしたので、MacOS High Sierra 時点の内容であることに留意。<code>$ apachectl -v</code> でバージョンを見ると、<code>Apache/2.4.33 (Unix)</code> となっていたので、この時点での内容だ。</p>
+<p>ちなみに、<code>#</code> から始まる行はコメントアウトされるのだが、<strong>行末にコメントアウトを書こうとするとオプションの一つのように解釈されて上手く動かなくなるので注意。</strong></p>
+<pre class="language-apacheconf"><code class="language-apacheconf"><span class="token comment"># ↓ コレはアレです。みたいにコメントを書くのは大丈夫。</span>
+<span class="token directive-inline property">LoadModule</span> cgi_module libexec/apache2/mod_cgi.so
+
+<span class="token directive-inline property">LoadModule</span> cgi_module libexec/apache2/mod_cgi.so  <span class="token comment"># ← コレはアレです。</span>
+<span class="token comment"># ↑ というようにコメントを書こうとすると、コメントのつもりの部分もコードとして解釈されて動かなくなる</span>
+</code></pre>
+<p>これらの編集を行ったら保存して終了する。Apachea は <code>$ sudo apachectl restart</code> で再起動しておこう。</p>
+<h2 id="サンプル用-perl-cgi-スクリプトを作成・格納する"><a class="header-link" href="#サンプル用-perl-cgi-スクリプトを作成・格納する"><span class="header-link-mark"></span></a>サンプル用 Perl CGI スクリプトを作成・格納する</h2>
+<p>いよいよ Perl CGI を書いてみる。<code>/Library/WebServer/</code> 配下で作業するので、必ず <code>sudo</code> が必要なのが面倒なところ…。</p>
+<p>まずは <code>CGI-Executables/</code> ディレクトリ配下に CGI ファイルを置き、それが動作するか見てみよう。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># CGI-Executables ディレクトリに移動する</span>
+$ <span class="token builtin class-name">cd</span> /Library/WebServer/CGI-Executables/
+
+<span class="token comment"># CGI ファイルを作る</span>
+$ <span class="token function">sudo</span> <span class="token function">touch</span> test.cgi
+
+<span class="token comment"># CGI ファイルを編集する</span>
+$ <span class="token function">sudo</span> <span class="token function">vi</span> test.cgi
+</code></pre>
+<p><code>test.cgi</code> の中身は以下のようにする。</p>
+<pre class="language-perl"><code class="language-perl"><span class="token comment">#!/usr/bin/perl</span>
+
+<span class="token keyword">print</span> <span class="token string">"Content-Type: text/html\n\n"</span><span class="token punctuation">;</span>
+<span class="token keyword">print</span> <span class="token string">"Hello From CGI-Bin"</span><span class="token punctuation">;</span>
+<span class="token keyword">print</span> <span class="token string">"\n"</span><span class="token punctuation">;</span>
+</code></pre>
+<p>「Hello From CGI-Bin」と表示させるだけの簡単なモノだが、Perl で書いてある。</p>
+<p>編集が終わったら保存して <code>vi</code> を終了し、アクセス権を設定する。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">sudo</span> <span class="token function">chmod</span> <span class="token number">777</span> test.cgi
+</code></pre>
+<p>ココまで出来たら、ブラウザで <em><code>http://localhost/cgi-bin/test.cgi</code></em> にアクセスしてみよう。「Hello From CGI-Bin」と表示されたら OK だ。</p>
+<p><code>CGI-Executables/</code> ディレクトリ配下の内容が <code>cgi-bin/</code> というパス配下で見られるようになっているのは、<code>/etc/apache2/httpd.conf</code> の L372 あたりで設定されている。L345 あたりから始まる <code>&#x3C;IfModule alias_module></code> 内に、</p>
+<ul>
+  <li><code>ScriptAliasMatch ^/cgi-bin/((?!(?i:webobjects)).*$) "/Library/WebServer/CGI-Executables/$1"</code></li>
+</ul>
+<p>という記述がある。この行で、<code>cgi-bin/</code> というパスと対応するようエイリアスを張っているというワケ。</p>
+<hr>
+<p>続いて、先程 <code>httpd.conf</code> で設定したとおり、<code>/Library/WebServer/Documents/</code> ディレクトリ配下にも CGI ファイルを置いて動作させられるようになったので、コレも試してみる。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token builtin class-name">cd</span> /Library/WebServer/Documents/
+
+$ <span class="token function">sudo</span> <span class="token function">touch</span> test.cgi
+$ <span class="token function">sudo</span> <span class="token function">vi</span> test.cgi
+</code></pre>
+<p>コチラに作った <code>test.cgi</code> の中身は、先程のモノと違いが分かるよう、以下のようにしてみよう。</p>
+<pre class="language-perl"><code class="language-perl"><span class="token comment">#!/usr/bin/perl</span>
+
+<span class="token keyword">print</span> <span class="token string">"Content-Type: text/html\n\n"</span><span class="token punctuation">;</span>
+<span class="token keyword">print</span> <span class="token string">"Hello From Documents"</span><span class="token punctuation">;</span>
+<span class="token keyword">print</span> <span class="token string">"\n"</span><span class="token punctuation">;</span>
+</code></pre>
+<p>編集できたら保存して終了し、アクセス権を付与する。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">sudo</span> <span class="token function">chmod</span> <span class="token number">777</span> test.cgi
+</code></pre>
+<p>ココまで出来たら、今度は <strong><code>http://localhost/test.cgi</code></strong> にアクセスしてみよう。「Hello From Documents」と表示されたら成功だ。</p>
+<h2 id="apache-のアクセスログ・エラーログを確認する"><a class="header-link" href="#apache-のアクセスログ・エラーログを確認する"><span class="header-link-mark"></span></a>Apache のアクセスログ・エラーログを確認する</h2>
+<p>上述のような簡素なコードなら特に問題ないかもしれないが、Apache サーバへのアクセス記録や、エラー時のコンソール出力が確認したい場合もあるだろう。その時は以下の場所にあるログファイルを参照すれば良い。</p>
+<ul>
+  <li>アクセスログ : <code>/var/log/apache2/access_log</code></li>
+  <li>エラーログ : <code>/var/log/apache2/error_log</code></li>
+</ul>
+<p>CGI ファイルへのアクセスが上手くいっていなさそうな場合は、</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">tail</span> -f /var/log/apache2/access_log
+</code></pre>
+<p>でアクセス状況を確認し、CGI が上手く動かない場合は、</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">tail</span> -f /var/log/apache2/error_log
+</code></pre>
+<p>でエラーの内容を確認すれば良いだろう。</p>
+<h2 id="以上"><a class="header-link" href="#以上"><span class="header-link-mark"></span></a>以上</h2>
+<p>とりあえずコレで、<code>/Library/WebServer/Documents/</code> ないしは <code>/Library/WebServer/CGI-Executables/</code> に Perl 製のファイルを置いて、CGI として動作させられるようになった。</p>
+<h2 id="参考文献"><a class="header-link" href="#参考文献"><span class="header-link-mark"></span></a>参考文献</h2>
+<ul>
+  <li><a href="https://qiita.com/shuntaro_tamura/items/bdabcb77926dc92617b1">Macでローカルサーバを立ち上げる方法 - Qiita</a>
+    <ul>
+      <li>CentOS との対応で書いてある</li>
+    </ul>
+  </li>
+  <li><a href="http://blog.livedoor.jp/kmiwa_project/archives/1064390486.html">Mac OS &#x26; Apacheで Perlプログラムのソースがそのまま表示されるとき : プログラマー社長の「日々発見」</a></li>
+  <li><a href="https://qiita.com/Mitsunori_Tsukada/items/9e7fad3e3ea49fc9a2c7"><code>access_log</code>および<code>error_log</code>の出力場所 - Qiita</a></li>
+</ul>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2019-01-26</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2019-01-26</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

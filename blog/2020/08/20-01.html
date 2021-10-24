@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>GitHub Actions から FTP 転送する - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2020/08/20-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2020/index.html">2020年</a></li>
+            <li><a href="/blog/2020/08/index.html">08月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2020-08-20</time></div>
+        <h1 id="page-title">GitHub Actions から FTP 転送する</h1>
+
+<p>自分のメインサイト Neo's World は GitHub で管理しているが、ファイルの FTP 転送は手動で行っていた。</p>
+<p>一応 npm スクリプトを用意してコマンドラインから FTP 転送したりできるようにはしていたが、完全自動化したくなり、GitHub Actions でコネコネすることにした。</p>
+<ul>
+  <li><a href="/blog/2017/12/17-01.html">ftp-client で指定のファイルを FTP アップロードする</a>
+    <ul>
+      <li>↑ 今回も使用する ftp-client の解説。</li>
+    </ul>
+  </li>
+  <li><a href="/blog/2017/12/18-01.html">ftp-deploy で指定のディレクトリを FTP アップロードする</a></li>
+</ul>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#github-actions-workflow">GitHub Actions Workflow</a></li>
+  <li><a href="#%E3%82%A2%E3%83%83%E3%83%97%E3%83%AD%E3%83%BC%E3%83%89%E3%81%8C%E5%BF%85%E8%A6%81%E3%81%AA%E3%83%95%E3%82%A1%E3%82%A4%E3%83%AB%E5%90%8D%E3%82%92%E5%88%97%E6%8C%99%E3%81%99%E3%82%8B%E3%82%B9%E3%82%AF%E3%83%AA%E3%83%97%E3%83%88">アップロードが必要なファイル名を列挙するスクリプト</a></li>
+  <li><a href="#ftp-%E3%82%A2%E3%83%83%E3%83%97%E3%83%AD%E3%83%BC%E3%83%89%E3%81%99%E3%82%8B%E3%82%B9%E3%82%AF%E3%83%AA%E3%83%97%E3%83%88">FTP アップロードするスクリプト</a></li>
+  <li><a href="#%E4%BB%A5%E4%B8%8A">以上</a></li>
+</ul>
+<h2 id="github-actions-workflow"><a class="header-link" href="#github-actions-workflow"><span class="header-link-mark"></span></a>GitHub Actions Workflow</h2>
+<p>今回作成した GitHub Actions Workflow は次のとおり。</p>
+<ul>
+  <li><code>.github/workflows/ftp.yaml</code></li>
+</ul>
+<pre class="language-yaml"><code class="language-yaml"><span class="token key atrule">name</span><span class="token punctuation">:</span> FTP
+<span class="token key atrule">on</span><span class="token punctuation">:</span>
+  <span class="token key atrule">push</span><span class="token punctuation">:</span>
+    <span class="token key atrule">branches</span><span class="token punctuation">:</span>
+      <span class="token punctuation">-</span> master
+    <span class="token key atrule">workflow_dispatch</span><span class="token punctuation">:</span>
+<span class="token key atrule">jobs</span><span class="token punctuation">:</span>
+  <span class="token key atrule">deploy</span><span class="token punctuation">:</span>
+    <span class="token key atrule">runs-on</span><span class="token punctuation">:</span> ubuntu<span class="token punctuation">-</span>latest
+    <span class="token key atrule">steps</span><span class="token punctuation">:</span>
+      <span class="token punctuation">-</span> <span class="token key atrule">name</span><span class="token punctuation">:</span> Checkout
+        <span class="token key atrule">uses</span><span class="token punctuation">:</span> actions/checkout@v2
+      <span class="token punctuation">-</span> <span class="token key atrule">name</span><span class="token punctuation">:</span> Use Node.js
+        <span class="token key atrule">uses</span><span class="token punctuation">:</span> actions/setup<span class="token punctuation">-</span>node@v1
+        <span class="token key atrule">with</span><span class="token punctuation">:</span>
+          <span class="token key atrule">node-version</span><span class="token punctuation">:</span> 12.x
+      <span class="token comment"># 変更があったファイルを JSON ファイルに書き出す</span>
+      <span class="token punctuation">-</span> <span class="token key atrule">name</span><span class="token punctuation">:</span> Get Changed Files
+        <span class="token key atrule">id</span>  <span class="token punctuation">:</span> get_changed_files
+        <span class="token key atrule">uses</span><span class="token punctuation">:</span> jitterbit/get<span class="token punctuation">-</span>changed<span class="token punctuation">-</span>files@v1
+        <span class="token key atrule">with</span><span class="token punctuation">:</span>
+          <span class="token key atrule">format</span><span class="token punctuation">:</span> json
+      <span class="token punctuation">-</span> <span class="token key atrule">name</span><span class="token punctuation">:</span> Write Changed Files
+        <span class="token key atrule">run</span> <span class="token punctuation">:</span> <span class="token punctuation">|</span><span class="token scalar string">
+          mkdir -p ./temp/
+          echo '${{ steps.get_changed_files.outputs.added_modified }}' > ./temp/added_modified.json
+          echo '${{ steps.get_changed_files.outputs.renamed }}' > ./temp/renamed.json
+          echo '${{ steps.get_changed_files.outputs.removed }}' > ./temp/removed.json
+          cat ./temp/added_modified.json
+          cat ./temp/renamed.json
+          cat ./temp/removed.json</span>
+      <span class="token comment"># JSON ファイルを基にアップロードするファイル名の配列を組み立て ./temp/upload-files.json に書き出す</span>
+      <span class="token punctuation">-</span> <span class="token key atrule">name</span><span class="token punctuation">:</span> Detect Upload Files
+        <span class="token key atrule">id</span>  <span class="token punctuation">:</span> detect_upload_files
+        <span class="token key atrule">run</span> <span class="token punctuation">:</span> <span class="token punctuation">|</span><span class="token scalar string">
+          node ./.github/workflows/ftp-detect-upload-files.js
+          if [[ -e ./temp/upload-files.json ]]; then
+            echo "::set-output name=do_upload::true"
+            echo 'Do Upload'
+          else
+            echo "::set-output name=do_upload::false"
+            echo 'Do Not Upload'
+          fi</span>
+      <span class="token comment"># 以降のデプロイ処理は do_upload Output が true の時だけ実行する</span>
+      <span class="token punctuation">-</span> <span class="token key atrule">name</span><span class="token punctuation">:</span> Install
+        <span class="token key atrule">if</span>  <span class="token punctuation">:</span> steps.detect_upload_files.outputs.do_upload == 'true'
+        <span class="token key atrule">run</span> <span class="token punctuation">:</span> npm install
+      <span class="token punctuation">-</span> <span class="token key atrule">name</span><span class="token punctuation">:</span> Build
+        <span class="token key atrule">if</span>  <span class="token punctuation">:</span> steps.detect_upload_files.outputs.do_upload == 'true'
+        <span class="token key atrule">run</span> <span class="token punctuation">:</span> npm run build <span class="token punctuation">-</span><span class="token punctuation">-</span>if<span class="token punctuation">-</span>present
+      <span class="token punctuation">-</span> <span class="token key atrule">name</span><span class="token punctuation">:</span> FTP Upload Files
+        <span class="token key atrule">if</span>  <span class="token punctuation">:</span> steps.detect_upload_files.outputs.do_upload == 'true'
+        <span class="token key atrule">run</span> <span class="token punctuation">:</span> node ./.github/workflows/ftp<span class="token punctuation">-</span>upload<span class="token punctuation">-</span>files.js
+        <span class="token key atrule">env</span> <span class="token punctuation">:</span>
+          <span class="token key atrule">FTP_PASSWORD</span><span class="token punctuation">:</span> $<span class="token punctuation">{</span><span class="token punctuation">{</span> secrets.FTP_PASSWORD <span class="token punctuation">}</span><span class="token punctuation">}</span>
+</code></pre>
+<ul>
+  <li>master ブランチへの Push 時に起動する</li>
+  <li>Get Changed Files
+    <ul>
+      <li><code>jitterbit/get-changed-files@v1</code> Action を使い、コミットを参照して変更が発生したファイルを JSON 形式で取得する</li>
+      <li>JSON の形式は次のような配列形式になる
+        <ul>
+          <li>対象ファイルが1件もない場合 : <code>[]</code> ← 空配列</li>
+          <li>対象ファイルがある場合 : <code>["src/pages/index.html","src/styles/index.scss"]</code> といった感じ</li>
+        </ul>
+      </li>
+    </ul>
+  </li>
+  <li>Write Changed Files
+    <ul>
+      <li>その内容を JSON ファイルに書き出しておく</li>
+      <li>前述のとおり、対象ファイルがなくても空配列の文字列 <code>[]</code> が書き込まれるので、後続の Node.js スクリプト内で <code>require()</code> を使って読み込んでもエラーにならない</li>
+    </ul>
+  </li>
+  <li>Detect Upload Files
+    <ul>
+      <li>その JSON ファイルを読み取って、FTP アップロードすべきファイル名を列挙した JSON ファイルを作る</li>
+      <li><code>ftp-detect-upload-files.js</code> という自作の Node.js スクリプトを動かす (後述)</li>
+      <li>結果ファイルの有無を基に、アップロード処理が必要かどうかを Output に出力しておく</li>
+    </ul>
+  </li>
+  <li>アップロード処理が必要なら、<code>npm install</code> → <code>npm run build</code> 実行後、FTP アップロードを行う</li>
+  <li>FTP Upload Files
+    <ul>
+      <li>FTP アップロード処理は、<code>ftp-client</code> パッケージを使った自作の Node.js スクリプト <code>ftp-upload-files.js</code> で行っている</li>
+      <li>FTP パスワードを Secret で渡している</li>
+    </ul>
+  </li>
+</ul>
+<p>という感じ。</p>
+<p><code>jitterbit/get-changed-files</code> が要で、その後のファイル調整や FTP アップロード処理は自前でゴリゴリ実装している。</p>
+<h2 id="アップロードが必要なファイル名を列挙するスクリプト"><a class="header-link" href="#アップロードが必要なファイル名を列挙するスクリプト"><span class="header-link-mark"></span></a>アップロードが必要なファイル名を列挙するスクリプト</h2>
+<p>「Detect Upload Files」Step で動かしている <code>ftp-detect-upload-files.js</code> の内容はこんな感じ。</p>
+<ul>
+  <li><code>./.github/workflows/ftp-detect-upload-files.js</code></li>
+</ul>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword">const</span> fs <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'fs'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token keyword">const</span> srcDir  <span class="token operator">=</span> <span class="token string">'src/'</span><span class="token punctuation">;</span>
+<span class="token keyword">const</span> distDir <span class="token operator">=</span> <span class="token string">'docs/'</span><span class="token punctuation">;</span>
+
+<span class="token comment">// 前 Step で JSON ファイルに書き出しておいた変更ファイル一覧を取得する</span>
+<span class="token keyword">const</span> addedModified <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'../../temp/added_modified.json'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">const</span> renamed       <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'../../temp/renamed.json'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">const</span> removed       <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'../../temp/removed.json'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment">// 削除されたファイルがあるかどうかの確認だけ</span>
+
+<span class="token keyword control-flow">if</span><span class="token punctuation">(</span>removed<span class="token punctuation">.</span><span class="token property-access">length</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'Removed Files Exist. Please Remove Manually'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+
+<span class="token keyword">const</span> joined <span class="token operator">=</span> <span class="token punctuation">[</span><span class="token spread operator">...</span>addedModified<span class="token punctuation">,</span> <span class="token spread operator">...</span>renamed<span class="token punctuation">]</span><span class="token punctuation">;</span>
+
+<span class="token comment">// src/templates/ 配下の変更がある場合は一切のアップロードを行わないこととする</span>
+<span class="token keyword">const</span> isTemplateChanged <span class="token operator">=</span> joined<span class="token punctuation">.</span><span class="token method function property-access">some</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token parameter">file</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> file<span class="token punctuation">.</span><span class="token method function property-access">includes</span><span class="token punctuation">(</span>srcDir <span class="token operator">+</span> <span class="token string">'templates/'</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword control-flow">if</span><span class="token punctuation">(</span>isTemplateChanged<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">error</span><span class="token punctuation">(</span><span class="token string">'Templates Changed! Please Upload Manually. Aborted'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword control-flow">return</span> process<span class="token punctuation">.</span><span class="token method function property-access">exit</span><span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+
+<span class="token comment">// src/ 配下の変更ファイルのみ抽出する</span>
+<span class="token keyword">const</span> filtered <span class="token operator">=</span> joined<span class="token punctuation">.</span><span class="token method function property-access">filter</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token parameter">file</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> file<span class="token punctuation">.</span><span class="token method function property-access">includes</span><span class="token punctuation">(</span>srcDir<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// ビルド後のコンテンツに対応するようファイル名を直す</span>
+<span class="token keyword">const</span> uploadFiles <span class="token operator">=</span> filtered<span class="token punctuation">.</span><span class="token method function property-access">map</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token parameter">file</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token keyword control-flow">if</span><span class="token punctuation">(</span>file<span class="token punctuation">.</span><span class="token method function property-access">includes</span><span class="token punctuation">(</span>srcDir <span class="token operator">+</span> <span class="token string">'scripts/'</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token keyword control-flow">return</span> distDir <span class="token operator">+</span> <span class="token string">'scripts.js'</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  <span class="token keyword control-flow">if</span><span class="token punctuation">(</span>file<span class="token punctuation">.</span><span class="token method function property-access">includes</span><span class="token punctuation">(</span>srcDir <span class="token operator">+</span> <span class="token string">'styles/'</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token keyword control-flow">return</span> distDir <span class="token operator">+</span> <span class="token string">'styles.js'</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  <span class="token keyword control-flow">if</span><span class="token punctuation">(</span>file<span class="token punctuation">.</span><span class="token method function property-access">includes</span><span class="token punctuation">(</span>srcDir <span class="token operator">+</span> <span class="token string">'pages/'</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token keyword control-flow">return</span> file<span class="token punctuation">.</span><span class="token method function property-access">replace</span><span class="token punctuation">(</span>srcDir <span class="token operator">+</span> <span class="token string">'pages/'</span><span class="token punctuation">,</span> distDir<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  <span class="token comment">// 知らないパスにファイルが登場したら中止する</span>
+  <span class="token keyword control-flow">throw</span> <span class="token keyword">new</span> <span class="token class-name">Error</span><span class="token punctuation">(</span><span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">The file path is not supported : [</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>file<span class="token interpolation-punctuation punctuation">}</span></span><span class="token string">]</span><span class="token template-punctuation string">`</span></span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// 変更ファイルがなければ結果ファイルを作らず終了する</span>
+<span class="token keyword control-flow">if</span><span class="token punctuation">(</span><span class="token operator">!</span>uploadFiles<span class="token punctuation">.</span><span class="token property-access">length</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token keyword control-flow">return</span> <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'Upload Files Not Exist'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+
+<span class="token keyword">const</span> stringified <span class="token operator">=</span> <span class="token known-class-name class-name">JSON</span><span class="token punctuation">.</span><span class="token method function property-access">stringify</span><span class="token punctuation">(</span>uploadFiles<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'Upload Files :'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span>stringified<span class="token punctuation">)</span><span class="token punctuation">;</span>
+fs<span class="token punctuation">.</span><span class="token method function property-access">writeFileSync</span><span class="token punctuation">(</span><span class="token string">'./temp/upload-files.json'</span><span class="token punctuation">,</span> stringified<span class="token punctuation">,</span> <span class="token string">'utf-8'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<ul>
+  <li>前 Step で書き出しておいた JSON を <code>require()</code> で読み込んでいる</li>
+</ul>
+<p><code>jitterbit/get-changed-files</code> は JSON で出力するので、ファイルに書き出したりしなくとも、<code>jq</code> で読み込んで <code>jq</code> 芸をキメて、アップロードしたいファイルの列挙をしても良い。</p>
+<p>今回はちょっと複雑なファイル名の置換処理があったので、JavaScript で処理してしまったが、<code>.github/</code> ディレクトリだけはアップしたくない、ぐらいの Filter 処理なら、jq で処理して Output しても良いだろう。</p>
+<ul>
+  <li>「変更があったファイル名」は、<code>src/</code> から始まるソースコードとして特定されるが、FTP アップロードしたいのは <code>npm run build</code> で生成される <code>dist/</code> 配下のファイルとなる</li>
+  <li>そこで、このスクリプト内で <code>filter()</code> したり <code>map()</code> したりして、アップロードしたい <code>dist/</code> 配下のファイル名を組み立て、JSON ファイルに書き出すのである</li>
+  <li><strong>ファイル削除の変更には対応していない</strong>ので、削除処理は手作業でやってね、というメッセージを出力している</li>
+  <li>プロジェクト都合だが、全量再アップロードになる <code>src/templates/</code> 配下の変更があった場合はエラーとし、自分でやってもらうようにしている。よって、変更の内容によっては<em>完全自動で FTP 転送が完了するワケではない</em></li>
+</ul>
+<p>アップロードしたいファイルが1件でもあれば、JSON ファイルを書き出しているので、コレをその後のシェルスクリプトでチェックして、後続処理を行うかどうかの判定用 Output を用意している。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token keyword">if</span> <span class="token punctuation">[</span><span class="token punctuation">[</span> -e ./temp/upload-files.json <span class="token punctuation">]</span><span class="token punctuation">]</span><span class="token punctuation">;</span> <span class="token keyword">then</span>
+  <span class="token builtin class-name">echo</span> <span class="token string">"::set-output name=do_upload::true"</span>
+  <span class="token builtin class-name">echo</span> <span class="token string">'Do Upload'</span>
+<span class="token keyword">else</span>
+  <span class="token builtin class-name">echo</span> <span class="token string">"::set-output name=do_upload::false"</span>
+  <span class="token builtin class-name">echo</span> <span class="token string">'Do Not Upload'</span>
+<span class="token keyword">fi</span>
+</code></pre>
+<p>以降の Step では、ココで Output した <code>do_upload</code> フラグを <code>if</code> で見ている。</p>
+<pre class="language-yaml"><code class="language-yaml"><span class="token punctuation">-</span> <span class="token key atrule">name</span><span class="token punctuation">:</span> Install
+  <span class="token key atrule">if</span>  <span class="token punctuation">:</span> steps.detect_upload_files.outputs.do_upload == 'true'
+  <span class="token key atrule">run</span> <span class="token punctuation">:</span> npm install
+</code></pre>
+<h2 id="ftp-アップロードするスクリプト"><a class="header-link" href="#ftp-アップロードするスクリプト"><span class="header-link-mark"></span></a>FTP アップロードするスクリプト</h2>
+<p>FTP アップロードするスクリプトは <code>ftp-client</code> パッケージを利用している。</p>
+<ul>
+  <li><code>./.github/workflows/ftp-upload-files.js</code></li>
+</ul>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword">const</span> <span class="token maybe-class-name">FtpClient</span> <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'ftp-client'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// 手前の Node.js スクリプトが出力した JSON ファイルを読み込む</span>
+<span class="token keyword">const</span> uploadFiles <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'../../temp/upload-files.json'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token keyword">const</span> ftpClient <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">FtpClient</span><span class="token punctuation">(</span><span class="token punctuation">{</span>
+  user    <span class="token operator">:</span> <span class="token string">'【ユーザ名】'</span><span class="token punctuation">,</span>
+  password<span class="token operator">:</span> process<span class="token punctuation">.</span><span class="token property-access">env</span><span class="token punctuation">[</span><span class="token string">'FTP_PASSWORD'</span><span class="token punctuation">]</span><span class="token punctuation">,</span>  <span class="token comment">// Secret からパスワードを注入する</span>
+  host    <span class="token operator">:</span> <span class="token string">'【サーバ名】'</span>
+<span class="token punctuation">}</span><span class="token punctuation">,</span> <span class="token punctuation">{</span>
+  logging<span class="token operator">:</span> <span class="token string">'debug'</span><span class="token punctuation">,</span>
+  overwrite<span class="token operator">:</span> <span class="token string">'all'</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+ftpClient<span class="token punctuation">.</span><span class="token method function property-access">connect</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'Connected'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  
+  ftpClient<span class="token punctuation">.</span><span class="token method function property-access">upload</span><span class="token punctuation">(</span>
+    uploadFiles<span class="token punctuation">,</span>  <span class="token comment">// ← ココで配列として指定する</span>
+    <span class="token string">'/public_html/'</span><span class="token punctuation">,</span>
+    <span class="token punctuation">{</span>
+      baseDir<span class="token operator">:</span> <span class="token string">'docs'</span><span class="token punctuation">,</span>
+      overwrite<span class="token operator">:</span> <span class="token string">'all'</span>
+    <span class="token punctuation">}</span><span class="token punctuation">,</span>
+    <span class="token punctuation">(</span><span class="token parameter">result</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+      <span class="token keyword control-flow">if</span><span class="token punctuation">(</span>result<span class="token punctuation">.</span><span class="token property-access">errors</span> <span class="token operator">&#x26;&#x26;</span> <span class="token known-class-name class-name">Object</span><span class="token punctuation">.</span><span class="token method function property-access">keys</span><span class="token punctuation">(</span>result<span class="token punctuation">.</span><span class="token property-access">errors</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token property-access">length</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">error</span><span class="token punctuation">(</span><span class="token string">'Upload Error'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">error</span><span class="token punctuation">(</span>result<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword control-flow">throw</span> <span class="token keyword">new</span> <span class="token class-name">Error</span><span class="token punctuation">(</span><span class="token string">'Upload Error'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span>
+      
+      <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'Uploaded'</span><span class="token punctuation">)</span>
+      <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span>result<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>自分が送信対象としている XREA サーバの仕様に合わせて各種設定を入れている。FTP パスワードなどのクレデンシャル情報は Secret を環境変数に注入して使用すること。</p>
+<h2 id="以上"><a class="header-link" href="#以上"><span class="header-link-mark"></span></a>以上</h2>
+<p>FTP 転送ができる GitHub Actions もあるのだが、自分の XREA サーバに対して上手く動かせなかったので、結局自前でゴリゴリ実装していった。</p>
+<p>ファイル削除に対応しきれていなかったりはするが、とりあえずやりたかったことは上手くできたのでコレで OK。</p>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2020-08-20</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2020-08-20</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

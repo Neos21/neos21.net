@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>PowerShell の GetDetailsOf を使ってファイルの詳細プロパティを取得する - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2019/11/11-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2019/index.html">2019年</a></li>
+            <li><a href="/blog/2019/11/index.html">11月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2019-11-11</time></div>
+        <h1 id="page-title">PowerShell の GetDetailsOf を使ってファイルの詳細プロパティを取得する</h1>
+
+<p>久々に PowerShell を書いてみた。</p>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#%E3%80%8C%E3%83%A1%E3%83%87%E3%82%A3%E3%82%A2%E3%81%AE%E4%BD%9C%E6%88%90%E6%97%A5%E6%99%82%E3%80%8D%E3%81%A8%E3%81%84%E3%81%86%E3%83%95%E3%82%A1%E3%82%A4%E3%83%AB%E3%83%97%E3%83%AD%E3%83%91%E3%83%86%E3%82%A3%E3%82%92%E5%8F%96%E5%BE%97%E3%81%97%E3%81%9F%E3%81%84">「メディアの作成日時」というファイルプロパティを取得したい</a></li>
+  <li><a href="#%E5%85%88%E3%81%AB%E3%82%B3%E3%83%BC%E3%83%89%E3%82%92%E8%BC%89%E3%81%9B%E3%81%A6%E3%81%8A%E3%81%8F">先にコードを載せておく</a></li>
+  <li><a href="#%E8%A9%B3%E7%B4%B0%E3%83%97%E3%83%AD%E3%83%91%E3%83%86%E3%82%A3%E3%82%92%E6%8B%BE%E3%81%86%E3%81%AB%E3%81%AF-getdetailsof-%E3%82%92%E4%BD%BF%E3%81%86">詳細プロパティを拾うには <code>GetDetailsOf</code> を使う</a></li>
+  <li><a href="#%E4%B8%80%E6%8B%AC%E3%83%AA%E3%83%8D%E3%83%BC%E3%83%A0%E3%81%99%E3%82%8B%E3%82%B9%E3%82%AF%E3%83%AA%E3%83%97%E3%83%88%E3%82%92%E6%9B%B8%E3%81%84%E3%81%A6%E3%81%BF%E3%82%8B">一括リネームするスクリプトを書いてみる</a>
+    <ul>
+      <li><a href="#%E3%82%AB%E3%83%AC%E3%83%B3%E3%83%88%E3%83%87%E3%82%A3%E3%83%AC%E3%82%AF%E3%83%88%E3%83%AA%E3%82%92%E5%8F%96%E5%BE%97%E3%81%99%E3%82%8B">カレントディレクトリを取得する</a></li>
+      <li><a href="#%E6%8C%87%E5%AE%9A%E3%83%87%E3%82%A3%E3%83%AC%E3%82%AF%E3%83%88%E3%83%AA%E9%85%8D%E4%B8%8B%E3%81%AE%E3%83%95%E3%82%A1%E3%82%A4%E3%83%AB%E3%82%92%E3%83%95%E3%83%AB%E3%83%91%E3%82%B9%E3%81%A7%E5%8F%96%E5%BE%97%E3%81%99%E3%82%8B">指定ディレクトリ配下のファイルをフルパスで取得する</a></li>
+      <li><a href="#%E3%83%95%E3%82%A1%E3%82%A4%E3%83%AB%E3%82%92%E9%A0%86%E3%81%AB%E6%93%8D%E4%BD%9C%E3%81%99%E3%82%8B">ファイルを順に操作する</a></li>
+      <li><a href="#%E3%80%8C%E3%83%A1%E3%83%87%E3%82%A3%E3%82%A2%E3%81%AE%E4%BD%9C%E6%88%90%E6%97%A5%E6%99%82%E3%80%8D%E3%82%84%E3%80%8C%E6%92%AE%E5%BD%B1%E6%97%A5%E6%99%82%E3%80%8D%E3%83%97%E3%83%AD%E3%83%91%E3%83%86%E3%82%A3%E3%81%AE%E6%83%85%E5%A0%B1%E3%82%92%E5%8F%96%E5%BE%97%E3%81%99%E3%82%8B">「メディアの作成日時」や「撮影日時」プロパティの情報を取得する</a></li>
+      <li><a href="#%E6%97%A5%E4%BB%98%E6%96%87%E5%AD%97%E5%88%97%E3%82%92%E6%95%B4%E5%BD%A2%E3%81%97%E3%81%A6%E3%83%AA%E3%83%8D%E3%83%BC%E3%83%A0%E3%81%99%E3%82%8B">日付文字列を整形してリネームする</a></li>
+    </ul>
+  </li>
+  <li><a href="#%E3%83%95%E3%82%A1%E3%82%A4%E3%83%AB%E3%81%8B%E3%82%89%E6%97%A5%E4%BB%98%E6%83%85%E5%A0%B1%E3%82%92%E5%8F%96%E5%BE%97%E3%81%97%E3%80%81%E3%81%9D%E3%81%AE%E3%83%87%E3%82%A3%E3%83%AC%E3%82%AF%E3%83%88%E3%83%AA%E3%82%92%E4%BD%9C%E6%88%90%E3%80%81%E3%81%9D%E3%81%93%E3%81%AB%E3%83%95%E3%82%A1%E3%82%A4%E3%83%AB%E3%82%92%E7%A7%BB%E5%8B%95%E3%81%99%E3%82%8B">ファイルから日付情報を取得し、そのディレクトリを作成、そこにファイルを移動する</a></li>
+  <li><a href="#%E3%82%B9%E3%82%AF%E3%83%AA%E3%83%97%E3%83%88%E3%81%AE%E5%AE%9F%E8%A1%8C%E6%96%B9%E6%B3%95">スクリプトの実行方法</a>
+    <ul>
+      <li><a href="#path-%E3%81%AE%E3%81%A8%E3%81%8A%E3%81%A3%E3%81%9F%E3%83%87%E3%82%A3%E3%83%AC%E3%82%AF%E3%83%88%E3%83%AA%E3%82%92%E7%94%A8%E6%84%8F%E3%81%99%E3%82%8B%E3%81%A8%E6%A5%BD">PATH のとおったディレクトリを用意すると楽</a></li>
+      <li><a href="#%E5%AE%9F%E8%A1%8C%E6%96%B9%E6%B3%951">実行方法1</a></li>
+      <li><a href="#%E5%AE%9F%E8%A1%8C%E6%96%B9%E6%B3%952">実行方法2</a></li>
+      <li><a href="#%E5%AE%9F%E8%A1%8C%E6%96%B9%E6%B3%953">実行方法3</a></li>
+      <li><a href="#%E5%AE%9F%E8%A1%8C%E6%96%B9%E6%B3%954">実行方法4</a></li>
+      <li><a href="#%E3%81%BE%E3%81%A8%E3%82%81">まとめ</a></li>
+    </ul>
+  </li>
+  <li><a href="#%E4%BB%A5%E4%B8%8A">以上</a></li>
+</ul>
+<h2 id="「メディアの作成日時」というファイルプロパティを取得したい"><a class="header-link" href="#「メディアの作成日時」というファイルプロパティを取得したい"><span class="header-link-mark"></span></a>「メディアの作成日時」というファイルプロパティを取得したい</h2>
+<p><strong>画像ファイルや動画ファイルをリネームしたり、撮影日別のディレクトリに移動したりしたいと思った。</strong></p>
+<p>画像や動画の撮影日というと、ファイルの中に<em>「撮影日時」</em>というプロパティや<em>「メディアの作成日時」</em>というプロパティで日付情報が埋め込まれている。コレまでは、エクスプローラでこのプロパティのカラムを表示して、それを見ながら手入力でリネームしたりしていた。</p>
+<p>今回は、コレをスクリプトで取得して、リネームやファイル移動をバッチ化しようと思う。</p>
+<h2 id="先にコードを載せておく"><a class="header-link" href="#先にコードを載せておく"><span class="header-link-mark"></span></a>先にコードを載せておく</h2>
+<p>先に成果物を載せておく。</p>
+<ul>
+  <li>ディレクトリ配下のファイルについて、「メディアの作成日時」か「撮影日時」の値を取得しリネームする
+    <ul>
+      <li>ex. <code>HOGE.jpg</code> → <code>2019-01-31 HOGE.jpg</code> とリネームする</li>
+      <li><a href="https://github.com/Neos21/shell-scripts/blob/master/powershell/rename-all.ps1">Neos21/powershell-scripts : rename-all.ps1</a></li>
+    </ul>
+  </li>
+  <li>ディレクトリ配下のファイルについて、「メディアの作成日時」か「撮影日時」の値が取得できたらその値で、両方取得できなかったら「作成日時」か「更新日時」のより古い方の値で、「YYYY-MM-DD」ディレクトリを作り、そこにファイルを移動する
+    <ul>
+      <li>ex. <code>HOGE.jpg</code> → <code>2019-01-31\HOGE.jpg</code> と移動する</li>
+      <li><a href="https://github.com/Neos21/shell-scripts/blob/master/powershell/move-all.ps1">Neos21/powershell-scripts : move-all.ps1</a></li>
+    </ul>
+  </li>
+</ul>
+<p>これらのスクリプトの実装に至るメモ、使い方など順に説明していく。</p>
+<h2 id="詳細プロパティを拾うには-getdetailsof-を使う"><a class="header-link" href="#詳細プロパティを拾うには-getdetailsof-を使う"><span class="header-link-mark"></span></a>詳細プロパティを拾うには <code>GetDetailsOf</code> を使う</h2>
+<p>まずは、「撮影日時」や「メディアの作成日時」というプロパティの値を拾う方法を調べてみる。</p>
+<pre class="language-powershell"><code class="language-powershell"><span class="token comment"># シェルオブジェクトを作成する</span>
+<span class="token variable">$objShell</span> = <span class="token function">New-Object</span> <span class="token operator">-</span>ComObject Shell<span class="token punctuation">.</span>Application
+<span class="token comment"># ディレクトリを指定する</span>
+<span class="token variable">$objFolder</span> = <span class="token variable">$objShell</span><span class="token punctuation">.</span>namespace<span class="token punctuation">(</span><span class="token string">"C:\"</span><span class="token punctuation">)</span>
+
+<span class="token comment"># プロパティ名の一覧を表示する : とりあえず330項目分拾ってみる</span>
+0<span class="token punctuation">.</span><span class="token punctuation">.</span>330 <span class="token punctuation">|</span> <span class="token keyword">foreach</span> <span class="token punctuation">{</span> <span class="token string">"{0,3}:{1}"</span> <span class="token operator">-</span>f <span class="token variable">$_</span><span class="token punctuation">,</span> <span class="token variable">$objFolder</span><span class="token punctuation">.</span>getDetailsOf<span class="token punctuation">(</span><span class="token variable">$Null</span><span class="token punctuation">,</span> <span class="token variable">$_</span><span class="token punctuation">)</span> <span class="token punctuation">}</span>
+</code></pre>
+<p>この中に出てきた、<strong><code>getDetailsOf</code></strong> というメソッドがキモ。第1引数に <code>$Null</code> を入れておくと、「プロパティ名」が返ってくる。手元で実行した感じではこんな結果になった。少し長いのでご注意。</p>
+<pre><code>  0:名前
+  1:サイズ
+  2:項目の種類
+  3:更新日時
+  4:作成日時
+  5:アクセス日時
+  6:属性
+  7:オフラインの状態
+  8:利用可能性
+  9:認識された種類
+ 10:所有者
+ 11:分類
+ 12:撮影日時
+ 13:参加アーティスト
+ 14:アルバム
+ 15:年
+ 16:ジャンル
+ 17:指揮者
+ 18:タグ
+ 19:評価
+ 20:作成者
+ 21:タイトル
+ 22:件名
+ 23:分類項目
+ 24:コメント
+ 25:著作権
+ 26:トラック番号
+ 27:長さ
+ 28:ビット レート
+ 29:保護
+ 30:カメラのモデル
+ 31:大きさ
+ 32:カメラの製造元
+ 33:会社
+ 34:ファイルの説明
+ 35:マスター キーワード
+ 36:マスター キーワード
+ 37:
+ 38:
+ 39:
+ 40:
+ 41:
+ 42:プログラム名
+ 43:継続時間
+ 44:オンライン
+ 45:再帰
+ 46:場所
+ 47:任意出席者アドレス
+ 48:任意出席者
+ 49:開催者住所
+ 50:開催者名
+ 51:アラーム時刻
+ 52:必須出席者アドレス
+ 53:必須出席者
+ 54:リソース
+ 55:会議の状態
+ 56:空き時間情報
+ 57:合計サイズ
+ 58:アカウント名
+ 59:
+ 60:進捗状況
+ 61:コンピューター
+ 62:記念日
+ 63:秘書の名前
+ 64:秘書の電話
+ 65:誕生日
+ 66:住所 (会社)
+ 67:市 (会社)
+ 68:国/地域 (会社)
+ 69:私書箱 (会社)
+ 70:郵便番号 (会社)
+ 71:都道府県 (会社)
+ 72:番地 (会社)
+ 73:FAX 番号 (会社)
+ 74:会社のホーム ページ
+ 75:会社電話
+ 76:コールバック番号
+ 77:自動車電話
+ 78:子供
+ 79:会社代表電話
+ 80:部署
+ 81:電子メール アドレス
+ 82:電子メール2
+ 83:電子メール3
+ 84:電子メールの一覧
+ 85:電子メール表示名
+ 86:表題2
+ 87:名
+ 88:氏名
+ 89:性別
+ 90:名2
+ 91:趣味
+ 92:住所 (自宅)
+ 93:市 (自宅)
+ 94:国/地域 (自宅)
+ 95:私書箱 (自宅)
+ 96:郵便番号 (自宅)
+ 97:都道府県 (自宅)
+ 98:番地 (自宅)
+ 99:自宅 FAX
+100:自宅電話
+101:IM アドレス
+102:イニシャル
+103:役職
+104:ラベル
+105:姓
+106:住所 (郵送先)
+107:ミドル ネーム
+108:携帯電話
+109:ニックネーム
+110:勤務先所在地
+111:住所 (その他)
+112:ほかの市区町村
+113:他の国/地域
+114:他の私書箱
+115:他の郵便番号
+116:他の都道府県
+117:他の番地
+118:ポケットベル
+119:肩書き
+120:市区町村 (郵送先)
+121:国/地域
+122:私書箱 (郵送先)
+123:郵便番号 (郵送先)
+124:都道府県
+125:番地 (郵送先)
+126:プライマリ電子メール
+127:通常の電話
+128:職業
+129:配偶者
+130:サフィックス
+131:TTY/TTD 電話
+132:テレックス
+133:Web ページ
+134:内容の状態
+135:内容の種類
+136:取得日時
+137:アーカイブ日時
+138:完了日
+139:デバイス カテゴリ
+140:接続済み
+141:探索方法
+142:フレンドリ名
+143:ローカル コンピューター
+144:製造元
+145:モデル
+146:ペアリング済み
+147:クラス
+148:状態
+149:状態
+150:クライアント ID
+151:共同作成者
+152:コンテンツの作成日時
+153:前回印刷日
+154:前回保存日時
+155:事業部
+156:ドキュメント ID
+157:ページ数
+158:スライド
+159:総編集時間
+160:単語数
+161:期限
+162:終了日
+163:ファイル数
+164:ファイル拡張子
+165:ファイル名
+166:ファイル バージョン
+167:フラグの色
+168:フラグの状態
+169:空き領域
+170:
+171:
+172:グループ
+173:共有の種類
+174:ビットの深さ
+175:水平方向の解像度
+176:幅
+177:垂直方向の解像度
+178:高さ
+179:重要度
+180:添付
+181:削除
+182:暗号化の状態
+183:フラグの有無
+184:終了済
+185:未完了
+186:開封の状態
+187:共有
+188:製作者
+189:日付時刻
+190:フォルダー名
+191:フォルダーのパス
+192:フォルダー
+193:参加者
+194:パス
+195:場所ごと
+196:種類
+197:連絡先の名
+198:履歴の種類
+199:言語
+200:最終表示日
+201:説明
+202:リンクの状態
+203:リンク先
+204:URL
+205:
+206:
+207:
+208:メディアの作成日時
+209:リリース日
+210:エンコード方式
+211:エピソード番号
+212:プロデューサー
+213:発行元
+214:シーズン番号
+215:サブタイトル
+216:ユーザー Web URL
+217:作者
+218:
+219:添付ファイル
+220:BCC アドレス
+221:BCC
+222:CC アドレス
+223:CC
+224:会話 ID
+225:受信日時
+226:送信日時
+227:送信元アドレス
+228:差出人
+229:添付ファイルの有無
+230:送信者アドレス
+231:送信者名
+232:ストア
+233:送信先アドレス
+234:To do タイトル
+235:宛先
+236:経費情報
+237:アルバムのアーティスト
+238:アルバム アーティストで並べ替え
+239:アルバム ID
+240:アルバムで並べ替え
+241:参加アーティストで並べ替え
+242:ビート数/分
+243:作曲者
+244:作曲者で並べ替え
+245:ディスク
+246:イニシャル キー
+247:コンパイルの一部
+248:雰囲気
+249:セットのパート
+250:期間
+251:色
+252:保護者による制限
+253:保護者による制限の理由
+254:使用領域
+255:EXIF バージョン
+256:イベント
+257:露出補正
+258:露出プログラム
+259:露出時間
+260:絞り値
+261:フラッシュ モード
+262:焦点距離
+263:35mm 焦点距離
+264:ISO 速度
+265:レンズ メーカー
+266:レンズ モデル
+267:光源
+268:最大絞り
+269:測光モード
+270:向き
+271:人物
+272:プログラムのモード
+273:彩度
+274:対象の距離
+275:ホワイト バランス
+276:優先度
+277:プロジェクト
+278:チャンネル番号
+279:この回のタイトル
+280:字幕
+281:再放映
+282:SAP
+283:放送日
+284:プログラムの説明
+285:記録時間
+286:ステーション コール サイン
+287:局名
+288:概要
+289:抜粋
+290:自動要約
+291:関連度
+292:ファイルの所有権
+293:秘密度
+294:共有ユーザー
+295:共有状態
+296:
+297:製品名
+298:製品バージョン
+299:サポートのリンク
+300:ソース
+301:開始日
+302:共有中
+303:可用性の状態
+304:状態
+305:課金情報
+306:完了
+307:仕事の所有者
+308:タイトルで並べ替え
+309:総ファイル サイズ
+310:商標
+311:ビデオ圧縮
+312:ディレクター
+313:データ速度
+314:フレーム高
+315:フレーム率
+316:フレーム幅
+317:球形
+318:ステレオ
+319:ビデオの向き
+320:総ビット レート
+321:Audio tracks
+322:Bit depth
+323:Contains chapters
+324:Content compression
+325:Subtitles
+326:Subtitle tracks
+327:Video tracks
+328:
+329:
+330:
+</code></pre>
+<p><code>0:名前</code> など先頭の方はよくあるプロパティなので、どの PC 環境でも大体同じ順番で出てくるのだが、今回お目当ての<em>「撮影日時」や「メディアの作成日時」といった項目は、PC 環境によって登場する番号が異なるようだ。</em></p>
+<p>今回は「プロパティ名」を取得したが、<code>$Null</code> を指定した第1引数部分にファイル名を入れることで、そのファイルの「撮影日時」や「メディアの作成日時」の値が拾える。</p>
+<ul>
+  <li>参考：<a href="https://tagook.blogspot.com/2018/01/getDetailsOf-name-valu.html">Powershell: プロパティの詳細情報インデックスと項目名の列挙 | TAGO.OK</a></li>
+  <li>参考：<a href="https://tagook.blogspot.com/2016/11/powershellgetdetailsof-id.html">PowerShellのGetDetailsOf メソッドでプロパティの詳細情報のID番号と項目名を列挙します | TAGO.OK</a></li>
+  <li>参考：<a href="http://wedatmark.blogspot.com/2016/10/powershell.html">WEDATMARK: PowerShellでファイルのプロパティを書き出す</a></li>
+  <li>参考：<a href="https://dot-sharp.com/net-getdetailof/">GetDetailOfでファイルプロパティを取得する | ITネタその他もろもろ</a></li>
+</ul>
+<h2 id="一括リネームするスクリプトを書いてみる"><a class="header-link" href="#一括リネームするスクリプトを書いてみる"><span class="header-link-mark"></span></a>一括リネームするスクリプトを書いてみる</h2>
+<p>さて、<code>getDetailsOf</code> メソッドを使えば撮影日時などの値が拾えることが分かったので、順にスクリプトを書いていってみる。スクリプトファイル名は適当に <code>rename-all.ps1</code> みたいな名前にしようと思う。</p>
+<p>PowerShell を書くのが久々だったので、引っかかったところを順にメモしていく。</p>
+<h3 id="カレントディレクトリを取得する"><a class="header-link" href="#カレントディレクトリを取得する"><span class="header-link-mark"></span></a>カレントディレクトリを取得する</h3>
+<p>まずは、このスクリプトを呼び出した時に、カレントディレクトリを対象に操作をしたいので、スクリプトの中でカレントディレクトリを取得したい。</p>
+<pre class="language-powershell"><code class="language-powershell"><span class="token namespace">[String]</span><span class="token variable">$targetDirectory</span> = <span class="token function">Get-Location</span>
+</code></pre>
+<p>このように String 型にキャストして <code>Get-Location</code> とすれば良い。</p>
+<p>もし任意のディレクトリを固定で指定したいなら、</p>
+<pre class="language-powershell"><code class="language-powershell"><span class="token variable">$targetDirectory</span> = <span class="token string">"C:\Path\To\Target\Directory"</span>
+</code></pre>
+<p>なんていう風にパスを書いてしまえば良い。</p>
+<ul>
+  <li>参考：<a href="https://win.just4fun.biz/?PowerShell/%E3%83%87%E3%82%A3%E3%83%AC%E3%82%AF%E3%83%88%E3%83%AA%E3%81%AE%E3%81%BF%E3%80%81%E3%83%95%E3%82%A1%E3%82%A4%E3%83%AB%E3%81%AE%E3%81%BF%E3%81%AE%E4%B8%80%E8%A6%A7%E3%82%92%E8%A1%A8%E7%A4%BA%E3%81%99%E3%82%8B%E6%96%B9%E6%B3%95#r4cfd090">PowerShell/ディレクトリのみ、ファイルのみの一覧を表示する方法 - Windowsと暮らす</a></li>
+</ul>
+<h3 id="指定ディレクトリ配下のファイルをフルパスで取得する"><a class="header-link" href="#指定ディレクトリ配下のファイルをフルパスで取得する"><span class="header-link-mark"></span></a>指定ディレクトリ配下のファイルをフルパスで取得する</h3>
+<p>先程の <code>$targetDirectory</code> で、ディレクトリのパスを取得できた。次は、その配下にあるファイル名をフルパスで取得してみる。</p>
+<pre class="language-powershell"><code class="language-powershell"><span class="token variable">$targetFiles</span> = <span class="token function">Get-ChildItem</span> <span class="token variable">$targetDirectory</span> <span class="token punctuation">|</span> <span class="token function">Where-Object</span> <span class="token punctuation">{</span> <span class="token operator">!</span> <span class="token variable">$_</span><span class="token punctuation">.</span>PSIsContainer <span class="token punctuation">}</span> <span class="token punctuation">|</span> <span class="token operator">%</span> <span class="token punctuation">{</span> <span class="token variable">$_</span><span class="token punctuation">.</span>FullName <span class="token punctuation">}</span>
+</code></pre>
+<p><code>Get-ChildItem</code> で一覧を取得し、<code>Where-Object</code> を使ってディレクトリを除外する。<code>Where-Object</code> は <code>?</code> や <code>where</code> というエイリアスでも書ける。</p>
+<ul>
+  <li>参考：<a href="https://qiita.com/Kirito1617/items/bd3937fb26c668eca078#2-%E3%82%AA%E3%83%96%E3%82%B8%E3%82%A7%E3%82%AF%E3%83%88%E6%93%8D%E4%BD%9C%E7%B3%BB%E3%82%B3%E3%83%9E%E3%83%B3%E3%83%89%E3%83%AC%E3%83%83%E3%83%88">PowerShellの使い方(オブジェクト操作編) - Qiita</a></li>
+</ul>
+<p>ディレクトリを除外したら、<code>ForEach-Object</code> (= エイリアス <code>%</code>) でフルパスを取得する。コレで変数 <code>$targetFiles</code> に、指定ディレクトリ配下のファイルがフルパスで格納された。</p>
+<ul>
+  <li>参考：<a href="https://qiita.com/jca02266/items/a0c71ae90d055ab3893c#%E3%83%91%E3%82%A4%E3%83%97%E3%83%A9%E3%82%A4%E3%83%B3">powershell チートシート - Qiita</a></li>
+</ul>
+<h3 id="ファイルを順に操作する"><a class="header-link" href="#ファイルを順に操作する"><span class="header-link-mark"></span></a>ファイルを順に操作する</h3>
+<p>ファイルを順に操作するには、先程も登場した <code>ForEach-Object</code> (<code>%</code>) を使ったりできるのだが、<code>ForEach-Object</code> は <code>continue</code> や <code>break</code> ができないようなので、代わりに <code>foreach</code> を使う。</p>
+<ul>
+  <li>参考：<a href="https://codeday.me/jp/qa/20190107/101399.html">PowerShellでForEach-Objectを終了する方法 - コードログ</a></li>
+</ul>
+<pre class="language-powershell"><code class="language-powershell"><span class="token keyword">foreach</span><span class="token punctuation">(</span><span class="token variable">$targetFile</span> in <span class="token variable">$targetFiles</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token comment"># ディレクトリパスとファイル名に分割する</span>
+  <span class="token variable">$folderPath</span> = <span class="token function">Split-Path</span> <span class="token variable">$targetFile</span>
+  <span class="token variable">$fileName</span>   = <span class="token function">Split-Path</span> <span class="token variable">$targetFile</span> <span class="token operator">-</span>Leaf
+  
+  <span class="token function">Write-Host</span> <span class="token string">"<span class="token variable">$folderPath</span> : <span class="token variable">$fileName</span>"</span>
+  
+  <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token function">Get-Item</span> <span class="token variable">$targetFile</span><span class="token punctuation">)</span><span class="token punctuation">.</span>extension<span class="token punctuation">.</span>toLower<span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">-eq</span> <span class="token string">".ps1"</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token function">Write-Host</span> <span class="token string">"PowerShell スクリプトは処理しない"</span>
+    <span class="token keyword">continue</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>こんな感じで、変数 <code>$targetFiles</code> を <code>foreach</code> でループしている。拡張子で判定して、処理したくないファイルなら <code>continue</code> で飛ばしたり、ということができる。</p>
+<ul>
+  <li>参考：<a href="https://win.just4fun.biz/?PowerShell/%E3%83%95%E3%82%A1%E3%82%A4%E3%83%AB%E3%81%AE%E3%83%95%E3%83%AB%E3%83%91%E3%82%B9%2Cbasename%2C%E6%8B%A1%E5%BC%B5%E5%AD%90%E3%82%92%E5%8F%96%E5%BE%97%E3%81%99%E3%82%8B%E6%96%B9%E6%B3%95#tb98287c">PowerShell/ファイルのフルパス,basename,拡張子を取得する方法 - Windowsと暮らす</a></li>
+  <li>参考：<a href="http://hiros-dot.net/PowerShell/string/string10.htm">10.英小文字/英大文字を相互変換するには</a></li>
+</ul>
+<h3 id="「メディアの作成日時」や「撮影日時」プロパティの情報を取得する"><a class="header-link" href="#「メディアの作成日時」や「撮影日時」プロパティの情報を取得する"><span class="header-link-mark"></span></a>「メディアの作成日時」や「撮影日時」プロパティの情報を取得する</h3>
+<p>以降は <code>foreach</code> 内にコードを書いていく。最初に調べた <code>getDetailsOf</code> メソッドを使っていく。</p>
+<pre class="language-powershell"><code class="language-powershell"><span class="token keyword">foreach</span><span class="token punctuation">(</span><span class="token variable">$targetFile</span> in <span class="token variable">$targetFiles</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token comment"># ディレクトリパスとファイル名に分割する</span>
+  <span class="token variable">$folderPath</span> = <span class="token function">Split-Path</span> <span class="token variable">$targetFile</span>
+  <span class="token variable">$fileName</span>   = <span class="token function">Split-Path</span> <span class="token variable">$targetFile</span> <span class="token operator">-</span>Leaf
+  
+  <span class="token comment"># …中略…</span>
+  
+  <span class="token comment"># シェルオブジェクトを作成する</span>
+  <span class="token variable">$shell</span>       = <span class="token function">New-Object</span> <span class="token operator">-</span>ComObject Shell<span class="token punctuation">.</span>Application
+  <span class="token variable">$shellFolder</span> = <span class="token variable">$shell</span><span class="token punctuation">.</span>namespace<span class="token punctuation">(</span><span class="token variable">$folderPath</span><span class="token punctuation">)</span>
+  <span class="token variable">$shellFile</span>   = <span class="token variable">$shellFolder</span><span class="token punctuation">.</span>parseName<span class="token punctuation">(</span><span class="token variable">$fileName</span><span class="token punctuation">)</span>
+  
+  <span class="token comment"># 詳細プロパティからリネームに使用するプロパティ名と値を取得する</span>
+  <span class="token variable">$selectedPropertyNo</span>    = <span class="token string">""</span>
+  <span class="token variable">$selectedPropertyName</span>  = <span class="token string">""</span>
+  <span class="token variable">$selectedPropertyValue</span> = <span class="token string">""</span>
+  
+  <span class="token comment"># 詳細プロパティを列挙する : 適当に310項目ほど取得する</span>
+  <span class="token keyword">for</span><span class="token punctuation">(</span><span class="token variable">$i</span> = 0<span class="token punctuation">;</span> <span class="token variable">$i</span> <span class="token operator">-lt</span> 310<span class="token punctuation">;</span> <span class="token variable">$i</span>+<span class="token operator">+</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token comment"># プロパティ名を取得する</span>
+    <span class="token variable">$propertyName</span>  = <span class="token variable">$shellFolder</span><span class="token punctuation">.</span>getDetailsOf<span class="token punctuation">(</span><span class="token variable">$Null</span><span class="token punctuation">,</span> <span class="token variable">$i</span><span class="token punctuation">)</span>
+    
+    <span class="token comment"># プロパティ名が目的のモノなら、そのプロパティの値を取得する</span>
+    <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token variable">$propertyName</span> <span class="token operator">-eq</span> <span class="token string">"メディアの作成日時"</span> <span class="token operator">-or</span> <span class="token variable">$propertyName</span> <span class="token operator">-eq</span> <span class="token string">"撮影日時"</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token comment"># ファイルからそのプロパティの値を取得する</span>
+      <span class="token variable">$propertyValue</span> = <span class="token variable">$shellFolder</span><span class="token punctuation">.</span>getDetailsOf<span class="token punctuation">(</span><span class="token variable">$shellFile</span><span class="token punctuation">,</span> <span class="token variable">$i</span><span class="token punctuation">)</span>
+      
+      <span class="token comment"># そのプロパティに値があれば変数に控えて終わりにする</span>
+      <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token variable">$propertyValue</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        <span class="token variable">$selectedPropertyNo</span>    = <span class="token variable">$i</span>
+        <span class="token variable">$selectedPropertyName</span>  = <span class="token variable">$propertyName</span>
+        <span class="token variable">$selectedPropertyValue</span> = <span class="token variable">$propertyValue</span>
+        <span class="token keyword">break</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p><code>getDetailsOf</code> メソッドが取得できるプロパティの総数はパッとは分からないので、ループ中では適当に <code>310</code> 回ループしている。上に貼ったプロパティ一覧を見ても、「撮影日時」は <code>12</code>、「メディアの作成日時」は <code>208</code> という位置に登場しているので、300 ぐらいまでループすれば多分取得できる。</p>
+<p>そして、プロパティ名を見て目的のプロパティかどうか判定している。直接 <code>-eq "メディアの作成日時"</code> なんて比較をしているので、英語環境の Windows なんかだと上手く拾えないと思う。<strong>ココらへんはキニシナイ。w</strong></p>
+<p><code>if</code>・<code>elseIf</code> (スペースなし) における And 条件、Or 条件は <code>-and</code> や <code>-or</code> で書ける。</p>
+<ul>
+  <li>参考：<a href="https://win.just4fun.biz/?PowerShell/PowerShell%E3%81%AEif%E6%96%87%E3%81%A7and%2Cor%2Cxor%2Cnot%E3%82%92%E8%A8%98%E8%BF%B0%E3%81%99%E3%82%8B%E6%96%B9%E6%B3%95https://win.just4fun.biz/?PowerShell/PowerShell%E3%81%AEif%E6%96%87%E3%81%A7and%2Cor%2Cxor%2Cnot%E3%82%92%E8%A8%98%E8%BF%B0%E3%81%99%E3%82%8B%E6%96%B9%E6%B3%95">有効なInterWikiNameではありません - Windowsと暮らす</a></li>
+</ul>
+<p>「メディアの作成日時」プロパティの番号が分かったところで、ファイルから情報を取得する。それが <code>$propertyValue = $shellFolder.getDetailsOf($shellFile, $i)</code> 部分。</p>
+<p>そのプロパティに値が入っているかどうか、空文字かどうかを判定するには、JavaScript ライクに <code>if</code> に変数を突っ込むだけで大丈夫。Bool にキャストしたりしても良い。</p>
+<ul>
+  <li>参考：<a href="https://yomon.hatenablog.com/entry/2014/11/20/225546">PowerShellで文字列などの変数のNullまたは空文字を確認するには - YOMON8.NET</a></li>
+</ul>
+<p>値が拾えたら、<code>for</code> ループの外に用意しておいた変数に値を退避し、<code>for</code> ループを <code>break</code> で抜ける。</p>
+<h3 id="日付文字列を整形してリネームする"><a class="header-link" href="#日付文字列を整形してリネームする"><span class="header-link-mark"></span></a>日付文字列を整形してリネームする</h3>
+<p>プロパティを特定して値を取得し、<code>$selectedPropertyValue</code> などの変数に値を控えておいた。次はその値を整形して、リネームしていく。</p>
+<pre class="language-powershell"><code class="language-powershell"><span class="token keyword">foreach</span><span class="token punctuation">(</span><span class="token variable">$targetFile</span> in <span class="token variable">$targetFiles</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token comment"># …中略…</span>
+  <span class="token keyword">for</span><span class="token punctuation">(</span><span class="token variable">$i</span> = 0<span class="token punctuation">;</span> <span class="token variable">$i</span> <span class="token operator">-lt</span> 310<span class="token punctuation">;</span> <span class="token variable">$i</span>+<span class="token operator">+</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token comment"># …中略…</span>
+  <span class="token punctuation">}</span>
+  
+  <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token operator">!</span> <span class="token variable">$selectedPropertyNo</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token function">Write-Host</span> <span class="token string">"プロパティ・もしくはプロパティの値がなかった・リネーム処理できない"</span>
+    <span class="token keyword">continue</span>
+  <span class="token punctuation">}</span>
+  
+  <span class="token comment"># YYYY-MM-DD 形式で日付を取得する</span>
+  <span class="token variable">$dateTimeStr</span> = <span class="token variable">$selectedPropertyValue</span><span class="token punctuation">.</span>substring<span class="token punctuation">(</span>1<span class="token punctuation">,</span> 4<span class="token punctuation">)</span> `
+                 <span class="token operator">+</span> <span class="token string">"-"</span> <span class="token operator">+</span> <span class="token variable">$selectedPropertyValue</span><span class="token punctuation">.</span>substring<span class="token punctuation">(</span>7<span class="token punctuation">,</span> 2<span class="token punctuation">)</span> `
+                 <span class="token operator">+</span> <span class="token string">"-"</span> <span class="token operator">+</span> <span class="token variable">$selectedPropertyValue</span><span class="token punctuation">.</span>substring<span class="token punctuation">(</span>11<span class="token punctuation">,</span> 2<span class="token punctuation">)</span>
+  <span class="token comment"># 新しいファイル名を作る (日付をオリジナルのファイル名の行頭に付与しスペースを付ける)</span>
+  <span class="token variable">$newFileName</span> = <span class="token variable">$dateTimeStr</span> <span class="token operator">+</span> <span class="token string">" "</span> <span class="token operator">+</span> <span class="token variable">$fileName</span>
+  
+  <span class="token comment"># リネームする</span>
+  <span class="token function">Rename-Item</span> <span class="token variable">$targetFile</span> <span class="token operator">-</span>newName <span class="token variable">$newFileName</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>空文字かどうかの判定は先程も書いたとおり <code>if</code> 文に突っ込むだけ。<code>if(! $selectedPropertyNo)</code> と <code>!</code> で条件を反転させれば、「空文字だった場合は」と処理できる。リネームに使用したい値が取得できていなかった場合は、<code>continue</code> を使って <code>foreach</code> ループを中断している。</p>
+<p>さて、「メディアの作成日時」や「撮影日時」の値は、先頭に1文字スペースがあり、<code>YYYY- MM- DD HH:mm</code> みたいな謎の書式になっている。この情報は String 型で取得されていて、Date 型への変換が面倒くさかった。</p>
+<ul>
+  <li>参考：<a href="https://confrage.jp/powershell%E3%82%B9%E3%82%AF%E3%83%AA%E3%83%97%E3%83%88%E3%81%A7%E3%83%87%E3%83%BC%E3%82%BF%E5%9E%8B%E3%82%92%E8%AA%BF%E3%81%B9%E3%82%8B/">PowerShellスクリプトでデータ型を調べる方法 | 株式会社CONFRAGE ITソリューション事業部</a>
+    <ul>
+      <li>変数のデータ型を調べるには <code>$myVariable.getType().fullName</code> と書く</li>
+    </ul>
+  </li>
+</ul>
+<p>色々面倒くさいので、<code>substring</code> メソッドで位置指定して <code>YYYY</code>・<code>MM</code>・<code>DD</code> 部分を取得し、自前でハイフン <code>-</code> と結合し、<code>YYYY-MM-DD</code> 形式にする。</p>
+<ul>
+  <li>参考：<a href="https://bayashita.com/p/entry/show/223">文字列の一部を取り出す方法 PowerShell : バヤシタ</a></li>
+</ul>
+<p>そしてそれをオリジナルのファイル名の先頭にくっつけて、変数 <code>$newFileName</code> を用意する。</p>
+<p>実際のリネームは <code>Rename-Item</code> というメソッドを使う。</p>
+<ul>
+  <li>参考：<a href="http://hiros-dot.net/PowerShell/file/file21.htm">21.ファイル名を変更する</a></li>
+</ul>
+<h2 id="ファイルから日付情報を取得し、そのディレクトリを作成、そこにファイルを移動する"><a class="header-link" href="#ファイルから日付情報を取得し、そのディレクトリを作成、そこにファイルを移動する"><span class="header-link-mark"></span></a>ファイルから日付情報を取得し、そのディレクトリを作成、そこにファイルを移動する</h2>
+<p>次は、リネームではなく、ファイル移動。画像ファイルなどを撮影日時別のディレクトリに分類するための、別のスクリプトを作る。</p>
+<p>「メディアの作成日時」や「撮影日時」というプロパティは、ファイルによって情報が付与されていたりいなかったりするので、どちらのプロパティもなかった場合は、「作成日時」や「更新日時」あたりの必ずあるプロパティを使いたい。</p>
+<p>ただ、「作成日時」や「更新日時」は、たまに<em>更新日時の方がより古い値</em>になっていて、そちらが実際の撮影時間に近い場合があったりする。</p>
+<p>そこで、作成日時と更新日時を取得したら日時を比較して、<strong>より古い値の方を撮影時間とみなして利用する</strong>ことにする。</p>
+<pre class="language-powershell"><code class="language-powershell"><span class="token comment"># ファイルフルパスを元に1ファイルずつ処理する</span>
+<span class="token keyword">foreach</span><span class="token punctuation">(</span><span class="token variable">$targetFile</span> in <span class="token variable">$targetFiles</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token comment"># ディレクトリパスとファイル名に分割する</span>
+  <span class="token variable">$folderPath</span> = <span class="token function">Split-Path</span> <span class="token variable">$targetFile</span>
+  <span class="token variable">$fileName</span>   = <span class="token function">Split-Path</span> <span class="token variable">$targetFile</span> <span class="token operator">-</span>Leaf
+  
+  <span class="token comment"># ファイルのオブジェクトを取得しておく</span>
+  <span class="token variable">$targetFileObject</span> = <span class="token function">Get-Item</span> <span class="token variable">$targetFile</span>
+  
+  <span class="token comment"># …中略…</span>
+  
+  <span class="token comment"># 詳細プロパティの取得を試みる</span>
+  <span class="token keyword">for</span><span class="token punctuation">(</span><span class="token variable">$i</span> = 0<span class="token punctuation">;</span> <span class="token variable">$i</span> <span class="token operator">-lt</span> 310<span class="token punctuation">;</span> <span class="token variable">$i</span>+<span class="token operator">+</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token comment"># …中略…</span>
+  <span class="token punctuation">}</span>
+  
+  <span class="token comment"># 日付文字列を控える変数</span>
+  <span class="token variable">$dateTimeStr</span> = <span class="token string">"0000-00-00"</span>
+  
+  <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token operator">!</span> <span class="token variable">$selectedPropertyNo</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token comment"># プロパティが取れなかったら、作成日時か更新日時からより古い方の値を取得する</span>
+    
+    <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token variable">$targetFileObject</span><span class="token punctuation">.</span>creationTime <span class="token operator">-lt</span> <span class="token variable">$targetFileObject</span><span class="token punctuation">.</span>lastWriteTime<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token comment"># 作成日時の方が古い</span>
+      <span class="token variable">$dateTimeStr</span> = <span class="token variable">$targetFileObject</span><span class="token punctuation">.</span>creationTime<span class="token punctuation">.</span>toString<span class="token punctuation">(</span><span class="token string">"yyyy-MM-dd"</span><span class="token punctuation">)</span>
+    <span class="token punctuation">}</span>
+    <span class="token keyword">else</span> <span class="token punctuation">{</span>
+      <span class="token comment"># 更新日時の方が古い</span>
+      <span class="token variable">$dateTimeStr</span> = <span class="token variable">$targetFileObject</span><span class="token punctuation">.</span>lastWriteTime<span class="token punctuation">.</span>toString<span class="token punctuation">(</span><span class="token string">"yyyy-MM-dd"</span><span class="token punctuation">)</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span>
+  <span class="token keyword">else</span> <span class="token punctuation">{</span>
+    <span class="token comment"># 「メディアの作成日時」や「撮影日時」が取得できた場合は、そのプロパティの値から日付を取得する</span>
+    
+    <span class="token variable">$dateTimeStr</span> = <span class="token variable">$selectedPropertyValue</span><span class="token punctuation">.</span>substring<span class="token punctuation">(</span>1<span class="token punctuation">,</span> 4<span class="token punctuation">)</span> `
+                 <span class="token operator">+</span> <span class="token string">"-"</span> <span class="token operator">+</span> <span class="token variable">$selectedPropertyValue</span><span class="token punctuation">.</span>substring<span class="token punctuation">(</span>7<span class="token punctuation">,</span> 2<span class="token punctuation">)</span> `
+                 <span class="token operator">+</span> <span class="token string">"-"</span> <span class="token operator">+</span> <span class="token variable">$selectedPropertyValue</span><span class="token punctuation">.</span>substring<span class="token punctuation">(</span>11<span class="token punctuation">,</span> 2<span class="token punctuation">)</span>
+  <span class="token punctuation">}</span>
+  
+  <span class="token comment"># 日付のディレクトリを作る</span>
+  <span class="token variable">$newDirectoryPath</span> = <span class="token variable">$targetDirectory</span> <span class="token operator">+</span> <span class="token string">"\"</span> <span class="token operator">+</span> <span class="token variable">$dateTimeStr</span>
+  <span class="token comment"># Out-Null にパイプすることで結果を非表示にする</span>
+  <span class="token function">New-Item</span> <span class="token variable">$newDirectoryPath</span> <span class="token operator">-</span>ItemType Directory <span class="token operator">-</span>Force <span class="token punctuation">|</span> <span class="token function">Out-Null</span>
+  
+  <span class="token comment"># ファイルを移動する</span>
+  <span class="token function">Move-Item</span> <span class="token variable">$targetFile</span> <span class="token variable">$newDirectoryPath</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p><code>if(! $selectedPropertyNo)</code> の <code>if</code> 文の中が、作成日時 (<code>creationTime</code>) や更新日時 (<code>lastWriteTime</code>) を取得・比較しているところ。単純に <code>-lt</code> と比較演算子を使って比較できた。<code>toString</code> メソッドを使うと日付のフォーマットを指定して文字列として取得できる。</p>
+<ul>
+  <li>参考：<a href="http://hiros-dot.net/PowerShell/file/file10.htm">10.ファイルの作成日時/更新日時を取得する</a></li>
+</ul>
+<p><code>else</code> の方は、リネームスクリプトに出てきたコードと同様だ。</p>
+<p>変数 <code>$newDirectoryPath</code> として、これから作ろうとしている日付のディレクトリのフルパスを用意する。<code>【カレントディレクトリ】\YYYY-MM-DD</code> という内容だ。</p>
+<p>コレを使ってディレクトリを作成するには、<code>New-Item</code> を使う。<code>-ItemType Directory</code> を指定しないと空ファイルを作ってしまう (<code>touch</code> 的な挙動) ので注意。<code>-Force</code> は、そのディレクトリが既に存在する場合もエラーを発生させないようにするためのモノ。</p>
+<p><code>New-Item</code> メソッドを使うと、作成したディレクトリの情報が出力されるので、その出力を非表示にするために <code>| Out-Null</code> にパイプしている。Bash でいうと <code>> /dev/null</code> みたいなモノだ。</p>
+<p>ファイルの移動は <code>Move-Item</code>。簡単だ。</p>
+<h2 id="スクリプトの実行方法"><a class="header-link" href="#スクリプトの実行方法"><span class="header-link-mark"></span></a>スクリプトの実行方法</h2>
+<p>さて、こうして作ったスクリプトを簡単に実行する方法を紹介する。</p>
+<h3 id="path-のとおったディレクトリを用意すると楽"><a class="header-link" href="#path-のとおったディレクトリを用意すると楽"><span class="header-link-mark"></span></a>PATH のとおったディレクトリを用意すると楽</h3>
+<p>まずは、ユーザホームディレクトリ直下に <code>bin</code> というディレクトリを作る。フルパスでいうと <code>C:\Users\【ユーザ名】\bin\</code> という具合だ。</p>
+<p>その <code>bin</code> ディレクトリの下に、今回作成した <code>rename-all.ps1</code> や <code>move-all.ps1</code> ファイルを置いておく。</p>
+<p>そして「環境変数」の設定を開き、<code>Path</code> に先程の <code>bin</code> ディレクトリまでのパス <code>C:\Users\【ユーザ名】\bin\</code> を追加しておく。</p>
+<p>こうすると、コマンドプロンプトや PowerShell で、この <code>bin</code> ディレクトリ配下に置いたスクリプトを、フルパスを書くことなく呼び出せるようになる。</p>
+<p>ユーザホームディレクトリの直下に <code>bin</code> ディレクトリを作る、という構成は、Linux における <code>~/bin/</code> と同じ構成になり、実際に GitBash でも <code>~/bin/</code> でアクセスできるようになり、扱いやすい。</p>
+<h3 id="実行方法1"><a class="header-link" href="#実行方法1"><span class="header-link-mark"></span></a>実行方法1</h3>
+<p>ということで、ココまでできたら、<code>Win + X</code> キーでコンテキストメニューを出し、<code>A</code> キーで「Windows PowerShell (管理者)」を選択したりして、PowerShell を起動したら、</p>
+<pre class="language-powershell"><code class="language-powershell">PS1> cd C:\Path\To\Target\Directory\
+PS1> <span class="token function">rename-all</span>
+</code></pre>
+<p>こんな風に一括リネームを実行したいディレクトリに移動 (<code>cd</code>) して、<code>rename-all</code> や <code>move-all</code> のように、スクリプトファイル名を入力すれば実行できる。拡張子は書いても書かなくても良い。</p>
+<h3 id="実行方法2"><a class="header-link" href="#実行方法2"><span class="header-link-mark"></span></a>実行方法2</h3>
+<p>次はエクスプローラから起動する方法。</p>
+<p>エクスプローラで目的のディレクトリに移動したら、アドレスバーに <code>%comspec%</code> もしくは <code>cmd</code> と入力する。すると<em>コマンドプロンプト</em>が起動する。その時のカレントディレクトリは、エクスプローラで開いていたディレクトリになっているので、そのまま</p>
+<pre class="language-batch"><code class="language-batch">> powershell rename-all
+</code></pre>
+<p>みたいにすると実行できる。</p>
+<h3 id="実行方法3"><a class="header-link" href="#実行方法3"><span class="header-link-mark"></span></a>実行方法3</h3>
+<p>エクスプローラのアドレスバーに <code>powershell</code> と入力すると PowerShell のウィンドウが起動する。その時のカレントディレクトリは、エクスプローラで開いていたディレクトリになっているので、そのまま</p>
+<pre class="language-powershell"><code class="language-powershell">PS1> <span class="token function">rename-all</span>
+</code></pre>
+<p>と実行すれば、スクリプトが実行できる。</p>
+<ul>
+  <li>参考：<a href="https://qiita.com/skkzsh/items/9d32f6fa937f49053523">エクスプローラからコマンドプロンプトやPowerShellを開いたり, その逆をする方法のまとめ - Qiita</a></li>
+</ul>
+<h3 id="実行方法4"><a class="header-link" href="#実行方法4"><span class="header-link-mark"></span></a>実行方法4</h3>
+<p>もう少し直接的に、エクスプローラのアドレスバーに</p>
+<pre class="language-powershell"><code class="language-powershell">powershell <span class="token function">rename-all</span>
+</code></pre>
+<p>と打つと、PowerShell が起動してスクリプトが実行される。ただしこの場合、スクリプトが終わると PowerShell のウィンドウも閉じてしまうので、スクリプトの末尾に</p>
+<pre class="language-powershell"><code class="language-powershell"><span class="token function">Read-Host</span> <span class="token string">"続行するには Enter キーを押してください。"</span>
+</code></pre>
+<p>みたいな1行を入れて、コマンドプロンプトの <code>Pause</code> のように処理を止めてあげるか、アドレスバーに入れる時に</p>
+<pre class="language-powershell"><code class="language-powershell">powershell <span class="token operator">-</span>noexit <span class="token function">rename-all</span>
+</code></pre>
+<p>と、<code>-NoExit</code> (大文字小文字は問わない) を入れてあげると、PowerShell のウィンドウが閉じずに残ってくれる。</p>
+<ul>
+  <li>参考：<a href="http://wiki.yottun8.com/PowerShell%20%E3%82%B9%E3%82%AF%E3%83%AA%E3%83%97%E3%83%88.html">PowerShell スクリプト - wiki.yottun8.com</a></li>
+</ul>
+<h3 id="まとめ"><a class="header-link" href="#まとめ"><span class="header-link-mark"></span></a>まとめ</h3>
+<p>ということで起動方法まとめ。</p>
+<ol>
+  <li><code>Win + X</code> → <code>A</code> → (PowerShell 起動) → <code>cd 【ディレクトリ】</code> → <code>rename-all</code> (実行)</li>
+  <li>エクスプローラのアドレスバーで <code>%comspec%</code> or <code>cmd</code> → (コマンドプロンプト起動) → <code>powershell rename-all</code> (実行)</li>
+  <li>エクスプローラのアドレスバーで <code>powershell</code> → (PowerShell 起動) → <code>rename-all</code> (実行)</li>
+  <li>エクスプローラのアドレスバーで <code>powershell -noexit rename-all</code> (実行)</li>
+</ol>
+<p>4つ目が楽かなぁ。<code>powershell</code> ってタイプ数が多いが面倒くさいので、ココも短くしたいなぁ。</p>
+<h2 id="以上"><a class="header-link" href="#以上"><span class="header-link-mark"></span></a>以上</h2>
+<p>久々に PowerShell を書いたので、文法も何も完全に忘れていた。</p>
+<p>中途半端にシェルスクリプトっぽく書けたり、.NET っぽさも出てきたり、なかなかややこしいので、あんまり積極的には書きたくないな…。それでも WSH より色んなことがやりやすいので、今回は PowerShell を使ってみた次第。</p>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2019-11-11</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2019-11-11</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

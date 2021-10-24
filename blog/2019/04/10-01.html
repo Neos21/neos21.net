@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>OCI CLI・OKE・OCIR 利用時に異なるアカウントを切り替えるには - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2019/04/10-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2019/index.html">2019年</a></li>
+            <li><a href="/blog/2019/04/index.html">04月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2019-04-10</time></div>
+        <h1 id="page-title">OCI CLI・OKE・OCIR 利用時に異なるアカウントを切り替えるには</h1>
+
+<p>OCI (Oracle Cloud Infrastructure) 環境の参照・操作に使う <strong>OCI CLI</strong> (<code>oci</code> コマンド)。</p>
+<p>なかなかいないかもしれないが、複数のテナンシーを管理していて、OCI CLI で複数の環境を操作したいという人向けに、設定ファイルの切り替え方を考えたのでご紹介。</p>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#oci-cli-%E8%A8%AD%E5%AE%9A%E3%83%95%E3%82%A1%E3%82%A4%E3%83%AB">OCI CLI 設定ファイル</a></li>
+  <li><a href="#%E8%A4%87%E6%95%B0%E7%92%B0%E5%A2%83%E3%81%AE%E5%AE%9A%E7%BE%A9%E3%82%92-config-%E3%83%95%E3%82%A1%E3%82%A4%E3%83%AB%E3%81%AB%E6%9B%B8%E3%81%8F">複数環境の定義を <code>config</code> ファイルに書く</a></li>
+  <li><a href="#ocir-%E6%93%8D%E4%BD%9C%E6%99%82--docker-login-%E3%82%B3%E3%83%9E%E3%83%B3%E3%83%89%E3%81%A7%E5%88%87%E3%82%8A%E6%9B%BF%E3%81%88%E3%82%8B">OCIR 操作時 : <code>docker login</code> コマンドで切り替える</a></li>
+  <li><a href="#oke-%E6%93%8D%E4%BD%9C%E6%99%82--%E7%92%B0%E5%A2%83%E5%A4%89%E6%95%B0-kubeconfig-%E3%81%A7%E5%8F%82%E7%85%A7%E3%81%99%E3%82%8B%E8%A8%AD%E5%AE%9A%E3%83%95%E3%82%A1%E3%82%A4%E3%83%AB%E3%82%92%E5%88%87%E3%82%8A%E6%9B%BF%E3%81%88%E3%82%8B">OKE 操作時 : 環境変数 <code>KUBECONFIG</code> で参照する設定ファイルを切り替える</a></li>
+  <li><a href="#%E4%BB%A5%E4%B8%8A">以上</a></li>
+</ul>
+<h2 id="oci-cli-設定ファイル"><a class="header-link" href="#oci-cli-設定ファイル"><span class="header-link-mark"></span></a>OCI CLI 設定ファイル</h2>
+<p>まず OCI CLI の設定ファイルと、<code>oci</code> コマンドの仕様から確認。</p>
+<ul>
+  <li>参考：<a href="https://docs.cloud.oracle.com/iaas/Content/API/SDKDocs/cliconfigure.htm">Configuration</a></li>
+  <li>参考：<a href="http://cosol.jp/techdb/2018/12/oracle-cloud-infrastructure-cli-memo.html">Oracle Cloud Infrastructure CLIについてのメモ (コーソル DatabaseエンジニアのBlog)</a></li>
+</ul>
+<p>このあたりを見ると、以下のような方法がある。</p>
+<ul>
+  <li><code>--config-file</code> オプションで設定ファイルを指定すると、その設定ファイルに基づいた環境にアクセスできる</li>
+  <li><code>--profile</code> オプションを指定すると、参照している設定ファイル内の<em>「プロファイル名」</em>に基づいた環境にアクセスできる</li>
+  <li>環境変数 <code>OCI_CLI_PROFILE</code> でプロファイル名を指定すると、参照している設定ファイルからそのプロファイル名に基づいた環境を見つけてアクセスする</li>
+</ul>
+<p>設定ファイルは、デフォルトでは <code>~/.oci/config</code> というパスに置かれる。<code>--config-file</code> オプション未指定時はこのパスが参照されるワケだ。中身はデフォルトだとこんな感じ。↓</p>
+<pre class="language-properties"><code class="language-properties">[DEFAULT]
+<span class="token attr-name">user</span><span class="token punctuation">=</span><span class="token attr-value">ocid1.user.xxxxxx</span>
+<span class="token attr-name">fingerprint</span><span class="token punctuation">=</span><span class="token attr-value">xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx</span>
+<span class="token attr-name">key_file</span><span class="token punctuation">=</span><span class="token attr-value">/Users/Neo/.oci/oci_api_key.pem</span>
+<span class="token attr-name">tenancy</span><span class="token punctuation">=</span><span class="token attr-value">ocid1.tenancy.xxxxxx</span>
+<span class="token attr-name">region</span><span class="token punctuation">=</span><span class="token attr-value">us-ashburn-1</span>
+</code></pre>
+<p><code>[DEFAULT]</code> というプロファイル名で定義されているので、<code>--profile</code> オプションを指定しない場合にこの設定が使われることになる。</p>
+<p>また、<code>key_file</code> キーで確認できるが、秘密鍵ファイルのフルパスも指定されている。ココでは <code>oci_api_key.pem</code> というファイル名だが、初期設定時に自動生成させると、<code>oci_api_key_public.pem</code> という公開鍵ファイルも一緒に生成されていると思われる。</p>
+<h2 id="複数環境の定義を-config-ファイルに書く"><a class="header-link" href="#複数環境の定義を-config-ファイルに書く"><span class="header-link-mark"></span></a>複数環境の定義を <code>config</code> ファイルに書く</h2>
+<p>設定ファイルの仕様が分かったので、実際に複数の環境を切り替えられるようにしてみよう。</p>
+<p>まず、環境別の秘密鍵・公開鍵ファイルを、それぞれリネームして <code>~/.oci/</code> ディレクトリ配下に配置する。</p>
+<pre><code>~/.oci/
+├ dev-oci_api_key.pem
+├ dev-oci_api_key_public.pem
+├ prd-oci_api_key.pem
+└ prd-oci_api_key_public.pem
+</code></pre>
+<p>ファイル名からお察しいただけるかと思うが、<code>dev-</code> 始まりの2つが開発環境のテイ、<code>prd-</code> 始まりの2つが本番環境のテイで配置した、秘密鍵と公開鍵ファイルだ。</p>
+<p>そして <code>~/.oci/config</code> ファイルの内容は以下の用に記述する。</p>
+<pre class="language-properties"><code class="language-properties">[DEV]
+<span class="token attr-name">user</span><span class="token punctuation">=</span><span class="token attr-value">ocid1.user.xxxxxx</span>
+<span class="token attr-name">fingerprint</span><span class="token punctuation">=</span><span class="token attr-value">xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx</span>
+<span class="token attr-name">key_file</span><span class="token punctuation">=</span><span class="token attr-value">/Users/Neo/.oci/dev-oci_api_key.pem</span>
+<span class="token attr-name">tenancy</span><span class="token punctuation">=</span><span class="token attr-value">ocid1.tenancy.xxxxxx</span>
+<span class="token attr-name">region</span><span class="token punctuation">=</span><span class="token attr-value">us-ashburn-1</span>
+
+[PRD]
+<span class="token attr-name">user</span><span class="token punctuation">=</span><span class="token attr-value">ocid1.user.yyyyyy</span>
+<span class="token attr-name">fingerprint</span><span class="token punctuation">=</span><span class="token attr-value">yy:yy:yy:yy:yy:yy:yy:yy:yy:yy:yy:yy:yy:yy:yy:yy</span>
+<span class="token attr-name">key_file</span><span class="token punctuation">=</span><span class="token attr-value">/Users/Neo/.oci/prd-oci_api_key.pem</span>
+<span class="token attr-name">tenancy</span><span class="token punctuation">=</span><span class="token attr-value">ocid1.tenancy.yyyyyy</span>
+<span class="token attr-name">region</span><span class="token punctuation">=</span><span class="token attr-value">us-ashburn-1</span>
+</code></pre>
+<p>それぞれの環境向けの設定ファイルをマージし、<code>[DEFAULT]</code> を使用せず、環境別のプロファイル名を付けた。<code>key_file</code> キーの値の変更も忘れずに。</p>
+<p>デフォルトのプロファイルがなくなったので、このままでは <code>oci</code> コマンドを実行しても接続先が分からない。そこで、以下のようなエイリアスを用意する。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token builtin class-name">alias</span> oci-dev<span class="token operator">=</span><span class="token string">'export OCI_CLI_PROFILE=DEV'</span>
+<span class="token builtin class-name">alias</span> oci-prd<span class="token operator">=</span><span class="token string">'export OCI_CLI_PROFILE=PRD'</span>
+</code></pre>
+<p>見れば分かるとおり、環境変数 <code>OCI_CLI_PROFILE</code> を書き換えて、<code>~/.oci/config</code> ファイルのどのプロファイルを見れば良いか知らせているだけ。</p>
+<p>開発環境のテナンシーを触りたければ、<code>$ oci-dev</code> を叩いてから <code>$ oci network ...</code> などとコマンドを叩けば良い。</p>
+<p>デフォルトで接続されるテナンシーを定義しなかったので、操作対象の環境を間違えるようなミスが減らせるかな、と思う。</p>
+<h2 id="ocir-操作時--docker-login-コマンドで切り替える"><a class="header-link" href="#ocir-操作時--docker-login-コマンドで切り替える"><span class="header-link-mark"></span></a>OCIR 操作時 : <code>docker login</code> コマンドで切り替える</h2>
+<p>OCIR (OCI におけるプライベート Docker レジストリ) を使っている場合は、<code>docker login</code> コマンドで接続先環境を切り替えるしかない。コチラも以前エイリアスを紹介した。</p>
+<ul>
+  <li><a href="/blog/2019/04/08-02.html">異なるプライベート Docker レジストリを切り替えるには</a></li>
+</ul>
+<h2 id="oke-操作時--環境変数-kubeconfig-で参照する設定ファイルを切り替える"><a class="header-link" href="#oke-操作時--環境変数-kubeconfig-で参照する設定ファイルを切り替える"><span class="header-link-mark"></span></a>OKE 操作時 : 環境変数 <code>KUBECONFIG</code> で参照する設定ファイルを切り替える</h2>
+<p>OKE (Kubernetes のマネージドサービス) を使っている場合は、環境変数 <code>KUBECONFIG</code> の値を変更し、参照する設定ファイルを切り替えることで複数環境に対応しよう。コチラも以前やり方を紹介した。</p>
+<ul>
+  <li><a href="/blog/2019/04/09-02.html">kubectl コマンドを使うとき異なる Kubernetes 環境を切り替えるには</a></li>
+</ul>
+<h2 id="以上"><a class="header-link" href="#以上"><span class="header-link-mark"></span></a>以上</h2>
+<p>OCI・OCIR・OKE を使う際は、<code>oci</code>・<code>docker</code>・<code>kubectl</code> コマンドを多用すると思うので、複数のテナンシーを持っている人はこうした方法で環境切り替えを楽にしてみてはどうだろうか。</p>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2019-04-10</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2019-04-10</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>iOS 13 AVCaptureMultiCamSession を使った複数カメラでの同時ビデオ録画 iPhone アプリを作った - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2019/09/27-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2019/index.html">2019年</a></li>
+            <li><a href="/blog/2019/09/index.html">09月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2019-09-27</time></div>
+        <h1 id="page-title">iOS 13 AVCaptureMultiCamSession を使った複数カメラでの同時ビデオ録画 iPhone アプリを作った</h1>
+
+<p>iOS 13 から登場した <strong><code>AVCaptureMultiCamSession</code></strong> という API を使うと、1台の iPhone に搭載されている<em>複数のカメラデバイスを同時に</em>使用できる。例えば、バックの標準カメラで被写体を写しながら、フロントカメラで撮影者自身も同時に撮影したり、といった感じだ。</p>
+<p>今回はこの <code>AVCaptureMultiCamSession</code> を使って、<strong>複数のカメラで同時に動画を撮影する iOS アプリを作った</strong>ので紹介する。</p>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#%E3%82%A2%E3%83%97%E3%83%AA%E3%81%AE%E6%A7%98%E5%AD%90">アプリの様子</a></li>
+  <li><a href="#%E3%82%B3%E3%83%BC%E3%83%89%E3%81%AF-github-%E3%81%A7%E5%85%AC%E9%96%8B%E4%B8%AD">コードは GitHub で公開中</a></li>
+  <li><a href="#%E5%8B%95%E4%BD%9C%E6%A4%9C%E8%A8%BC%E7%92%B0%E5%A2%83">動作検証環境</a></li>
+  <li><a href="#4%E3%82%AB%E3%83%A1%E5%90%8C%E6%99%82%E6%92%AE%E5%BD%B1%E3%81%AF%E3%81%A7%E3%81%8D%E3%81%AA%E3%81%8B%E3%81%A3%E3%81%9F">4カメ同時撮影はできなかった</a></li>
+  <li><a href="#avcapturemulticamsession-%E3%81%AE%E4%BB%95%E7%B5%84%E3%81%BF"><code>AVCaptureMultiCamSession</code> の仕組み</a></li>
+  <li><a href="#4%E3%81%A4%E3%81%AE%E3%82%AB%E3%83%A1%E3%83%A9%E3%82%92-avcapturemulticamsession-%E3%81%AB%E8%BF%BD%E5%8A%A0%E3%81%99%E3%82%8B%E3%81%A8%E3%81%A9%E3%81%86%E3%81%AA%E3%82%8B%E3%81%8B">4つのカメラを <code>AVCaptureMultiCamSession</code> に追加するとどうなるか</a></li>
+  <li><a href="#%E5%90%8C%E6%99%82%E3%81%AB%E4%BD%BF%E3%81%88%E3%82%8B%E3%82%AB%E3%83%A1%E3%83%A9%E3%81%AE%E7%B5%84%E5%90%88%E3%81%9B%E3%82%92%E8%AA%BF%E3%81%B9%E3%82%8B%EF%BC%9Asupportedmulticamdevicesets">同時に使えるカメラの組合せを調べる：<code>supportedMultiCamDeviceSets</code></a></li>
+  <li><a href="#%E3%83%90%E3%83%83%E3%82%AF%E3%82%B0%E3%83%A9%E3%82%A6%E3%83%B3%E3%83%89%E3%81%AB%E7%A7%BB%E8%A1%8C%E3%81%97%E3%81%9F%E6%99%82%E3%81%AE%E3%82%A8%E3%83%A9%E3%83%BC%E3%81%AF%E4%BD%95%EF%BC%9F">バックグラウンドに移行した時のエラーは何？</a></li>
+  <li><a href="#%E6%8E%A2%E3%82%8A%E6%8E%A2%E3%82%8A%E5%AE%9F%E8%A3%85%E3%81%97%E3%81%9F%E3%81%AE%E3%81%A7%E3%81%BE%E3%81%A0%E3%81%BE%E3%81%A0%E3%83%90%E3%82%AE%E3%83%BC">探り探り実装したのでまだまだバギー</a></li>
+  <li><a href="#%E7%B5%82%E3%82%8F%E3%82%8A">終わり</a></li>
+</ul>
+<h2 id="アプリの様子"><a class="header-link" href="#アプリの様子"><span class="header-link-mark"></span></a>アプリの様子</h2>
+<p>アプリが動作しているスクリーンショットは以下。</p>
+<p>
+  <img src="27-01-02.png" alt="アプリの様子">
+</p>
+<p>左上が超広角カメラ、右上が標準カメラ、右下がフロントのインカメラを表示している。下部の「Start」ボタンを押下すると、プレビューが表示されているカメラのそれぞれで動画の録画が開始される。</p>
+<p>
+  <img src="27-01-01.png" alt="Start で録画開始">
+</p>
+<p>コチラは標準カメラ (右上) の代わりに、望遠カメラ (左下) を起動したパターン。後述するが、<strong>4カメラを同時に録画することはできなかった</strong>ので、このような挙動になっている。</p>
+<p>動画を撮影し始めると「Start」ボタンが「Stop」ボタンになり、「Stop」ボタンを押すと、動画ファイルが「写真」アプリ (カメラロール) に書き出される仕組み。例えば<em>3カメラで同時に撮影していれば、3つの動画ファイルがカメラロールに追加される。</em></p>
+<h2 id="コードは-github-で公開中"><a class="header-link" href="#コードは-github-で公開中"><span class="header-link-mark"></span></a>コードは GitHub で公開中</h2>
+<p>コードの全量は GitHub にアップしてあるので、各自で導入して試してみてほしい。</p>
+<ul>
+  <li><a href="https://github.com/Neos21/multi-cam">Neos21/multi-cam</a></li>
+</ul>
+<h2 id="動作検証環境"><a class="header-link" href="#動作検証環境"><span class="header-link-mark"></span></a>動作検証環境</h2>
+<ul>
+  <li>検証端末 : iPhone 11 Pro Max</li>
+  <li>検証 OS : iOS 13.0・iOS 13.1</li>
+  <li>現状同時に撮影できる最大デバイス数：<strong>3台</strong></li>
+  <li>撮影される動画ファイルの仕様 : 1920x1080px・29.58fps (バックカメラ・フロントカメラともに同じ)</li>
+  <li>開発環境：Xcode 11.0 (11A420a)</li>
+</ul>
+<p>検証に使ったのは、2019-09-21 に購入した iPhone 11 Pro Max。</p>
+<ul>
+  <li><a href="/blog/2019/09/22-01.html">iPhone 11 Pro Max を買った・使えた液晶ガラスフィルム・レンズ保護フィルム・ケースの話も</a></li>
+</ul>
+<p>プリインストールの iOS 13.0 と、2019-09-25 に配信された iOS 13.1 とで動作確認した。OS のマイナーバージョンアップによる挙動の違いはなかった。</p>
+<p>動画を撮影できるアプリとして開発したが、撮影できている動画ファイルはいずれも、フル HD サイズ (1920x1080px) で 29.58fps (= 30fps) だった。コレはフレームレートや画質設定を一切せずに撮影できているスペックなので、設定したらもしかしたら 60fps 撮影とかもできるのかもしれない。</p>
+<h2 id="4カメ同時撮影はできなかった"><a class="header-link" href="#4カメ同時撮影はできなかった"><span class="header-link-mark"></span></a>4カメ同時撮影はできなかった</h2>
+<p>ご存知のとおり、iPhone 11 Pro Max には</p>
+<ol>
+  <li>バック・超広角レンズ</li>
+  <li>バック・標準 (広角) レンズ</li>
+  <li>バック・望遠レンズ</li>
+  <li>フロントレンズ</li>
+</ol>
+<p>の、合計4つのレンズが付いている。</p>
+<p>iPhone 11 の製品発表イベントでデモンストレーションされていた、<em>「FiLMic Pro」</em>アプリによる4カメラ同時撮影を再現してみたくてアプリを作ったのだが、今回試した限りでは<em>実現できなかった。</em></p>
+<ul>
+  <li>参考：<a href="https://www.gizmodo.jp/2019/09/198536.html">3眼レンズ＋新しい｢FilMic Pro｣の組み合わせ、すっごい！ #AppleEvent | ギズモード・ジャパン</a></li>
+</ul>
+<p>なぜ4つ同時がダメだったかというと、<strong>4つ目のカメラを使おうとするとエラーが出てしまうため</strong>で、内部的な詳細を追っていくと、どうも現段階では <strong><code>AVCaptureMultiCamSession</code> に4つの <code>AVCaptureDeviceInput</code> を追加することはできない</strong>ようだ。</p>
+<h2 id="avcapturemulticamsession-の仕組み"><a class="header-link" href="#avcapturemulticamsession-の仕組み"><span class="header-link-mark"></span></a><code>AVCaptureMultiCamSession</code> の仕組み</h2>
+<p><strong>そもそも <code>AVCaptureMultiCamSession</code> に関する文献が今の段階ではまるでなく</strong>、探り探りの中で実装した。見つかった資料は以下ぐらい。</p>
+<ul>
+  <li><a href="https://developer.apple.com/documentation/avfoundation/avcapturemulticamsession">AVCaptureMultiCamSession - AVFoundation | Apple Developer Documentation</a> … 公式のリファレンス</li>
+  <li><a href="https://developer.apple.com/documentation/avfoundation/cameras_and_media_capture/avmulticampip_capturing_from_multiple_cameras">AVMultiCamPiP: Capturing from Multiple Cameras | Apple Developer Documentation</a> … サンプルコード</li>
+  <li><a href="https://github.com/Blackjacx/WWDC/blob/master/README.md#introducing-multi-camera-capture-for-ios">WWDC/README.md at master · Blackjacx/WWDC · GitHub</a> … WWDC のメモ</li>
+</ul>
+<p><code>AVCaptureMultiCamSession</code> の使い方は以下のような流れになる。</p>
+<ol>
+  <li><code>AVCaptureMultiCamSession</code> を生成する</li>
+  <li>目的のカメラレンズ = <code>AVCaptureDevice</code> を探す</li>
+  <li>そのレンズからの映像を取得するための <code>AVCaptureDeviceInput</code> を取得する</li>
+  <li>取得した Input を <code>AVCaptureMultiCamSession</code> に追加する (<code>addInputWithNoConnections()</code>)</li>
+  <li>その映像の出力先となる <code>AVCaptureOutput</code> (のサブクラスである <code>AVCaptureMovieFileOutput</code> など) を用意する</li>
+  <li>用意した Output を <code>AVCaptureMultiCamSession</code> に追加する (<code>addOutputWithNoConnections()</code>)</li>
+  <li><code>AVCaptureDeviceInput</code> から <code>Port</code> を取得し、<code>AVCaptureOutput</code> との紐付け = <code>AVCaptureConnection</code> を作る</li>
+  <li>作った Connection を <code>AVCaptureMultiCamSession</code> に追加する (<code>addConnection()</code>)</li>
+  <li><code>AVCaptureMultiCamSession</code> を開始 (<code>startRunning()</code>) し、プレビュー表示を開始。録画開始に備える</li>
+</ol>
+<p>準備するモノが多く、ローレベルな実装をコツコツしないといけないのだ。</p>
+<p>今回は「各カメラのプレビュー表示があって、音声付きの動画をそれぞれ書き出す」というアプリとして作ったので、以下のようなリソースを用意する必要があった。</p>
+<p>
+  <img src="27-01-03.png" alt="AVCapture 周りの関係図">
+</p>
+<p>Input と Output は <code>AVCaptureMultiCamSession</code> に追加しておき、Input と Output の紐付けは <code>AVCaptureConnection</code> という定義体を作ることで実現できる。上の図の矢印は一方通行になっているが、実装的には前述のとおり、Input と Output を用意してから <code>AVCaptureConnection</code> を作ることになる。</p>
+<h2 id="4つのカメラを-avcapturemulticamsession-に追加するとどうなるか"><a class="header-link" href="#4つのカメラを-avcapturemulticamsession-に追加するとどうなるか"><span class="header-link-mark"></span></a>4つのカメラを <code>AVCaptureMultiCamSession</code> に追加するとどうなるか</h2>
+<p><code>AVCaptureDeviceInput</code> を <code>AVCaptureMultiCamSession</code> に追加する際は、以下のようなコードを書くことになる。コレを、使用したいカメラの台数分だけ、異なる <code>AVCaptureDeviceInput</code> を指定して実行することになる。</p>
+<pre class="language-swift"><code class="language-swift"><span class="token keyword">self</span><span class="token punctuation">.</span>avCaptureMultiCamSession<span class="token punctuation">.</span><span class="token function">addInputWithNoConnections</span><span class="token punctuation">(</span>avCaptureDeviceInput<span class="token punctuation">)</span>
+</code></pre>
+<p>例えば、超広角カメラを追加 → 標準カメラを追加 → 望遠カメラを追加、というところまでは正常に処理が進んだ後、4つ目のフロントカメラを追加しようとして上のようなコードを実行すると、そこでエラーが発生し、以下のようなエラーメッセージがコンソールに出力される。</p>
+<pre><code>*** Terminating app due to uncaught exception 'NSInvalidArgumentException', reason: '*** -[AVCaptureMultiCamSession addInputWithNoConnections:] These devices may not be used simultaneously. Use -[AVCaptureDeviceDiscoverySession supportedMultiCamDeviceSets]'
+</code></pre>
+<p><code>NSInvalidArgumentException</code>、何やら「引数がダメ」という扱いになっている。</p>
+<p>それではと、実装の順番を変えて、フロントカメラを追加 → 超広角カメラを追加 → 標準カメラを追加、という順にすると、この3つまでは正しく追加できるが、その次に望遠カメラを追加しようとすると、同様のエラーが発生する。つまり、「フロントカメラを追加」する処理のコード自体には引数誤りはないということなのだ。</p>
+<p>もう少し読んでみると、<code>These devices may not be used simultaneously.</code> とある。これらのデバイスは同時に使えないよ、と明言されてしまった。</p>
+<h2 id="同時に使えるカメラの組合せを調べる：supportedmulticamdevicesets"><a class="header-link" href="#同時に使えるカメラの組合せを調べる：supportedmulticamdevicesets"><span class="header-link-mark"></span></a>同時に使えるカメラの組合せを調べる：<code>supportedMultiCamDeviceSets</code></h2>
+<p>じゃあどういう組合せなら同時に使えるの？というと、<code>Use -[AVCaptureDeviceDiscoverySession supportedMultiCamDeviceSets]</code> と書いてある。同時に使える組合せを知るための <strong><code>supportedMultiCamDeviceSets</code></strong> というプロパティがあるようだ。</p>
+<p>ということで以下のように実装して、実際に <code>supportedMultiCamDeviceSets</code> の中身を見てみた。</p>
+<pre class="language-swift"><code class="language-swift"><span class="token keyword">let</span> discoverySession <span class="token operator">=</span> <span class="token builtin">AVCaptureDevice</span><span class="token punctuation">.</span><span class="token builtin">DiscoverySession</span><span class="token punctuation">.</span><span class="token keyword">init</span><span class="token punctuation">(</span>deviceTypes<span class="token punctuation">:</span> <span class="token punctuation">[</span>
+  <span class="token comment">// カメラ単体のデバイス種別</span>
+  <span class="token builtin">AVCaptureDevice</span><span class="token punctuation">.</span><span class="token builtin">DeviceType</span><span class="token punctuation">.</span>builtInWideAngleCamera<span class="token punctuation">,</span>
+  <span class="token builtin">AVCaptureDevice</span><span class="token punctuation">.</span><span class="token builtin">DeviceType</span><span class="token punctuation">.</span>builtInUltraWideCamera<span class="token punctuation">,</span>
+  <span class="token builtin">AVCaptureDevice</span><span class="token punctuation">.</span><span class="token builtin">DeviceType</span><span class="token punctuation">.</span>builtInTelephotoCamera<span class="token punctuation">,</span>
+  <span class="token comment">// 以下は複数カメラを切り替えながら使うデバイス種別</span>
+  <span class="token builtin">AVCaptureDevice</span><span class="token punctuation">.</span><span class="token builtin">DeviceType</span><span class="token punctuation">.</span>builtInDualCamera<span class="token punctuation">,</span>
+  <span class="token builtin">AVCaptureDevice</span><span class="token punctuation">.</span><span class="token builtin">DeviceType</span><span class="token punctuation">.</span>builtInDualWideCamera<span class="token punctuation">,</span>
+  <span class="token builtin">AVCaptureDevice</span><span class="token punctuation">.</span><span class="token builtin">DeviceType</span><span class="token punctuation">.</span>builtInTripleCamera<span class="token punctuation">,</span>
+  <span class="token comment">// コレは TrueDepth カメラの定義</span>
+  <span class="token builtin">AVCaptureDevice</span><span class="token punctuation">.</span><span class="token builtin">DeviceType</span><span class="token punctuation">.</span>builtInTrueDepthCamera
+<span class="token punctuation">]</span><span class="token punctuation">,</span> mediaType<span class="token punctuation">:</span> <span class="token builtin">AVMediaType</span><span class="token punctuation">.</span>video<span class="token punctuation">,</span> position<span class="token punctuation">:</span> <span class="token builtin">AVCaptureDevice</span><span class="token punctuation">.</span><span class="token builtin">Position</span><span class="token punctuation">.</span>unspecified<span class="token punctuation">)</span>
+
+<span class="token keyword">let</span> deviceSets <span class="token operator">=</span> discoverySession<span class="token punctuation">.</span>supportedMultiCamDeviceSets
+
+<span class="token function">print</span><span class="token punctuation">(</span><span class="token string">"<span class="token interpolation"><span class="token delimiter variable">\(</span>deviceSets<span class="token delimiter variable">)</span></span>"</span><span class="token punctuation">)</span>
+</code></pre>
+<p><code>deviceTypes</code> に指定するのは、最初の3つの DeviceType だけで良い。それ以降の DeviceType は、全量を調べるためにとりあえず書いてみたモノだが、結果に大した違いはなかった。</p>
+<p><code>print()</code> した結果は以下のとおり。</p>
+<pre class="language-swift"><code class="language-swift"><span class="token punctuation">[</span>
+  <span class="token function">Set</span><span class="token punctuation">(</span><span class="token punctuation">[</span>
+    <span class="token punctuation">[</span><span class="token builtin">Back</span> <span class="token builtin">Dual</span> <span class="token builtin">Camera</span><span class="token punctuation">]</span><span class="token punctuation">[</span>com<span class="token punctuation">.</span>apple<span class="token punctuation">.</span>avfoundation<span class="token punctuation">.</span>avcapturedevice<span class="token punctuation">.</span>built<span class="token operator">-</span>in_video<span class="token punctuation">:</span><span class="token number">3</span><span class="token punctuation">]</span>
+  <span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+  <span class="token function">Set</span><span class="token punctuation">(</span><span class="token punctuation">[</span>
+    <span class="token punctuation">[</span><span class="token builtin">Back</span> <span class="token builtin">Dual</span> <span class="token builtin">Wide</span> <span class="token builtin">Camera</span><span class="token punctuation">]</span><span class="token punctuation">[</span>com<span class="token punctuation">.</span>apple<span class="token punctuation">.</span>avfoundation<span class="token punctuation">.</span>avcapturedevice<span class="token punctuation">.</span>built<span class="token operator">-</span>in_video<span class="token punctuation">:</span><span class="token number">6</span><span class="token punctuation">]</span>
+  <span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+  <span class="token function">Set</span><span class="token punctuation">(</span><span class="token punctuation">[</span>
+    <span class="token punctuation">[</span><span class="token builtin">Back</span> <span class="token builtin">Triple</span> <span class="token builtin">Camera</span><span class="token punctuation">]</span><span class="token punctuation">[</span>com<span class="token punctuation">.</span>apple<span class="token punctuation">.</span>avfoundation<span class="token punctuation">.</span>avcapturedevice<span class="token punctuation">.</span>built<span class="token operator">-</span>in_video<span class="token punctuation">:</span><span class="token number">7</span><span class="token punctuation">]</span>
+  <span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+  <span class="token function">Set</span><span class="token punctuation">(</span><span class="token punctuation">[</span>
+    <span class="token punctuation">[</span><span class="token builtin">Back</span> <span class="token builtin">Camera</span><span class="token punctuation">]</span><span class="token punctuation">[</span>com<span class="token punctuation">.</span>apple<span class="token punctuation">.</span>avfoundation<span class="token punctuation">.</span>avcapturedevice<span class="token punctuation">.</span>built<span class="token operator">-</span>in_video<span class="token punctuation">:</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
+    <span class="token punctuation">[</span><span class="token builtin">Front</span> <span class="token builtin">Camera</span><span class="token punctuation">]</span><span class="token punctuation">[</span>com<span class="token punctuation">.</span>apple<span class="token punctuation">.</span>avfoundation<span class="token punctuation">.</span>avcapturedevice<span class="token punctuation">.</span>built<span class="token operator">-</span>in_video<span class="token punctuation">:</span><span class="token number">1</span><span class="token punctuation">]</span>
+  <span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+  <span class="token function">Set</span><span class="token punctuation">(</span><span class="token punctuation">[</span>
+    <span class="token punctuation">[</span><span class="token builtin">Back</span> <span class="token builtin">Camera</span><span class="token punctuation">]</span><span class="token punctuation">[</span>com<span class="token punctuation">.</span>apple<span class="token punctuation">.</span>avfoundation<span class="token punctuation">.</span>avcapturedevice<span class="token punctuation">.</span>built<span class="token operator">-</span>in_video<span class="token punctuation">:</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
+    <span class="token punctuation">[</span><span class="token builtin">Back</span> <span class="token builtin">Ultra</span> <span class="token builtin">Wide</span> <span class="token builtin">Camera</span><span class="token punctuation">]</span><span class="token punctuation">[</span>com<span class="token punctuation">.</span>apple<span class="token punctuation">.</span>avfoundation<span class="token punctuation">.</span>avcapturedevice<span class="token punctuation">.</span>built<span class="token operator">-</span>in_video<span class="token punctuation">:</span><span class="token number">5</span><span class="token punctuation">]</span>
+  <span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+  <span class="token function">Set</span><span class="token punctuation">(</span><span class="token punctuation">[</span>
+    <span class="token punctuation">[</span><span class="token builtin">Back</span> <span class="token builtin">Camera</span><span class="token punctuation">]</span><span class="token punctuation">[</span>com<span class="token punctuation">.</span>apple<span class="token punctuation">.</span>avfoundation<span class="token punctuation">.</span>avcapturedevice<span class="token punctuation">.</span>built<span class="token operator">-</span>in_video<span class="token punctuation">:</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
+    <span class="token punctuation">[</span><span class="token builtin">Back</span> <span class="token builtin">Telephoto</span> <span class="token builtin">Camera</span><span class="token punctuation">]</span><span class="token punctuation">[</span>com<span class="token punctuation">.</span>apple<span class="token punctuation">.</span>avfoundation<span class="token punctuation">.</span>avcapturedevice<span class="token punctuation">.</span>built<span class="token operator">-</span>in_video<span class="token punctuation">:</span><span class="token number">2</span><span class="token punctuation">]</span>
+  <span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+  <span class="token function">Set</span><span class="token punctuation">(</span><span class="token punctuation">[</span>
+    <span class="token punctuation">[</span><span class="token builtin">Front</span> <span class="token builtin">TrueDepth</span> <span class="token builtin">Camera</span><span class="token punctuation">]</span><span class="token punctuation">[</span>com<span class="token punctuation">.</span>apple<span class="token punctuation">.</span>avfoundation<span class="token punctuation">.</span>avcapturedevice<span class="token punctuation">.</span>built<span class="token operator">-</span>in_video<span class="token punctuation">:</span><span class="token number">4</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
+    <span class="token punctuation">[</span><span class="token builtin">Back</span> <span class="token builtin">Camera</span><span class="token punctuation">]</span><span class="token punctuation">[</span>com<span class="token punctuation">.</span>apple<span class="token punctuation">.</span>avfoundation<span class="token punctuation">.</span>avcapturedevice<span class="token punctuation">.</span>built<span class="token operator">-</span>in_video<span class="token punctuation">:</span><span class="token number">0</span><span class="token punctuation">]</span>
+  <span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+  <span class="token function">Set</span><span class="token punctuation">(</span><span class="token punctuation">[</span>
+    <span class="token punctuation">[</span><span class="token builtin">Front</span> <span class="token builtin">Camera</span><span class="token punctuation">]</span><span class="token punctuation">[</span>com<span class="token punctuation">.</span>apple<span class="token punctuation">.</span>avfoundation<span class="token punctuation">.</span>avcapturedevice<span class="token punctuation">.</span>built<span class="token operator">-</span>in_video<span class="token punctuation">:</span><span class="token number">1</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
+    <span class="token punctuation">[</span><span class="token builtin">Back</span> <span class="token builtin">Ultra</span> <span class="token builtin">Wide</span> <span class="token builtin">Camera</span><span class="token punctuation">]</span><span class="token punctuation">[</span>com<span class="token punctuation">.</span>apple<span class="token punctuation">.</span>avfoundation<span class="token punctuation">.</span>avcapturedevice<span class="token punctuation">.</span>built<span class="token operator">-</span>in_video<span class="token punctuation">:</span><span class="token number">5</span><span class="token punctuation">]</span>
+  <span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+  <span class="token function">Set</span><span class="token punctuation">(</span><span class="token punctuation">[</span>
+    <span class="token punctuation">[</span><span class="token builtin">Front</span> <span class="token builtin">Camera</span><span class="token punctuation">]</span><span class="token punctuation">[</span>com<span class="token punctuation">.</span>apple<span class="token punctuation">.</span>avfoundation<span class="token punctuation">.</span>avcapturedevice<span class="token punctuation">.</span>built<span class="token operator">-</span>in_video<span class="token punctuation">:</span><span class="token number">1</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
+    <span class="token punctuation">[</span><span class="token builtin">Back</span> <span class="token builtin">Telephoto</span> <span class="token builtin">Camera</span><span class="token punctuation">]</span><span class="token punctuation">[</span>com<span class="token punctuation">.</span>apple<span class="token punctuation">.</span>avfoundation<span class="token punctuation">.</span>avcapturedevice<span class="token punctuation">.</span>built<span class="token operator">-</span>in_video<span class="token punctuation">:</span><span class="token number">2</span><span class="token punctuation">]</span>
+  <span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+  <span class="token function">Set</span><span class="token punctuation">(</span><span class="token punctuation">[</span>
+    <span class="token punctuation">[</span><span class="token builtin">Front</span> <span class="token builtin">Camera</span><span class="token punctuation">]</span><span class="token punctuation">[</span>com<span class="token punctuation">.</span>apple<span class="token punctuation">.</span>avfoundation<span class="token punctuation">.</span>avcapturedevice<span class="token punctuation">.</span>built<span class="token operator">-</span>in_video<span class="token punctuation">:</span><span class="token number">1</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
+    <span class="token punctuation">[</span><span class="token builtin">Back</span> <span class="token builtin">Dual</span> <span class="token builtin">Camera</span><span class="token punctuation">]</span><span class="token punctuation">[</span>com<span class="token punctuation">.</span>apple<span class="token punctuation">.</span>avfoundation<span class="token punctuation">.</span>avcapturedevice<span class="token punctuation">.</span>built<span class="token operator">-</span>in_video<span class="token punctuation">:</span><span class="token number">3</span><span class="token punctuation">]</span>
+  <span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+  <span class="token function">Set</span><span class="token punctuation">(</span><span class="token punctuation">[</span>
+    <span class="token punctuation">[</span><span class="token builtin">Back</span> <span class="token builtin">Dual</span> <span class="token builtin">Wide</span> <span class="token builtin">Camera</span><span class="token punctuation">]</span><span class="token punctuation">[</span>com<span class="token punctuation">.</span>apple<span class="token punctuation">.</span>avfoundation<span class="token punctuation">.</span>avcapturedevice<span class="token punctuation">.</span>built<span class="token operator">-</span>in_video<span class="token punctuation">:</span><span class="token number">6</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
+    <span class="token punctuation">[</span><span class="token builtin">Front</span> <span class="token builtin">Camera</span><span class="token punctuation">]</span><span class="token punctuation">[</span>com<span class="token punctuation">.</span>apple<span class="token punctuation">.</span>avfoundation<span class="token punctuation">.</span>avcapturedevice<span class="token punctuation">.</span>built<span class="token operator">-</span>in_video<span class="token punctuation">:</span><span class="token number">1</span><span class="token punctuation">]</span>
+  <span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+  <span class="token function">Set</span><span class="token punctuation">(</span><span class="token punctuation">[</span>
+    <span class="token punctuation">[</span><span class="token builtin">Back</span> <span class="token builtin">Ultra</span> <span class="token builtin">Wide</span> <span class="token builtin">Camera</span><span class="token punctuation">]</span><span class="token punctuation">[</span>com<span class="token punctuation">.</span>apple<span class="token punctuation">.</span>avfoundation<span class="token punctuation">.</span>avcapturedevice<span class="token punctuation">.</span>built<span class="token operator">-</span>in_video<span class="token punctuation">:</span><span class="token number">5</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
+    <span class="token punctuation">[</span><span class="token builtin">Back</span> <span class="token builtin">Telephoto</span> <span class="token builtin">Camera</span><span class="token punctuation">]</span><span class="token punctuation">[</span>com<span class="token punctuation">.</span>apple<span class="token punctuation">.</span>avfoundation<span class="token punctuation">.</span>avcapturedevice<span class="token punctuation">.</span>built<span class="token operator">-</span>in_video<span class="token punctuation">:</span><span class="token number">2</span><span class="token punctuation">]</span>
+  <span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+  <span class="token function">Set</span><span class="token punctuation">(</span><span class="token punctuation">[</span>
+    <span class="token punctuation">[</span><span class="token builtin">Front</span> <span class="token builtin">TrueDepth</span> <span class="token builtin">Camera</span><span class="token punctuation">]</span><span class="token punctuation">[</span>com<span class="token punctuation">.</span>apple<span class="token punctuation">.</span>avfoundation<span class="token punctuation">.</span>avcapturedevice<span class="token punctuation">.</span>built<span class="token operator">-</span>in_video<span class="token punctuation">:</span><span class="token number">4</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
+    <span class="token punctuation">[</span><span class="token builtin">Back</span> <span class="token builtin">Ultra</span> <span class="token builtin">Wide</span> <span class="token builtin">Camera</span><span class="token punctuation">]</span><span class="token punctuation">[</span>com<span class="token punctuation">.</span>apple<span class="token punctuation">.</span>avfoundation<span class="token punctuation">.</span>avcapturedevice<span class="token punctuation">.</span>built<span class="token operator">-</span>in_video<span class="token punctuation">:</span><span class="token number">5</span><span class="token punctuation">]</span>
+  <span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+  <span class="token function">Set</span><span class="token punctuation">(</span><span class="token punctuation">[</span>
+    <span class="token punctuation">[</span><span class="token builtin">Front</span> <span class="token builtin">TrueDepth</span> <span class="token builtin">Camera</span><span class="token punctuation">]</span><span class="token punctuation">[</span>com<span class="token punctuation">.</span>apple<span class="token punctuation">.</span>avfoundation<span class="token punctuation">.</span>avcapturedevice<span class="token punctuation">.</span>built<span class="token operator">-</span>in_video<span class="token punctuation">:</span><span class="token number">4</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
+    <span class="token punctuation">[</span><span class="token builtin">Back</span> <span class="token builtin">Telephoto</span> <span class="token builtin">Camera</span><span class="token punctuation">]</span><span class="token punctuation">[</span>com<span class="token punctuation">.</span>apple<span class="token punctuation">.</span>avfoundation<span class="token punctuation">.</span>avcapturedevice<span class="token punctuation">.</span>built<span class="token operator">-</span>in_video<span class="token punctuation">:</span><span class="token number">2</span><span class="token punctuation">]</span>
+  <span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+  <span class="token function">Set</span><span class="token punctuation">(</span><span class="token punctuation">[</span>
+    <span class="token punctuation">[</span><span class="token builtin">Front</span> <span class="token builtin">TrueDepth</span> <span class="token builtin">Camera</span><span class="token punctuation">]</span><span class="token punctuation">[</span>com<span class="token punctuation">.</span>apple<span class="token punctuation">.</span>avfoundation<span class="token punctuation">.</span>avcapturedevice<span class="token punctuation">.</span>built<span class="token operator">-</span>in_video<span class="token punctuation">:</span><span class="token number">4</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
+    <span class="token punctuation">[</span><span class="token builtin">Back</span> <span class="token builtin">Dual</span> <span class="token builtin">Camera</span><span class="token punctuation">]</span><span class="token punctuation">[</span>com<span class="token punctuation">.</span>apple<span class="token punctuation">.</span>avfoundation<span class="token punctuation">.</span>avcapturedevice<span class="token punctuation">.</span>built<span class="token operator">-</span>in_video<span class="token punctuation">:</span><span class="token number">3</span><span class="token punctuation">]</span>
+  <span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+  <span class="token function">Set</span><span class="token punctuation">(</span><span class="token punctuation">[</span>
+    <span class="token punctuation">[</span><span class="token builtin">Back</span> <span class="token builtin">Dual</span> <span class="token builtin">Wide</span> <span class="token builtin">Camera</span><span class="token punctuation">]</span><span class="token punctuation">[</span>com<span class="token punctuation">.</span>apple<span class="token punctuation">.</span>avfoundation<span class="token punctuation">.</span>avcapturedevice<span class="token punctuation">.</span>built<span class="token operator">-</span>in_video<span class="token punctuation">:</span><span class="token number">6</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
+    <span class="token punctuation">[</span><span class="token builtin">Front</span> <span class="token builtin">TrueDepth</span> <span class="token builtin">Camera</span><span class="token punctuation">]</span><span class="token punctuation">[</span>com<span class="token punctuation">.</span>apple<span class="token punctuation">.</span>avfoundation<span class="token punctuation">.</span>avcapturedevice<span class="token punctuation">.</span>built<span class="token operator">-</span>in_video<span class="token punctuation">:</span><span class="token number">4</span><span class="token punctuation">]</span>
+  <span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+  <span class="token function">Set</span><span class="token punctuation">(</span><span class="token punctuation">[</span>
+    <span class="token punctuation">[</span><span class="token builtin">Back</span> <span class="token builtin">Ultra</span> <span class="token builtin">Wide</span> <span class="token builtin">Camera</span><span class="token punctuation">]</span><span class="token punctuation">[</span>com<span class="token punctuation">.</span>apple<span class="token punctuation">.</span>avfoundation<span class="token punctuation">.</span>avcapturedevice<span class="token punctuation">.</span>built<span class="token operator">-</span>in_video<span class="token punctuation">:</span><span class="token number">5</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
+    <span class="token punctuation">[</span><span class="token builtin">Back</span> <span class="token builtin">Camera</span><span class="token punctuation">]</span><span class="token punctuation">[</span>com<span class="token punctuation">.</span>apple<span class="token punctuation">.</span>avfoundation<span class="token punctuation">.</span>avcapturedevice<span class="token punctuation">.</span>built<span class="token operator">-</span>in_video<span class="token punctuation">:</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
+    <span class="token punctuation">[</span><span class="token builtin">Front</span> <span class="token builtin">Camera</span><span class="token punctuation">]</span><span class="token punctuation">[</span>com<span class="token punctuation">.</span>apple<span class="token punctuation">.</span>avfoundation<span class="token punctuation">.</span>avcapturedevice<span class="token punctuation">.</span>built<span class="token operator">-</span>in_video<span class="token punctuation">:</span><span class="token number">1</span><span class="token punctuation">]</span>
+  <span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+  <span class="token function">Set</span><span class="token punctuation">(</span><span class="token punctuation">[</span>
+    <span class="token punctuation">[</span><span class="token builtin">Back</span> <span class="token builtin">Telephoto</span> <span class="token builtin">Camera</span><span class="token punctuation">]</span><span class="token punctuation">[</span>com<span class="token punctuation">.</span>apple<span class="token punctuation">.</span>avfoundation<span class="token punctuation">.</span>avcapturedevice<span class="token punctuation">.</span>built<span class="token operator">-</span>in_video<span class="token punctuation">:</span><span class="token number">2</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
+    <span class="token punctuation">[</span><span class="token builtin">Back</span> <span class="token builtin">Camera</span><span class="token punctuation">]</span><span class="token punctuation">[</span>com<span class="token punctuation">.</span>apple<span class="token punctuation">.</span>avfoundation<span class="token punctuation">.</span>avcapturedevice<span class="token punctuation">.</span>built<span class="token operator">-</span>in_video<span class="token punctuation">:</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
+    <span class="token punctuation">[</span><span class="token builtin">Front</span> <span class="token builtin">Camera</span><span class="token punctuation">]</span><span class="token punctuation">[</span>com<span class="token punctuation">.</span>apple<span class="token punctuation">.</span>avfoundation<span class="token punctuation">.</span>avcapturedevice<span class="token punctuation">.</span>built<span class="token operator">-</span>in_video<span class="token punctuation">:</span><span class="token number">1</span><span class="token punctuation">]</span>
+  <span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+  <span class="token function">Set</span><span class="token punctuation">(</span><span class="token punctuation">[</span>
+    <span class="token punctuation">[</span><span class="token builtin">Back</span> <span class="token builtin">Telephoto</span> <span class="token builtin">Camera</span><span class="token punctuation">]</span><span class="token punctuation">[</span>com<span class="token punctuation">.</span>apple<span class="token punctuation">.</span>avfoundation<span class="token punctuation">.</span>avcapturedevice<span class="token punctuation">.</span>built<span class="token operator">-</span>in_video<span class="token punctuation">:</span><span class="token number">2</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
+    <span class="token punctuation">[</span><span class="token builtin">Back</span> <span class="token builtin">Camera</span><span class="token punctuation">]</span><span class="token punctuation">[</span>com<span class="token punctuation">.</span>apple<span class="token punctuation">.</span>avfoundation<span class="token punctuation">.</span>avcapturedevice<span class="token punctuation">.</span>built<span class="token operator">-</span>in_video<span class="token punctuation">:</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
+    <span class="token punctuation">[</span><span class="token builtin">Back</span> <span class="token builtin">Ultra</span> <span class="token builtin">Wide</span> <span class="token builtin">Camera</span><span class="token punctuation">]</span><span class="token punctuation">[</span>com<span class="token punctuation">.</span>apple<span class="token punctuation">.</span>avfoundation<span class="token punctuation">.</span>avcapturedevice<span class="token punctuation">.</span>built<span class="token operator">-</span>in_video<span class="token punctuation">:</span><span class="token number">5</span><span class="token punctuation">]</span>
+  <span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+  <span class="token function">Set</span><span class="token punctuation">(</span><span class="token punctuation">[</span>
+    <span class="token punctuation">[</span><span class="token builtin">Front</span> <span class="token builtin">TrueDepth</span> <span class="token builtin">Camera</span><span class="token punctuation">]</span><span class="token punctuation">[</span>com<span class="token punctuation">.</span>apple<span class="token punctuation">.</span>avfoundation<span class="token punctuation">.</span>avcapturedevice<span class="token punctuation">.</span>built<span class="token operator">-</span>in_video<span class="token punctuation">:</span><span class="token number">4</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
+    <span class="token punctuation">[</span><span class="token builtin">Back</span> <span class="token builtin">Camera</span><span class="token punctuation">]</span><span class="token punctuation">[</span>com<span class="token punctuation">.</span>apple<span class="token punctuation">.</span>avfoundation<span class="token punctuation">.</span>avcapturedevice<span class="token punctuation">.</span>built<span class="token operator">-</span>in_video<span class="token punctuation">:</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
+    <span class="token punctuation">[</span><span class="token builtin">Back</span> <span class="token builtin">Ultra</span> <span class="token builtin">Wide</span> <span class="token builtin">Camera</span><span class="token punctuation">]</span><span class="token punctuation">[</span>com<span class="token punctuation">.</span>apple<span class="token punctuation">.</span>avfoundation<span class="token punctuation">.</span>avcapturedevice<span class="token punctuation">.</span>built<span class="token operator">-</span>in_video<span class="token punctuation">:</span><span class="token number">5</span><span class="token punctuation">]</span>
+  <span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+  <span class="token function">Set</span><span class="token punctuation">(</span><span class="token punctuation">[</span>
+    <span class="token punctuation">[</span><span class="token builtin">Front</span> <span class="token builtin">TrueDepth</span> <span class="token builtin">Camera</span><span class="token punctuation">]</span><span class="token punctuation">[</span>com<span class="token punctuation">.</span>apple<span class="token punctuation">.</span>avfoundation<span class="token punctuation">.</span>avcapturedevice<span class="token punctuation">.</span>built<span class="token operator">-</span>in_video<span class="token punctuation">:</span><span class="token number">4</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
+    <span class="token punctuation">[</span><span class="token builtin">Back</span> <span class="token builtin">Camera</span><span class="token punctuation">]</span><span class="token punctuation">[</span>com<span class="token punctuation">.</span>apple<span class="token punctuation">.</span>avfoundation<span class="token punctuation">.</span>avcapturedevice<span class="token punctuation">.</span>built<span class="token operator">-</span>in_video<span class="token punctuation">:</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
+    <span class="token punctuation">[</span><span class="token builtin">Back</span> <span class="token builtin">Telephoto</span> <span class="token builtin">Camera</span><span class="token punctuation">]</span><span class="token punctuation">[</span>com<span class="token punctuation">.</span>apple<span class="token punctuation">.</span>avfoundation<span class="token punctuation">.</span>avcapturedevice<span class="token punctuation">.</span>built<span class="token operator">-</span>in_video<span class="token punctuation">:</span><span class="token number">2</span><span class="token punctuation">]</span>
+  <span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+  <span class="token function">Set</span><span class="token punctuation">(</span><span class="token punctuation">[</span>
+    <span class="token punctuation">[</span><span class="token builtin">Back</span> <span class="token builtin">Telephoto</span> <span class="token builtin">Camera</span><span class="token punctuation">]</span><span class="token punctuation">[</span>com<span class="token punctuation">.</span>apple<span class="token punctuation">.</span>avfoundation<span class="token punctuation">.</span>avcapturedevice<span class="token punctuation">.</span>built<span class="token operator">-</span>in_video<span class="token punctuation">:</span><span class="token number">2</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
+    <span class="token punctuation">[</span><span class="token builtin">Front</span> <span class="token builtin">Camera</span><span class="token punctuation">]</span><span class="token punctuation">[</span>com<span class="token punctuation">.</span>apple<span class="token punctuation">.</span>avfoundation<span class="token punctuation">.</span>avcapturedevice<span class="token punctuation">.</span>built<span class="token operator">-</span>in_video<span class="token punctuation">:</span><span class="token number">1</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
+    <span class="token punctuation">[</span><span class="token builtin">Back</span> <span class="token builtin">Ultra</span> <span class="token builtin">Wide</span> <span class="token builtin">Camera</span><span class="token punctuation">]</span><span class="token punctuation">[</span>com<span class="token punctuation">.</span>apple<span class="token punctuation">.</span>avfoundation<span class="token punctuation">.</span>avcapturedevice<span class="token punctuation">.</span>built<span class="token operator">-</span>in_video<span class="token punctuation">:</span><span class="token number">5</span><span class="token punctuation">]</span>
+  <span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+  <span class="token function">Set</span><span class="token punctuation">(</span><span class="token punctuation">[</span>
+    <span class="token punctuation">[</span><span class="token builtin">Front</span> <span class="token builtin">TrueDepth</span> <span class="token builtin">Camera</span><span class="token punctuation">]</span><span class="token punctuation">[</span>com<span class="token punctuation">.</span>apple<span class="token punctuation">.</span>avfoundation<span class="token punctuation">.</span>avcapturedevice<span class="token punctuation">.</span>built<span class="token operator">-</span>in_video<span class="token punctuation">:</span><span class="token number">4</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
+    <span class="token punctuation">[</span><span class="token builtin">Back</span> <span class="token builtin">Ultra</span> <span class="token builtin">Wide</span> <span class="token builtin">Camera</span><span class="token punctuation">]</span><span class="token punctuation">[</span>com<span class="token punctuation">.</span>apple<span class="token punctuation">.</span>avfoundation<span class="token punctuation">.</span>avcapturedevice<span class="token punctuation">.</span>built<span class="token operator">-</span>in_video<span class="token punctuation">:</span><span class="token number">5</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
+    <span class="token punctuation">[</span><span class="token builtin">Back</span> <span class="token builtin">Telephoto</span> <span class="token builtin">Camera</span><span class="token punctuation">]</span><span class="token punctuation">[</span>com<span class="token punctuation">.</span>apple<span class="token punctuation">.</span>avfoundation<span class="token punctuation">.</span>avcapturedevice<span class="token punctuation">.</span>built<span class="token operator">-</span>in_video<span class="token punctuation">:</span><span class="token number">2</span><span class="token punctuation">]</span>
+  <span class="token punctuation">]</span><span class="token punctuation">)</span>
+<span class="token punctuation">]</span>
+</code></pre>
+<p>コレを見ると分かるとおり、利用可能なデバイスの組合せは、<strong>最大で3カメラ分までの定義しか見つからなかった。</strong></p>
+<p><code>AVCaptureMultiCamSession#addInputWithNoConnections()</code> を実行すると、裏では引数で指定された <code>AVCaptureDeviceInput</code> の組合せを、この <code>supportedMultiCamDeviceSets</code> と突合して確認していて、それに合わない組合せだとエラーになるのだろう。<code>supportedMultiCamDeviceSets</code> には4台の組合せが存在しないので、エラーになったというワケだ。</p>
+<p>この調査記録は以下の Gist にも記載した。</p>
+<ul>
+  <li><a href="https://gist.github.com/Neos21/1ef84b2114a9946663e130ffd210b742">AVCaptureMultiCamSession : SupportedMultiCamDeviceSets on iPhone 11 Pro Max · GitHub</a></li>
+</ul>
+<p>ということで、 <strong>本稿執筆時点では、最大3つまでのカメラレンズを使っての同時撮影なら可能</strong>、という結果になった。</p>
+<p>アプリの実装上は、4つのカメラレンズが使えるようになった時も動作するようにしてあるので、今後のアップデートとかで4カメ同時撮影ができるようになったりしたら、この実装のまま対応できるかと思う。</p>
+<h2 id="バックグラウンドに移行した時のエラーは何？"><a class="header-link" href="#バックグラウンドに移行した時のエラーは何？"><span class="header-link-mark"></span></a>バックグラウンドに移行した時のエラーは何？</h2>
+<p>もう一つ気になったことがあった。ホーム画面に戻ったりしてアプリがバックグラウンドに移ると、Xcode のデバッグコンソールに以下のエラーが出力されていた。</p>
+<pre><code>Can't end BackgroundTask: no background task exists with identifier 1 (0x1), or it may have already been ended. Break in UIApplicationEndBackgroundTaskError() to debug.
+</code></pre>
+<p>動画録画中かどうかには関係なく表示されていた。</p>
+<p>以下の記事を見ると、デバッグの仕方が書いてあったのでデバッグしてみたが、詳しいことは分からず。</p>
+<ul>
+  <li>参考：<a href="https://forums.developer.apple.com/thread/22836">Break in UIApplicationEndBackgroundTaskError() ... |Apple Developer Forums</a></li>
+</ul>
+<blockquote>
+  <p>In Xcode, switch to the breakpoint navigator (View > Navigators > Show Breakpoint Navigator) then push the + button in the bottom left and select Add Symbolic Breakpoint and enter "UIApplicationEndBackgroundTaskError" as the symbol.</p>
+</blockquote>
+<p>でも、この記事のおかげでブレイクポイントを打ってデバッグするやり方を覚えたので、そのやり方だけメモしとく。</p>
+<p>Xcode の左ペインの上側から、「Breakpoint Navigator」カラムを表示するアイコンを押下する。メニューバーの「View」→「Navigators」→「Show Breakpoint Navigator」と移動しても良い。</p>
+<p>そしたらその左ペインの左下にある「+」ボタンを押下し、メニューから「Symbolic Breakpoint...」を選択する。</p>
+<p>
+  <img src="27-01-04.png" alt="Symbolic Breakpoint">
+</p>
+<p>表示された枠の「Symbol」欄に「<code>UIApplicationEndBackgroundTaskError</code>」と入れれば OK。</p>
+<p>
+  <img src="27-01-05.png" alt="Symbol を指定">
+</p>
+<p>あとはこの状態でアプリを起動し、ホーム画面に戻るなどすると、ブレイクポイントで処理が止まり、デバッグができるようになる。</p>
+<p>このエラーは、<code>AVCaptureMultiCamSession</code> に関する唯一の公式サンプルコードである、以下のプロジェクトでも同様に発生していた。</p>
+<ul>
+  <li>参考：<a href="https://developer.apple.com/documentation/avfoundation/cameras_and_media_capture/avmulticampip_capturing_from_multiple_cameras">AVMultiCamPiP: Capturing from Multiple Cameras | Apple Developer Documentation</a>
+    <ul>
+      <li><strong>AVMultiCamPiP: Capturing from Multiple Cameras</strong></li>
+    </ul>
+  </li>
+</ul>
+<p>もしかしたら気にしなくて良いモノなのかもしれないが、原因も対処法も分からないままだ。</p>
+<h2 id="探り探り実装したのでまだまだバギー"><a class="header-link" href="#探り探り実装したのでまだまだバギー"><span class="header-link-mark"></span></a>探り探り実装したのでまだまだバギー</h2>
+<p>自分の iOS アプリの開発スキルは素人レベル。過去にスローモーション動画を撮影するための実装を紹介したことがあるが、コレをベースにした個人用のアプリを作ったぐらいしか経験がない。</p>
+<ul>
+  <li><a href="/blog/2018/06/04-01.html">iOS アプリで 120fps・240fps のスローモーション動画を撮るための Swift 4 実装</a></li>
+</ul>
+<p>素の <code>AVCaptureSesion</code> すら仕組みを理解していなくて怪しかったので、最初は以下あたりの記事のコードを参考に、単体カメラを操るところから復習した。</p>
+<ul>
+  <li>参考：<a href="http://developers.goalist.co.jp/entry/2017/01/19/171612">ささっとカメラアプリを作ってみた@Swift - Goalist Developers Blog</a></li>
+  <li>参考：<a href="https://qiita.com/shiz/items/d7738f998e4be2d37c0f">【Swift】この時期だから見直すiOS10の新機能 AVCapturePhotoOutput AVCaptureSettings など - Qiita</a></li>
+  <li>参考：<a href="https://qiita.com/takecian/items/2cee0f958c8bed00a69a">Swift で動画を撮影・保存するサンプル その１ - シンプル編 - Qiita</a>
+    <ul>
+      <li>この辺の記事はいずれも最新の Xcode プロジェクトにコピペしても動かず、ちょこちょこと手直しは必要</li>
+    </ul>
+  </li>
+</ul>
+<p>Action や Outlet の接続方法も忘れていたので覚え直し。</p>
+<ul>
+  <li>参考：<a href="https://pg-happy.jp/xcode-delete-action-outlet-connection.html">【Xcode/Swift】Action接続、Outlet接続の外し方（削除する方法） | おすすめのプログラミングスクール比較！最短で上達するなら？</a></li>
+  <li><a href="/blog/2018/06/03-01.html">Swift で iOS アプリを開発するチュートリアルをやってみる</a></li>
+</ul>
+<p>フロントカメラを使うのは初めてだったので、プレビューを鏡写しにするところを覚えた。</p>
+<ul>
+  <li>参考：<a href="https://qiita.com/shu223/items/057351d41229861251af">iOSでの動画処理における「回転」「向き」の取り扱いでもう混乱したくない - Qiita</a></li>
+</ul>
+<p>そういえば、Xcode プロジェクトを新規作成したところ、<code>SceneDelegate.swift</code> なる知らないファイルがあった。コレは複数の UI のインスタンスを作るためのモノで、iOS13 からの新機能によるファイルらしい。今回は必要なかったのでファイルごと消し、<code>Info.plist</code> の <code>Application Scene Manifest</code> キーを消した。</p>
+<ul>
+  <li>参考：<a href="https://tech.yappli.io/entry/scenedelegate">iOS 13 から導入されるSceneDelegateとは - Yappli Tech Blog</a></li>
+</ul>
+<p>プレビューを作る時、<code>AVCaptureVideoPreviewLayer(self.session)</code> と、第1引数に <code>session</code> を入れてやったら以下のエラーが出た。</p>
+<pre><code>&#x3C;AVCaptureConnection: 0x2810a64e0> cannot be added because AVCaptureVideoPreviewLayer only accepts one connection of this media type at a time, and it is already connected'
+</code></pre>
+<p>宣言時に <code>session</code> を指定せず、<code>AVCaptureVideoPreviewLayer()</code> でインスタンスを作り、<code>previewLayer.setSessionWithNoConnection(self.session)</code> と書いて接続したら回避できた。この辺よー分からん。</p>
+<p>公開したコードでは回避できてはいるが、<code>AVCaptureMultiCamSession</code> に追加した Input や Output などを除去する、<code>removeInput()</code> などを実装していたところ、その後に再度動画録画を始めようとすると以下のようなエラーが出た。</p>
+<pre><code>*** Terminating app due to uncaught exception 'NSRangeException', reason: 'Cannot remove an observer &#x3C;AVCaptureMultiCamSession 0x28084e7a0> for the key path "enabled" from &#x3C;AVCaptureConnection 0x2808066c0> because it is not registered as an observer.'
+</code></pre>
+<p>Observer よく分からん。公式サンプルコードの <em>AVMultiCamPiP</em> の中では、色々 Observer を操作したり、色んなタイミングでのエラーハンドリングを細かくやっていたりするのは分かるのだが、それがどうしてどういう理由で必要なのかが読み解けなかった。結局、今の実装は <code>AVCaptureMultiCamSession</code> ごと作り直すことで対処している。</p>
+<p>Swift の言語仕様でいうと、以下あたりを知った。</p>
+<ul>
+  <li><code>defer</code> って何やねん → その関数内で、例外が発生したりしても最後に必ずやりたい処理を書いておく。<code>finally</code> 的なモノ</li>
+  <li><code>if let hoge = self.hoge</code> って何やねん → 代入することで、Optional な値である <code>self.hoge</code> が <code>nil</code> でないことを確認できるイディオムらしい</li>
+</ul>
+<p>動画を録画し始めたあと、アプリがバックグラウンドに移行した時に、動画の撮影を終了して、フォトライブラリに書き出したいなぁと思って色々コネコネしたんだけど、挙動がバギーだ。</p>
+<ul>
+  <li>参考：<a href="https://qiita.com/teamhimeH/items/51efb4fc68d3f1d2ebb9">Swift iOSのバックグラウンド処理について - Qiita</a></li>
+</ul>
+<p>もう少しド直球に、<code>AVCaptureMultiCamSession</code> のコードを GitHub で探してみたのだが、以下の4つしか見つけられなかった。</p>
+<ul>
+  <li><a href="https://github.com/Dinalli/dbleTake/blob/master/dbleTake/ViewControllers/CaptureViewController.swift">dbleTake/CaptureViewController.swift at master · Dinalli/dbleTake · GitHub</a>
+    <ul>
+      <li>コメントの日付が 2019-09-12 なので、iOS 13 のベータ版で書いたコードっぽい</li>
+    </ul>
+  </li>
+  <li><a href="https://github.com/huiping192/MultiCamCapture/blob/master/PiP/ViewController.swift">MultiCamCapture/ViewController.swift at master · huiping192/MultiCamCapture · GitHub</a></li>
+  <li><a href="https://github.com/spaceotech/SODualCamera/blob/master/SODualCamera/ViewController.swift">SODualCamera/ViewController.swift at master · spaceotech/SODualCamera · GitHub</a>
+    <ul>
+      <li>ほぼ公式のコードそのまま</li>
+    </ul>
+  </li>
+  <li><a href="https://github.com/tatetate55/iOS13_camera_test/blob/master/AVMultiCamPiP/CameraViewController.swift">iOS13 camera test/CameraViewController.swift at master · tatetate55 GitHub</a>
+    <ul>
+      <li>日本人らしい</li>
+    </ul>
+  </li>
+</ul>
+<h2 id="終わり"><a class="header-link" href="#終わり"><span class="header-link-mark"></span></a>終わり</h2>
+<p><em>Swift ちから</em>がまだまだ全然足りなくて、</p>
+<ul>
+  <li>バックグラウンド移行を始めとした様々なイベントに対するエラーハンドリング</li>
+  <li>iPhone 11 Pro Max 以外の端末で動かした場合のレイアウト、動作 (他の端末での動作検証はできてないし、端末ごとのレイアウト調整もしてない)</li>
+  <li>カメラやフォトライブラリへのアクセス許可が拒否されている場合の動作</li>
+  <li>公式サンプルコードでは何やら処理している、負荷量を監視してフレームレートや解像度を下げたりする安全な作り (逆に、頑張れば複数カメラで 4K とか、スローとかが撮れたりする？)</li>
+</ul>
+<p>などなど、至らぬ点は重々認識しているが、どうやって解決していったら良いか分かっていないところも多い。コメントやプルリクで色々教えてもらえたら嬉しい。4カメ同時に使うテクニックが編み出されたりしたら取り入れたい。</p>
+<p>有料の FiLMic Pro がリリースされるよりも先に、同等のアプリを無料で公開できたらいいなーと思い、急ぎ作ってコードごと公開した次第。拙いコードだし、AppStore で公開してはいないが、ひとしきり動作するアプリとしては世界初の事例になったのではないか？と思っている。</p>
+<p>ぜひ感想、改善点などお寄せください。</p>
+<ul>
+  <li><a href="https://github.com/Neos21/multi-cam">Neos21/multi-cam</a></li>
+</ul>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2019-09-27</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2019-09-27</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

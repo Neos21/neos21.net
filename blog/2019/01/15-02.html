@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>カレントディレクトリ配下のファイルの作成日と更新日を指定の日時に一括変更する Mac 専用シェルスクリプト - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2019/01/15-02.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2019/index.html">2019年</a></li>
+            <li><a href="/blog/2019/01/index.html">01月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2019-01-15</time></div>
+        <h1 id="page-title">カレントディレクトリ配下のファイルの作成日と更新日を指定の日時に一括変更する Mac 専用シェルスクリプト</h1>
+
+<p>ニホンノエスイーの皆さん用。</p>
+<p>カレントディレクトリ配下にあるファイルの、作成日時と更新日時を、それぞれ任意の日時に変更できるシェルスクリプトを作った。<code>date</code> コマンドのオプションの書式や、<code>setfile</code> コマンドを使用したりしていることから、<strong>Mac 専用</strong>の Bash スクリプトである。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token shebang important">#!/bin/bash</span>
+
+<span class="token comment"># Change created / updated date to the files in the current working directory</span>
+
+<span class="token keyword">if</span> <span class="token punctuation">[</span> <span class="token string">"<span class="token variable"><span class="token variable">$(</span><span class="token function">uname</span><span class="token variable">)</span></span>"</span> <span class="token operator">!=</span> <span class="token string">"Darwin"</span> <span class="token punctuation">]</span><span class="token punctuation">;</span> <span class="token keyword">then</span>
+  <span class="token builtin class-name">echo</span> <span class="token string">'This script is not supported on this OS.'</span>
+  <span class="token builtin class-name">exit</span> <span class="token number">1</span>
+<span class="token keyword">fi</span>
+
+<span class="token keyword">function</span> <span class="token function-name function">invalid_arguments_exit</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token builtin class-name">echo</span> <span class="token string">'Invalid arguments.'</span>
+  <span class="token builtin class-name">exit</span> <span class="token number">1</span>
+<span class="token punctuation">}</span>
+
+<span class="token keyword">while</span> <span class="token builtin class-name">getopts</span> <span class="token string">":c:u:"</span> OPT<span class="token punctuation">;</span> <span class="token keyword">do</span>
+  <span class="token keyword">case</span> <span class="token string">"<span class="token variable">$OPT</span>"</span> <span class="token keyword">in</span>
+    c<span class="token punctuation">)</span>  <span class="token assign-left variable">CREATED_DATE</span><span class="token operator">=</span><span class="token string">"<span class="token variable">$OPTARG</span>"</span>
+        <span class="token punctuation">;</span><span class="token punctuation">;</span>
+    u<span class="token punctuation">)</span>  <span class="token assign-left variable">UPDATED_DATE</span><span class="token operator">=</span><span class="token string">"<span class="token variable">$OPTARG</span>"</span>
+        <span class="token punctuation">;</span><span class="token punctuation">;</span>
+    <span class="token punctuation">\</span>?<span class="token punctuation">)</span> invalid_arguments_exit
+        <span class="token punctuation">;</span><span class="token punctuation">;</span>
+  <span class="token keyword">esac</span>
+<span class="token keyword">done</span>
+
+<span class="token keyword">if</span> <span class="token punctuation">[</span> -n <span class="token string">"<span class="token variable">$CREATED_DATE</span>"</span> <span class="token punctuation">]</span><span class="token punctuation">;</span> <span class="token keyword">then</span>
+  <span class="token builtin class-name">echo</span> <span class="token string">''</span>
+  <span class="token builtin class-name">echo</span> <span class="token string">"Created Date : <span class="token variable">$CREATED_DATE</span>"</span>
+  <span class="token assign-left variable">FORMATTED_CREATED_DATE</span><span class="token operator">=</span><span class="token variable"><span class="token variable">`</span><span class="token function">date</span> -j  -f <span class="token string">"%Y-%m-%d %H:%M:%S"</span> <span class="token string">"<span class="token variable">$CREATED_DATE</span>"</span>  +<span class="token string">"%m/%d/%Y %H:%M:%S"</span><span class="token variable">`</span></span>
+  <span class="token builtin class-name">echo</span> <span class="token string">"-> Formatted : <span class="token variable">$FORMATTED_CREATED_DATE</span>"</span>
+  
+  <span class="token keyword">for</span> <span class="token for-or-select variable">file</span> <span class="token keyword">in</span> <span class="token variable"><span class="token variable">`</span><span class="token function">find</span> <span class="token builtin class-name">.</span> -maxdepth <span class="token number">1</span> -type f<span class="token variable">`</span></span><span class="token punctuation">;</span> <span class="token keyword">do</span>
+    <span class="token builtin class-name">echo</span> <span class="token string">"-> Execute : <span class="token variable">$file</span>"</span>
+    setfile -d <span class="token string">"<span class="token variable">$FORMATTED_CREATED_DATE</span>"</span> <span class="token variable">$file</span>
+  <span class="token keyword">done</span>
+<span class="token keyword">fi</span>
+
+<span class="token keyword">if</span> <span class="token punctuation">[</span> -n <span class="token string">"<span class="token variable">$UPDATED_DATE</span>"</span> <span class="token punctuation">]</span><span class="token punctuation">;</span> <span class="token keyword">then</span>
+  <span class="token builtin class-name">echo</span> <span class="token string">''</span>
+  <span class="token builtin class-name">echo</span> <span class="token string">"Updated Date : <span class="token variable">$UPDATED_DATE</span>"</span>
+  <span class="token assign-left variable">FORMATTED_UPDATED_DATE</span><span class="token operator">=</span><span class="token variable"><span class="token variable">`</span><span class="token function">date</span> -j  -f <span class="token string">"%Y-%m-%d %H:%M:%S"</span> <span class="token string">"<span class="token variable">$UPDATED_DATE</span>"</span>  +<span class="token string">"%Y%m%d%H%M.%S"</span><span class="token variable">`</span></span>
+  <span class="token builtin class-name">echo</span> <span class="token string">"-> Formatted : <span class="token variable">$FORMATTED_UPDATED_DATE</span>"</span>
+  
+  <span class="token keyword">for</span> <span class="token for-or-select variable">file</span> <span class="token keyword">in</span> <span class="token variable"><span class="token variable">`</span><span class="token function">find</span> <span class="token builtin class-name">.</span> -maxdepth <span class="token number">1</span> -type f<span class="token variable">`</span></span><span class="token punctuation">;</span> <span class="token keyword">do</span>
+    <span class="token builtin class-name">echo</span> <span class="token string">"-> Execute : <span class="token variable">$file</span>"</span>
+    <span class="token function">touch</span> -t <span class="token string">"<span class="token variable">$FORMATTED_UPDATED_DATE</span>"</span> <span class="token variable">$file</span>
+  <span class="token keyword">done</span>
+  
+<span class="token keyword">fi</span>
+
+<span class="token builtin class-name">echo</span> <span class="token string">''</span>
+<span class="token builtin class-name">echo</span> <span class="token string">'Finished.'</span>
+</code></pre>
+<p>今回特に勉強したのは <em><code>getopts</code></em> コマンド。引数を解析するためのコマンドで、コマンド直後に書く「コマンド名」と「各種オプション」の理解が難しかった。</p>
+<p>今回のコードだと、<code>-c</code>・<code>-u</code> オプションそれぞれで値を受け取れるようにしてあり (<code>c:</code>・<code>u:</code>)、それ以外のオプションが指定されたらワーニングを出すようにしている (先頭の <code>:</code>)。<code>getopts</code> コマンドを呼ぶ度に引数をシフトして処理するイメージで、オプションごとの値は <code>$OPTARG</code> という変数に都度格納される。だから <code>while</code> 文で <code>getopts</code> を回して、毎回 <code>case</code> で内容を判定している。</p>
+<p>Mac における<em>ファイル作成日時</em>は、<code>setfile</code> コマンドで変更できる。単純なコマンドなら以下のとおり。</p>
+<pre class="language-bash"><code class="language-bash">$ setfile -d <span class="token string">'12/24/2018 09:45:00'</span> <span class="token string">'./仕様書.xlsx'</span>
+</code></pre>
+<p><em>ファイルの更新日時</em>は <code>touch</code> コマンドで良い。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">touch</span> -t <span class="token number">201812311200.00</span> <span class="token string">'./仕様書.xlsx'</span>
+</code></pre>
+<p>もし Windows で同じことをやりたければ、PowerShell で書くのが良さそう。</p>
+<ul>
+  <li><a href="/blog/2019/01/16-01.html">PowerShell でファイルの作成日時・更新日時を任意の日時に変更する (指定ディレクトリ配下のファイルに一括適用する方法も)</a></li>
+  <li>参考：<a href="http://d.hatena.ne.jp/zariganitosh/20101210/falsify_file_info">ファイル情報はどこまで改竄できるか？ - ザリガニが見ていた...。</a></li>
+</ul>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2019-01-15</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2019-01-15</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

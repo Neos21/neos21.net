@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>grep コマンドより Node.js スクリプトの方が速い？ - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2020/11/20-02.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2020/index.html">2020年</a></li>
+            <li><a href="/blog/2020/11/index.html">11月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2020-11-20</time></div>
+        <h1 id="page-title">grep コマンドより Node.js スクリプトの方が速い？</h1>
+
+<p>このサイトのコンテンツを更新するため、このサイトのソースコードがある Git ディレクトリ配下で、次のような Grep コマンドを叩いた。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">grep</span> -inR <span class="token string">'Target Keyword'</span> ./src/pages
+</code></pre>
+<p>大量のファイルがあるにも関わらず、サラッと Grep 結果が表示されて、まぁ凄いなと思った。試しに <code>time</code> コマンドで実行時間を測ってみたらこんな感じだった。</p>
+<pre class="language-bash"><code class="language-bash">real    0m1.202s
+user    0m0.892s
+sys     0m0.058s
+</code></pre>
+<p>その後、コンテンツの内容を置換していくために、次のような Node.js スクリプトを書いた。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword">const</span> fs <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'fs'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// 指定のディレクトリ配下のファイルパスを再帰的に取得する</span>
+<span class="token keyword">function</span> <span class="token function">listFiles</span><span class="token punctuation">(</span><span class="token parameter">targetDirectoryPath</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token keyword control-flow">return</span> fs<span class="token punctuation">.</span><span class="token method function property-access">readdirSync</span><span class="token punctuation">(</span>targetDirectoryPath<span class="token punctuation">,</span> <span class="token punctuation">{</span> withFileTypes<span class="token operator">:</span> <span class="token boolean">true</span> <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">flatMap</span><span class="token punctuation">(</span><span class="token parameter">dirent</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+    <span class="token keyword">const</span> name <span class="token operator">=</span> <span class="token template-string"><span class="token template-punctuation string">`</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>targetDirectoryPath<span class="token interpolation-punctuation punctuation">}</span></span><span class="token string">/</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>dirent<span class="token punctuation">.</span><span class="token property-access">name</span><span class="token interpolation-punctuation punctuation">}</span></span><span class="token template-punctuation string">`</span></span><span class="token punctuation">;</span>
+    <span class="token keyword control-flow">return</span> dirent<span class="token punctuation">.</span><span class="token method function property-access">isFile</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">?</span> <span class="token punctuation">[</span>name<span class="token punctuation">]</span> <span class="token operator">:</span> <span class="token function">listFiles</span><span class="token punctuation">(</span>name<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+
+<span class="token function">listFiles</span><span class="token punctuation">(</span><span class="token string">'./src/pages'</span><span class="token punctuation">)</span>
+  <span class="token punctuation">.</span><span class="token method function property-access">filter</span><span class="token punctuation">(</span><span class="token parameter">filePath</span> <span class="token arrow operator">=></span> filePath<span class="token punctuation">.</span><span class="token method function property-access">endsWith</span><span class="token punctuation">(</span><span class="token string">'.md'</span><span class="token punctuation">)</span> <span class="token operator">||</span> filePath<span class="token punctuation">.</span><span class="token method function property-access">endsWith</span><span class="token punctuation">(</span><span class="token string">'.html'</span><span class="token punctuation">)</span><span class="token punctuation">)</span>  <span class="token comment">// Markdown と HTML だけチェックする</span>
+  <span class="token punctuation">.</span><span class="token method function property-access">forEach</span><span class="token punctuation">(</span><span class="token parameter">filePath</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+    <span class="token keyword">const</span> contents <span class="token operator">=</span> fs<span class="token punctuation">.</span><span class="token method function property-access">readFileSync</span><span class="token punctuation">(</span>filePath<span class="token punctuation">,</span> <span class="token string">'utf-8'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">const</span> lines <span class="token operator">=</span> contents<span class="token punctuation">.</span><span class="token method function property-access">split</span><span class="token punctuation">(</span><span class="token string">'\n'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">const</span> matchLineIndex <span class="token operator">=</span> lines<span class="token punctuation">.</span><span class="token method function property-access">findIndex</span><span class="token punctuation">(</span><span class="token parameter">line</span> <span class="token arrow operator">=></span> line<span class="token punctuation">.</span><span class="token method function property-access">match</span><span class="token punctuation">(</span><span class="token string">'Target Keyword'</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment">// Grep したい文言</span>
+    <span class="token keyword control-flow">if</span><span class="token punctuation">(</span>matchLineIndex <span class="token operator">&#x3C;</span> <span class="token number">0</span><span class="token punctuation">)</span> <span class="token keyword control-flow">return</span><span class="token punctuation">;</span>
+    <span class="token keyword">const</span> matchLine <span class="token operator">=</span> lines<span class="token punctuation">[</span>matchLineIndex<span class="token punctuation">]</span><span class="token punctuation">;</span>
+    <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token template-string"><span class="token template-punctuation string">`</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>filePath<span class="token interpolation-punctuation punctuation">}</span></span><span class="token string">:</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>matchLineIndex <span class="token operator">+</span> <span class="token number">1</span><span class="token interpolation-punctuation punctuation">}</span></span><span class="token string">:</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>matchLine<span class="token interpolation-punctuation punctuation">}</span></span><span class="token template-punctuation string">`</span></span><span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment">// 一旦 `grep` コマンドと同等の結果を出力するのみ</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>検索結果は <code>grep</code> コマンドと同じだった。<code>grep</code> コマンドも僕が書いたスクリプトも、どちらも検索の仕様として取りこぼし等はないようであった。</p>
+<p>このスクリプトは、対象のディレクトリ配下の Markdown と HTML を、都度 <code>fs.readFileSync()</code> で読み込んでいる。ファイルを書き換えて保存していくつもりで、一回きりのスクリプトだったので性能は気にせず書いたのだが、<code>grep</code> 相当のこの時点の動作が異様に速く感じた。<code>time</code> コマンドで時間を測ってみると次のとおりだった。</p>
+<pre class="language-bash"><code class="language-bash">real    0m0.168s
+user    0m0.101s
+sys     0m0.026s
+</code></pre>
+<p><code>grep</code> コマンドで1.2秒かかっていたのが、0.1秒に…？</p>
+<p>絶対こんなやり方非効率だろと思っていたのに、<code>grep</code> コマンドよりも速いだと？動作が速くて困ることはないのだが、どういう理屈なのか分からなくて考えていた。</p>
+<p>そしてふと気が付き、<code>grep</code> コマンドにオプションを足して再実行してみた。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">time</span> <span class="token function">grep</span> -inR <span class="token string">'Target Keyword'</span> ./src/pages --include<span class="token operator">=</span><span class="token string">'*.md'</span> --include<span class="token operator">=</span><span class="token string">'*.html'</span>
+real    0m0.142s
+user    0m0.088s
+sys     0m0.018s
+</code></pre>
+<p><code>grep</code> の <code>--include</code> オプションを使って、検索対象ファイルの拡張子を絞り込んでみた。すると動作速度が格段に上がった。</p>
+<p>なるほど、<code>grep</code> コマンドで拡張子のフィルタリングをしていなかったから、さっきの <code>grep</code> コマンドは遅かったんだ。</p>
+<p>ということは、Node.js スクリプトで <code>filter()</code> している行をコメントアウトしてみたら遅くなるのか？</p>
+<pre class="language-bash"><code class="language-bash">real    0m1.119s
+user    0m0.934s
+sys     0m0.082s
+</code></pre>
+<p>確かに遅くなった。</p>
+<p><code>real</code> の時間をまとめるとこうだ。</p>
+<table>
+  <thead>
+    <tr>
+      <th>拡張子絞込</th>
+      <th><code>grep</code></th>
+      <th>Node.js</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>なし</td>
+      <td>0m1.202s</td>
+      <td>0m1.119s</td>
+    </tr>
+    <tr>
+      <td>あり</td>
+      <td>0m0.142s</td>
+      <td>0m0.168s</td>
+    </tr>
+  </tbody>
+</table>
+<p>意外なのが、Node.js で全ファイルを <code>fs.readFileSync()</code> するようにした実行結果が、<code>grep</code> より若干速かったこと。<code>user</code> と <code>sys</code> は <code>grep</code> の方が短かったので、Node.js はイベント待ちが少なかったようだ。非同期関数にしなかったのでイベントループの待機が短く済んだのだろうか。</p>
+<p>ただ、拡張子で絞り込んでやると <code>grep</code> の方が速かった。思いの外、Node.js で雑に書いたスクリプトが健闘しているな、ともとれる。</p>
+<p>ということで、まとめ。</p>
+<ul>
+  <li>Node.js スクリプトが Bash コマンドより速く動くワケない</li>
+  <li>でもこんな雑なスクリプトでもそこまで極端な性能差も出ない (意外)</li>
+  <li>物事を比較する時は、条件が本当に同じかどうかよくよく確認しよう</li>
+</ul>
+<p>正確な比較をしましょうね〜</p>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2020-11-20</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2020-11-20</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

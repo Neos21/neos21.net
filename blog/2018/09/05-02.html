@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>Windows 上の Jenkins から curl で TypeTalk API を叩いてメッセージを送信するまでの道のり - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2018/09/05-02.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2018/index.html">2018年</a></li>
+            <li><a href="/blog/2018/09/index.html">09月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2018-09-05</time></div>
+        <h1 id="page-title">Windows 上の Jenkins から curl で TypeTalk API を叩いてメッセージを送信するまでの道のり</h1>
+
+<p>Windows 上の Jenkins はとにかく罠が多い…。</p>
+<p>Windows 上の Jenkins から「シェルスクリプトの実行」で <code>curl</code> コマンドを実行し、TypeTalk API を叩いて任意のメッセージを投稿してみようと思った。それがかなりつまづいたのでまとめる。</p>
+<h2 id="typetalk-api-の叩き方"><a class="header-link" href="#typetalk-api-の叩き方"><span class="header-link-mark"></span></a>TypeTalk API の叩き方</h2>
+<p>今回は、シェルスクリプトから TypeTalk API を叩いて、任意のメッセージを投稿させようと思った。</p>
+<p>予め TypeTalk のトピックの設定から、<em>Client ID と Client Secret</em> という認証用の文字列を発行しておく。</p>
+<p>そして、TypeTalk API の公式リファレンスを基にすれば、以下の2行のコードでメッセージが投稿できる<strong>はずだった…。</strong></p>
+<ul>
+  <li><a href="https://developer.nulab-inc.com/ja/docs/typetalk/samples/#shell">サンプル | Typetalk Developer API | Nulab</a></li>
+</ul>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># アクセストークンを発行し、jq で curl のレスポンスをパースして変数に入れる</span>
+<span class="token assign-left variable">access_token</span><span class="token operator">=</span><span class="token variable"><span class="token variable">$(</span><span class="token function">curl</span> https://typetalk.com/oauth2/access_token -X POST --data-urlencode <span class="token string">"client_id=【Client ID】"</span> -d <span class="token string">"client_secret=【Client Secret】"</span> -d <span class="token string">"grant_type=client_credentials"</span> -d <span class="token string">"scope=topic.post"</span> <span class="token operator">|</span> jq -r .access_token<span class="token variable">)</span></span>
+
+<span class="token comment"># メッセージ「こんにちは！」を指定のトピックに投稿する</span>
+<span class="token function">curl</span> https://typetalk.com/api/v1/topics/【トピック ID】 -X POST -H <span class="token string">"Authorization:Bearer <span class="token variable">$access_token</span>"</span> --data-urlencode <span class="token string">"message=こんにちは！"</span>
+</code></pre>
+<p>Mac のターミナルで上の2行を実行すると、正常にメッセージが送信できた。しかし、<em>Windows GitBash から実行すると、投稿メッセージが文字化けしてしまっていた。</em></p>
+<h2 id="gitbash-の-curl-で-post-すると日本語が文字化けする"><a class="header-link" href="#gitbash-の-curl-で-post-すると日本語が文字化けする"><span class="header-link-mark"></span></a>GitBash の <code>curl</code> で POST すると日本語が文字化けする</h2>
+<p>最初は Mac の <code>curl</code> と Windows GitBash 付属の <code>curl</code> で仕様が違うのか？と思ったが、どうもそうでもないみたいだ。<code>curl</code> は <code>--verbose</code> (or <code>-v</code>) オプションを渡すと通信内容の詳細が表示されるので見てみたが、解決の糸口にには繋がらず…。</p>
+<p>色々調べてみると、近しいポイントでつまづいていそうな人は見かけるが、そのものズバリな答えがなくて結構困った。</p>
+<ul>
+  <li>
+    <p>参考：<a href="https://discuss.elastic.co/t/windows-curl/49604">Windowsコマンドラインからcurlで全角文字を送るには - 日本語による質問・議論はこちら - Discuss the Elastic Stack</a></p>
+    <ul>
+      <li>
+        <blockquote>
+          <p>コマンドラインから直接送るのは難しいということですね。</p>
+        </blockquote>
+      </li>
+    </ul>
+  </li>
+  <li>
+    <p>参考：<a href="https://qiita.com/ironsand/items/ec0675644a55a69855d6">【無理】WindowsのコンソールでUnicodeを使いたい</a></p>
+    <ul>
+      <li>
+        <blockquote>
+          <p><code>chcp 65001</code> でコマンドプロンプトの設定が Unicode (UTF8?) になるので、これで <code>irb</code> とか <code>pry</code> で日本語を表示できる。<br>でも、日本語入力は出来ない。IME がアクティブにならないし、コピペならできるそうだけど、自分の環境ではコピペさえも不可能。<br>無理です。</p>
+        </blockquote>
+      </li>
+    </ul>
+  </li>
+  <li>
+    <p>参考：<a href="http://www.wagavulin.jp/entry/2015/10/18/060938">curlコマンドによるデータ送信あれこれ - wagavulin's blog</a></p>
+  </li>
+  <li>
+    <p>参考：<a href="https://ja.stackoverflow.com/questions/19068/watson-text-to-speech%E3%81%A7%E6%97%A5%E6%9C%AC%E8%AA%9E%E3%82%92post%E3%81%A7%E9%80%81%E3%82%8B%E6%96%B9%E6%B3%95%E3%82%92%E6%95%99%E3%81%88%E3%81%A6%E4%B8%8B%E3%81%95%E3%81%84">bluemix - Watson Text to Speechで日本語をPOSTで送る方法を教えて下さい - スタック・オーバーフロー</a></p>
+  </li>
+</ul>
+<p>とりあえず、1つ目の文献で触れられていた <code>@file</code> オプションを利用したやり方にしてみた。メッセージはシェルスクリプト内で用意したいので、リダイレクトで <code>msg.txt</code> というファイルに書き込むことにした。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token assign-left variable">access_token</span><span class="token operator">=</span><span class="token variable"><span class="token variable">$(</span><span class="token function">curl</span> https://typetalk.com/oauth2/access_token -X POST --data-urlencode <span class="token string">"client_id=【Client ID】"</span> -d <span class="token string">"client_secret=【Client Secret】"</span> -d <span class="token string">"grant_type=client_credentials"</span> -d <span class="token string">"scope=topic.post"</span> <span class="token operator">|</span> jq -r .access_token<span class="token variable">)</span></span>
+
+<span class="token builtin class-name">echo</span> <span class="token string">'message=こんにちは！'</span> <span class="token operator">></span> msg.txt
+<span class="token function">curl</span> https://typetalk.com/api/v1/topics/【トピック ID】 -X POST -H <span class="token string">"Authorization:Bearer <span class="token variable">$access_token</span>"</span> -d @msg.txt
+</code></pre>
+<p><code>-d</code> じゃなくて <code>--data-urlencode</code> か？とか思ったけどダメ。そこで <code>chcp</code> のことを思い出して <code>msg.txt</code> を Notepad++ で開いてみると、このファイルは Shift-JIS 形式になっていた。どうもリダイレクトのエンコーディングはコードページに左右されるっぽい。</p>
+<p><code>$ chcp.com</code> でコードページを確認してみると、<code>932</code> ≒ Shift-JIS と返ってきた (英語版の Windows を使ったりしていると <code>932</code> ではなく <code>437</code> = 英語 が返される)。そこで GitBash 上で <code>$ chcp.com 65001</code> と実行して、UTF-8 形式に変更してみてから <code>msg.txt</code> を生成してみた。<em>コマンドプロンプトなら拡張子 <code>.com</code> を省略できるが、GitBash では <code>.com</code> を省略できないので <code>chcp</code> ではなく <code>chcp.com</code> と叩く。</em></p>
+<pre class="language-bash"><code class="language-bash">chcp.com <span class="token number">65001</span>
+
+<span class="token assign-left variable">access_token</span><span class="token operator">=</span><span class="token variable"><span class="token variable">$(</span><span class="token function">curl</span> https://typetalk.com/oauth2/access_token -X POST --data-urlencode <span class="token string">"client_id=【Client ID】"</span> -d <span class="token string">"client_secret=【Client Secret】"</span> -d <span class="token string">"grant_type=client_credentials"</span> -d <span class="token string">"scope=topic.post"</span> <span class="token operator">|</span> jq -r .access_token<span class="token variable">)</span></span>
+
+<span class="token builtin class-name">echo</span> <span class="token string">'message=こんにちは！'</span> <span class="token operator">></span> msg.txt
+<span class="token function">curl</span> https://typetalk.com/api/v1/topics/【トピック ID】 -X POST -H <span class="token string">"Authorization:Bearer <span class="token variable">$access_token</span>"</span> -d @msg.txt
+</code></pre>
+<p>こうすると、<code>msg.txt</code> を BOM なし UTF-8 で出力できた。GitBash 上で叩いた限りだとコレで日本語が送信できた。</p>
+<p>やった〜じゃあコレを Jenkins のジョブに書き込んでやろう〜と思って実行してみると、なぜか Jenkins を経由して GitBash を使った場合だと文字化けする…。一体何故…。</p>
+<h2 id="jenkins-上で実行する-gitbash-のリダイレクトは-java-の実行環境に左右される"><a class="header-link" href="#jenkins-上で実行する-gitbash-のリダイレクトは-java-の実行環境に左右される"><span class="header-link-mark"></span></a>Jenkins 上で実行する GitBash のリダイレクトは Java の実行環境に左右される</h2>
+<p>Jenkins の「シェルスクリプトの実行」経由で GitBash を利用すると、なんか環境が変なところがある。今回色々調べてみると、どうも Java 製である Jenkins が、Java の実行環境に影響されて、シェルスクリプトの実行内容にも影響が出ているっぽいことが分かった。</p>
+<ul>
+  <li>参考：<a href="http://samooooon.hatenablog.com/entry/2016/07/07/151754">Windows環境でJenkinsのコンソール出力が文字化けした - 文系seの備忘録</a></li>
+  <li>参考：<a href="https://srz-zumix.blogspot.com/2017/02/jenkinscppcheck.html">ブログズミ: Jenkins Cppcheck ソースファイルの文字化けを解消する</a></li>
+  <li>参考：<a href="https://qiita.com/dakuton/items/b3e0a329378e9e4e9486">Jenkinsのコンソール出力が読みづらくなっている人向けのメモ</a></li>
+  <li>参考：<a href="http://umezawa.dyndns.info/wordpress/?p=5801">或るプログラマの一生 » Windows 上で Jenkins のジョブを走らせるといろいろ文字化けする</a></li>
+</ul>
+<p>このサイトにならって、Jenkins のシステムプロパティで <code>file.encoding</code> と <code>sun.jnu.encoding</code> を見てみると、Shift-JIS (MS932) となっていた。そこでコチラのページを参考に、</p>
+<blockquote>
+  <p>システム環境変数で <code>JAVA_TOOL_OPTIONS</code> を <em><code>-Dfile.encoding=UTF-8 -Dsun.jnu.encoding=UTF-8</code></em> に設定し、Jenkins のサービスを再起動</p>
+</blockquote>
+<p>してみたところ、<code>chcp.com 65001</code> をせずとも、<code>msg.txt</code> 生成時のリダイレクトが UTF-8 (BOM なし) に切り替わり、文字化けせず <code>curl</code> で POST できた。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token assign-left variable">access_token</span><span class="token operator">=</span><span class="token variable"><span class="token variable">$(</span><span class="token function">curl</span> https://typetalk.com/oauth2/access_token -X POST --data-urlencode <span class="token string">"client_id=【Client ID】"</span> -d <span class="token string">"client_secret=【Client Secret】"</span> -d <span class="token string">"grant_type=client_credentials"</span> -d <span class="token string">"scope=topic.post"</span> <span class="token operator">|</span> jq -r .access_token<span class="token variable">)</span></span>
+
+<span class="token builtin class-name">echo</span> <span class="token string">'message=こんにちは！'</span> <span class="token operator">></span> msg.txt
+<span class="token function">curl</span> https://typetalk.com/api/v1/topics/【トピック ID】 -X POST -H <span class="token string">"Authorization:Bearer <span class="token variable">$access_token</span>"</span> -d @msg.txt
+</code></pre>
+<p>シェルスクリプトはコレだけで良くなった。よしよし、じゃあ次はメッセージに改行を入れてみよう…と思ってまたハマった。</p>
+<h2 id="投稿メッセージに改行を入れるには"><a class="header-link" href="#投稿メッセージに改行を入れるには"><span class="header-link-mark"></span></a>投稿メッセージに改行を入れるには</h2>
+<p>改行をメッセージに入れたくて、<code>message=ほげ\nふが</code> と <code>msg.txt</code> に書き込んでみたが、うまく改行されなかった。ログを見ると、<code>curl</code> の送信時に <code>\</code> 記号が <code>\\</code> とエスケープされているようだった。<code>&#x26;br;</code> という Backlog 記法も試してみたけどダメだった。</p>
+<p>解決法を探ったところ、実際に改行を入れたファイルを用意して、<code>-d</code> ではなく <strong><code>--data-binary</code></strong> オプションで送ると良いそうだ。</p>
+<ul>
+  <li>参考：<a href="https://stackoverflow.com/questions/388365/how-do-i-post-lf-with-curl-command-line-tool">linux - How do I POST LF with curl command line tool? - Stack Overflow</a></li>
+</ul>
+<p>改行を含んだテキストファイルを吐くには、<code>cat</code> によるヒアドキュメントを利用する。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token assign-left variable">access_token</span><span class="token operator">=</span><span class="token variable"><span class="token variable">$(</span><span class="token function">curl</span> https://typetalk.com/oauth2/access_token -X POST --data-urlencode <span class="token string">"client_id=【Client ID】"</span> -d <span class="token string">"client_secret=【Client Secret】"</span> -d <span class="token string">"grant_type=client_credentials"</span> -d <span class="token string">"scope=topic.post"</span> <span class="token operator">|</span> jq -r .access_token<span class="token variable">)</span></span>
+
+<span class="token function">cat</span> <span class="token operator">&#x3C;&#x3C;</span> <span class="token string">EOF<span class="token bash punctuation"> <span class="token operator">></span> msg.txt</span>
+message=ほげ
+ふが
+EOF</span>
+
+<span class="token function">curl</span> https://typetalk.com/api/v1/topics/【トピック ID】 -X POST -H <span class="token string">"Authorization:Bearer <span class="token variable">$access_token</span>"</span> --data-binary @msg.txt
+</code></pre>
+<p>こうすると、<code>msg.txt</code> 内で実際に改行されている部分が <code>\n</code> としてそのまま送信されるので、投稿メッセージにコメントを含めることができた。</p>
+<p>あと、<code>message=</code> 部分のイコール記号の意味合いでバッティングするものと思われるが、本文中に半角イコール <code>=</code> があると、それ以降の文字列が送られない。どうもうまくエスケープできなかったので、本文で使用するイコール記号は全角のみ使用することにした。いいやり方ないだろうか…。</p>
+<h2 id="以上"><a class="header-link" href="#以上"><span class="header-link-mark"></span></a>以上</h2>
+<p>今回やったことは、結局「エンコーディングを UTF-8 に揃える」ということだ。Jenkins 起動時に <code>-Dfile.encoding=UTF-8 -Dsun.jnu.encoding=UTF-8</code> オプションを与え、もし必要なら <code>chcp.com 65001</code> コマンドを利用して、UTF-8 な <code>msg.txt</code> を用意できれば良い。</p>
+<p>あとはこのファイルを <code>curl</code> POST する時に <code>--data-binary</code> を使って渡してやれば上手くいった。</p>
+<p>「GitBash on Jenkins on Windows」な環境はエンコーディングとコードページの罠がキツいのう…。</p>
+<ul>
+  <li>その他参考：<a href="https://qiita.com/ida1ten0/items/291b463e45f422abd425">Windows版curlでJSONをPOSTする際に困った話</a></li>
+</ul>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2018-09-05</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2018-09-05</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

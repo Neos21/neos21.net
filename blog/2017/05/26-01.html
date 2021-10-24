@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>JScript.NET で読み込んだファイルの文字コードが UTF-8 か Shift-JIS か判定する - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2017/05/26-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2017/index.html">2017年</a></li>
+            <li><a href="/blog/2017/05/index.html">05月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2017-05-26</time></div>
+        <h1 id="page-title">JScript.NET で読み込んだファイルの文字コードが UTF-8 か Shift-JIS か判定する</h1>
+
+<p>JScript.NET で読み込んだテキストファイルの文字コードを判別したかった。</p>
+<ul>
+  <li>参考：<a href="https://dobon.net/vb/dotnet/string/detectcode.html">文字コードを判別する: .NET Tips: C#, VB.NET</a></li>
+</ul>
+<p>こちらのサイトで、<a href="http://openlab.ring.gr.jp/Jcode/index-j.html">Jcode.pm</a> という Perl 製の有名な文字コード判定スクリプトを VB.NET と C# に移植していた。</p>
+<p>元のソースは JIS や EUC も判定できるのだが、今回はコレをベースに、<strong>「テキストファイルが Shift-JIS か UTF-8 のどちらか」を判別する簡易版</strong>を JScript.NET で作ってみた。<em>このコード部分だけなら JScript.NET 特有の処理は含んでいないので、そのまま JavaScript としても利用できると思われる。</em></p>
+<p>ドキュメンテーションコメント部分は、Closure Compiler で使えるアノテーションコメントに沿って書いてみた。</p>
+<ul>
+  <li>参考：<a href="https://www37.atwiki.jp/aias-closurecompiler/pages/22.html">Closure Compilerを使う！ - アノテーションによる型定義</a></li>
+</ul>
+<pre class="language-javascript"><code class="language-javascript"><span class="token doc-comment comment">/**
+ * 文字コードを Shift-JIS か UTF-8 か判定する
+ * 
+ * <span class="token keyword">@param</span> <span class="token class-name"><span class="token punctuation">{</span>Array<span class="token punctuation">.</span><span class="token punctuation">&#x3C;</span>Byte<span class="token punctuation">></span><span class="token punctuation">}</span></span> <span class="token parameter">bytes</span> テキストファイルのバイト配列
+ * <span class="token keyword">@return</span> <span class="token class-name"><span class="token punctuation">{</span>String<span class="token punctuation">}</span></span> UTF-8 と判定したら "utf-8"、Shift-JIS と判定したら "shift-jis" を返す
+ */</span>
+<span class="token keyword">function</span> <span class="token function">getCode</span><span class="token punctuation">(</span><span class="token parameter">bytes</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token keyword">var</span> len <span class="token operator">=</span> bytes<span class="token punctuation">.</span><span class="token property-access"><span class="token maybe-class-name">Length</span></span><span class="token punctuation">;</span>
+  
+  <span class="token keyword control-flow">if</span><span class="token punctuation">(</span>len <span class="token operator">&#x3C;</span> <span class="token number">2</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token comment">// 短すぎると判別不可能、UTF-8 とみなすことにする</span>
+    <span class="token keyword control-flow">return</span> <span class="token string">"utf-8"</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  <span class="token keyword control-flow">else</span> <span class="token keyword control-flow">if</span><span class="token punctuation">(</span><span class="token punctuation">(</span>bytes<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span> <span class="token operator">==</span> <span class="token number">0xEF</span><span class="token punctuation">)</span> <span class="token operator">&#x26;&#x26;</span> <span class="token punctuation">(</span>bytes<span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span> <span class="token operator">==</span> <span class="token number">0xBB</span><span class="token punctuation">)</span> <span class="token operator">&#x26;&#x26;</span> <span class="token punctuation">(</span>bytes<span class="token punctuation">[</span><span class="token number">2</span><span class="token punctuation">]</span> <span class="token operator">==</span> <span class="token number">0xBF</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token comment">// BOM 付き UTF-8</span>
+    <span class="token keyword control-flow">return</span> <span class="token string">"utf-8"</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  
+  <span class="token keyword">var</span> sjis <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span>
+  <span class="token keyword control-flow">for</span><span class="token punctuation">(</span><span class="token keyword">var</span> i <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span> i <span class="token operator">&#x3C;</span> len <span class="token operator">-</span> <span class="token number">2</span><span class="token punctuation">;</span> i<span class="token operator">++</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token keyword">var</span> b1 <span class="token operator">=</span> <span class="token function">bytes</span><span class="token punctuation">(</span>i<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">var</span> b2 <span class="token operator">=</span> <span class="token function">bytes</span><span class="token punctuation">(</span>i <span class="token operator">+</span> <span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword control-flow">if</span><span class="token punctuation">(</span> <span class="token punctuation">(</span> <span class="token punctuation">(</span><span class="token number">0x81</span> <span class="token operator">&#x3C;=</span> b1 <span class="token operator">&#x26;&#x26;</span> b1 <span class="token operator">&#x3C;=</span> <span class="token number">0x9F</span><span class="token punctuation">)</span> <span class="token operator">||</span> <span class="token punctuation">(</span><span class="token number">0xE0</span> <span class="token operator">&#x3C;=</span> b1 <span class="token operator">&#x26;&#x26;</span> b1 <span class="token operator">&#x3C;=</span> <span class="token number">0xFC</span><span class="token punctuation">)</span> <span class="token punctuation">)</span> <span class="token operator">&#x26;&#x26;</span>
+        <span class="token punctuation">(</span> <span class="token punctuation">(</span><span class="token number">0x40</span> <span class="token operator">&#x3C;=</span> b2 <span class="token operator">&#x26;&#x26;</span> b2 <span class="token operator">&#x3C;=</span> <span class="token number">0x7E</span><span class="token punctuation">)</span> <span class="token operator">||</span> <span class="token punctuation">(</span><span class="token number">0x80</span> <span class="token operator">&#x3C;=</span> b2 <span class="token operator">&#x26;&#x26;</span> b2 <span class="token operator">&#x3C;=</span> <span class="token number">0xFC</span><span class="token punctuation">)</span> <span class="token punctuation">)</span> <span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      sjis <span class="token operator">+=</span> <span class="token number">2</span><span class="token punctuation">;</span>
+      i<span class="token operator">++</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span>
+  
+  <span class="token keyword">var</span> utf8 <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span>
+  <span class="token keyword control-flow">for</span><span class="token punctuation">(</span><span class="token keyword">var</span> i <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span> i <span class="token operator">&#x3C;</span> len <span class="token operator">-</span> <span class="token number">2</span><span class="token punctuation">;</span> i<span class="token operator">++</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token keyword">var</span> b1 <span class="token operator">=</span> <span class="token function">bytes</span><span class="token punctuation">(</span>i<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">var</span> b2 <span class="token operator">=</span> <span class="token function">bytes</span><span class="token punctuation">(</span>i <span class="token operator">+</span> <span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword control-flow">if</span><span class="token punctuation">(</span> <span class="token punctuation">(</span><span class="token number">0xC0</span> <span class="token operator">&#x3C;=</span> b1 <span class="token operator">&#x26;&#x26;</span> b1 <span class="token operator">&#x3C;=</span> <span class="token number">0xDF</span><span class="token punctuation">)</span> <span class="token operator">&#x26;&#x26;</span>
+        <span class="token punctuation">(</span><span class="token number">0x80</span> <span class="token operator">&#x3C;=</span> b2 <span class="token operator">&#x26;&#x26;</span> b2 <span class="token operator">&#x3C;=</span> <span class="token number">0xBF</span><span class="token punctuation">)</span> <span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      utf8 <span class="token operator">+=</span> <span class="token number">2</span><span class="token punctuation">;</span>
+      i<span class="token operator">++</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+    <span class="token keyword control-flow">else</span> <span class="token keyword control-flow">if</span><span class="token punctuation">(</span>i <span class="token operator">&#x3C;</span> len <span class="token operator">-</span> <span class="token number">2</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token keyword">var</span> b3 <span class="token operator">=</span> <span class="token function">bytes</span><span class="token punctuation">(</span>i <span class="token operator">+</span> <span class="token number">2</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token keyword control-flow">if</span><span class="token punctuation">(</span> <span class="token punctuation">(</span><span class="token number">0xE0</span> <span class="token operator">&#x3C;=</span> b1 <span class="token operator">&#x26;&#x26;</span> b1 <span class="token operator">&#x3C;=</span> <span class="token number">0xEF</span><span class="token punctuation">)</span> <span class="token operator">&#x26;&#x26;</span>
+          <span class="token punctuation">(</span><span class="token number">0x80</span> <span class="token operator">&#x3C;=</span> b2 <span class="token operator">&#x26;&#x26;</span> b2 <span class="token operator">&#x3C;=</span> <span class="token number">0xBF</span><span class="token punctuation">)</span> <span class="token operator">&#x26;&#x26;</span>
+          <span class="token punctuation">(</span><span class="token number">0x80</span> <span class="token operator">&#x3C;=</span> b3 <span class="token operator">&#x26;&#x26;</span> b3 <span class="token operator">&#x3C;=</span> <span class="token number">0xBF</span><span class="token punctuation">)</span> <span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        utf8 <span class="token operator">+=</span> <span class="token number">3</span><span class="token punctuation">;</span>
+        i <span class="token operator">+=</span> <span class="token number">2</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span>
+  
+  <span class="token keyword control-flow">if</span><span class="token punctuation">(</span>sjis <span class="token operator">></span> utf8<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token keyword control-flow">return</span> <span class="token string">"shift-jis"</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  <span class="token keyword control-flow">else</span> <span class="token keyword control-flow">if</span><span class="token punctuation">(</span>utf8 <span class="token operator">></span> sjis<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token keyword control-flow">return</span> <span class="token string">"utf-8"</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  
+  <span class="token comment">// 不明・UTF-8 とみなすことにする</span>
+  <span class="token keyword control-flow">return</span> <span class="token string">"utf-8"</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>Jcode.pm のことはこのスクリプトを作る時に初めて知ったのだが、どうやらテキストデータのバイト配列から「Shift-JIS っぽい並び」や「UTF-8 っぽい並び」を見付けてはポイントを加算し、一番ポイントが高い文字コード種別を返しているようだ。</p>
+<p>こうして作った <code>getCode()</code> 関数は以下のように使う。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token doc-comment comment">/**
+ * テキストファイルの文字コードを判定した上でテキストを読み込み、
+ * CR+LF で改行した文字列を返却する
+ * 
+ * <span class="token keyword">@param</span> <span class="token class-name"><span class="token punctuation">{</span>String<span class="token punctuation">}</span></span> <span class="token parameter">filePathStr</span> 読み込みたいテキストファイルのフルパス
+ * <span class="token keyword">@return</span> <span class="token class-name"><span class="token punctuation">{</span>String<span class="token punctuation">}</span></span> CR+LF で改行したテキストファイルの文字列
+ */</span>
+<span class="token keyword">function</span> <span class="token function">readTextFile</span><span class="token punctuation">(</span><span class="token parameter">filePathStr</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token comment">// 引数のテキストファイルを読み込み、文字コードを判定する (getCode() を使用)</span>
+  <span class="token keyword">var</span> enc <span class="token operator">=</span> <span class="token function">getCode</span><span class="token punctuation">(</span><span class="token maybe-class-name">System</span><span class="token punctuation">.</span><span class="token constant">IO</span><span class="token punctuation">.</span><span class="token property-access"><span class="token maybe-class-name">File</span></span><span class="token punctuation">.</span><span class="token method function property-access"><span class="token maybe-class-name">ReadAllBytes</span></span><span class="token punctuation">(</span>filePathStr<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  
+  <span class="token comment">// 変数 enc に判定した文字コードが入るため、これを利用して改めてテキストファイルを読み込む</span>
+  <span class="token keyword">var</span> stream <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">StreamReader</span><span class="token punctuation">(</span>filePathStr<span class="token punctuation">,</span> <span class="token maybe-class-name">Encoding</span><span class="token punctuation">.</span><span class="token method function property-access"><span class="token maybe-class-name">GetEncoding</span></span><span class="token punctuation">(</span>enc<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  
+  <span class="token comment">// テキストを保持する変数</span>
+  <span class="token keyword">var</span> text <span class="token operator">=</span> <span class="token string">""</span><span class="token punctuation">;</span>
+  
+  <span class="token comment">// 1行ずつテキストを読み込み、改行コードを付与していく</span>
+  <span class="token keyword control-flow">while</span><span class="token punctuation">(</span>stream<span class="token punctuation">.</span><span class="token method function property-access"><span class="token maybe-class-name">Peek</span></span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">></span> <span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    text <span class="token operator">+=</span> stream<span class="token punctuation">.</span><span class="token method function property-access"><span class="token maybe-class-name">ReadLine</span></span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">+</span> <span class="token string">"\r\n"</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  
+  stream<span class="token punctuation">.</span><span class="token method function property-access"><span class="token maybe-class-name">Close</span></span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  
+  <span class="token keyword control-flow">return</span> text<span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>この関数では、引数にテキストファイルのパスをもらい、さきほどの <code>getCode()</code> で文字コードを判定している。判定した文字コード種別を使用して Stream で読み込んだら、改行コードを CR+LF に統一して文字列で返却している。</p>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2017-05-26</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2017-05-26</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

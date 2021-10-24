@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>GCE インスタンスに Apache と PHP をインストールして Web サーバを公開してみた - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2019/12/13-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2019/index.html">2019年</a></li>
+            <li><a href="/blog/2019/12/index.html">12月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2019-12-13</time></div>
+        <h1 id="page-title">GCE インスタンスに Apache と PHP をインストールして Web サーバを公開してみた</h1>
+
+<p>以前、GCP (Google Cloud Platform) の永久無料枠で GCE (Google Compute Engine) インスタンスを作った。</p>
+<ul>
+  <li><a href="/blog/2019/08/01-01.html">永久無料枠で Google Compute Engine (GCE) インスタンスを立ち上げる : その1</a></li>
+  <li><a href="/blog/2019/08/02-01.html">永久無料枠で Google Compute Engine (GCE) インスタンスを立ち上げる : その2</a></li>
+</ul>
+<p>この記事のとおり進めたところだと、作成した GCE インスタンスは、再起動しても変動しない固定 Public IP アドレスを持ち、SSH 接続ができるだけ、という状態だった。</p>
+<p>今回はこのインスタンスにセットアップしていって、Apache (Web サーバ) を動かし、その上で PHP スクリプトが動くようにしてみる。</p>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#gce-%E3%82%A4%E3%83%B3%E3%82%B9%E3%82%BF%E3%83%B3%E3%82%B9%E3%81%AE%E8%A8%AD%E5%AE%9A">GCE インスタンスの設定</a></li>
+  <li><a href="#apache-%E3%82%92%E3%82%A4%E3%83%B3%E3%82%B9%E3%83%88%E3%83%BC%E3%83%AB%E3%81%99%E3%82%8B">Apache をインストールする</a></li>
+  <li><a href="#php-%E3%82%92%E3%82%A4%E3%83%B3%E3%82%B9%E3%83%88%E3%83%BC%E3%83%AB%E3%81%99%E3%82%8B">PHP をインストールする</a></li>
+  <li><a href="#%E5%AE%8C%E4%BA%86">完了</a></li>
+</ul>
+<h2 id="gce-インスタンスの設定"><a class="header-link" href="#gce-インスタンスの設定"><span class="header-link-mark"></span></a>GCE インスタンスの設定</h2>
+<p>GCP 管理画面に移動し、作成した GCE インスタンスの「編集」を行う。</p>
+<p>ファイアウォール設定の中の</p>
+<ul>
+  <li>HTTP トラフィックを許可する</li>
+  <li>HTTPS トラフィックを許可する</li>
+</ul>
+<p>を指定することで、80番ポートと443番ポートへのアクセスを許可するようになる。</p>
+<h2 id="apache-をインストールする"><a class="header-link" href="#apache-をインストールする"><span class="header-link-mark"></span></a>Apache をインストールする</h2>
+<p>続いて、GCE インスタンスに SSH 接続し、Apache をインストールする。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token variable">$$</span> <span class="token function">sudo</span> yum <span class="token function">install</span> -y httpd
+</code></pre>
+<ul>
+  <li>参考：<a href="https://cloud.oracle.com/ja_JP/cost-estimator">Cloud Cost Estimator</a>
+    <ul>
+      <li>Apache が <code>httpd</code> を名乗ってるの、偉そうな気がして違和感があったけど、そのくらいもうデファクトスタンダードになってるってことなのかな…。</li>
+    </ul>
+  </li>
+</ul>
+<p>サービスが自動起動するよう設定して、Apache を起動する。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token variable">$$</span> <span class="token function">sudo</span> systemctl <span class="token builtin class-name">enable</span> httpd.service
+<span class="token variable">$$</span> <span class="token function">sudo</span> systemctl start httpd.service
+<span class="token variable">$$</span> <span class="token function">sudo</span> systemctl status httpd.service
+</code></pre>
+<p>この状態で、GCE インスタンスの Public IP を指定して <code>http://100.0.0.1/</code> みたいにアクセスすると、「Testing 123..」と書かれた Apache のデフォルトのページが見えるはず。コレで Apache が上手く80番ポートで公開できていることが確認できた。</p>
+<h2 id="php-をインストールする"><a class="header-link" href="#php-をインストールする"><span class="header-link-mark"></span></a>PHP をインストールする</h2>
+<p>続いて、GCE に PHP をインストールする。PHP v7 系をインストールするには Yum リポジトリを追加する必要があるらしい。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token variable">$$</span> <span class="token function">sudo</span> <span class="token function">rpm</span> -Uvh http://rpms.famillecollet.com/enterprise/remi-release-7.rpm
+</code></pre>
+<p>そしたら PHP を色々インストール。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token variable">$$</span>  <span class="token function">sudo</span> yum <span class="token function">install</span> --enablerepo<span class="token operator">=</span>remi,remi-php70 php php-devel php-mbstring php-pdo php-gd -y
+</code></pre>
+<p>インストールできたらバージョンを確認してみる。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token variable">$$</span> php -v
+PHP <span class="token number">7.0</span>.33 <span class="token punctuation">(</span>cli<span class="token punctuation">)</span> <span class="token punctuation">(</span>built: Aug <span class="token number">28</span> <span class="token number">2019</span> <span class="token number">14</span>:11:09<span class="token punctuation">)</span> <span class="token punctuation">(</span> NTS <span class="token punctuation">)</span>
+Copyright <span class="token punctuation">(</span>c<span class="token punctuation">)</span> <span class="token number">1997</span>-2017 The PHP Group
+Zend Engine v3.0.0, Copyright <span class="token punctuation">(</span>c<span class="token punctuation">)</span> <span class="token number">1998</span>-2017 Zend Technologies
+</code></pre>
+<p>さらに、タイムゾーン設定を変更する。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token variable">$$</span> <span class="token function">sudo</span> <span class="token function">vim</span> /etc/php.ini
+</code></pre>
+<ul>
+  <li>877行目に <code>;date.timezone =</code> とコメントアウトされた部分がある</li>
+  <li>ココをアンコメントして <em><code>date.timezone = "Asia/Tokyo"</code></em> と直す</li>
+</ul>
+<p>設定できたら、設定を反映させるため Apache を再起動する。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token variable">$$</span> <span class="token function">sudo</span> systemctl restart httpd.service
+</code></pre>
+<p>PHP が使えることを確認するため、以下に新規ファイルを作ってみる。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token variable">$$</span> <span class="token function">sudo</span> <span class="token function">vim</span> /var/www/html/index.php
+</code></pre>
+<p>内容は以下のとおり。</p>
+<pre class="language-php"><code class="language-php"><span class="token php language-php"><span class="token delimiter important">&#x3C;?php</span>
+ 
+<span class="token function">phpinfo</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+ 
+<span class="token delimiter important">?></span></span>
+</code></pre>
+<p><code>phpinfo()</code> という関数は、PHP の情報を出力してくれるモノ。</p>
+<p>この状態で、GCE インスタンスの Public IP を指定して <code>http://100.0.0.1/</code> みたいにアクセスすると、先程 Apache のテストページが見えていたところが、PHP の情報が出力されるようになっているはずだ。</p>
+<h2 id="完了"><a class="header-link" href="#完了"><span class="header-link-mark"></span></a>完了</h2>
+<p>コレで、GCE インスタンスを Apache Web サーバとして公開し、PHP が使える状態になった。<code>/var/www/html/</code> 配下に HTML や PHP ファイルなどを置いていけば、それが Web ページとして表示されるようになった。<code>/var/www/html/</code> 配下は root 権限が必要なので、<code>$ sudo su -</code> で root ユーザになって作業すると楽だろう。</p>
+<ul>
+  <li>参考：<a href="http://yebisupress.dac.co.jp/2018/08/23/publish_website_with_google-cloud-platform/">【クラウド初心者向け】Google Cloud Platform（GCP）でWebサイトを公開してみよう！ | DACエンジニアブログ：アドテクゑびす界</a></li>
+  <li>参考：<a href="https://qiita.com/ndxbn/items/7ef0a96e409a5b5837bd">GCE の無料枠のサーバを立るときに、初見でハマりそうなところ - Qiita</a></li>
+  <li>参考：<a href="https://techblog.gmo-ap.jp/2019/07/08/10minutes-gce/">10分で分かるGCE：Webサーバを構築しよう | GMOアドパートナーズグループ TECH BLOG byGMO</a></li>
+</ul>
+<p>443番ポートも開けてあるが、今回は HTTPS 対応はしていない。以前紹介した Freenom の無料ドメインを取得し、Let's Encrypt を使えば無料で HTTPS 化、独自ドメイン対応もできるだろう。</p>
+<ul>
+  <li><a href="/blog/2018/12/03-01.html">独自ドメインを無料で取得できる Freenom を使ってみた</a></li>
+  <li><a href="/blog/2019/03/11-01.html">MacOS に CertBot を入れて Let's Encrypt 証明書を作ってみる</a></li>
+</ul>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2019-12-13</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2019-12-13</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

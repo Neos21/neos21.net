@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>child_process.exec() 実行時にエイリアスを使えるようにする - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2020/12/07-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2020/index.html">2020年</a></li>
+            <li><a href="/blog/2020/12/index.html">12月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2020-12-07</time></div>
+        <h1 id="page-title">child_process.exec() 実行時にエイリアスを使えるようにする</h1>
+
+<p>Node.js 組み込みモジュール <code>child_process</code> が提供する <code>exec()</code> 関数は、シェルを起動して任意のコマンドが実行できる。パイプを駆使した簡単なシェルの結果をもって Node.js スクリプトを書いたりしたい時に向いている。</p>
+<p>今回、この関数をゴリゴリに使うスクリプトを作ろうとしてつまづいたところがあるのでまとめておく。</p>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#bashrc-%E3%82%92%E8%AA%AD%E3%81%BF%E8%BE%BC%E3%81%BE%E3%81%AA%E3%81%84"><code>~/.bashrc</code> を読み込まない</a></li>
+  <li><a href="#bashrc-%E3%82%92%E8%AA%AD%E3%81%BF%E8%BE%BC%E3%81%BE%E3%81%9B%E3%82%8B%E3%81%AB%E3%81%AF"><code>~/.bashrc</code> を読み込ませるには</a></li>
+</ul>
+<h2 id="bashrc-を読み込まない"><a class="header-link" href="#bashrc-を読み込まない"><span class="header-link-mark"></span></a><code>~/.bashrc</code> を読み込まない</h2>
+<p><code>child_process#exec()</code> でコマンドを実行すると、通常は <code>/bin/sh</code> で動作する。コレは <code>shell</code> オプションを指定することで Bash に変更できる。</p>
+<p>しかし、Bash シェルを利用するようにしても、<code>~/.bash_profile</code> や <code>~/.bashrc</code> が読み込まれない。つまり、これらのファイル内で定義したエイリアスを利用できないワケだ。</p>
+<h2 id="bashrc-を読み込ませるには"><a class="header-link" href="#bashrc-を読み込ませるには"><span class="header-link-mark"></span></a><code>~/.bashrc</code> を読み込ませるには</h2>
+<p><code>~/.bashrc</code> などを読み込ませた状態で任意のコマンドを実行するには、次のように <strong><code>shopt</code> コマンドと <code>source</code> コマンドを実行してから指定のコマンドを実行する</strong>ようにしてやる。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword">const</span> childProcess <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'child_process'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">const</span> util <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'util'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token keyword">const</span> execAsync <span class="token operator">=</span> util<span class="token punctuation">.</span><span class="token method function property-access">promisify</span><span class="token punctuation">(</span>childProcess<span class="token punctuation">.</span><span class="token property-access">exec</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// 実行したいコマンド</span>
+<span class="token keyword">const</span> inputCommand <span class="token operator">=</span> <span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">my_alias</span><span class="token template-punctuation string">`</span></span><span class="token punctuation">;</span>
+
+<span class="token punctuation">(</span><span class="token keyword">async</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token keyword control-flow">try</span> <span class="token punctuation">{</span>
+    <span class="token keyword">const</span> result <span class="token operator">=</span> <span class="token keyword control-flow">await</span> <span class="token function">execAsync</span><span class="token punctuation">(</span><span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">shopt -s expand_aliases ; \n source ~/.bash_profile ; \n </span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>inputCommand<span class="token interpolation-punctuation punctuation">}</span></span><span class="token template-punctuation string">`</span></span><span class="token punctuation">,</span> <span class="token punctuation">{</span>
+      shell<span class="token operator">:</span> <span class="token string">'/bin/bash'</span><span class="token punctuation">,</span>
+      cwd<span class="token operator">:</span> <span class="token string">'/PATH/TO/my-directory/'</span>
+    <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span>result<span class="token punctuation">.</span><span class="token property-access">stdout</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  <span class="token keyword control-flow">catch</span><span class="token punctuation">(</span>error<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">error</span><span class="token punctuation">(</span>error<span class="token punctuation">.</span><span class="token property-access">stderr</span> <span class="token operator">?</span> error<span class="token punctuation">.</span><span class="token property-access">stderr</span> <span class="token operator">:</span> error<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>async・await で使えるように Promisify しているが、本質ではない。</p>
+<p><code>shopt -s expand_aliases</code> でエイリアスを使用するよう設定する。<code>; \n</code> でコマンドを区切り改行する。<code>source ~/.bash_profile</code> ないしは <code>source ~/.bashrc</code> など好きなファイルを読み込んでから、ようやく自分が実行したいコマンドを入力してやる。</p>
+<p><code>exec()</code> に指定するコマンド文字列の中で、セミコロンや改行を用いて複数のコマンドを実行する、という発想がなかったので驚いたが、こんなやり方で実現できた。</p>
+<ul>
+  <li>参考：<a href="https://stackoverflow.com/a/37837354">node.js - How load custom bash aliases in NodeJS script? - Stack Overflow</a></li>
+</ul>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2020-12-07</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2020-12-07</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

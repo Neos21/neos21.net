@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>PL/pgSQL : PostgreSQL でプロシージャ・トリガーを実装する - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2020/09/22-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2020/index.html">2020年</a></li>
+            <li><a href="/blog/2020/09/index.html">09月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2020-09-22</time></div>
+        <h1 id="page-title">PL/pgSQL : PostgreSQL でプロシージャ・トリガーを実装する</h1>
+
+<p>Oracle DB を触っていた時に PL/SQL というプログラミング言語を触っていた。同様の手続き型言語が PostgreSQL にも用意されていて、<strong>PL/pgSQL</strong> という。</p>
+<p>今回は<em>対象テーブルにインサートが発生した時にその内容を標準出力する</em>というプロシージャを作成し、PostgreSQL に適用してみる。Docker コンテナとかで動いている PostgreSQL を想定して、標準出力をロギングに利用しているので、そこに必要なログを追加で流すためにプロシージャを使うというようなシナリオだ。</p>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#%E3%83%97%E3%83%AD%E3%82%B7%E3%83%BC%E3%82%B8%E3%83%A3%E3%82%92%E4%BD%9C%E6%88%90%E3%81%99%E3%82%8B">プロシージャを作成する</a></li>
+  <li><a href="#%E3%83%88%E3%83%AA%E3%82%AC%E3%83%BC%E3%82%92%E4%BD%9C%E6%88%90%E3%81%99%E3%82%8B">トリガーを作成する</a></li>
+  <li><a href="#%E3%81%A9%E3%82%93%E3%81%AA%E3%83%AD%E3%82%B0%E3%81%8C%E5%87%BA%E5%8A%9B%E3%81%95%E3%82%8C%E3%82%8B%E3%81%AE%E3%81%8B">どんなログが出力されるのか</a></li>
+</ul>
+<h2 id="プロシージャを作成する"><a class="header-link" href="#プロシージャを作成する"><span class="header-link-mark"></span></a>プロシージャを作成する</h2>
+<p>まずはプロシージャを作成する。プロシージャは「関数」とも言い換えられ、このあと定義する「トリガー」によって実行される処理を実装する。</p>
+<pre class="language-plsql"><code class="language-plsql"><span class="token keyword">CREATE</span> <span class="token operator">OR</span> <span class="token keyword">REPLACE</span> <span class="token keyword">FUNCTION</span> logging_my_table<span class="token punctuation">(</span><span class="token punctuation">)</span>
+<span class="token keyword">RETURNS</span> <span class="token keyword">TRIGGER</span> <span class="token keyword">AS</span> $$
+<span class="token keyword">DECLARE</span>
+  <span class="token comment">-- 単一行コメントはハイフン2つ。C や Java と同じブロックコメントも書ける</span>
+  <span class="token comment">-- DECLARE は変数宣言のブロック。以下は「my_table」というテーブルの型を指定した「new_record」変数を定義している</span>
+  new_record my_table<span class="token operator">%</span><span class="token keyword">ROWTYPE</span><span class="token punctuation">;</span>
+<span class="token keyword">BEGIN</span>
+  <span class="token comment">-- インサートされた行は、組み込み変数「NEW」に設定されている</span>
+  new_record <span class="token operator">:=</span> <span class="token keyword">NEW</span><span class="token punctuation">;</span>
+  <span class="token comment">-- 標準出力にログを出力する。「%」を使用して my_table の id カラムの値を表示させている</span>
+  <span class="token keyword">RAISE</span> LOG <span class="token string">'Inserted : %'</span><span class="token punctuation">,</span> new_record<span class="token punctuation">.</span>id<span class="token punctuation">;</span>
+  <span class="token comment">-- インサート時のプロシージャでは戻り値を使わないので以下のように NULL を返す。RETURN を書かないと警告が出る</span>
+  <span class="token keyword">RETURN</span> <span class="token boolean">NULL</span><span class="token punctuation">;</span>
+<span class="token keyword">END</span><span class="token punctuation">;</span>
+$$ <span class="token keyword">LANGUAGE</span> plpgsql<span class="token punctuation">;</span>
+</code></pre>
+<p>こんな感じ。ほとんど PL/SQL と同様の構文。公式のリファレンスを参考に見様見真似で実装してみた。</p>
+<p><code>RAISE</code> がログ出力するための処理。<code>RAISE LOG</code> で <code>LOG</code> レベルのログを出力できる。ログレベルは以下のモノがあり、それぞれで標準出力されるかどうかなどの挙動が違った。</p>
+<pre class="language-plsql"><code class="language-plsql"># 以下の<span class="token number">3</span>つのレベルは標準出力にログが出てこなかった
+<span class="token keyword">RAISE</span> DEBUG <span class="token string">'Debug Level Log!'</span><span class="token punctuation">;</span>
+<span class="token keyword">RAISE</span> INFO <span class="token string">'Info Level Log!'</span><span class="token punctuation">;</span>
+<span class="token keyword">RAISE</span> NOTICE <span class="token string">'Notice Level Log!'</span><span class="token punctuation">;</span>
+
+# 以下の<span class="token number">2</span>つのレベルは標準出力にログが出た
+<span class="token keyword">RAISE</span> LOG <span class="token string">'Log Level Log!'</span><span class="token punctuation">;</span>
+<span class="token keyword">RAISE</span> WARNING <span class="token string">'Warning Level Log!'</span><span class="token punctuation">;</span>
+
+# 以下の<span class="token number">2</span>つはログ出力した行で処理が中止され、後続行が動作しない
+# <span class="token keyword">RAISE</span> のログレベル未指定は <span class="token keyword">EXCEPTION</span> と同義になる
+<span class="token keyword">RAISE</span> <span class="token keyword">EXCEPTION</span> <span class="token string">'Exception Level Log!'</span><span class="token punctuation">;</span>
+<span class="token keyword">RAISE</span> <span class="token string">'Raise Log!'</span><span class="token punctuation">;</span>
+</code></pre>
+<p>Info ログなつもりで考えているので、今回は <code>RAISE LOG</code> を使っている。</p>
+<h2 id="トリガーを作成する"><a class="header-link" href="#トリガーを作成する"><span class="header-link-mark"></span></a>トリガーを作成する</h2>
+<p>次に、「テーブルにインサートが発生した時に上述のプロシージャを実行する」という、トリガー定義を実装する。</p>
+<p>PostgreSQL の場合、<code>CREATE OR REPLACE TRIGGER</code> という構文はないので、先に <code>DROP TRIGGER IF EXISTS</code> を使って、<code>CREATE OR REPLACE</code> 相当の処理を実現する。</p>
+<pre class="language-sql"><code class="language-sql"><span class="token keyword">DROP</span> <span class="token keyword">TRIGGER</span> <span class="token keyword">IF</span> <span class="token keyword">EXISTS</span> trigger_my_table <span class="token keyword">ON</span> my_table<span class="token punctuation">;</span>
+
+<span class="token keyword">CREATE</span> <span class="token keyword">TRIGGER</span> trigger_my_table
+  <span class="token keyword">AFTER</span> <span class="token keyword">INSERT</span> <span class="token keyword">ON</span> my_table
+  <span class="token keyword">FOR EACH ROW</span>
+  <span class="token keyword">EXECUTE</span> <span class="token keyword">PROCEDURE</span> logging_my_table<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p><code>ON 【テーブル名】</code> で対象のテーブルを指定し、<code>AFTER INSERT</code> で実行タイミングを指定している。</p>
+<h2 id="どんなログが出力されるのか"><a class="header-link" href="#どんなログが出力されるのか"><span class="header-link-mark"></span></a>どんなログが出力されるのか</h2>
+<p>プロシージャとトリガーを登録したら、実際にどんなログが出力されるのか見てみる。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># 以下の要領で標準出力を確認する想定</span>
+$ docker logs -f my-postgres
+</code></pre>
+<p>別のターミナルで <code>my_table</code> にインサートをかけてみる。</p>
+<pre class="language-sql"><code class="language-sql"><span class="token keyword">SQL</span><span class="token operator">></span> <span class="token keyword">INSERT</span> <span class="token keyword">INTO</span> my_tables <span class="token punctuation">(</span>id<span class="token punctuation">,</span> name<span class="token punctuation">)</span> <span class="token keyword">VALUES</span> <span class="token punctuation">(</span><span class="token number">100</span><span class="token punctuation">,</span> <span class="token string">'Example'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>標準出力には次のようなログが出力された。</p>
+<pre><code>2020-08-01 00:10:25.500 UTC [7690] LOG:  Inserted : 100
+2020-08-01 00:10:25.500 UTC [7690] CONTEXT:  PL/pgSQL function logging_my_table() line 4 at RAISE
+2020-08-01 00:10:25.500 UTC [7690] STATEMENT:  INSERT INTO my_table VALUES (100, 'Example');
+</code></pre>
+<p><code>CONTEXT</code> と <code>STATEMENT</code> の行は勝手に出る。自分が意図して出したのは <code>LOG:</code> の行のみ。整形は後でやるからとりあえずコレでいいや〜。</p>
+<ul>
+  <li>参考：<a href="https://qiita.com/error_401/items/47f1920270ffbd35c840">PL/pgSQLのtriggerでNEW, OLDを透過的に参照する - Qiita</a></li>
+  <li>参考：<a href="https://db.just4fun.biz/?PL/pgSQL/%E3%82%BF%E3%83%BC%E3%83%9F%E3%83%8A%E3%83%AB%E3%81%AB%E3%83%A1%E3%83%83%E3%82%BB%E3%83%BC%E3%82%B8%E3%82%92%E8%A1%A8%E7%A4%BA%E3%81%99%E3%82%8B">PL/pgSQL/ターミナルにメッセージを表示する - 調べる.DB</a></li>
+  <li>参考：<a href="https://www.postgresql.jp/document/8.1/html/plpgsql-trigger.html">https://www.postgresql.jp/document/8.1/html/plpgsql-trigger.html</a></li>
+  <li>参考：<a href="https://www.it-swarm.dev/ja/sql/postgresql%E3%81%8B%E3%82%89%E3%81%AEplpgsql%E5%87%BA%E5%8A%9B%E3%82%92csv%E3%83%95%E3%82%A1%E3%82%A4%E3%83%AB%E3%81%AB%E4%BF%9D%E5%AD%98%E3%81%99%E3%82%8B/967150827/">sql — PostgreSQLからのPL/pgSQL出力をCSVファイルに保存する</a></li>
+  <li>参考：<a href="https://stackoverflow.com/questions/35927365/create-or-replace-trigger-postgres">sql - Create or replace trigger postgres - Stack Overflow</a></li>
+</ul>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2020-09-22</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2020-09-22</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

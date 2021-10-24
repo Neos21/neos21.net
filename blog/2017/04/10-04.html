@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>CSS と JavaScript を圧縮する Gulp タスク ～ npm-scripts から Gulp に戻ってしまった ～ - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2017/04/10-04.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2017/index.html">2017年</a></li>
+            <li><a href="/blog/2017/04/index.html">04月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2017-04-10</time></div>
+        <h1 id="page-title">CSS と JavaScript を圧縮する Gulp タスク ～ npm-scripts から Gulp に戻ってしまった ～</h1>
+
+<p>このはてなブログの CSS・JS ビルドに関して。</p>
+<p>これまで、CSS の圧縮は <code>clean-css-cli</code> を使っていて、<code>package.json</code> に npm-scripts を書き、<code>npm-run-all</code> で一括実行できるようにしていたが、結局 Gulp に戻ってしまった。</p>
+<ul>
+  <li><a href="/blog/2017/02/01-03.html">Gulp を使わずに npm-scripts を使う・npm-scripts から Clean-CSS-CLI を呼んで CSS を圧縮する</a></li>
+</ul>
+<p>Uglify を導入して、JavaScript の圧縮をしようとしたところで、なんとなく <code>package.json</code> にワンライナーを列挙するのがゴチャつく気がして、npm-scripts の運用を止めてしまった。<code>better-npm-run</code> というパッケージを使うともう少し <code>package.json</code> 内での可読性も上がるのかもしれないが、なんだか結局 <code>gulpfile.js</code> に書いていたモノを <code>package.json</code> に移し替えているだけな気がしてきて、なんだかなーと。</p>
+<p>直接 npm パッケージを叩くよりも、Gulp のラッパープラグインを間に挟むことで、「ラッパープラグインだけ保守されなくなったらどうしよう」とかいう心配はあるものの、1度構築した環境はバージョンを上げずに残しておけば最悪良いワケだし、フロントエンド界隈で今のところ「この技術でもうオッケー、これからは枯れていくだけ！」という状態のモノは何もないので、色々と諦めることにした。気持ち的には JSON ファイルに「処理」が書かれるのは違和感があり、JSON ファイルは「定義」だけにしたい感じがあるので、Gulp に戻った。</p>
+<h2 id="つーわけで-gulp-の用意"><a class="header-link" href="#つーわけで-gulp-の用意"><span class="header-link-mark"></span></a>つーわけで Gulp の用意</h2>
+<p>というワケで、npm-scripts を使っていたリポジトリで Gulp を使うための準備をしていく。</p>
+<p>まずはコマンドラインで使っていたパッケージ群が不要になるので消してしまう。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">npm</span> uninstall clean-css-cli npm-run-all rimraf -D
+</code></pre>
+<ul>
+  <li><code>uninstall</code> は <code>un</code> と省略表記できる。ヘルプで見てみると <code>remove, rm, r, un, unlink</code> は全て同じエイリアスらしい。</li>
+  <li>削除するパッケージを複数並べて記述できる。</li>
+  <li><code>-D</code> は <code>--save-dev</code> の略。<code>package.json</code> からこのパッケージを使用している記述を消してくれる。</li>
+  <li>参考：<a href="http://qiita.com/mamo/items/6f1cf71ccd82216fe25b">npmのuninstallコマンドを忘れがちなのでメモ - Qiita</a></li>
+</ul>
+<p>次に、今回使うパッケージ群をインストールする。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">npm</span> <span class="token function">install</span> gulp gulp-load-plugins gulp-plumber gulp-clean-css gulp-uglify -D
+</code></pre>
+<ul>
+  <li><code>install</code> は <code>i</code> と省略表記できる。</li>
+  <li><code>-D</code> は前述のとおり <code>--save-dev</code> の省略表記。<code>package.json</code> にこのパッケージを使用しているという記述を追記してくれる。</li>
+</ul>
+<p>導入しているプラグインは以下のとおり。</p>
+<ul>
+  <li><code>gulp</code> : Gulp 本体。</li>
+  <li><code>gulp-load-plugins</code> : Gulp プラグインを一括読み込みできるプラグイン。便利なのでとりあえず入れておく。
+    <ul>
+      <li><a href="/blog/2016/10/06-01.html">Babel にリベンジ！ES2015 ってやつを勉強する環境を作るぜ！</a></li>
+      <li>参考：<a href="http://qiita.com/dhun/items/daa207fc05c67f255c23">gulpパッケージの一括ロード - Qiita</a></li>
+      <li>
+        <blockquote>
+          <p>デフォルト設定では、パッケージの名前から <code>gulp-</code> が削除され、残りの部分をキャメルケースにした名前で <code>$</code> に割り当てられます</p>
+        </blockquote>
+      </li>
+    </ul>
+  </li>
+  <li><code>gulp-plumber</code> : JavaScript のビルドに失敗した時にプロセスが落ちないようにしてくれるプラグイン。今回はなくても良い気がしたけど入れておいて悪いことないので入れておく。
+    <ul>
+      <li><a href="/blog/2016/10/09-01.html">Babel を試す環境に Gulp-Plumber を入れて自動ビルドに備える</a></li>
+    </ul>
+  </li>
+  <li><code>gulp-clean-css</code> : 先程アンインストールした <code>clean-css-cli</code> を Gulp で使えるようにしているラッパーのプラグイン。CSS を圧縮する。</li>
+  <li><code>gulp-uglify</code> : JavaScript を圧縮するプラグイン。</li>
+</ul>
+<p>ググっていた中で <code>gulp-minify-css</code> とか <code>gulp-uglifyjs</code> といったプラグイン名も見かけたが、npm で確認するとどちらも Deprecated (廃止) になっていた。<em>使うプラグインはちゃんと公式の API を確認しておこう。</em></p>
+<ul>
+  <li>参考：<a href="https://www.npmjs.com/package/gulp-minify-css">gulp-minify-css - npm</a></li>
+  <li>参考：<a href="https://www.npmjs.com/package/gulp-uglifyjs">gulp-uglifyjs - npm</a></li>
+</ul>
+<h2 id="gulpfilejs-を書く"><a class="header-link" href="#gulpfilejs-を書く"><span class="header-link-mark"></span></a><code>gulpfile.js</code> を書く</h2>
+<p>次にリポジトリ配下に <code>gulpfile.js</code> を作り、以下のように書く。今回は <code>gulp-babel</code> などを入れていないので、普通の JavaScript (ES5) の書式で書く。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token string">'use strict'</span><span class="token punctuation">;</span>
+
+<span class="token comment">// 必要なプラグインの読み込み</span>
+<span class="token keyword">var</span> gulp <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'gulp'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">var</span> gulpLoadPlugins <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'gulp-load-plugins'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">var</span> $ <span class="token operator">=</span> <span class="token function">gulpLoadPlugins</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment">// Gulp プラグインを一括で読み込む</span>
+
+<span class="token doc-comment comment">/**
+ * CSS を圧縮する
+ * 
+ * <span class="token keyword">@return</span> <span class="token class-name"><span class="token punctuation">{</span>Stream<span class="token punctuation">}</span></span>
+ */</span>
+gulp<span class="token punctuation">.</span><span class="token method function property-access">task</span><span class="token punctuation">(</span><span class="token string">'min-css'</span><span class="token punctuation">,</span> <span class="token keyword">function</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token keyword control-flow">return</span> gulp
+    <span class="token punctuation">.</span><span class="token method function property-access">src</span><span class="token punctuation">(</span><span class="token string">"src/css/"</span> <span class="token operator">+</span> fileName <span class="token operator">+</span> <span class="token string">".css"</span><span class="token punctuation">)</span>  <span class="token comment">// src/css/ 配下の指定ファイルを対象に圧縮する</span>
+    <span class="token punctuation">.</span><span class="token method function property-access">pipe</span><span class="token punctuation">(</span>$<span class="token punctuation">.</span><span class="token method function property-access">cleanCss</span><span class="token punctuation">(</span>
+      <span class="token punctuation">{</span>
+        compatibility<span class="token operator">:</span> <span class="token string">'ie7'</span><span class="token punctuation">,</span>   <span class="token comment">// 互換性の設定</span>
+        format<span class="token operator">:</span> <span class="token punctuation">{</span>
+          breaks<span class="token operator">:</span> <span class="token punctuation">{</span>
+            afterComment<span class="token operator">:</span> <span class="token boolean">true</span>  <span class="token comment">// コメントの後ろに改行を入れる</span>
+          <span class="token punctuation">}</span>
+        <span class="token punctuation">}</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span> <span class="token keyword">function</span><span class="token punctuation">(</span><span class="token parameter">details</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        <span class="token comment">// 圧縮結果をログ出力する</span>
+        <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span>details<span class="token punctuation">.</span><span class="token property-access">name</span> <span class="token operator">+</span> <span class="token string">': '</span> <span class="token operator">+</span> details<span class="token punctuation">.</span><span class="token property-access">stats</span><span class="token punctuation">.</span><span class="token property-access">originalSize</span> <span class="token operator">+</span> <span class="token string">' -> '</span> <span class="token operator">+</span> details<span class="token punctuation">.</span><span class="token property-access">stats</span><span class="token punctuation">.</span><span class="token property-access">minifiedSize</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">)</span><span class="token punctuation">)</span>
+    <span class="token punctuation">.</span><span class="token method function property-access">pipe</span><span class="token punctuation">(</span>gulp<span class="token punctuation">.</span><span class="token method function property-access">dest</span><span class="token punctuation">(</span><span class="token string">'dist/css/'</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment">// dist/css/ 配下に出力する</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token doc-comment comment">/**
+ * JavaScript を圧縮する
+ * 
+ * <span class="token keyword">@return</span> <span class="token class-name"><span class="token punctuation">{</span>Stream<span class="token punctuation">}</span></span>
+ */</span>
+gulp<span class="token punctuation">.</span><span class="token method function property-access">task</span><span class="token punctuation">(</span><span class="token string">'min-js'</span><span class="token punctuation">,</span> <span class="token keyword">function</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token keyword control-flow">return</span> gulp
+    <span class="token punctuation">.</span><span class="token method function property-access">src</span><span class="token punctuation">(</span><span class="token string">"src/js/*.js"</span><span class="token punctuation">)</span>  <span class="token comment">// src/js/ 配下の全ファイルを対象に圧縮する</span>
+    <span class="token punctuation">.</span><span class="token method function property-access">pipe</span><span class="token punctuation">(</span>$<span class="token punctuation">.</span><span class="token method function property-access">plumber</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>  <span class="token comment">// エラー時にプロセスが落ちないようにする</span>
+    <span class="token punctuation">.</span><span class="token method function property-access">pipe</span><span class="token punctuation">(</span>$<span class="token punctuation">.</span><span class="token method function property-access">uglify</span><span class="token punctuation">(</span><span class="token punctuation">{</span>
+      compress<span class="token operator">:</span> <span class="token boolean">true</span><span class="token punctuation">,</span>  <span class="token comment">// 圧縮する </span>
+      mangle<span class="token operator">:</span> <span class="token boolean">true</span><span class="token punctuation">,</span>    <span class="token comment">// 変数の難読化を行う</span>
+      preserveComments<span class="token operator">:</span> <span class="token string">'some'</span>  <span class="token comment">// 「*!」で始まるブロックコメントを残す</span>
+    <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+    <span class="token punctuation">.</span><span class="token method function property-access">pipe</span><span class="token punctuation">(</span>gulp<span class="token punctuation">.</span><span class="token method function property-access">dest</span><span class="token punctuation">(</span><span class="token string">'dist/js/'</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment">// dist/js/ 配下に出力する</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<ul>
+  <li><code>gulp-load-plugins</code> の使い方は見ていただければ分かるかと。ハイフンケースのパッケージ名をキャメルケースにする。</li>
+  <li><code>gulp-plumber</code> は <code>gulp.src()</code> の後に挟んでおく。</li>
+  <li><code>gulp.dest()</code> は対象のディレクトリがなくても勝手に作ってくれる。また、ファイルが存在する場合は上書きする。</li>
+</ul>
+<h3 id="clean-css-について"><a class="header-link" href="#clean-css-について"><span class="header-link-mark"></span></a>Clean-CSS について</h3>
+<p><code>gulp-clean-css</code> は <code>clean-css-cli</code> で使えたオプションがそのまま使えるので、<code>clean-css</code> パッケージの説明を参考に、連想配列の形式で書き直しておく。</p>
+<ul>
+  <li>参考：<a href="https://www.npmjs.com/package/clean-css#formatting-options">clean-css - npm</a></li>
+</ul>
+<p>実行結果をログ出力するコールバック関数を仕込めたので、圧縮前後のファイルサイズを出力するようにしてみた。</p>
+<ul>
+  <li>参考：<a href="https://www.npmjs.com/package/gulp-clean-css#callback">gulp-clean-css - npm</a></li>
+</ul>
+<h3 id="uglify-について"><a class="header-link" href="#uglify-について"><span class="header-link-mark"></span></a>Uglify について</h3>
+<p>オプションの類は、コマンドラインで使う場合と基本的に同じ。</p>
+<ul>
+  <li><code>-c</code> = <code>-compress</code> … 圧縮する。</li>
+  <li><code>-m</code> = <code>-mangle</code> … 変数を短くする。AngularJS なんかでコレのせいでストレートな DI ができなくなる、アレ。</li>
+</ul>
+<p><code>preserveComments</code> オプションの <code>some</code> は廃止されているようなのだが、<code>license</code> で <code>/*!</code> 始まりのコメントが出力されなかったので使っている。</p>
+<ul>
+  <li>参考：<a href="https://www.npmjs.com/package/gulp-uglify#options">gulp-uglify - npm</a></li>
+</ul>
+<h2 id="npm-scripts-は-gulp-呼び出しで書いておく"><a class="header-link" href="#npm-scripts-は-gulp-呼び出しで書いておく"><span class="header-link-mark"></span></a>npm-scripts は Gulp 呼び出しで書いておく</h2>
+<p>今回、グローバルに Gulp をインストールしていないので、<code>$ gulp min-js</code> といった呼び出し方をしても、<code>command not found</code> となってしまうか、gulp のバージョンが合わないと正常に動作しない。</p>
+<p>ローカルにインストールされた Gulp でも、<code>node_modules</code> 配下の実行ファイルを指定すれば呼べるのだが、これはめんどくさい。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># これでも一応叩ける。</span>
+$ ./node_modules/gulp/bin/gulp.js min-js
+</code></pre>
+<p>そこで、ローカルインストールされているコマンドでも叩ける npm-scripts の仕様を利用し、以下のようなタスクを <code>package.json</code> に定義してやる。</p>
+<pre class="language-json"><code class="language-json"><span class="token comment">// 前略</span>
+<span class="token property">"scripts"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+  <span class="token property">"min-css"</span><span class="token operator">:</span> <span class="token string">"gulp min-css"</span><span class="token punctuation">,</span>
+  <span class="token property">"min-js"</span><span class="token operator">:</span> <span class="token string">"gulp min-js"</span>
+<span class="token punctuation">}</span><span class="token punctuation">,</span>
+<span class="token comment">// 後略</span>
+</code></pre>
+<p>こうしておけば、以下のように <code>npm run</code> で Gulp タスクが呼べるようになる。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">npm</span> run min-css
+$ <span class="token function">npm</span> run min-js
+</code></pre>
+<p>npm-scripts を全く使わなくなるワケではなく、「定義」だけ書くスタイルで残してみた。</p>
+<ul>
+  <li>参考：<a href="http://takedajs.hatenablog.jp/entry/2016/11/23/115457">Gulpを利用してJavaScriptとCSSを圧縮する - takedajs ログ</a></li>
+</ul>
+<h2 id="個別のファイルのみビルドするようタスクを分割する"><a class="header-link" href="#個別のファイルのみビルドするようタスクを分割する"><span class="header-link-mark"></span></a>個別のファイルのみビルドするようタスクを分割する</h2>
+<p>今回の「はてなブログで利用する CSS・JS をビルドしたい」という用途からすると、<code>*.css</code> というように全ファイルを毎度ビルドする必要がそこまでないので、個別のファイルをビルドできるタスクを作る。この時、基本的な処理は同じなので、処理部分は共通化しておく。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token doc-comment comment">/**
+ * CSS を圧縮する Function
+ * 
+ * <span class="token keyword">@param</span> <span class="token class-name"><span class="token punctuation">{</span>string<span class="token punctuation">}</span></span> 圧縮するファイル名。"*" を渡せば src/css/ 配下の全ファイルが対象となる
+ * <span class="token keyword">@return</span> <span class="token class-name"><span class="token punctuation">{</span>Stream<span class="token punctuation">}</span></span>
+ */</span>
+<span class="token keyword">function</span> <span class="token function">minCss</span><span class="token punctuation">(</span><span class="token parameter">fileName</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token keyword control-flow">return</span> gulp
+    <span class="token punctuation">.</span><span class="token method function property-access">src</span><span class="token punctuation">(</span><span class="token string">"src/css/"</span> <span class="token operator">+</span> fileName <span class="token operator">+</span> <span class="token string">".css"</span><span class="token punctuation">)</span>  <span class="token comment">// src/css/ 配下の指定ファイルを対象に圧縮する</span>
+    <span class="token punctuation">.</span><span class="token method function property-access">pipe</span><span class="token punctuation">(</span>$<span class="token punctuation">.</span><span class="token method function property-access">cleanCss</span><span class="token punctuation">(</span>
+      <span class="token punctuation">{</span>
+        compatibility<span class="token operator">:</span> <span class="token string">'ie7'</span><span class="token punctuation">,</span>   <span class="token comment">// 互換性の設定</span>
+        format<span class="token operator">:</span> <span class="token punctuation">{</span>
+          breaks<span class="token operator">:</span> <span class="token punctuation">{</span>
+            afterComment<span class="token operator">:</span> <span class="token boolean">true</span>  <span class="token comment">// コメントの後ろに改行を入れる</span>
+          <span class="token punctuation">}</span>
+        <span class="token punctuation">}</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span> <span class="token keyword">function</span><span class="token punctuation">(</span><span class="token parameter">details</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        <span class="token comment">// 圧縮結果をログ出力する</span>
+        <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span>details<span class="token punctuation">.</span><span class="token property-access">name</span> <span class="token operator">+</span> <span class="token string">': '</span> <span class="token operator">+</span> details<span class="token punctuation">.</span><span class="token property-access">stats</span><span class="token punctuation">.</span><span class="token property-access">originalSize</span> <span class="token operator">+</span> <span class="token string">' -> '</span> <span class="token operator">+</span> details<span class="token punctuation">.</span><span class="token property-access">stats</span><span class="token punctuation">.</span><span class="token property-access">minifiedSize</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">)</span><span class="token punctuation">)</span>
+    <span class="token punctuation">.</span><span class="token method function property-access">pipe</span><span class="token punctuation">(</span>gulp<span class="token punctuation">.</span><span class="token method function property-access">dest</span><span class="token punctuation">(</span><span class="token string">'dist/css/'</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment">// dist/css/ 配下に出力する (対象ディレクトリがなくても OK・ファイルは上書き)</span>
+<span class="token punctuation">}</span>
+
+<span class="token doc-comment comment">/**
+ * CSS 圧縮 … 全ファイル
+ * 
+ * <span class="token keyword">@return</span> <span class="token class-name"><span class="token punctuation">{</span>Stream<span class="token punctuation">}</span></span>
+ */</span>
+gulp<span class="token punctuation">.</span><span class="token method function property-access">task</span><span class="token punctuation">(</span><span class="token string">'min-css'</span><span class="token punctuation">,</span> <span class="token keyword">function</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token keyword control-flow">return</span> <span class="token function">minCss</span><span class="token punctuation">(</span><span class="token string">"*"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token doc-comment comment">/**
+ * CSS 圧縮 … Corredor
+ * 
+ * <span class="token keyword">@return</span> <span class="token class-name"><span class="token punctuation">{</span>Stream<span class="token punctuation">}</span></span>
+ */</span>
+gulp<span class="token punctuation">.</span><span class="token method function property-access">task</span><span class="token punctuation">(</span><span class="token string">'min-css-corredor'</span><span class="token punctuation">,</span> <span class="token keyword">function</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token keyword control-flow">return</span> <span class="token function">minCss</span><span class="token punctuation">(</span><span class="token string">"Corredor"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token doc-comment comment">/**
+ * CSS 圧縮 … Murga
+ * 
+ * <span class="token keyword">@return</span> <span class="token class-name"><span class="token punctuation">{</span>Stream<span class="token punctuation">}</span></span>
+ */</span>
+gulp<span class="token punctuation">.</span><span class="token method function property-access">task</span><span class="token punctuation">(</span><span class="token string">'min-css-murga'</span><span class="token punctuation">,</span> <span class="token keyword">function</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token keyword control-flow">return</span> <span class="token function">minCss</span><span class="token punctuation">(</span><span class="token string">"Murga"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token doc-comment comment">/**
+ * CSS 圧縮 … El Mylar
+ * 
+ * <span class="token keyword">@return</span> <span class="token class-name"><span class="token punctuation">{</span>Stream<span class="token punctuation">}</span></span>
+ */</span>
+gulp<span class="token punctuation">.</span><span class="token method function property-access">task</span><span class="token punctuation">(</span><span class="token string">'min-css-elmylar'</span><span class="token punctuation">,</span> <span class="token keyword">function</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token keyword control-flow">return</span> <span class="token function">minCss</span><span class="token punctuation">(</span><span class="token string">"ElMylar"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p><code>minCss()</code> という独自の Function を作り、引数のファイルを圧縮するようにしておく。<code>gulp.task()</code> は、この関数にファイル名を渡すだけのタスクにして、ファイル数の数だけ作っておいてやる。</p>
+<p>コレに合わせて、<code>package.json</code> にも各タスクを呼び出す npm-scripts を定義しておくと良い。</p>
+<p>JavaScript の圧縮タスクも同様に作っておくことで、個別に呼び出しやすい。</p>
+<p>こうしてできた GitHub リポジトリは以下。<code>gulpfile.js</code> と <code>package.json</code> を見ていただくと分かるかと。</p>
+<ul>
+  <li><a href="https://github.com/Neos21/hatena-blogs">GitHub - Neos21/HatenaBlogs: はてなブログのテーマやカスタム HTML などを保存しておくリポジトリ。</a></li>
+</ul>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2017-04-10</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2017-04-10</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>Instagram で自分がフォローしているユーザ一覧を取得したい - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2019/12/25-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2019/index.html">2019年</a></li>
+            <li><a href="/blog/2019/12/index.html">12月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2019-12-25</time></div>
+        <h1 id="page-title">Instagram で自分がフォローしているユーザ一覧を取得したい</h1>
+
+<p>Instagram で自分がフォローしているユーザ一覧を取得したく、色々調べてみた。</p>
+<p>Instagram はスクレイピングが難しく、ページ内の CSS クラス名もデタラメで分かりづらい。Selenium 的なツールでログインからフォロー一覧表示まで遷移するのは面倒臭くて諦めてしまった。</p>
+<p>そこで次に考えたのは、フォロー一覧ページを開いている状態で、<strong>ブラウザの開発者ツールから JavaScript を実行し、データ収集を試みる</strong>という方法。</p>
+<p>フォロー一覧ページの URL はこのようになっている。</p>
+<ul>
+  <li><code>https://www.instagram.com/【自分の ID】/following/</code></li>
+</ul>
+<p>このページに遷移し、<code>F12</code> で開発者ツールを開く。</p>
+<p>CSS クラス <code>.isgrP</code> という要素が、フォローユーザをスクロール表示している領域なので、この要素に対して <code>scrollTo()</code> 関数を使ってスクロールしていけば、ユーザを確認していける。</p>
+<p>このユーザ一覧は、スクロールの最下部に到達すると、ページャ的な要領で続きのユーザを動的に取得し、スクロールの下部に付与してくれる。現状<em>バーチャルスクロールは使われていない</em>ので、</p>
+<ul>
+  <li><strong>最下部にスクロール → ユーザ一覧の続きを読み込ませる → 最下部にスクロール → ユーザ一覧の続きを読み込ませる</strong></li>
+</ul>
+<p>を繰り返していけば、ページ内に全ユーザ情報の DOM が蓄えられるというワケ。</p>
+<p>そんなワケで、こんな風にスクリプトを書いてみた。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword">var</span> timerId <span class="token operator">=</span> <span class="token function">setInterval</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token dom variable">document</span><span class="token punctuation">.</span><span class="token method function property-access">querySelector</span><span class="token punctuation">(</span><span class="token string">'.isgrP'</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">scrollTo</span><span class="token punctuation">(</span><span class="token number">0</span><span class="token punctuation">,</span> <span class="token number">20000</span> <span class="token operator">*</span> <span class="token number">10</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'Scroll'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">,</span> <span class="token number">400</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p><code>scrollTo()</code> に大きな値を渡して、常に最下部にスクロールし続けるよう、<code>setInterval()</code> でループしている。コレを開発者ツールのコンソールにコピペして実行すると、</p>
+<ul>
+  <li>最下部にスクロール → ユーザ一覧の続きを読み込む</li>
+</ul>
+<p>という動きが始まる。<em>コレをこのまましばらく放置する。</em></p>
+<p>自分が試した限りだと、<strong>2400ユーザ</strong>くらいまでは取得できるようなので、ひととおりの取得が終わったら、次のコードを叩いて <code>setInterval()</code> のループを止める。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token function">clearInterval</span><span class="token punctuation">(</span>timerId<span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>あとは取得したデータをコピペできれば良いだろう。</p>
+<p>自分が調べたところ、ページ内の HTML 構造は以下のようになっている。</p>
+<pre><code>.isgrP
+└ .jSC57._6xe7A
+   └ .PZuss
+      └ .wo9IH
+         └ .uu6c_ : 1ユーザのくくり
+            └ .t2ksc : アイコン・ID・名前
+               └ .RR-M-.h5uC0.SAvC5 : アイコン
+                  └ .enpQJ : ID・名前
+                     ├ .d7ByH : ID
+                     │ └ a.FPmhX.notranslate._0imsa : リンク
+                     └ .wFPL8 : 名前
+</code></pre>
+<p>なので、<em>取得できたユーザの数</em>を知るには以下のように見れば良い。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token dom variable">document</span><span class="token punctuation">.</span><span class="token method function property-access">querySelectorAll</span><span class="token punctuation">(</span><span class="token string">'.enpQJ'</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token property-access">length</span><span class="token punctuation">;</span>
+</code></pre>
+<p>最終結果。<strong>ユーザ ID とユーザ名を取得し、クリップボードにコピーするには、以下のコードを流す。</strong></p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword">var</span> users <span class="token operator">=</span> <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token punctuation">;</span>
+<span class="token dom variable">document</span><span class="token punctuation">.</span><span class="token method function property-access">querySelectorAll</span><span class="token punctuation">(</span><span class="token string">'.enpQJ'</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">forEach</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token parameter">elem</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  users<span class="token punctuation">.</span><span class="token method function property-access">push</span><span class="token punctuation">(</span>elem<span class="token punctuation">.</span><span class="token method function property-access">querySelector</span><span class="token punctuation">(</span><span class="token string">'.FPmhX'</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token property-access">textContent</span> <span class="token operator">+</span> <span class="token string">' : '</span> <span class="token operator">+</span> elem<span class="token punctuation">.</span><span class="token method function property-access">querySelector</span><span class="token punctuation">(</span><span class="token string">'.wFPL8'</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token property-access">textContent</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token function">copy</span><span class="token punctuation">(</span><span class="token known-class-name class-name">JSON</span><span class="token punctuation">.</span><span class="token method function property-access">stringify</span><span class="token punctuation">(</span>users<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p><code>copy()</code> 関数は、<em>開発者コンソールでのみ使える関数</em>で、引数に渡した文字列をクリップボードにコピーしてくれる。</p>
+<p>このコードを実行したらクリップボードにデータが入っているので、テキストエディタにでもペーストして、あとはよしなに加工すれば良いだろう。</p>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2019-12-25</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2019-12-25</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

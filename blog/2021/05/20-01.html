@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>指定の文字列を含む Kubernetes Pod を一括 Delete する - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2021/05/20-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2021/index.html">2021年</a></li>
+            <li><a href="/blog/2021/05/index.html">05月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2021-05-20</time></div>
+        <h1 id="page-title">指定の文字列を含む Kubernetes Pod を一括 Delete する</h1>
+
+<p><code>kubectl delete pod</code> コマンドで、複数の Pod を一括削除したい場合、</p>
+<pre class="language-bash"><code class="language-bash">$ kubectl get pod myapp-xxxxxx myapp-yyyyyy
+</code></pre>
+<p>…のように記述する。ココで <code>-xxxxxx</code> や <code>-yyyyyy</code> 部分はランダムな文字列になっていて、Pod が再生成される度に変化する。</p>
+<p>こうした Pod 群を一括削除したい時に、ランダムな文字列部分を都度指定するのは面倒だ。そこで、次のようなコマンドで、<strong><code>myapp</code> を含む Pod を一括削除</strong>してみる。</p>
+<pre class="language-bash"><code class="language-bash">$ kubectl delete pod <span class="token variable"><span class="token variable">$(</span>kubectl get pod --no-headers -o custom-columns<span class="token operator">=</span><span class="token string">":metadata.name"</span> <span class="token operator">|</span> <span class="token function">grep</span> myapp <span class="token operator">|</span> <span class="token function">tr</span> -s <span class="token string">'<span class="token entity" title="\n">\n</span>'</span> <span class="token string">' '</span><span class="token variable">)</span></span>
+</code></pre>
+<p>↑ 先に結論。コレで <code>myapp</code> を含む Pod を一括削除できる。</p>
+<p><em>コマンド置換</em>の中を一つずつ見ていく。</p>
+<pre class="language-bash"><code class="language-bash">$ kubectl get pod --no-headers -o custom-columns<span class="token operator">=</span><span class="token string">":metadata.name"</span>
+</code></pre>
+<p>コレで、Pod 名のみの一覧を表示する。</p>
+<p>次に <strong><code>grep myapp</code></strong> 部分で、<code>myapp</code> 部分を含む Pod 名のみに絞り込む。コレだけ実行すると次のような出力になる。</p>
+<pre class="language-bash"><code class="language-bash">$ kubectl get pod --no-headers -o custom-columns<span class="token operator">=</span><span class="token string">":metadata.name"</span> <span class="token operator">|</span> <span class="token function">grep</span> myapp
+myapp-xxxxxx
+myapp-yyyyyy
+</code></pre>
+<p>最後に <code>tr -s '\n' ' '</code> で、改行をスペースに変換する。</p>
+<pre class="language-bash"><code class="language-bash">$ kubectl get pod --no-headers -o custom-columns<span class="token operator">=</span><span class="token string">":metadata.name"</span> <span class="token operator">|</span> <span class="token function">grep</span> myapp <span class="token operator">|</span> <span class="token function">tr</span> -s <span class="token string">'<span class="token entity" title="\n">\n</span>'</span> <span class="token string">' '</span>
+myapp-xxxxxx myapp-yyyyyy
+</code></pre>
+<p>ココまで出来たら、コマンド置換で <code>kubectl delete pod</code> の後ろにコイツをくっつけてやるだけ。おしまい。</p><div class="ad-amazon">
+  <div class="ad-amazon-image">
+    <a href="https://www.amazon.co.jp/dp/B087PTX51W?tag=neos21-22&amp;linkCode=osi&amp;th=1&amp;psc=1">
+      <img src="https://m.media-amazon.com/images/I/41vudLzVYWL._SL160_.jpg" width="123" height="160">
+    </a>
+  </div>
+  <div class="ad-amazon-info">
+    <div class="ad-amazon-title">
+      <a href="https://www.amazon.co.jp/dp/B087PTX51W?tag=neos21-22&amp;linkCode=osi&amp;th=1&amp;psc=1">Kubernetes on AWS～アプリケーションエンジニア 本番環境へ備える</a>
+    </div>
+  </div>
+</div>
+<div class="ad-rakuten">
+  <div class="ad-rakuten-image">
+    <a href="https://hb.afl.rakuten.co.jp/hgc/g00reb42.waxycf23.g00reb42.waxyd080/?pc=https%3A%2F%2Fitem.rakuten.co.jp%2Frakutenkobo-ebooks%2F40c337a940ae35d1b3fd75f2024256d5%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Frakutenkobo-ebooks%2Fi%2F19155735%2F">
+      <img src="https://thumbnail.image.rakuten.co.jp/@0_mall/rakutenkobo-ebooks/cabinet/2088/2000008422088.jpg?_ex=128x128">
+    </a>
+  </div>
+  <div class="ad-rakuten-info">
+    <div class="ad-rakuten-title">
+      <a href="https://hb.afl.rakuten.co.jp/hgc/g00reb42.waxycf23.g00reb42.waxyd080/?pc=https%3A%2F%2Fitem.rakuten.co.jp%2Frakutenkobo-ebooks%2F40c337a940ae35d1b3fd75f2024256d5%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Frakutenkobo-ebooks%2Fi%2F19155735%2F">Kubernetes on AWS〜アプリケーションエンジニア　本番環境へ備える【電子書籍】[ 会澤康二 ]</a>
+    </div>
+    <div class="ad-rakuten-shop">
+      <a href="https://hb.afl.rakuten.co.jp/hgc/g00reb42.waxycf23.g00reb42.waxyd080/?pc=https%3A%2F%2Fwww.rakuten.co.jp%2Frakutenkobo-ebooks%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Frakutenkobo-ebooks%2F">楽天Kobo電子書籍ストア</a>
+    </div>
+    <div class="ad-rakuten-price">価格 : 3740円</div>
+  </div>
+</div>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2021-05-20</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2021-05-20</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

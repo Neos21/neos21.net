@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>ウェブフォントを遅延読み込みする簡単な実装 - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2020/11/26-03.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2020/index.html">2020年</a></li>
+            <li><a href="/blog/2020/11/index.html">11月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2020-11-26</time></div>
+        <h1 id="page-title">ウェブフォントを遅延読み込みする簡単な実装</h1>
+
+<p>ページの初回読み込み時から <code>@font-face</code> でウェブフォントを読み込もうとしていると、どうもレンダリングが遅くなる。<code>font-display: swap</code> もなんだか効いてない気がする。そこで、いさぎよく <code>window.onload</code> 以降にウェブフォントを遅延読み込みすることにした。</p>
+<p>ココでは、OS 問わず日本語対応の等幅フォントを表示するため、Noto Sans Mono CJK JP を遅延読み込みすることにする。</p>
+<h2 id="サンプル"><a class="header-link" href="#サンプル"><span class="header-link-mark"></span></a>サンプル</h2>
+<p>以下の CodePen で、実装サンプルを確認できる。</p>
+<ul>
+  <li><a href="https://codepen.io/Neos21/pen/WNxpmgW">Easy Lazy Loading Web Font</a></li>
+</ul>
+<p>サンプルでは、ページ読み込みから3秒後、初めて Web フォントを読み込むよう遅延させている。</p>
+<p>「Remove」と「Add」ボタンは、遅延読み込み時に <code>html</code> 要素に付与しているクラス名を付けたり外したりできる。スワップの挙動を手動で再現できる。</p>
+<h2 id="font-face-で定義したウェブフォントはいつロードされるか"><a class="header-link" href="#font-face-で定義したウェブフォントはいつロードされるか"><span class="header-link-mark"></span></a><code>@font-face</code> で定義したウェブフォントはいつロードされるか</h2>
+<p>ところで、<code>@font-face</code> で定義したウェブフォントは、どのタイミングでロードされるのか。自分が調べたところ、</p>
+<ol>
+  <li>ただ <code>@font-face</code> を定義しただけでは、ウェブフォントは読み込まれない</li>
+  <li>HTML 中に適用する対象がないセレクタでウェブフォントを指定していても、ウェブフォントは読み込まれない
+    <ul>
+      <li>例えばページ中に <code>div</code> 要素が一つもない状態で、<code>div { font-family: "My Web Font"; }</code> という CSS 指定があっても、そのウェブフォントはロードされない</li>
+    </ul>
+  </li>
+  <li>HTML 中に適用対象となる要素が存在すると、初めてウェブフォントが読み込まれる</li>
+</ol>
+<p>つまり、ウェブフォントを使うような指定が CSS として記述してあっても、それが使われている HTML 要素がページ中になければ、その CSS の記述が無視されて、ウェブフォントも読み込まれないワケだ。</p>
+<h2 id="遅延読み込みを前提とした-css-を書く"><a class="header-link" href="#遅延読み込みを前提とした-css-を書く"><span class="header-link-mark"></span></a>遅延読み込みを前提とした CSS を書く</h2>
+<p>ということなので、予め次のような CSS を用意しておく分には、ウェブフォントはロードされない。</p>
+<pre class="language-css"><code class="language-css"><span class="token atrule"><span class="token rule">@font-face</span></span> <span class="token punctuation">{</span>
+  <span class="token property">font-family</span><span class="token punctuation">:</span> <span class="token string">"Noto Sans Mono CJK JP Web"</span><span class="token punctuation">;</span>
+  <span class="token property">src</span><span class="token punctuation">:</span> <span class="token function">local</span><span class="token punctuation">(</span><span class="token string">"NotoSansMonoCJKjp-Regular"</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+       <span class="token function">local</span><span class="token punctuation">(</span><span class="token string">"Noto Sans Mono CJK JP Regular"</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+       <span class="token function">local</span><span class="token punctuation">(</span><span class="token string">"Noto Sans Mono CJK JP"</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+       <span class="token url"><span class="token function">url</span><span class="token punctuation">(</span><span class="token string url">"https://cdn.jsdelivr.net/npm/@neos21/japanese-monospaced-fonts@1.0.2/NotoSansMonoCJKjp-Regular.woff2"</span><span class="token punctuation">)</span></span>              <span class="token function">format</span><span class="token punctuation">(</span><span class="token string">"woff2"</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+       <span class="token url"><span class="token function">url</span><span class="token punctuation">(</span><span class="token string url">"https://unpkg.com/@neos21/japanese-monospaced-fonts@1.0.2/NotoSansMonoCJKjp-Regular.woff2"</span><span class="token punctuation">)</span></span>                         <span class="token function">format</span><span class="token punctuation">(</span><span class="token string">"woff2"</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+       <span class="token url"><span class="token function">url</span><span class="token punctuation">(</span><span class="token string url">"https://cdn.jsdelivr.net/npm/@neos21/japanese-monospaced-fonts@1.0.2/NotoSansMonoCJKjp-Regular.woff"</span><span class="token punctuation">)</span></span>               <span class="token function">format</span><span class="token punctuation">(</span><span class="token string">"woff"</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+       <span class="token url"><span class="token function">url</span><span class="token punctuation">(</span><span class="token string url">"https://unpkg.com/@neos21/japanese-monospaced-fonts@1.0.2/NotoSansMonoCJKjp-Regular.woff"</span><span class="token punctuation">)</span></span>                          <span class="token function">format</span><span class="token punctuation">(</span><span class="token string">"woff"</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+       <span class="token url"><span class="token function">url</span><span class="token punctuation">(</span><span class="token string url">"https://cdn.jsdelivr.net/npm/@neos21/japanese-monospaced-fonts@1.0.2/NotoSansMonoCJKjp-Regular.otf"</span><span class="token punctuation">)</span></span>                <span class="token function">format</span><span class="token punctuation">(</span><span class="token string">"opentype"</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+       <span class="token url"><span class="token function">url</span><span class="token punctuation">(</span><span class="token string url">"https://unpkg.com/@neos21/japanese-monospaced-fonts@1.0.2/NotoSansMonoCJKjp-Regular.otf"</span><span class="token punctuation">)</span></span>                           <span class="token function">format</span><span class="token punctuation">(</span><span class="token string">"opentype"</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+       <span class="token url"><span class="token function">url</span><span class="token punctuation">(</span><span class="token string url">"https://cdn.jsdelivr.net/npm/@japanese-monospaced-fonts/noto-sans-mono-cjk-jp@1.0.1/NotoSansMonoCJKJP-Regular.otf"</span><span class="token punctuation">)</span></span> <span class="token function">format</span><span class="token punctuation">(</span><span class="token string">"opentype"</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+       <span class="token url"><span class="token function">url</span><span class="token punctuation">(</span><span class="token string url">"https://unpkg.com/@japanese-monospaced-fonts/noto-sans-mono-cjk-jp@1.0.1/NotoSansMonoCJKJP-Regular.otf"</span><span class="token punctuation">)</span></span>            <span class="token function">format</span><span class="token punctuation">(</span><span class="token string">"opentype"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token property">font-display</span><span class="token punctuation">:</span> swap<span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+
+<span class="token comment">/* 通常のスタイル : ウェブフォントを読み込まない */</span>
+<span class="token selector">html</span> <span class="token punctuation">{</span> <span class="token property">font-family</span><span class="token punctuation">:</span> monospace<span class="token punctuation">;</span> <span class="token punctuation">}</span>
+
+<span class="token comment">/* html 要素に class が振られた場合 : 通常 .loaded クラスを振らなければ、この指定はどこにも使われず、ウェブフォントはロードされない */</span>
+<span class="token selector">html<span class="token class">.loaded</span></span> <span class="token punctuation">{</span> <span class="token property">font-family</span><span class="token punctuation">:</span> <span class="token string">"Noto Sans Mono CJK JP Web"</span><span class="token punctuation">,</span> monospace<span class="token punctuation">;</span> <span class="token punctuation">}</span>
+</code></pre>
+<h2 id="遅延読み込みのためのスクリプト"><a class="header-link" href="#遅延読み込みのためのスクリプト"><span class="header-link-mark"></span></a>遅延読み込みのためのスクリプト</h2>
+<p>先程用意した <code>html.loaded</code> というセレクタを有効にするため、<code>window.onload</code> のタイミング以降で <code>html</code> 要素に CSS クラスを振る、簡単な JS を書く。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token dom variable">window</span><span class="token punctuation">.</span><span class="token method function property-access">addEventListener</span><span class="token punctuation">(</span><span class="token string">'load'</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token function">setTimeout</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+    <span class="token dom variable">document</span><span class="token punctuation">.</span><span class="token method function property-access">querySelector</span><span class="token punctuation">(</span><span class="token string">'html'</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token property-access">classList</span><span class="token punctuation">.</span><span class="token method function property-access">add</span><span class="token punctuation">(</span><span class="token string">'loaded'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>コレだけで OK。この CSS クラスが振られた瞬間からウェブフォントが読み込まれ、読み込みが完了したら画面に適用される。</p>
+<p>Noto Sans Mono CJK JP はファイルサイズが大きいので、ロードに10秒程度かかることもある。ページへの反映がかなり遅れるかもしれないが、ページの初回読み込みは一切ブロックしないので、一長一短。</p>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2020-11-26</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2020-11-26</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

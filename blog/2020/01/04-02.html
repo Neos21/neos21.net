@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>Python 開発環境の構成方法を考えた : pipenv のススメ - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2020/01/04-02.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2020/index.html">2020年</a></li>
+            <li><a href="/blog/2020/01/index.html">01月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2020-01-04</time></div>
+        <h1 id="page-title">Python 開発環境の構成方法を考えた : pipenv のススメ</h1>
+
+<p>Python の開発環境をどう作ったらいいかなー、という話。</p>
+<p><strong>TL;DR : OS に Python3 系を入れて、プロジェクトディレクトリごとに pipenv で管理しろ。</strong></p>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#pyenv%EF%BC%9Fvirtualenv%EF%BC%9Fvenv%EF%BC%9F">pyenv？virtualenv？venv？</a></li>
+  <li><a href="#python-v3-%E7%B3%BB%E3%82%92-os-%E3%81%AB%E7%9B%B4%E6%8E%A5%E3%82%A4%E3%83%B3%E3%82%B9%E3%83%88%E3%83%BC%E3%83%AB%E3%81%99%E3%82%8B">Python v3 系を OS に直接インストールする</a></li>
+  <li><a href="#%E3%83%91%E3%83%83%E3%82%B1%E3%83%BC%E3%82%B8%E7%AE%A1%E7%90%86%E3%81%AF-pipenv-%E3%82%92%E4%BD%BF%E3%81%86">パッケージ管理は pipenv を使う</a></li>
+  <li><a href="#pipenv-%E3%82%92%E4%BD%BF%E3%81%A3%E3%81%A6%E6%96%B0%E8%A6%8F%E3%83%97%E3%83%AD%E3%82%B8%E3%82%A7%E3%82%AF%E3%83%88%E3%81%AE%E4%BD%9C%E6%88%90">pipenv を使って新規プロジェクトの作成</a></li>
+  <li><a href="#%E4%BE%9D%E5%AD%98%E3%83%A2%E3%82%B8%E3%83%A5%E3%83%BC%E3%83%AB%E3%82%92%E3%82%A4%E3%83%B3%E3%82%B9%E3%83%88%E3%83%BC%E3%83%AB%E3%81%97%E3%81%A6%E3%81%BF%E3%82%8B">依存モジュールをインストールしてみる</a></li>
+  <li><a href="#scripts-%E3%83%96%E3%83%AD%E3%83%83%E3%82%AF%E3%82%92%E4%BD%BF%E3%81%86"><code>[scripts]</code> ブロックを使う</a></li>
+  <li><a href="#%E6%97%A2%E5%AD%98%E3%81%AE-pipenv-%E3%83%97%E3%83%AD%E3%82%B8%E3%82%A7%E3%82%AF%E3%83%88%E3%82%92%E5%86%8D%E7%8F%BE%E3%81%99%E3%82%8B%E3%81%AB%E3%81%AF">既存の pipenv プロジェクトを再現するには</a></li>
+  <li><a href="#%E4%BB%A5%E4%B8%8A">以上</a></li>
+</ul>
+<h2 id="pyenv？virtualenv？venv？"><a class="header-link" href="#pyenv？virtualenv？venv？"><span class="header-link-mark"></span></a>pyenv？virtualenv？venv？</h2>
+<p>複数の Python のバージョンをインストールするためのバージョン管理ツール。Node.js における Nodist や Nodebrew 的なヤツ。</p>
+<p>歴史的経緯から色んなツールが存在するが、pyenv は v2 系向けとかで、venv が現在 Python 公式に含まれてる。</p>
+<ul>
+  <li>参考：<a href="https://qiita.com/shibukawa/items/0daab479a2fd2cb8a0e7">pyenvが必要かどうかフローチャート - Qiita</a></li>
+  <li>参考：<a href="https://qiita.com/KRiver1/items/c1788e616b77a9bad4dd">pyenv、pyenv-virtualenv、venv、Anaconda、Pipenv。私はPipenvを使う。 - Qiita</a></li>
+  <li>参考：<a href="https://qiita.com/sl2/items/1e503952b9506a0539ea">2018年のPythonプロジェクトのはじめかた - Qiita</a></li>
+</ul>
+<h2 id="python-v3-系を-os-に直接インストールする"><a class="header-link" href="#python-v3-系を-os-に直接インストールする"><span class="header-link-mark"></span></a>Python v3 系を OS に直接インストールする</h2>
+<p>色々調べたけど、<strong>めんどくせーから全部無視することにする。</strong></p>
+<p>Python v2 系はもう使わない。Python v3 系も、v3.7 あたりが1つ入っていれば良くて、複数の Python 本体のバージョンなんか管理しなくていい。Node.js だって、v5・v6 時代はゴチャついててめんどくさかったけど、今となっては v10 以降の適当なヤツが入ってればもう問題ないし、メジャーバージョンが変わったところで適当にバージョンアップして最新版だけ使ってればいいレベルだ。Nodist も Nodebrew も別に使うことはなくなったわ。</p>
+<p>だから v3.7 系か v3.8 系か、適当なあたりのバージョンを OS に直接インストールする。</p>
+<ul>
+  <li>公式から OS 別のインストーラを落としてきて入れる
+    <ul>
+      <li><a href="https://www.python.org/downloads/release/python-375/">Python Release Python 3.7.5 | Python.org</a></li>
+    </ul>
+  </li>
+  <li>Windows で Chocolatey を入れていれば以下のようなコマンドで入れられる
+    <ul>
+      <li><code>PS1> choco install python3</code> (バージョン指定したい場合は <code>--version=3.7.5</code> とか書けば良い)</li>
+    </ul>
+  </li>
+  <li>Windows の場合は Git SDK に同梱の Python3 でも事足りそう
+    <ul>
+      <li><a href="https://github.com/git-for-windows/build-extra/releases">Releases · git-for-windows/build-extra · GitHub</a></li>
+    </ul>
+  </li>
+  <li>MacOS は Homebrew で入れれば良い
+    <ul>
+      <li><code>$ brew install python</code></li>
+      <li><code>python</code> と打った時に v3 系を使いたい場合は、v2 系との衝突を <code>$ brew unlink python@2</code> → <code>$ brew link python</code> で解消できるかと</li>
+    </ul>
+  </li>
+</ul>
+<h2 id="パッケージ管理は-pipenv-を使う"><a class="header-link" href="#パッケージ管理は-pipenv-を使う"><span class="header-link-mark"></span></a>パッケージ管理は pipenv を使う</h2>
+<p>パッケージ管理ツールは <strong>pipenv</strong> というツールを使えば良い。コレがちょうど <em>npm</em> のように使える。</p>
+<pre class="language-bash"><code class="language-bash">$ pip <span class="token function">install</span> pipenv
+</code></pre>
+<p>コレで <code>pipenv</code> をグローバルに使えるようにしておいたら、<em>以降は <code>pip</code> コマンドは使わず、<code>pipenv</code> のみを使う。</em></p>
+<p>次に、環境変数 <em><code>PIPENV_VENV_IN_PROJECT</code></em> を指定する。コレに <code>true</code> なり <code>1</code> なり値をしてしておくことで、プロジェクトディレクトリごとに仮想環境ファイルを格納できるようになる。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token builtin class-name">export</span> <span class="token assign-left variable">PIPENV_VENV_IN_PROJECT</span><span class="token operator">=</span>true
+</code></pre>
+<ul>
+  <li>参考：<a href="https://drumato.hatenablog.com/entry/2019/01/13/104206">https://drumato.hatenablog.com/entry/2019/01/13/104206</a></li>
+</ul>
+<h2 id="pipenv-を使って新規プロジェクトの作成"><a class="header-link" href="#pipenv-を使って新規プロジェクトの作成"><span class="header-link-mark"></span></a>pipenv を使って新規プロジェクトの作成</h2>
+<p>それでは、pipenv を使って新規 Python プロジェクトを作成してみる。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">mkdir</span> python-example-project <span class="token operator">&#x26;&#x26;</span> <span class="token builtin class-name">cd</span> <span class="token variable">$_</span>
+$ pipenv --python <span class="token number">3.7</span>
+</code></pre>
+<p>使用する Python のバージョンを <code>--python</code> オプションで指定するだけ。こうすると、そのディレクトリに <code>Pipfile</code> というファイルができる。コレが npm における <code>package.json</code> 的な役割を担う。中身も読みやすいので見てみると良い。</p>
+<h2 id="依存モジュールをインストールしてみる"><a class="header-link" href="#依存モジュールをインストールしてみる"><span class="header-link-mark"></span></a>依存モジュールをインストールしてみる</h2>
+<p>続いて pipenv を使って依存モジュールをインストールしてみる。例えば BeautifulSoup をインストールするとしたらこんな感じ。</p>
+<pre class="language-bash"><code class="language-bash">$ pipenv <span class="token function">install</span> beautifulsoup4
+</code></pre>
+<p>こうすると <code>Pipfile</code> に依存モジュールの情報が書かれる他、<code>Pipfile.lock</code> という Lock ファイルも生成される。</p>
+<h2 id="scripts-ブロックを使う"><a class="header-link" href="#scripts-ブロックを使う"><span class="header-link-mark"></span></a><code>[scripts]</code> ブロックを使う</h2>
+<p>試しに <code>example.py</code> というファイルを作る。中身は適当で良い。普通に考えたら、このスクリプトは</p>
+<pre class="language-bash"><code class="language-bash">$ python example.py
+</code></pre>
+<p>と実行して動かしたい。</p>
+<p>コレも、pipenv を使うと、npm-run-scripts のように動かせる仕組みがある。</p>
+<p>Pipfile を開き、以下のような行を追加する。</p>
+<pre class="language-properties"><code class="language-properties">[scripts]
+<span class="token attr-name">start</span> <span class="token punctuation">=</span> <span class="token attr-value">"python example.py"</span>
+</code></pre>
+<p>そして、以下のようにコマンド実行すれば、npm-run-scripts のように実行できることが分かる。</p>
+<pre class="language-bash"><code class="language-bash">$ pipenv run start
+</code></pre>
+<h2 id="既存の-pipenv-プロジェクトを再現するには"><a class="header-link" href="#既存の-pipenv-プロジェクトを再現するには"><span class="header-link-mark"></span></a>既存の pipenv プロジェクトを再現するには</h2>
+<p>ココまでは、プロジェクトを新規作成して拡張していく立場の人向けの話。ココからは、そうしたプロジェクトをローカルにクローンしてきて、開発に参加したい人の話。</p>
+<p>プロジェクトをクローンしてきたら、以下のコマンドで <code>npm install</code> 同様に、依存パッケージを拾ってこられる。</p>
+<pre class="language-bash"><code class="language-bash">$ pipenv <span class="token function">install</span> --dev
+</code></pre>
+<p><code>--dev</code> を付けると開発向けのパッケージも取得できるので、開発者は付けておくと良い。</p>
+<h2 id="以上"><a class="header-link" href="#以上"><span class="header-link-mark"></span></a>以上</h2>
+<p>「Python のバージョン管理をどうしたらいいか」というお題目に対して、「そもそも Python 本体のバージョンを管理する必要があるのか」を突き付け、「Python 本体の管理は不要！パッケージ管理を pipenv で一元化しろ！」で終えた。</p>
+<p>pipenv がかなり npm と似た使い勝手なので、Node.js 民はとっつきやすいかなーと思う。</p>
+<ul>
+  <li>参考：<a href="https://qiita.com/sl2/items/1e503952b9506a0539ea">2018年のPythonプロジェクトのはじめかた - Qiita</a></li>
+  <li>参考：<a href="https://qiita.com/toto1310/items/a8ab8391bc8169721b4f">Pipenvでnpm-scriptsみたいにPipfileへコマンドを書く - Qiita</a></li>
+  <li>参考：<a href="https://qiita.com/y-tsutsu/items/54c10e0b2c6b565c887a">Pipenvを使ったPython開発まとめ - Qiita</a></li>
+  <li>参考：<a href="https://github.com/pypa/pipenv/issues/598">git - Should Pipfile.lock be committed to version control? · Issue #598 · pypa/pipenv · GitHub</a></li>
+</ul>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2020-01-04</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2020-01-04</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>TypeScript で Express サーバを実装するためのボイラープレートを作った - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2020/06/13-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2020/index.html">2020年</a></li>
+            <li><a href="/blog/2020/06/index.html">06月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2020-06-13</time></div>
+        <h1 id="page-title">TypeScript で Express サーバを実装するためのボイラープレートを作った</h1>
+
+<p>サーバサイド JS であれば、個人的には TypeScript がなくても書けるのだが、複数人で開発するとなると、型チェックを導入できた方が安全な実装になる。</p>
+<p>ということで今回は、Express サーバを TypeScript で実装するためのボイラープレートプロジェクトを作ってみた。</p>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#%E3%82%B3%E3%83%BC%E3%83%89%E5%85%A8%E9%87%8F">コード全量</a></li>
+  <li><a href="#%E3%83%97%E3%83%AD%E3%82%B8%E3%82%A7%E3%82%AF%E3%83%88%E4%BD%9C%E6%88%90%E3%81%AE%E6%B5%81%E3%82%8C">プロジェクト作成の流れ</a>
+    <ul>
+      <li><a href="#packagejson-%E3%82%92%E7%94%9F%E6%88%90%E3%81%99%E3%82%8B"><code>package.json</code> を生成する</a></li>
+      <li><a href="#typescript-%E7%92%B0%E5%A2%83%E3%82%92%E4%BD%9C%E3%82%8B">TypeScript 環境を作る</a></li>
+      <li><a href="#express-%E3%82%92%E5%85%A5%E3%82%8C%E3%82%8B">Express を入れる</a></li>
+      <li><a href="#ts-node--%E3%83%88%E3%83%A9%E3%83%B3%E3%82%B9%E3%83%91%E3%82%A4%E3%83%AB%E3%81%AA%E3%81%97%E3%81%A7%E5%8B%95%E4%BD%9C%E3%81%95%E3%81%9B%E3%82%8B%E3%81%9F%E3%82%81%E3%81%AE%E3%83%84%E3%83%BC%E3%83%AB">ts-node : トランスパイルなしで動作させるためのツール</a></li>
+      <li><a href="#ts-node-dev--ts-node-%E3%81%AE%E3%83%A9%E3%82%A4%E3%83%96%E3%83%AA%E3%83%AD%E3%83%BC%E3%83%89%E9%96%8B%E7%99%BA%E5%AF%BE%E5%BF%9C%E7%89%88">ts-node-dev : ts-node のライブリロード開発対応版</a></li>
+      <li><a href="#eslint--linter">ESLint : Linter</a></li>
+      <li><a href="#jest--%E3%83%A6%E3%83%8B%E3%83%83%E3%83%88%E3%83%86%E3%82%B9%E3%83%88">Jest : ユニットテスト</a></li>
+    </ul>
+  </li>
+  <li><a href="#%E5%90%84%E7%A8%AE%E8%A8%AD%E5%AE%9A%E3%83%95%E3%82%A1%E3%82%A4%E3%83%AB">各種設定ファイル</a>
+    <ul>
+      <li><a href="#packagejson"><code>package.json</code></a></li>
+      <li><a href="#tsconfigjson"><code>tsconfig.json</code></a></li>
+      <li><a href="#eslintrcjs"><code>.eslintrc.js</code></a></li>
+      <li><a href="#jestconfigjs"><code>jest.config.js</code></a></li>
+    </ul>
+  </li>
+  <li><a href="#%E3%81%B2%E3%81%A8%E3%81%BE%E3%81%9A-ok">ひとまず OK</a></li>
+  <li><a href="#%E3%81%9D%E3%81%AE%E4%BB%96%E3%81%AE%E3%82%AA%E3%83%97%E3%82%B7%E3%83%A7%E3%83%B3">その他のオプション</a>
+    <ul>
+      <li><a href="#%E3%83%95%E3%82%A1%E3%82%A4%E3%83%AB%E3%81%AE%E5%A4%89%E6%9B%B4%E7%9B%A3%E8%A6%96%E3%81%AB-ts-node-dev-%E3%81%A7%E3%81%AF%E3%81%AA%E3%81%8F-nodemon-%E3%82%92%E4%BD%BF%E3%81%86">ファイルの変更監視に ts-node-dev ではなく nodemon を使う</a></li>
+      <li><a href="#eslint-%E3%81%AB-prettier-%E3%82%92%E8%BF%BD%E5%8A%A0%E3%81%99%E3%82%8B">ESLint に Prettier を追加する</a></li>
+    </ul>
+  </li>
+  <li><a href="#%E4%BB%A5%E4%B8%8A">以上</a></li>
+  <li><a href="#%E5%8F%82%E8%80%83%E6%96%87%E7%8C%AE">参考文献</a></li>
+</ul>
+<h2 id="コード全量"><a class="header-link" href="#コード全量"><span class="header-link-mark"></span></a>コード全量</h2>
+<p>いきなりだがコード全量は以下に置いた。</p>
+<ul>
+  <li><a href="https://github.com/Neos21/boilerplate-typescript-express">Neos21/boilerplate-typescript-express</a></li>
+</ul>
+<p>ご自由にご利用ください。</p>
+<h2 id="プロジェクト作成の流れ"><a class="header-link" href="#プロジェクト作成の流れ"><span class="header-link-mark"></span></a>プロジェクト作成の流れ</h2>
+<p>だいたい次のような流れでプロジェクトを作っていった。</p>
+<h3 id="packagejson-を生成する"><a class="header-link" href="#packagejson-を生成する"><span class="header-link-mark"></span></a><code>package.json</code> を生成する</h3>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">npm</span> init -y
+</code></pre>
+<h3 id="typescript-環境を作る"><a class="header-link" href="#typescript-環境を作る"><span class="header-link-mark"></span></a>TypeScript 環境を作る</h3>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">npm</span> i -D typescript @types/node
+
+<span class="token comment"># 以下で tsconfig.json を生成する。あとで内容を編集する</span>
+$ <span class="token function">npm</span> run tsc -- --init
+</code></pre>
+<h3 id="express-を入れる"><a class="header-link" href="#express-を入れる"><span class="header-link-mark"></span></a>Express を入れる</h3>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">npm</span> i -S express
+$ <span class="token function">npm</span> i -D @types/express
+
+<span class="token comment"># コードを書いていく</span>
+$ <span class="token function">mkdir</span> src
+$ <span class="token function">touch</span> src/index.ts
+
+<span class="token comment"># コードをビルドする時はこんな感じ (後で npm run build にする)</span>
+$ <span class="token function">npm</span> run tsc
+
+<span class="token comment"># ビルドしたコードを実行する時はこんな感じ (後で npm start にする)</span>
+$ node dist/index.js
+</code></pre>
+<h3 id="ts-node--トランスパイルなしで動作させるためのツール"><a class="header-link" href="#ts-node--トランスパイルなしで動作させるためのツール"><span class="header-link-mark"></span></a>ts-node : トランスパイルなしで動作させるためのツール</h3>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">npm</span> i -D ts-node
+
+<span class="token comment"># 使う時はこんな感じ (後で npm run start-ts にする)</span>
+$ <span class="token function">npm</span> run ts-node src/index.ts
+</code></pre>
+<h3 id="ts-node-dev--ts-node-のライブリロード開発対応版"><a class="header-link" href="#ts-node-dev--ts-node-のライブリロード開発対応版"><span class="header-link-mark"></span></a>ts-node-dev : ts-node のライブリロード開発対応版</h3>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">npm</span> i -D ts-node-dev
+
+<span class="token comment"># 使う時はこんな感じ・ファイルの変更監視をしてくれる (後で npm run dev にする)</span>
+$ <span class="token function">npm</span> run ts-node-dev src/index.ts
+</code></pre>
+<h3 id="eslint--linter"><a class="header-link" href="#eslint--linter"><span class="header-link-mark"></span></a>ESLint : Linter</h3>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">npm</span> i -D eslint @typescript-eslint/eslint-plugin @typescript-eslint/parser
+
+<span class="token comment"># .eslintrc.js を生成する。あとで内容を編集する</span>
+$ <span class="token function">npm</span> run eslint -- --init
+
+<span class="token comment"># 使う時はこんな感じ (後で npm run lint にする)</span>
+$ <span class="token function">npm</span> run eslint -- --ext <span class="token string">'.js,.ts'</span> ./src/**
+
+<span class="token comment"># Lint + 自動修正を行う場合はこんな感じ (後で npm run lint-fix にする)</span>
+$ <span class="token function">npm</span> run eslint -- --fix --ext <span class="token string">'.js,.ts'</span> ./src/**"
+</code></pre>
+<h3 id="jest--ユニットテスト"><a class="header-link" href="#jest--ユニットテスト"><span class="header-link-mark"></span></a>Jest : ユニットテスト</h3>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">npm</span> i -D jest ts-jest @types/jest
+
+<span class="token comment"># Express API をモック化するために入れておく</span>
+$ <span class="token function">npm</span> i -D supertest @types/supertest
+
+<span class="token comment"># 設定ファイルを作成する・内容は後述する</span>
+$ <span class="token function">touch</span> jest.config.js
+
+<span class="token comment"># テストファイルを書く</span>
+$ <span class="token function">mkdir</span> <span class="token builtin class-name">test</span>
+$ <span class="token function">touch</span> test/index.spec.ts
+
+<span class="token comment"># 使う時はこんな感じ (後で npm test にする)</span>
+$ <span class="token function">npm</span> run jest -- --coverage
+<span class="token comment"># coverage/ ディレクトリにカバレッジレポートが出力される</span>
+
+<span class="token comment"># ライブリロードでテストを行う場合はこんな感じ (後で npm run test-watch にする)</span>
+$ <span class="token function">npm</span> run jest -- --coverage --watch
+</code></pre>
+<p><code>supertest</code> を使う時は、ソースコードとテストコードをそれぞれ次のように記述すること。</p>
+<ul>
+  <li><code>src/index.ts</code></li>
+</ul>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword module">import</span> <span class="token imports"><span class="token operator">*</span> <span class="token keyword module">as</span> express</span> <span class="token keyword module">from</span> <span class="token string">'express'</span><span class="token punctuation">;</span>
+
+<span class="token keyword">const</span> app <span class="token operator">=</span> <span class="token function">express</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+app<span class="token punctuation">.</span><span class="token method function property-access">get</span><span class="token punctuation">(</span><span class="token string">'/'</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token parameter">req<span class="token punctuation">,</span> res</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span> res<span class="token punctuation">.</span><span class="token method function property-access">send</span><span class="token punctuation">(</span><span class="token string">'Hello World'</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// ユニットテスト時の呼び出しでなければサーバを起動する</span>
+<span class="token keyword control-flow">if</span><span class="token punctuation">(</span><span class="token operator">!</span>module<span class="token punctuation">.</span><span class="token property-access">parent</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  app<span class="token punctuation">.</span><span class="token method function property-access">listen</span><span class="token punctuation">(</span>process<span class="token punctuation">.</span><span class="token property-access">env</span><span class="token punctuation">.</span><span class="token constant">PORT</span> <span class="token operator">||</span> <span class="token number">8080</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+    <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'Listening'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+
+<span class="token comment">// ユニットテストのために app をエクスポートする</span>
+<span class="token keyword module">export</span> <span class="token keyword module">default</span> app<span class="token punctuation">;</span>
+</code></pre>
+<ul>
+  <li><code>test/index.spec.ts</code></li>
+</ul>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword module">import</span> <span class="token imports"><span class="token operator">*</span> <span class="token keyword module">as</span> supertest</span> <span class="token keyword module">from</span> <span class="token string">'supertest'</span><span class="token punctuation">;</span>
+
+<span class="token keyword module">import</span> <span class="token imports">app</span> <span class="token keyword module">from</span> <span class="token string">'../src/index'</span><span class="token punctuation">;</span>
+
+<span class="token function">describe</span><span class="token punctuation">(</span><span class="token string">'サーバのテスト'</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token function">it</span><span class="token punctuation">(</span><span class="token string">'Path [/] のテスト'</span><span class="token punctuation">,</span> <span class="token keyword">async</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+    <span class="token keyword">const</span> res <span class="token operator">=</span> <span class="token keyword control-flow">await</span> <span class="token function">supertest</span><span class="token punctuation">(</span>app<span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">get</span><span class="token punctuation">(</span><span class="token string">'/'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">expect</span><span class="token punctuation">(</span>res<span class="token punctuation">.</span><span class="token property-access">text</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">toBe</span><span class="token punctuation">(</span><span class="token string">'Hello World'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>こんな感じ。<code>app.listen()</code> をユニットテスト時に実行しないようにしておく。以前も Jasmine を使う際の解説に書いたが、Jest でも同様だった。</p>
+<ul>
+  <li><a href="/blog/2019/02/07-01.html">Express で構築した WebAPI サーバをユニットテストする (コードカバレッジも見る)</a></li>
+</ul>
+<h2 id="各種設定ファイル"><a class="header-link" href="#各種設定ファイル"><span class="header-link-mark"></span></a>各種設定ファイル</h2>
+<p>本プロジェクトで必要になる設定ファイルは以下のとおり。</p>
+<ul>
+  <li><code>package.json</code></li>
+  <li><code>tsconfig.json</code></li>
+  <li><code>.eslintrc.js</code></li>
+  <li><code>jest.config.js</code></li>
+</ul>
+<p>それぞれの内容を記載していく。</p>
+<h3 id="packagejson"><a class="header-link" href="#packagejson"><span class="header-link-mark"></span></a><code>package.json</code></h3>
+<p>前述のコマンドを叩いていったあと、<code>scripts</code> セクションを書いていく。</p>
+<pre class="language-json"><code class="language-json"><span class="token punctuation">{</span>
+  <span class="token property">"name"</span><span class="token operator">:</span> <span class="token string">"typescript-express-boilerplate"</span><span class="token punctuation">,</span>
+  <span class="token property">"private"</span><span class="token operator">:</span> <span class="token boolean">true</span><span class="token punctuation">,</span>
+  <span class="token property">"scripts"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+    <span class="token property">"eslint"</span><span class="token operator">:</span> <span class="token string">"eslint"</span><span class="token punctuation">,</span>
+    <span class="token property">"jest"</span><span class="token operator">:</span> <span class="token string">"jest"</span><span class="token punctuation">,</span>
+    <span class="token property">"ts-node"</span><span class="token operator">:</span> <span class="token string">"ts-node"</span><span class="token punctuation">,</span>
+    <span class="token property">"tsc"</span><span class="token operator">:</span> <span class="token string">"tsc"</span><span class="token punctuation">,</span>
+    <span class="token property">"?start"</span><span class="token operator">:</span> <span class="token string">"echo 'トランスパイル済の Express サーバを起動する・事前に npm run build を実行し ./dist/ ディレクトリにコードを生成しておくこと'"</span><span class="token punctuation">,</span>
+    <span class="token property">"start"</span><span class="token operator">:</span> <span class="token string">"node ./dist/index.js"</span><span class="token punctuation">,</span>
+    <span class="token property">"?start-ts"</span><span class="token operator">:</span> <span class="token string">"echo 'ts-node で ./src/ 配下のコードを直接実行する'"</span><span class="token punctuation">,</span>
+    <span class="token property">"start-ts"</span><span class="token operator">:</span> <span class="token string">"ts-node ./src/index.ts"</span><span class="token punctuation">,</span>
+    <span class="token property">"?dev"</span><span class="token operator">:</span> <span class="token string">"echo 'ライブリロード開発を開始する・ts-node-dev で ./src/ 配下のコードを直接実行する'"</span><span class="token punctuation">,</span>
+    <span class="token property">"dev"</span><span class="token operator">:</span> <span class="token string">"ts-node-dev ./src/index.ts"</span><span class="token punctuation">,</span>
+    <span class="token property">"?lint"</span><span class="token operator">:</span> <span class="token string">"echo 'ESLint を実行する (型チェックはできないので npm run build を利用する)'"</span><span class="token punctuation">,</span>
+    <span class="token property">"lint"</span><span class="token operator">:</span> <span class="token string">"eslint --ext '.js,.ts' ./src/**"</span><span class="token punctuation">,</span>
+    <span class="token property">"?lint-fix"</span><span class="token operator">:</span> <span class="token string">"echo 'ESLint を実行し、自動修正できる箇所は修正する'"</span><span class="token punctuation">,</span>
+    <span class="token property">"lint-fix"</span><span class="token operator">:</span> <span class="token string">"eslint --fix --ext '.js,.ts' ./src/**"</span><span class="token punctuation">,</span>
+    <span class="token property">"?test"</span><span class="token operator">:</span> <span class="token string">"echo 'ユニットテストを実行する・結果は ./coverage/ ディレクトリに出力される'"</span><span class="token punctuation">,</span>
+    <span class="token property">"test"</span><span class="token operator">:</span> <span class="token string">"jest --coverage"</span><span class="token punctuation">,</span>
+    <span class="token property">"?test-watch"</span><span class="token operator">:</span> <span class="token string">"echo 'ユニットテストを監視実行する'"</span><span class="token punctuation">,</span>
+    <span class="token property">"test-watch"</span><span class="token operator">:</span> <span class="token string">"jest --coverage --watch"</span><span class="token punctuation">,</span>
+    <span class="token property">"?build"</span><span class="token operator">:</span> <span class="token string">"echo 'TypeScript をトランスパイルする・設定は ./tsconfig.json を参照'"</span><span class="token punctuation">,</span>
+    <span class="token property">"build"</span><span class="token operator">:</span> <span class="token string">"tsc"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token property">"dependencies"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+    <span class="token property">"body-parser"</span><span class="token operator">:</span> <span class="token string">"1.19.0"</span><span class="token punctuation">,</span>
+    <span class="token property">"express"</span><span class="token operator">:</span> <span class="token string">"4.17.1"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token property">"devDependencies"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+    <span class="token property">"@types/express"</span><span class="token operator">:</span> <span class="token string">"4.17.6"</span><span class="token punctuation">,</span>
+    <span class="token property">"@types/jest"</span><span class="token operator">:</span> <span class="token string">"25.2.3"</span><span class="token punctuation">,</span>
+    <span class="token property">"@types/node"</span><span class="token operator">:</span> <span class="token string">"14.0.5"</span><span class="token punctuation">,</span>
+    <span class="token property">"@types/supertest"</span><span class="token operator">:</span> <span class="token string">"2.0.9"</span><span class="token punctuation">,</span>
+    <span class="token property">"@typescript-eslint/eslint-plugin"</span><span class="token operator">:</span> <span class="token string">"3.0.0"</span><span class="token punctuation">,</span>
+    <span class="token property">"@typescript-eslint/parser"</span><span class="token operator">:</span> <span class="token string">"3.0.0"</span><span class="token punctuation">,</span>
+    <span class="token property">"eslint"</span><span class="token operator">:</span> <span class="token string">"7.1.0"</span><span class="token punctuation">,</span>
+    <span class="token property">"jest"</span><span class="token operator">:</span> <span class="token string">"26.0.1"</span><span class="token punctuation">,</span>
+    <span class="token property">"supertest"</span><span class="token operator">:</span> <span class="token string">"4.0.2"</span><span class="token punctuation">,</span>
+    <span class="token property">"ts-jest"</span><span class="token operator">:</span> <span class="token string">"26.0.0"</span><span class="token punctuation">,</span>
+    <span class="token property">"ts-node"</span><span class="token operator">:</span> <span class="token string">"8.10.1"</span><span class="token punctuation">,</span>
+    <span class="token property">"ts-node-dev"</span><span class="token operator">:</span> <span class="token string">"1.0.0-pre.44"</span><span class="token punctuation">,</span>
+    <span class="token property">"typescript"</span><span class="token operator">:</span> <span class="token string">"3.9.3"</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<h3 id="tsconfigjson"><a class="header-link" href="#tsconfigjson"><span class="header-link-mark"></span></a><code>tsconfig.json</code></h3>
+<pre class="language-json"><code class="language-json"><span class="token punctuation">{</span>
+  <span class="token property">"compilerOptions"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+    <span class="token property">"target"</span><span class="token operator">:</span> <span class="token string">"es5"</span><span class="token punctuation">,</span>
+    <span class="token property">"module"</span><span class="token operator">:</span> <span class="token string">"commonjs"</span><span class="token punctuation">,</span>
+    <span class="token property">"strict"</span><span class="token operator">:</span> <span class="token boolean">true</span><span class="token punctuation">,</span>
+    <span class="token property">"skipLibCheck"</span><span class="token operator">:</span> <span class="token boolean">true</span><span class="token punctuation">,</span>
+    <span class="token property">"forceConsistentCasingInFileNames"</span><span class="token operator">:</span> <span class="token boolean">true</span><span class="token punctuation">,</span>
+    
+    <span class="token comment">// 以下、デフォルトから設定を変更したところ</span>
+    
+    <span class="token comment">// トランスパイル後のファイルを出力するディレクトリを指定する</span>
+    <span class="token property">"outDir"</span><span class="token operator">:</span> <span class="token string">"./dist"</span><span class="token punctuation">,</span>
+    <span class="token comment">// モジュール解決の方法を指定する</span>
+    <span class="token property">"moduleResolution"</span><span class="token operator">:</span> <span class="token string">"node"</span><span class="token punctuation">,</span>
+    <span class="token comment">// import * as を認識させるため false にする</span>
+    <span class="token property">"esModuleInterop"</span><span class="token operator">:</span> <span class="token boolean">false</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token comment">// トランスパイル対象ディレクトリを指定する</span>
+  <span class="token property">"include"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
+    <span class="token string">"./src/**/*"</span>
+  <span class="token punctuation">]</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p><code>./dist/</code> にビルド後のファイルを出力するので、<code>.gitignore</code> で <code>dist/</code> を無視しておこう。</p>
+<h3 id="eslintrcjs"><a class="header-link" href="#eslintrcjs"><span class="header-link-mark"></span></a><code>.eslintrc.js</code></h3>
+<p>TSLint は廃止予定なので、ESLint を使用するよ。</p>
+<pre class="language-javascript"><code class="language-javascript">module<span class="token punctuation">.</span><span class="token property-access">exports</span> <span class="token operator">=</span> <span class="token punctuation">{</span>
+  env<span class="token operator">:</span> <span class="token punctuation">{</span>
+    es6<span class="token operator">:</span> <span class="token boolean">true</span><span class="token punctuation">,</span>
+    node<span class="token operator">:</span> <span class="token boolean">true</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token keyword">extends</span><span class="token operator">:</span> <span class="token punctuation">[</span>
+    <span class="token string">'plugin:@typescript-eslint/recommended'</span>
+  <span class="token punctuation">]</span><span class="token punctuation">,</span>
+  parser<span class="token operator">:</span> <span class="token string">'@typescript-eslint/parser'</span><span class="token punctuation">,</span>
+  parserOptions<span class="token operator">:</span> <span class="token punctuation">{</span>
+    sourceType<span class="token operator">:</span> <span class="token string">'module'</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  plugins<span class="token operator">:</span> <span class="token punctuation">[</span>
+    <span class="token string">'@typescript-eslint'</span>
+  <span class="token punctuation">]</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+</code></pre>
+<p>独自にルール設定したい場合は <code>rules: []</code> を追加する。何のルールも設定しない空配列だとエラーになるので、その場合は記述しないでおく。</p>
+<h3 id="jestconfigjs"><a class="header-link" href="#jestconfigjs"><span class="header-link-mark"></span></a><code>jest.config.js</code></h3>
+<pre class="language-javascript"><code class="language-javascript">module<span class="token punctuation">.</span><span class="token property-access">exports</span> <span class="token operator">=</span> <span class="token punctuation">{</span>
+  transform<span class="token operator">:</span> <span class="token punctuation">{</span>
+    <span class="token string">'^.+\\.ts$'</span><span class="token operator">:</span> <span class="token string">'ts-jest'</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+</code></pre>
+<p>Jest は <code>--coverage</code> オプションを付けると <code>./coverage/</code> ディレクトリにカバレッジレポートを出力するので、<code>.gitignore</code> で <code>coverage/</code> を無視しておこう。</p>
+<h2 id="ひとまず-ok"><a class="header-link" href="#ひとまず-ok"><span class="header-link-mark"></span></a>ひとまず OK</h2>
+<p>実装はこんな感じ。</p>
+<p>あとは <code>src/</code> 配下にお好みで TypeScript を書いていくだけ。</p>
+<p>Jest はデフォルトで <code>src/</code> ディレクトリ内の <code>.ts</code> ファイルに対応する <code>.spec.ts</code> ファイルを探すので、テストファイルが1対1で揃っていないとワーニングが出る点に注意。</p>
+<h2 id="その他のオプション"><a class="header-link" href="#その他のオプション"><span class="header-link-mark"></span></a>その他のオプション</h2>
+<h3 id="ファイルの変更監視に-ts-node-dev-ではなく-nodemon-を使う"><a class="header-link" href="#ファイルの変更監視に-ts-node-dev-ではなく-nodemon-を使う"><span class="header-link-mark"></span></a>ファイルの変更監視に ts-node-dev ではなく nodemon を使う</h3>
+<p>ファイルの変更監視、ライブリロード開発のために <code>ts-node-dev</code> パッケージを使ったが、世間的には <code>nodemon</code> の方が知られているかも。ただし、動作は ts-node-dev の方が格段に速い。</p>
+<p>一応 <code>nodemon</code> を使う方法も紹介。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">npm</span> i -D nodemon
+$ <span class="token function">touch</span> nodemon.json
+</code></pre>
+<ul>
+  <li><code>nodemon.json</code></li>
+</ul>
+<pre class="language-json"><code class="language-json"><span class="token punctuation">{</span>
+  <span class="token property">"watch"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
+    <span class="token string">"./src/"</span>
+  <span class="token punctuation">]</span><span class="token punctuation">,</span>
+  <span class="token property">"ext"</span><span class="token operator">:</span> <span class="token string">"ts"</span><span class="token punctuation">,</span>
+  <span class="token property">"exec"</span><span class="token operator">:</span> <span class="token string">"npm run ts-node ./src/index.ts"</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<h3 id="eslint-に-prettier-を追加する"><a class="header-link" href="#eslint-に-prettier-を追加する"><span class="header-link-mark"></span></a>ESLint に Prettier を追加する</h3>
+<p><em>Prettier</em> は、Linter というよりはコード・フォーマッタといえるツール。ESLint 越しに呼び出せるので連携する人も多いだろう。</p>
+<p>強制力が強すぎるのが嫌で自分は入れなかったが、導入する際は前述の手順に加えて以下を行う。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">npm</span> i -D prettier eslint-config-prettier eslint-plugin-prettier
+</code></pre>
+<ul>
+  <li><code>.eslintrc.js</code>
+    <ul>
+      <li>次のように書く</li>
+    </ul>
+  </li>
+</ul>
+<pre class="language-javascript"><code class="language-javascript">module<span class="token punctuation">.</span><span class="token property-access">exports</span> <span class="token operator">=</span> <span class="token punctuation">{</span>
+  <span class="token keyword">extends</span><span class="token operator">:</span> <span class="token punctuation">[</span>
+    <span class="token string">'eslint:recommended'</span><span class="token punctuation">,</span>
+    <span class="token string">'plugin:@typescript-eslint/eslint-recommended'</span><span class="token punctuation">,</span>
+    <span class="token string">'plugin:@typescript-eslint/recommended'</span><span class="token punctuation">,</span>
+    <span class="token string">'plugin:prettier/recommended'</span><span class="token punctuation">,</span>
+    <span class="token string">'prettier/@typescript-eslint'</span>
+  <span class="token punctuation">]</span><span class="token punctuation">,</span>
+  plugins<span class="token operator">:</span> <span class="token punctuation">[</span><span class="token string">'@typescript-eslint'</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
+  env<span class="token operator">:</span> <span class="token punctuation">{</span>
+    node<span class="token operator">:</span> <span class="token boolean">true</span><span class="token punctuation">,</span>
+    es6<span class="token operator">:</span> <span class="token boolean">true</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  parser<span class="token operator">:</span> <span class="token string">'@typescript-eslint/parser'</span><span class="token punctuation">,</span>
+  parserOptions<span class="token operator">:</span> <span class="token punctuation">{</span>
+    sourceType<span class="token operator">:</span> <span class="token string">'module'</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  rules<span class="token operator">:</span> <span class="token punctuation">{</span>
+    <span class="token comment">// Prettier のルールを上書きする場合は次のように書く</span>
+    <span class="token string">'prettier/prettier'</span><span class="token operator">:</span> <span class="token punctuation">[</span>
+      <span class="token string">'error'</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span>
+        <span class="token comment">// シングルクォートを使う</span>
+        singleQuote<span class="token operator">:</span> <span class="token boolean">true</span><span class="token punctuation">,</span>
+        <span class="token comment">// 配列の最後の要素の後ろにカンマを置かなくて良い</span>
+        trailingComma<span class="token operator">:</span> <span class="token string">'none'</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">]</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+</code></pre>
+<h2 id="以上"><a class="header-link" href="#以上"><span class="header-link-mark"></span></a>以上</h2>
+<p>ざっとコードで説明した。何のパッケージが必要なのか整理していかないと分かりにくいので、もうこうやってボイラープレートにまとめておくのが良さげ。</p>
+<h2 id="参考文献"><a class="header-link" href="#参考文献"><span class="header-link-mark"></span></a>参考文献</h2>
+<ul>
+  <li><a href="https://qiita.com/techneconn/items/012bdf1b9ff3881546b3">TypeScriptでExpress.js開発するときにやることまとめ (docker/lint/format/tsのまま実行/autoreload) - Qiita</a></li>
+  <li><a href="https://qiita.com/sa9ra4ma/items/67ab5ac6fea3e5f065b0">ts-node と ts-node-dev の違い - Qiita</a></li>
+  <li>ESLint 関連
+    <ul>
+      <li><a href="https://qiita.com/suzuki_sh/items/fe9b60c4f9e1dbc5d903">脱TSLintして、ESLint TypeScript Plugin に移行する - Qiita</a></li>
+      <li><a href="https://tech.ga-tech.co.jp/entry/2020/01/refactoring-type-safety-with-eslint">eslintを最大限活用してTypeScriptの型安全を少しずつ高める方法 - GA technologies Tech Blog</a></li>
+    </ul>
+  </li>
+  <li>ESLint + Prettier 関連
+    <ul>
+      <li><a href="https://qiita.com/madono/items/a134e904e891c5cb1d20">VSCodeでESLint+typescript-eslint+Prettierを導入する v3.0.0 - Qiita</a></li>
+      <li><a href="https://qiita.com/ikngtty/items/4df2e13d2fa1c4c47528">ESLint - Prettier連携のやり方と仕組み - Qiita</a></li>
+      <li><a href="https://qiita.com/59naga/items/66d6019164b67ae2c977">prettier-v1.13.7チートシート - Qiita</a></li>
+      <li><a href="https://qiita.com/y-w/items/dcf5fb4af52e990109eb">初心者向けTypeScript用にESLintとPrettierを導入する - Qiita</a></li>
+      <li><a href="https://dackdive.hateblo.jp/entry/2019/03/15/100000">ESLintとPrettierを併用するときの設定(eslint-plugin-prettier, eslint-config-prettier) - dackdive's blog</a></li>
+    </ul>
+  </li>
+  <li>Jest 関連
+    <ul>
+      <li><a href="https://tech.bitbank.cc/lets-test-by-jest/">Jestでテストを書こう！</a></li>
+      <li><a href="https://qiita.com/kotauchisunsun/items/6361b8f53540404a4a20">TypeScriptでREST APIをテスト駆動するためのHowTo - Qiita</a></li>
+    </ul>
+  </li>
+  <li>Supertest の書き方
+    <ul>
+      <li><a href="https://stackoverflow.com/questions/52701206/jest-has-detected-the-following-1-open-handle-potentially-keeping-jest-from-exit">javascript - Jest has detected the following 1 open handle potentially keeping Jest from exiting - Stack Overflow</a></li>
+    </ul>
+  </li>
+</ul>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2020-06-13</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2020-06-13</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>Windows エクスプローラから Bash スクリプトを開いて実行したい - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2021/08/31-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2021/index.html">2021年</a></li>
+            <li><a href="/blog/2021/08/index.html">08月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2021-08-31</time></div>
+        <h1 id="page-title">Windows エクスプローラから Bash スクリプトを開いて実行したい</h1>
+
+<p>Windows 環境での自動化というと、Windows コマンドプロンプトや PowerShell を使うのが妥当だと思うが、GitBash (Git SDK) をインストールしているので、Bash でスクリプトを書きたいなーと思うこともある。WSL から Windows ホスト上に移動して作業しても良いのかもしれないが、何となくそれは気持ち悪い気がして避けている。</p>
+<p><code>.bat</code> ファイルや <code>.ps1</code> ファイルは、エクスプローラからダブルクリックすればスクリプトを実行できるので、同じ要領で、<em>Windows のエクスプローラ上で <code>.bash</code> ファイルをダブルクリックして、GitBash (Git SDK) で実行できたらいいなー</em>と考えていた。</p>
+<p>今回色々と試行錯誤して、それらしい技を編み出したので紹介する。</p>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#1-%E4%BB%BB%E6%84%8F%E3%81%AE-bash-%E3%82%B9%E3%82%AF%E3%83%AA%E3%83%97%E3%83%88%E3%82%92%E5%AE%9F%E8%A1%8C%E3%81%99%E3%82%8B-windows-%E3%83%90%E3%83%83%E3%83%81%E3%83%95%E3%82%A1%E3%82%A4%E3%83%AB">1. 任意の Bash スクリプトを実行する Windows バッチファイル</a></li>
+  <li><a href="#2-%E3%80%8Cgitbash%E3%80%8D%E3%81%AA%E3%82%A6%E3%82%A3%E3%83%B3%E3%83%89%E3%82%A6--mintty-%E3%81%A7%E4%BB%BB%E6%84%8F%E3%81%AE-bash-%E3%82%B9%E3%82%AF%E3%83%AA%E3%83%97%E3%83%88%E3%82%92%E5%AE%9F%E8%A1%8C%E3%81%99%E3%82%8B-windows-%E3%83%90%E3%83%83%E3%83%81%E3%83%95%E3%82%A1%E3%82%A4%E3%83%AB">2. 「GitBash」なウィンドウ (= MinTTY) で任意の Bash スクリプトを実行する Windows バッチファイル</a></li>
+  <li><a href="#3-%E3%82%B3%E3%83%9E%E3%83%B3%E3%83%89%E3%83%97%E3%83%AD%E3%83%B3%E3%83%97%E3%83%88%E3%81%AE%E3%82%A6%E3%82%A3%E3%83%B3%E3%83%89%E3%82%A6%E3%81%8C%E3%83%81%E3%83%A9%E3%81%A4%E3%81%8B%E3%81%AA%E3%81%84%E3%82%88%E3%81%86%E3%81%AB-gitbash-%E3%82%A6%E3%82%A3%E3%83%B3%E3%83%89%E3%82%A6%E3%82%92%E7%9B%B4%E6%8E%A5%E9%96%8B%E3%81%8F-vbscript">3. コマンドプロンプトのウィンドウがチラつかないように GitBash ウィンドウを直接開く VBScript</a></li>
+</ul>
+<h2 id="1-任意の-bash-スクリプトを実行する-windows-バッチファイル"><a class="header-link" href="#1-任意の-bash-スクリプトを実行する-windows-バッチファイル"><span class="header-link-mark"></span></a>1. 任意の Bash スクリプトを実行する Windows バッチファイル</h2>
+<p>最初に作ったのはこんな Windows バッチファイル。</p>
+<ul>
+  <li><code>exec-my-bash-script-1.bat</code></li>
+</ul>
+<pre class="language-batch"><code class="language-batch"><span class="token operator">@</span><span class="token command"><span class="token keyword">C</span><span class="token label property">:\git-sdk-64\usr\bin\bash.exe</span> <span class="token parameter attr-name">--login</span> <span class="token parameter attr-name">-i</span> <span class="token parameter attr-name">-c</span> '/c/Users/Neo/bin/my-bash-script.bash ; read'</span>
+</code></pre>
+<p><code>@</code> でプロンプトを非表示にし、Git SDK 内の <code>bash.exe</code> を使う (通常の GitBash を使っている人はパスを適宜書き換えること)。</p>
+<p>あとは通常の <code>bash</code> コマンドどおり、<code>--login -i -c</code> で実行したいスクリプトファイルへのフルパスを渡す。</p>
+<p>末尾に <code>; read</code> を入れているのは、実行後にウィンドウを開きっぱなしにしておきたいため。Enter を押せばウィンドウが閉じるようにしてある。</p>
+<p>このようなバッチファイルを作ると、Windows コマンドプロンプト上で Bash スクリプトが実行される。実際の <code>.bash</code> ファイルと別々にファイルを持つことになるが、とりあえずこのバッチファイルへのショートカットを用意しておけば、エクスプローラ上から好きな Bash スクリプトを実行できるだろう。</p>
+<h2 id="2-「gitbash」なウィンドウ--mintty-で任意の-bash-スクリプトを実行する-windows-バッチファイル"><a class="header-link" href="#2-「gitbash」なウィンドウ--mintty-で任意の-bash-スクリプトを実行する-windows-バッチファイル"><span class="header-link-mark"></span></a>2. 「GitBash」なウィンドウ (= MinTTY) で任意の Bash スクリプトを実行する Windows バッチファイル</h2>
+<p>上のバッチファイルだと、Windows コマンドプロンプトのウィンドウで Bash が実行されるので、コンソール出力が味気ない。せっかくなら、<em>いつも使っている GitBash のウィンドウ (<code>git-bash.exe</code> を実行して開かれる MinTTY のウィンドウ) でスクリプトを実行したい。</em></p>
+<p>色々調べてみたが、<code>git-bash.exe</code> 自体で任意のスクリプトを実行させるようなオプションはないっぽかった。調べてみると、以下の記事を見付けた。</p>
+<ul>
+  <li>参考：<a href="https://superuser.com/questions/1104567/how-can-i-find-out-the-command-line-options-for-git-bash-exe">windows - How can I find out the command line options for git-bash.exe? - Super User</a></li>
+</ul>
+<p>コレを参考に編み出したのが以下のワンライナー。</p>
+<ul>
+  <li><code>exec-my-bash-script-2.bat</code></li>
+</ul>
+<pre class="language-batch"><code class="language-batch"><span class="token operator">@</span><span class="token command"><span class="token keyword">C</span><span class="token label property">:\git-sdk-64\usr\bin\mintty.exe</span> <span class="token parameter attr-name">--icon</span> C:\git-sdk<span class="token number">-64</span>\git-bash.exe <span class="token parameter attr-name">--exec</span> '/usr/bin/bash' <span class="token parameter attr-name">--login</span> <span class="token parameter attr-name">-i</span> <span class="token parameter attr-name">-c</span> '/c/Users/Neo/bin/my-bash-script.bash ; read'</span>
+</code></pre>
+<ul>
+  <li>メインで実行するのは <code>C:\git-sdk-64\usr\bin\mintty.exe</code>。先程と同じく <code>@</code> を付けて <code>@Echo Off</code> 相当のことをしておく</li>
+  <li>このまま開くとウィンドウのアイコンが MinTTY のモノになるので、<code>--icon C:\git-sdk-64\git-bash.exe</code> でアイコンを変える。コレは好みでw</li>
+  <li><code>mintty.exe</code> に対して <code>--exec '/usr/bin/bash'</code> オプションを渡すと、起動時に <code>bash</code> が実行できる</li>
+  <li>あとはその <code>bash</code> コマンドのオプションとして <code>--login -i -c</code> を書いていく</li>
+</ul>
+<p>このバッチファイルを開けば、Bash スクリプトが実行されるウィンドウが GitBash のモノ (= MinTTY) になった。いつもの GitBash のウィンドウを開いて Bash スクリプトを実行した時と同じ UI になるだろう。</p>
+<h2 id="3-コマンドプロンプトのウィンドウがチラつかないように-gitbash-ウィンドウを直接開く-vbscript"><a class="header-link" href="#3-コマンドプロンプトのウィンドウがチラつかないように-gitbash-ウィンドウを直接開く-vbscript"><span class="header-link-mark"></span></a>3. コマンドプロンプトのウィンドウがチラつかないように GitBash ウィンドウを直接開く VBScript</h2>
+<p>上のワンライナーで、MinTTY ウィンドウを開いて Bash スクリプトを実行できるようになった。</p>
+<p>しかし、Windows バッチファイルである以上、<code>.bat</code> ファイルを実行した直後に一瞬だけ「Windows コマンドプロンプト」のウィンドウが表示され、その後すぐに「MinTTY ウィンドウ」が開く、という挙動になる。</p>
+<p><strong>一瞬だけ開くコマンドプロンプトのウィンドウがチラついて鬱陶しい…そんな時は WSH だ！！</strong></p>
+<ul>
+  <li>過去記事：<a href="/blog/2021/08/10-01.html">PowerShell のウィンドウを一切表示させずに実行する</a></li>
+</ul>
+<p>↑ コレの応用。</p>
+<ul>
+  <li><code>exec-my-bash-script-3.vbs</code> (拡張子が <em><code>.vbs</code></em>)</li>
+</ul>
+<pre class="language-vb"><code class="language-vb">WScript<span class="token punctuation">.</span>CreateObject<span class="token punctuation">(</span><span class="token string">"WScript.Shell"</span><span class="token punctuation">)</span><span class="token punctuation">.</span>Run <span class="token string">"C:\git-sdk-64\usr\bin\mintty.exe --icon C:\git-sdk-64\git-bash.exe --exec '/usr/bin/bash' --login -i -c '/c/Users/Neo/bin/my-bash-script.bash ; read'"</span>
+</code></pre>
+<p>上述のワンライナーを、WSH で実行するようにしている。<code>WScript.CreateObject("WScript.Shell").Run</code> 以降の内容は全く同じだ。もしも実行するコマンド内にダブルクォートを含む場合は、VBScript の書式に合わせて調整すること。</p>
+<p>WSH (<code>.vbs</code>) も、<code>.bat</code> 同様エクスプローラからダブルクリックで実行できるので、この VBScript へのショートカットを配置しておけばよかろう。</p>
+<hr>
+<p>実行する Bash スクリプト内で <code>read -p</code> なんかを使っていると、起動スクリプト中に書いた <code>; read</code> が上手く効かないことがある。原因がイマイチ分かっていないのだが、<strong><code>; read ; read</code></strong> と、<code>read</code> コマンドを2回連続で記入しておけば、確実に止められた。</p>
+<p>以上。コレで Windows エクスプローラから Bash ファイルを直接実行できるようになった。2021年も WSH じゃ…。</p><div class="ad-amazon">
+  <div class="ad-amazon-image">
+    <a href="https://www.amazon.co.jp/dp/4802611021?tag=neos21-22&amp;linkCode=osi&amp;th=1&amp;psc=1">
+      <img src="https://m.media-amazon.com/images/I/41-rp6-AXmL._SL160_.jpg" width="125" height="160">
+    </a>
+  </div>
+  <div class="ad-amazon-info">
+    <div class="ad-amazon-title">
+      <a href="https://www.amazon.co.jp/dp/4802611021?tag=neos21-22&amp;linkCode=osi&amp;th=1&amp;psc=1">Windows自動処理のための WSHプログラミングガイド 増補改訂版</a>
+    </div>
+  </div>
+</div>
+<div class="ad-rakuten">
+  <div class="ad-rakuten-image">
+    <a href="https://hb.afl.rakuten.co.jp/hgc/g00q0722.waxyc9ff.g00q0722.waxyd017/?pc=https%3A%2F%2Fitem.rakuten.co.jp%2Fbook%2F14917901%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Fbook%2Fi%2F18583555%2F">
+      <img src="https://thumbnail.image.rakuten.co.jp/@0_mall/book/cabinet/1022/9784802611022.jpg?_ex=128x128">
+    </a>
+  </div>
+  <div class="ad-rakuten-info">
+    <div class="ad-rakuten-title">
+      <a href="https://hb.afl.rakuten.co.jp/hgc/g00q0722.waxyc9ff.g00q0722.waxyd017/?pc=https%3A%2F%2Fitem.rakuten.co.jp%2Fbook%2F14917901%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Fbook%2Fi%2F18583555%2F">Windows自動処理のためのWSHプログラミングガイド増補改訂版 JScript／VBScript対応 [ 五十嵐貴之 ]</a>
+    </div>
+    <div class="ad-rakuten-shop">
+      <a href="https://hb.afl.rakuten.co.jp/hgc/g00q0722.waxyc9ff.g00q0722.waxyd017/?pc=https%3A%2F%2Fwww.rakuten.co.jp%2Fbook%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Fbook%2F">楽天ブックス</a>
+    </div>
+    <div class="ad-rakuten-price">価格 : 3278円</div>
+  </div>
+</div>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2021-08-31</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2021-08-31</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

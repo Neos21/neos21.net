@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>awk で TSV の2列目が重複する行を削除し、元ファイルに上書きする - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2020/03/13-02.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2020/index.html">2020年</a></li>
+            <li><a href="/blog/2020/03/index.html">03月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2020-03-13</time></div>
+        <h1 id="page-title">awk で TSV の2列目が重複する行を削除し、元ファイルに上書きする</h1>
+
+<p>色々詰め込んだタイトル…。</p>
+<p>次のような TSV があったとする。</p>
+<pre><code>001    Hoge
+002    Fuga
+003    Foo
+004    Fuga
+005    Bar
+006    Piyo
+</code></pre>
+<p>掲載コードは半角スペース4つにしてあるが、実際はタブ文字で区切られている TSV ファイルである。</p>
+<p>コレを見ると、<code>002</code> と <code>004</code> の行は、ともに2列目 (2カラム目) が <code>Fuga</code> で重複している。コレを判断し、重複している行を片方削除したい。</p>
+<p>どうやら awk で重複行を削除できそうなので作ってみた。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">awk</span> -F <span class="token string">"<span class="token entity" title="\t">\t</span>"</span> <span class="token string">'!colname[<span class="token variable">$2</span>]++{print <span class="token variable">$1</span>"<span class="token entity" title="\t">\t</span>"<span class="token variable">$2</span>}'</span> ./example.tsv
+</code></pre>
+<p>こんな風に、<code>-F</code> オプションで区切り文字をタブ文字に指定し、<code>$2</code> で2列目をカウントする。重複行は 2 以上になるため <code>print</code> 部分には乗ってこない仕組みだ。<code>$1"\t"$2</code> で、元と同じ2カラムの行を再現しているというワケ。</p>
+<p>コレで重複行の削除はできるようになった。</p>
+<p>さらに、<em>GNU awk v4.1.0</em> 以降では <strong><code>-i inplace</code></strong> というオプションが使えるようになっており、コレを使うと指定した元ファイルにそのまま上書き保存できるようになるのだ。<code>sed -i</code> 的なヤツである。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># タブ区切りのファイルの2列目が重複している行を削除し、元ファイルに上書きする</span>
+$ <span class="token function">awk</span> -i inplace -F <span class="token string">"<span class="token entity" title="\t">\t</span>"</span> <span class="token string">'!colname[<span class="token variable">$2</span>]++{print <span class="token variable">$1</span>"<span class="token entity" title="\t">\t</span>"<span class="token variable">$2</span>}'</span> ./example.tsv
+</code></pre>
+<p>というワケでコレが完成形。よきよき。</p>
+<ul>
+  <li>参考：<a href="http://akiniwa.hatenablog.jp/entry/2014/04/04/203256">awkで重複行を高速削除する。 - 忘れないようにメモっとく</a></li>
+  <li>参考：<a href="https://orebibou.com/2017/06/awk%E3%81%A7%E5%87%A6%E7%90%86%E7%B5%90%E6%9E%9C%E3%82%92%E5%85%83%E3%81%AB%E3%81%AA%E3%81%A3%E3%81%9F%E3%83%95%E3%82%A1%E3%82%A4%E3%83%AB%E3%81%AB%E4%B8%8A%E6%9B%B8%E3%81%8D%E3%81%99%E3%82%8B/">awkで処理結果を元になったファイルに上書きする | 俺的備忘録 〜なんかいろいろ〜</a></li>
+</ul>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2020-03-13</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2020-03-13</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

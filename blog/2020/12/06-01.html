@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>Angular フロントエンドから Express サーバ + Multer でファイルアップロードを実現する - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2020/12/06-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2020/index.html">2020年</a></li>
+            <li><a href="/blog/2020/12/index.html">12月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2020-12-06</time></div>
+        <h1 id="page-title">Angular フロントエンドから Express サーバ + Multer でファイルアップロードを実現する</h1>
+
+<p>Angular アプリをフロントエンド、Express サーバをバックエンドに従え、ファイルアップロード機能を実現してみた。</p>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#angular-%E5%81%B4%E3%81%AE%E5%AE%9F%E8%A3%85">Angular 側の実装</a></li>
+  <li><a href="#express-%E3%82%B5%E3%83%BC%E3%83%90%E3%81%AB-multer-%E3%82%92%E3%82%A4%E3%83%B3%E3%82%B9%E3%83%88%E3%83%BC%E3%83%AB%E3%81%99%E3%82%8B">Express サーバに Multer をインストールする</a></li>
+</ul>
+<h2 id="angular-側の実装"><a class="header-link" href="#angular-側の実装"><span class="header-link-mark"></span></a>Angular 側の実装</h2>
+<p>Angular アプリの実装はそこまで複雑ではないのでサクッと。Angular CLI v10 系で構築したアプリにて、次のようなコンポーネントを実装した。</p>
+<pre class="language-typescript"><code class="language-typescript"><span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">Component</span><span class="token punctuation">,</span> <span class="token maybe-class-name">Input</span><span class="token punctuation">,</span> <span class="token maybe-class-name">Output</span><span class="token punctuation">,</span> <span class="token maybe-class-name">EventEmitter</span> <span class="token punctuation">}</span></span> <span class="token keyword">from</span> <span class="token string">'@angular/core'</span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">HttpClient</span> <span class="token punctuation">}</span></span> <span class="token keyword">from</span> <span class="token string">'@angular/common/http'</span><span class="token punctuation">;</span>
+
+@<span class="token function"><span class="token maybe-class-name">Component</span></span><span class="token punctuation">(</span><span class="token punctuation">{</span>
+  selector<span class="token operator">:</span> <span class="token string">'app-upload-file'</span><span class="token punctuation">,</span>
+  template<span class="token operator">:</span> <span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">
+    &#x3C;p>&#x3C;input type="file" (change)="handleFileInput($event.target.files)">&#x3C;/p>
+    &#x3C;p>&#x3C;button type="button" (click)="uploadFile()">アップロード&#x3C;/button>&#x3C;/p>
+  </span><span class="token template-punctuation string">`</span></span><span class="token punctuation">,</span>
+  styles<span class="token operator">:</span> <span class="token punctuation">[</span><span class="token punctuation">]</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span>
+<span class="token keyword">export</span> <span class="token keyword">class</span> <span class="token class-name"><span class="token maybe-class-name">UploadFileComponent</span></span> <span class="token punctuation">{</span>
+  <span class="token doc-comment comment">/** アップロード対象ファイル */</span>
+  <span class="token keyword">public</span> file<span class="token operator">:</span> <span class="token maybe-class-name">File</span> <span class="token operator">=</span> <span class="token keyword">null</span><span class="token punctuation">;</span>
+  
+  <span class="token keyword">constructor</span><span class="token punctuation">(</span><span class="token keyword">private</span> httpClient<span class="token operator">:</span> <span class="token maybe-class-name">HttpClient</span><span class="token punctuation">)</span> <span class="token punctuation">{</span> <span class="token punctuation">}</span>
+  
+  <span class="token doc-comment comment">/** `input[type="file"]` 操作時にアップロードされたファイル情報を控えておく */</span>
+  <span class="token keyword">public</span> <span class="token function">handleFileInput</span><span class="token punctuation">(</span>files<span class="token operator">:</span> <span class="token maybe-class-name">FileList</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token keyword">if</span><span class="token punctuation">(</span>files <span class="token operator">==</span> <span class="token keyword">null</span> <span class="token operator">||</span> <span class="token operator">!</span>files<span class="token punctuation">.</span><span class="token property-access">length</span><span class="token punctuation">)</span> <span class="token keyword">return</span> <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">file</span> <span class="token operator">=</span> <span class="token keyword">null</span><span class="token punctuation">;</span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">file</span> <span class="token operator">=</span> files<span class="token punctuation">.</span><span class="token method function property-access">item</span><span class="token punctuation">(</span><span class="token number">0</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  
+  <span class="token doc-comment comment">/** ファイルをアップロードする */</span>
+  <span class="token keyword">public</span> <span class="token keyword">async</span> <span class="token function">uploadFile</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token keyword">try</span> <span class="token punctuation">{</span>
+      <span class="token keyword">const</span> formData<span class="token operator">:</span> <span class="token maybe-class-name">FormData</span> <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name"><span class="token maybe-class-name">FormData</span></span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      formData<span class="token punctuation">.</span><span class="token method function property-access">append</span><span class="token punctuation">(</span><span class="token string">'file'</span>    <span class="token punctuation">,</span> <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">file</span><span class="token punctuation">,</span> <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">file</span><span class="token punctuation">.</span><span class="token property-access">name</span><span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment">// ファイル本体とファイル名を指定する</span>
+      formData<span class="token punctuation">.</span><span class="token method function property-access">append</span><span class="token punctuation">(</span><span class="token string">'fileName'</span><span class="token punctuation">,</span> <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">file</span><span class="token punctuation">.</span><span class="token property-access">name</span><span class="token punctuation">)</span><span class="token punctuation">;</span>             <span class="token comment">// ファイル名のみを別で送信しているが、必須ではない</span>
+      <span class="token keyword">const</span> result<span class="token operator">:</span> <span class="token builtin">any</span> <span class="token operator">=</span> <span class="token keyword">await</span> <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">httpClient</span><span class="token punctuation">.</span><span class="token method function property-access">post</span><span class="token punctuation">(</span><span class="token string">'./api/upload-file'</span><span class="token punctuation">,</span> formData<span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">toPromise</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'File Uploaded'</span><span class="token punctuation">,</span> result<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+    <span class="token keyword">catch</span><span class="token punctuation">(</span>error<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">error</span><span class="token punctuation">(</span>error<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>バリデーションなどは省略している。重要なのは3点。</p>
+<ol>
+  <li><code>input[type="file"]</code> の変更時に、<code>File</code> オブジェクトを取得しておく : <code>$event</code> から辿れる</li>
+  <li>ファイルアップロードの際は <code>FormData</code> に値を詰めて送信する</li>
+  <li>ファイルのパラメータは、ファイルの内容とファイル名を両方指定する (<code>formData.append('file')</code> 部分)</li>
+</ol>
+<p>コレに相当する実装ができれば、フロントエンドは Angular に限らず実装できるだろう。</p>
+<h2 id="express-サーバに-multer-をインストールする"><a class="header-link" href="#express-サーバに-multer-をインストールする"><span class="header-link-mark"></span></a>Express サーバに Multer をインストールする</h2>
+<p>Express 側は v4.17.1 を使用。Express サーバは単体ではファイルアップロードを処理できないので、<strong>Multer</strong> というプラグインを入れる。</p>
+<ul>
+  <li><a href="https://github.com/expressjs/multer">GitHub - expressjs/multer: Node.js middleware for handling `multipart/form-data`.</a></li>
+</ul>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># 本稿執筆時点では v1.4.2 だった</span>
+$ <span class="token function">npm</span> <span class="token function">install</span> --save multer
+</code></pre>
+<p>そしたら次のように実装する。TypeScript で実装しているが、素の Node.js の場合は <code>import</code> 部分を <code>require()</code> に直すぐらいで動作すると思う。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword module">import</span> <span class="token imports">express</span> <span class="token keyword module">from</span> <span class="token string">'express'</span><span class="token punctuation">;</span>
+<span class="token keyword module">import</span> <span class="token imports">multer</span> <span class="token keyword module">from</span> <span class="token string">'multer'</span><span class="token punctuation">;</span>
+<span class="token keyword module">import</span> <span class="token imports"><span class="token punctuation">{</span> promises <span class="token keyword module">as</span> fs <span class="token punctuation">}</span></span> <span class="token keyword module">from</span> <span class="token string">'fs'</span><span class="token punctuation">;</span>  <span class="token comment">// アップロードされたファイルを保存するのに使用</span>
+
+<span class="token keyword">const</span> app <span class="token operator">=</span> <span class="token function">express</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// body-parser 相当</span>
+app<span class="token punctuation">.</span><span class="token method function property-access">use</span><span class="token punctuation">(</span>express<span class="token punctuation">.</span><span class="token method function property-access">json</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+app<span class="token punctuation">.</span><span class="token method function property-access">use</span><span class="token punctuation">(</span>express<span class="token punctuation">.</span><span class="token method function property-access">urlencoded</span><span class="token punctuation">(</span><span class="token punctuation">{</span> extended<span class="token operator">:</span> <span class="token boolean">false</span> <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// Multer をミドルウェアとして挟む。今回は `file` というパラメータ名で単一ファイルがアップロードされてくるので、</span>
+<span class="token comment">// `single('file')` という形でそれを指定している</span>
+router<span class="token punctuation">.</span><span class="token method function property-access">post</span><span class="token punctuation">(</span><span class="token string">'/api/upload-file'</span><span class="token punctuation">,</span> <span class="token function">multer</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">single</span><span class="token punctuation">(</span><span class="token string">'file'</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token keyword">async</span> <span class="token punctuation">(</span><span class="token parameter">req<span class="token punctuation">,</span> res</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token keyword">const</span> file     <span class="token operator">=</span> req<span class="token punctuation">.</span><span class="token property-access">file</span><span class="token punctuation">;</span>  <span class="token comment">// ファイルの内容はこのように受け取れる (ココで出てくる `file` というプロパティ名は Multer が指定してくるモノ</span>
+  <span class="token keyword">const</span> fileName <span class="token operator">=</span> req<span class="token punctuation">.</span><span class="token property-access">body</span><span class="token punctuation">.</span><span class="token property-access">fileName</span><span class="token punctuation">;</span>  <span class="token comment">// 別に指定したファイル名のパラメータは POST Body より取得できる</span>
+  <span class="token keyword control-flow">await</span> fs<span class="token punctuation">.</span><span class="token method function property-access">writeFile</span><span class="token punctuation">(</span><span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">./upload-files/</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>fileName<span class="token interpolation-punctuation punctuation">}</span></span><span class="token template-punctuation string">`</span></span><span class="token punctuation">,</span> file<span class="token punctuation">.</span><span class="token property-access">buffer</span><span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment">// 指定の位置にファイルを保存する例</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token keyword">const</span> server <span class="token operator">=</span> app<span class="token punctuation">.</span><span class="token method function property-access">listen</span><span class="token punctuation">(</span>process<span class="token punctuation">.</span><span class="token property-access">env</span><span class="token punctuation">.</span><span class="token constant">PORT</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'Server Started'</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>ポイントは Multer をミドルウェアとして記述するところ。クライアント側で指定した <code>file</code> というパラメータ名と、単一ファイルが送られてくるのか複数ファイルが送られてくるのか、といった指定をしておく必要がある。</p>
+<p>複数ファイルも扱える。詳しくは Multer の README を参照。</p>
+<p>上の実装の場合、ファイルの内容はメモリに載るだけなので、自分でファイルを指定ディレクトリに保存したりしているが、Multer がディスク上に保存してくれる機能もあったりする。結構便利。</p>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2020-12-06</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2020-12-06</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>Flask RESTful でステータスコードとともにレスポンスする - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2020/02/21-03.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2020/index.html">2020年</a></li>
+            <li><a href="/blog/2020/02/index.html">02月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2020-02-21</time></div>
+        <h1 id="page-title">Flask RESTful でステータスコードとともにレスポンスする</h1>
+
+<p>Flask RESTful (<code>pipenv install flask_restful</code>) の小ネタ。</p>
+<p>リクエストパラメータに応じてレスポンスを変えていくが、パラメータがない場合や、中での処理に失敗した時に、403 とか 500 とかをレスポンスしたいことがある。Flask RESTful では次のように実装すれば上手くいく。</p>
+<pre class="language-python"><code class="language-python"><span class="token keyword">from</span> flask <span class="token keyword">import</span> Blueprint<span class="token punctuation">,</span> request
+<span class="token keyword">from</span> flask_restful <span class="token keyword">import</span> Api<span class="token punctuation">,</span> Resource
+
+<span class="token comment"># BitFlyer API</span>
+<span class="token keyword">import</span> pybitflyer
+bit_flyer_api <span class="token operator">=</span> pybitflyer<span class="token punctuation">.</span>API<span class="token punctuation">(</span><span class="token punctuation">)</span>
+
+<span class="token comment"># Blueprint</span>
+blueprint_api <span class="token operator">=</span> Blueprint<span class="token punctuation">(</span><span class="token string">'api'</span><span class="token punctuation">,</span> __name__<span class="token punctuation">,</span> url_prefix <span class="token operator">=</span> <span class="token string">'/api'</span><span class="token punctuation">)</span>
+api <span class="token operator">=</span> Api<span class="token punctuation">(</span>blueprint_api<span class="token punctuation">)</span>
+
+<span class="token comment"># 指定の仮想通貨の為替レートを取得する (pybitflyer 使用)</span>
+<span class="token keyword">class</span> <span class="token class-name">Rate</span><span class="token punctuation">(</span>Resource<span class="token punctuation">)</span><span class="token punctuation">:</span>
+  <span class="token keyword">def</span> <span class="token function">get</span><span class="token punctuation">(</span>self<span class="token punctuation">,</span> code<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    <span class="token keyword">try</span><span class="token punctuation">:</span>
+      <span class="token keyword">if</span><span class="token punctuation">(</span>code <span class="token operator">==</span> <span class="token string">'btc'</span><span class="token punctuation">)</span><span class="token punctuation">:</span>
+        <span class="token keyword">return</span> <span class="token punctuation">{</span> <span class="token string">'code'</span><span class="token punctuation">:</span> code<span class="token punctuation">,</span> <span class="token string">'bid'</span><span class="token punctuation">:</span> <span class="token builtin">str</span><span class="token punctuation">(</span>bit_flyer_api<span class="token punctuation">.</span>ticker<span class="token punctuation">(</span>product_code <span class="token operator">=</span> <span class="token string">'BTC_JPY'</span><span class="token punctuation">)</span><span class="token punctuation">[</span><span class="token string">'best_bid'</span><span class="token punctuation">]</span><span class="token punctuation">)</span> <span class="token punctuation">}</span>
+      <span class="token keyword">if</span><span class="token punctuation">(</span>code <span class="token operator">==</span> <span class="token string">'eth'</span><span class="token punctuation">)</span><span class="token punctuation">:</span>
+        <span class="token keyword">return</span> <span class="token punctuation">{</span> <span class="token string">'code'</span><span class="token punctuation">:</span> code<span class="token punctuation">,</span> <span class="token string">'bid'</span><span class="token punctuation">:</span> <span class="token builtin">str</span><span class="token punctuation">(</span>bit_flyer_api<span class="token punctuation">.</span>ticker<span class="token punctuation">(</span>product_code <span class="token operator">=</span> <span class="token string">'ETH_JPY'</span><span class="token punctuation">)</span><span class="token punctuation">[</span><span class="token string">'best_bid'</span><span class="token punctuation">]</span><span class="token punctuation">)</span> <span class="token punctuation">}</span>
+      
+      <span class="token keyword">return</span> <span class="token punctuation">{</span> <span class="token string">'message'</span><span class="token punctuation">:</span> <span class="token string">'Unknown code'</span> <span class="token punctuation">}</span><span class="token punctuation">,</span> <span class="token number">403</span>
+    <span class="token keyword">except</span><span class="token punctuation">:</span>
+      <span class="token keyword">return</span> <span class="token punctuation">{</span> <span class="token string">'message'</span><span class="token punctuation">:</span> <span class="token string">'Failed to get ticker'</span> <span class="token punctuation">}</span><span class="token punctuation">,</span> <span class="token number">500</span>
+api<span class="token punctuation">.</span>add_resource<span class="token punctuation">(</span>Rate<span class="token punctuation">,</span> <span class="token string">'/rate/&#x3C;string:code>'</span><span class="token punctuation">)</span>
+</code></pre>
+<p>この API は、</p>
+<ul>
+  <li><code>http://localhost:5000/api/rate/btc</code></li>
+  <li><code>http://localhost:5000/api/rate/eth</code></li>
+</ul>
+<p>といった URL でアクセスすると、pybitflyer というライブラリを利用して取得した、為替レートの情報を返してくれる。</p>
+<pre class="language-json"><code class="language-json"><span class="token comment">// http://localhost:5000/api/rate/btc をコールした場合のレスポンス例</span>
+<span class="token punctuation">{</span>
+  <span class="token property">"code"</span><span class="token operator">:</span> <span class="token string">"btc"</span><span class="token punctuation">,</span>
+  <span class="token property">"bid"</span> <span class="token operator">:</span> <span class="token string">"10000.5"</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<ul>
+  <li>参考：<a href="https://flask-restful.readthedocs.io/en/0.3.6/quickstart.html#resourceful-routing">Quickstart — Flask-RESTful 0.3.6 documentation</a>
+    <ul>
+      <li><code>api.add_resource(Rate, '/rate/&#x3C;string:code>')</code> 部分の <em>Resourceful Routing</em> で実現している</li>
+    </ul>
+  </li>
+</ul>
+<p>で、<code>btc</code> でも <code>eth</code> でもないパラメータをもらった場合は、パラメータが足りないということで 403 をレスポンスしたい。やり方を色々調べたが、<strong>Flask RESTful の場合は <code>jsonify()</code> や <code>json.dumps()</code> で処理することなく直接連想配列を <code>return</code></strong> してやり、<em><code>return</code> の2つ目でステータスコードを指定する</em>ことで実現できた。</p>
+<pre class="language-python"><code class="language-python"><span class="token comment"># この部分 ↓</span>
+<span class="token keyword">return</span> <span class="token punctuation">{</span> <span class="token string">'message'</span><span class="token punctuation">:</span> <span class="token string">'Unknown code'</span> <span class="token punctuation">}</span><span class="token punctuation">,</span> <span class="token number">403</span>
+</code></pre>
+<p>ついでに、<code>try</code>・<code>except</code> を使って、pybitflyer の処理に失敗した時は 500 を返すよう実装した。</p>
+<pre class="language-python"><code class="language-python"><span class="token keyword">return</span> <span class="token punctuation">{</span> <span class="token string">'message'</span><span class="token punctuation">:</span> <span class="token string">'Failed to get ticker'</span> <span class="token punctuation">}</span><span class="token punctuation">,</span> <span class="token number">500</span>
+</code></pre>
+<p>この <code>return</code> 部分で</p>
+<ul>
+  <li><code>flask.jsonify({ 'message': '...' })</code></li>
+  <li><code>json.dumps({ 'message': '...' })</code></li>
+</ul>
+<p>のように実装してしまうと、Flask RESTful の場合は <code>TypeError</code> になってしまうので、そのまま連想配列を書けば良い。</p>
+<ul>
+  <li><a href="https://inokara.hateblo.jp/entry/2016/10/01/123923">Flask のエラーハンドラメモ - ようへいの日々精進XP</a>
+    <ul>
+      <li>Flask の場合。<code>abort()</code> を使う手法</li>
+    </ul>
+  </li>
+  <li><a href="https://qiita.com/mink0212/items/52e0ebd66bd94e1303c1">flaskでhttpステータスを返却する方法 - Qiita</a>
+    <ul>
+      <li>Flask の場合。<code>return</code> の2つ目でステータスコードを指定する</li>
+    </ul>
+  </li>
+  <li><a href="https://stackoverflow.com/questions/44430906/flask-api-typeerror-object-of-type-response-is-not-json-serializable">python - Flask API TypeError: Object of type 'Response' is not JSON serializable - Stack Overflow</a>
+    <ul>
+      <li><code>is not JSON serializable</code> といったエラーの対処法を調べていた時の記事</li>
+    </ul>
+  </li>
+  <li><a href="https://kazuhira-r.hatenablog.com/entry/2019/08/14/235805">Flask RESTfulを試す - CLOVER🍀</a>
+    <ul>
+      <li>コレが答えだった</li>
+    </ul>
+  </li>
+</ul>
+<p>ついでに、Flask のデフォルト指定では5000番ポートでサーバが起動するが、コレは外部公開されていないので、80番ポートで外部に公開したい、といった場合は次のようにする必要がある。</p>
+<pre class="language-python"><code class="language-python"><span class="token comment"># サーバを起動する</span>
+<span class="token keyword">if</span> __name__ <span class="token operator">==</span> <span class="token string">'__main__'</span><span class="token punctuation">:</span>
+  app<span class="token punctuation">.</span>run<span class="token punctuation">(</span>debug <span class="token operator">=</span> <span class="token boolean">False</span><span class="token punctuation">,</span> host <span class="token operator">=</span> <span class="token string">'0.0.0.0'</span><span class="token punctuation">,</span> port <span class="token operator">=</span> <span class="token number">80</span><span class="token punctuation">)</span>
+</code></pre>
+<ul>
+  <li>参考：<a href="https://qiita.com/tomboyboy/items/122dfdb41188176e45b5">Flaskのサーバーはデフォルトだと公開されてない - Qiita</a></li>
+</ul>
+<p>ウェルノウン・ポートで公開する場合は root ユーザで実行する必要がある。</p>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2020-02-21</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2020-02-21</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

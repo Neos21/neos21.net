@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>起動中の Docker コンテナにファイルを転送する / コンテナからファイルをダウンロードする - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2019/04/14-02.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2019/index.html">2019年</a></li>
+            <li><a href="/blog/2019/04/index.html">04月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2019-04-14</time></div>
+        <h1 id="page-title">起動中の Docker コンテナにファイルを転送する / コンテナからファイルをダウンロードする</h1>
+
+<p>ポケットモンスター アップロード / ダウンロード (何)</p>
+<p>Docker コンテナ起動時に <code>-v</code> オプションを指定すれば、ホスト OS との共有ディレクトリを設定することはできる。</p>
+<p>今回はそうではなく、既に起動されている Docker コンテナにホスト OS からファイルを送ったり、逆に Docker コンテナからホスト OS に向けてファイルを送ってもらったりする手順を紹介する。</p>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#docker-cp-%E3%82%B3%E3%83%9E%E3%83%B3%E3%83%89"><code>docker cp</code> コマンド</a></li>
+  <li><a href="#%E3%83%9B%E3%82%B9%E3%83%88-os-%E3%81%8B%E3%82%89-docker-%E3%82%B3%E3%83%B3%E3%83%86%E3%83%8A%E3%81%AB%E3%83%95%E3%82%A1%E3%82%A4%E3%83%AB%E3%82%92%E9%80%81%E3%82%8B">ホスト OS から Docker コンテナにファイルを送る</a></li>
+  <li><a href="#docker-%E3%82%B3%E3%83%B3%E3%83%86%E3%83%8A%E3%81%8B%E3%82%89%E3%83%9B%E3%82%B9%E3%83%88-os-%E3%81%AB%E3%83%95%E3%82%A1%E3%82%A4%E3%83%AB%E3%82%92%E9%80%81%E3%82%89%E3%81%9B%E3%82%8B">Docker コンテナからホスト OS にファイルを送らせる</a></li>
+</ul>
+<h2 id="docker-cp-コマンド"><a class="header-link" href="#docker-cp-コマンド"><span class="header-link-mark"></span></a><code>docker cp</code> コマンド</h2>
+<p>ファイル転送に使用するのは、ホスト → コンテナ、コンテナ → ホスト、どちらの場合も <strong><code>docker cp</code></strong> コマンドだ。</p>
+<p>起動中のコンテナの ID を知っておく必要があるので、<code>$ docker ps</code> コマンドで <code>CONTAINER ID</code> を確認しておこう。</p>
+<h2 id="ホスト-os-から-docker-コンテナにファイルを送る"><a class="header-link" href="#ホスト-os-から-docker-コンテナにファイルを送る"><span class="header-link-mark"></span></a>ホスト OS から Docker コンテナにファイルを送る</h2>
+<p>ホスト OS から Docker コンテナにファイルを送るには、以下のように書く。</p>
+<pre class="language-bash"><code class="language-bash">$ docker <span class="token function">cp</span> 【ホスト OS のファイル】 【コンテナ ID】:【転送先のフルパス】
+</code></pre>
+<p>例えばこんな感じ。</p>
+<pre class="language-bash"><code class="language-bash">$ docker <span class="token function">cp</span> ./my-host-os-file.txt 00x000xxx000:/tmp
+</code></pre>
+<p>コレで、Docker コンテナ内に <code>/tmp/my-host-os-file.txt</code> が置かれる。</p>
+<p>以下のようにファイル名を指定すれば、転送先でファイル名の変更もできる。</p>
+<pre class="language-bash"><code class="language-bash">$ docker <span class="token function">cp</span> ./my-host-os-file.txt 00x000xxx000:/tmp/my-container-file.txt
+</code></pre>
+<h2 id="docker-コンテナからホスト-os-にファイルを送らせる"><a class="header-link" href="#docker-コンテナからホスト-os-にファイルを送らせる"><span class="header-link-mark"></span></a>Docker コンテナからホスト OS にファイルを送らせる</h2>
+<p>逆に、Docker コンテナ内のファイルを受け取るには、<code>docker cp</code> コマンドの順序を逆にすれば良い。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># docker cp 【送るファイルのパス】 【送り先パス】 という書き順</span>
+
+$ docker <span class="token function">cp</span> 【コンテナ ID】:【転送するファイルのフルパス】 【ホスト OS のダウンロード先】
+</code></pre>
+<p>実際にダウンロードするにはこんな感じ。</p>
+<pre class="language-bash"><code class="language-bash">$ docker <span class="token function">cp</span> 00x000xxx000:/tmp/my-container-file.txt ./
+</code></pre>
+<p>一度覚えれば簡単っすね。</p>
+<ul>
+  <li>参考：<a href="https://blog.amedama.jp/entry/2018/01/30/221546">Docker のホストとコンテナ間でファイルをやり取りする - CUBE SUGAR CONTAINER</a></li>
+</ul>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2019-04-14</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2019-04-14</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

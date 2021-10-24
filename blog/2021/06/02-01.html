@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>OS 問わず Bash で一括リネームする - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2021/06/02-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2021/index.html">2021年</a></li>
+            <li><a href="/blog/2021/06/index.html">06月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2021-06-02</time></div>
+        <h1 id="page-title">OS 問わず Bash で一括リネームする</h1>
+
+<p>Bash でファイル名を一括でリネームしようと思い、調べ始めたらなかなか混乱していたので、整理する。</p>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#windows-git-sdk%E3%80%81ubuntu-linux%E3%80%81macos-%E3%81%A7%E5%90%8C%E3%81%98%E3%82%B3%E3%83%9E%E3%83%B3%E3%83%89%E3%82%92%E4%BD%BF%E3%81%84%E3%81%9F%E3%81%84">Windows Git SDK、Ubuntu Linux、MacOS で同じコマンドを使いたい</a></li>
+  <li><a href="#rename-%E3%82%B3%E3%83%9E%E3%83%B3%E3%83%89%E3%81%AF-os-%E9%96%93%E3%81%A7%E5%85%A8%E3%81%8F%E9%81%95%E3%81%86%E3%81%AE%E3%81%A7%E4%BD%BF%E3%82%8F%E3%81%AA%E3%81%84"><code>rename</code> コマンドは OS 間で全く違うので使わない</a></li>
+  <li><a href="#find-%E3%81%A8-sed-%E3%81%A8-xargs-mv-%E3%81%A7%E3%83%AA%E3%83%8D%E3%83%BC%E3%83%A0%E3%81%99%E3%82%8B"><code>find</code> と <code>sed</code> と <code>xargs mv</code> でリネームする</a></li>
+  <li><a href="#find-%E3%81%A7%E5%87%A6%E7%90%86%E5%AF%BE%E8%B1%A1%E3%82%92%E7%B5%9E%E3%82%8A%E8%BE%BC%E3%82%80"><code>find</code> で処理対象を絞り込む</a></li>
+  <li><a href="#sed-%E3%81%A7%E3%83%AA%E3%83%8D%E3%83%BC%E3%83%A0%E5%BE%8C%E3%81%AE%E6%96%87%E5%AD%97%E5%88%97%E3%82%92%E4%BD%9C%E3%82%8B"><code>sed</code> でリネーム後の文字列を作る</a></li>
+  <li><a href="#xargs-mv-%E3%81%A7%E5%AE%9F%E9%9A%9B%E3%81%AB%E7%BD%AE%E6%8F%9B%E3%81%99%E3%82%8B"><code>xargs mv</code> で実際に置換する</a></li>
+  <li><a href="#%E4%BB%A5%E4%B8%8A">以上</a></li>
+</ul>
+<h2 id="windows-git-sdk、ubuntu-linux、macos-で同じコマンドを使いたい"><a class="header-link" href="#windows-git-sdk、ubuntu-linux、macos-で同じコマンドを使いたい"><span class="header-link-mark"></span></a>Windows Git SDK、Ubuntu Linux、MacOS で同じコマンドを使いたい</h2>
+<p>ファイルの一括リネームを実現するにあたって、OS の差異があるのは鬱陶しいので、どの環境でも同じコマンドでリネームできる方法を探すことにする。</p>
+<p>Windows 環境では、自分は Git For Windows (GitBash) の上位互換である Git SDK を使っているのでその環境を対象にし、また、WSL Ubuntu でも同様に動くようにしたい。</p>
+<p>同じく MacOS でも同じコマンドが動くようにしたい。GNU 系のコマンドを別途 Homebrew でインストールして利用する前提とする。</p>
+<h2 id="rename-コマンドは-os-間で全く違うので使わない"><a class="header-link" href="#rename-コマンドは-os-間で全く違うので使わない"><span class="header-link-mark"></span></a><code>rename</code> コマンドは OS 間で全く違うので使わない</h2>
+<p>「ファイルの一括リネーム」を実現する、<em><code>rename</code></em> というドンズバなコマンドが存在する。しかしこのコマンド、よくある名前なので混沌としていて、OS (導入環境) によって<strong>全く別のコマンド</strong>がインストールされる。以下、<code>--help</code> オプションの出力内容を比較してみよう。</p>
+<ul>
+  <li>Git SDK に内蔵の <code>rename</code>
+    <ul>
+      <li>util-linux というパッケージ群の一部らしい</li>
+      <li>Git SDK 内蔵なのでファイルとしては <code>rename.exe</code> でありソースは読めない</li>
+    </ul>
+  </li>
+</ul>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">rename</span> --help
+
+使い方:
+ <span class="token function">rename</span> <span class="token punctuation">[</span>options<span class="token punctuation">]</span> <span class="token operator">&#x3C;</span>expression<span class="token operator">></span> <span class="token operator">&#x3C;</span>replacement<span class="token operator">></span> <span class="token operator">&#x3C;</span>file<span class="token operator">></span><span class="token punctuation">..</span>.
+
+ファイル名を変更します。
+
+オプション:
+ -v, --verbose       explain what is being <span class="token keyword">done</span>
+ -s, --symlink       act on the target of symlinks
+ -n, --no-act        <span class="token keyword">do</span> not <span class="token function">make</span> any changes
+ -o, --no-overwrite  don't overwrite existing files
+ -i, --interactive   prompt before overwrite
+
+ -h, --help          このヘルプを表示します
+ -V, --version       バージョンを表示します
+
+詳しくは rename<span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">)</span> をお読みください。
+
+$ <span class="token function">rename</span> --version
+<span class="token function">rename</span> from util-linux <span class="token number">2.35</span>.2
+</code></pre>
+<ul>
+  <li>Ubuntu 環境で <code>apt</code> からインストールできる <code>rename</code>
+    <ul>
+      <li><code>/usr/bin/rename</code> を参照すると、実体は Perl 製であることが分かる</li>
+    </ul>
+  </li>
+</ul>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">apt</span> <span class="token function">install</span> <span class="token function">rename</span>
+
+$ <span class="token function">rename</span> --help
+Usage:
+    <span class="token function">rename</span> <span class="token punctuation">[</span> -h<span class="token operator">|</span>-m<span class="token operator">|</span>-V <span class="token punctuation">]</span> <span class="token punctuation">[</span> -v <span class="token punctuation">]</span> <span class="token punctuation">[</span> -0 <span class="token punctuation">]</span> <span class="token punctuation">[</span> -n <span class="token punctuation">]</span> <span class="token punctuation">[</span> -f <span class="token punctuation">]</span> <span class="token punctuation">[</span> -d <span class="token punctuation">]</span>
+    <span class="token punctuation">[</span> -e<span class="token operator">|</span>-E perlexpr<span class="token punctuation">]</span>*<span class="token operator">|</span>perlexpr <span class="token punctuation">[</span> files <span class="token punctuation">]</span>
+
+$ <span class="token function">rename</span> -V
+/usr/bin/rename using File::Rename version <span class="token number">1.10</span>
+</code></pre>
+<ul>
+  <li>MacOS 環境で <code>brew</code> からインストールできる <code>rename</code>
+    <ul>
+      <li><code>/usr/local/bin/rename</code> を覗くと Perl 製であることが分かるが、Ubuntu Linux 版とは全く違う</li>
+    </ul>
+  </li>
+</ul>
+<pre class="language-bash"><code class="language-bash">$ brew <span class="token function">install</span> <span class="token function">rename</span>
+
+$ <span class="token function">rename</span> --help
+Usage:
+    <span class="token function">rename</span> <span class="token punctuation">[</span>switches<span class="token operator">|</span>transforms<span class="token punctuation">]</span> <span class="token punctuation">[</span>files<span class="token punctuation">]</span>
+
+    Switches:
+
+    --man <span class="token punctuation">(</span>read the full manual<span class="token punctuation">)</span>
+    -0/--null <span class="token punctuation">(</span>when reading from STDIN<span class="token punctuation">)</span>
+    -f/--force or -i/--interactive <span class="token punctuation">(</span>proceed or prompt when overwriting<span class="token punctuation">)</span>
+    -g/--glob <span class="token punctuation">(</span>expand <span class="token string">"*"</span> etc. <span class="token keyword">in</span> filenames, useful <span class="token keyword">in</span> Windows™ CMD.EXE<span class="token punctuation">)</span>
+    -k/--backwards/--reverse-order
+    -l/--symlink or -L/--hardlink
+    -M/--use<span class="token operator">=</span>Module
+    -n/--just-print/--dry-run
+    -N/--counter-format
+    -p/--mkpath/--make-dirs
+    --stdin/--no-stdin
+    -t/--sort-time
+    -T/--transcode<span class="token operator">=</span>encoding
+    -v/--verbose
+
+    Transforms, applied sequentially:
+
+    -a/--append<span class="token operator">=</span>str
+    -A/--prepend<span class="token operator">=</span>str
+    -c/--lower-case
+    -C/--upper-case
+    -d/--delete<span class="token operator">=</span>str
+    -D/--delete-all<span class="token operator">=</span>str
+    -e/--expr<span class="token operator">=</span>code
+    -P/--pipe<span class="token operator">=</span>cmd
+    -s/--subst from to
+    -S/--subst-all from to
+    -x/--remove-extension
+    -X/--keep-extension
+    -z/--sanitize
+    --camelcase --urlesc --nows --rews --noctrl --nometa --trim <span class="token punctuation">(</span>see manual<span class="token punctuation">)</span>
+
+<span class="token comment"># バージョン表示のオプションはないようなので man を抜粋する</span>
+$ <span class="token function">rename</span> --man
+NAME
+    <span class="token function">rename</span> - renames multiple files
+
+VERSION
+    version <span class="token number">1.601</span>
+</code></pre>
+<p>…それぞれ全くオプションが違うので、各環境で使い方を覚えないといけない。Mac の <code>rename</code> なんかはまぁまぁ使いやすいし、<code>find -exec rename</code> といった組み合わせ方もあるのだが、いずれも他の環境で使えないので今回はコレ以上深堀りしない。</p>
+<h2 id="find-と-sed-と-xargs-mv-でリネームする"><a class="header-link" href="#find-と-sed-と-xargs-mv-でリネームする"><span class="header-link-mark"></span></a><code>find</code> と <code>sed</code> と <code>xargs mv</code> でリネームする</h2>
+<p>そこで調べ直すと、</p>
+<ol>
+  <li><code>find</code> でリネーム対象を絞り込み、</li>
+  <li><code>sed</code> でリネーム後のファイル名を組み立て、</li>
+  <li>最後に <code>xargs mv</code> で実際にリネームする</li>
+</ol>
+<p>という方法が、どの環境でも同じように処理できそうだと思った。</p>
+<p>なお、MacOS の場合は <code>find</code>・<code>sed</code> ともに BSD 版であるため、細かなオプションの差異を吸収するために GNU 版を入れておくと良い。</p>
+<pre class="language-bash"><code class="language-bash">$ brew <span class="token function">install</span> findutils gnu-sed
+$ <span class="token builtin class-name">alias</span> <span class="token assign-left variable">find</span><span class="token operator">=</span><span class="token string">'gfind'</span>
+$ <span class="token builtin class-name">alias</span> <span class="token assign-left variable">sed</span><span class="token operator">=</span><span class="token string">'gsed'</span>
+</code></pre>
+<h2 id="find-で処理対象を絞り込む"><a class="header-link" href="#find-で処理対象を絞り込む"><span class="header-link-mark"></span></a><code>find</code> で処理対象を絞り込む</h2>
+<p>まずは <code>find</code> コマンドによる絞り込みの方法を押さえておく。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># カレントディレクトリ直下のファイルを全取得する</span>
+$ <span class="token function">find</span> <span class="token builtin class-name">.</span> -type f -maxdepth <span class="token number">1</span>
+</code></pre>
+<p>※ <code>-maxdepth</code> オプションは、BSD 版だと <code>-depth</code>・<code>-d</code> オプションとも書けるが、GNU 版は <code>-maxdepth</code> と書かないと有効にならない。</p>
+<p>コレをベースに、<code>-name</code> オプションなんかを使って絞り込んでやると良いだろう。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># 前方一致</span>
+$ <span class="token function">find</span> <span class="token builtin class-name">.</span> -type f -maxdepth <span class="token number">1</span> -name <span class="token string">'prefix*'</span>
+<span class="token comment"># 部分一致</span>
+$ <span class="token function">find</span> <span class="token builtin class-name">.</span> -type f -maxdepth <span class="token number">1</span> -name <span class="token string">'*file-name*'</span>
+<span class="token comment"># 後方一致</span>
+$ <span class="token function">find</span> <span class="token builtin class-name">.</span> -type f -maxdepth <span class="token number">1</span> -name <span class="token string">'*-suffix.txt'</span>
+</code></pre>
+<p>…こんな感じで、アスタリスク <code>*</code> を使うと絞り込みやすい。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">find</span> <span class="token builtin class-name">.</span> -type f -maxdepth <span class="token number">1</span> -name <span class="token string">'prefix*'</span>
+./prefix-001.jpg
+./prefix-002.jpg
+</code></pre>
+<p>こんな風に、リネーム対象とするファイル名が列挙できた。</p>
+<h2 id="sed-でリネーム後の文字列を作る"><a class="header-link" href="#sed-でリネーム後の文字列を作る"><span class="header-link-mark"></span></a><code>sed</code> でリネーム後の文字列を作る</h2>
+<p>続いて、リネーム後のファイル名文字列を <code>sed</code> で作る。<strong><code>p</code> スクリプトコマンド</strong>を使うと、「処理前・(改行)・処理後」の順で出力できるので、コレを使う。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">find</span> <span class="token builtin class-name">.</span> -type f -maxdepth <span class="token number">1</span> -name <span class="token string">'prefix-*'</span> <span class="token operator">|</span> <span class="token function">sed</span> <span class="token string">'p;s/prefix-/new-/'</span>
+./prefix-001.jpg
+./new-001.jpg
+./prefix-002.jpg
+./new-002.jpg
+</code></pre>
+<p>正規表現を使いたい場合は <code>-r</code> オプションを使う。普通の正規表現と違って、キャプチャした文字列を参照する場合は <code>$1</code>・<code>$2</code> (ドルマーク) ではなく <code>\1</code>・<code>\2</code> とバックスラッシュで書く。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># キャプチャを使って、ハイフン部分だけアンダースコアに変更する</span>
+$ <span class="token function">find</span> <span class="token builtin class-name">.</span> -type f -maxdepth <span class="token number">1</span> -name <span class="token string">'prefix-*'</span> <span class="token operator">|</span> <span class="token function">sed</span> -r <span class="token string">'p;s/(prefix)-([0-9]*).jpg/<span class="token entity" title="\1">\1</span>__<span class="token entity" title="\2">\2</span>.jpeg/'</span>
+./prefix-001.jpg
+./prefix__001.jpeg
+./prefix-002.jpg
+./prefix__002.jpeg
+</code></pre>
+<p>大文字・小文字変換は <code>\L</code> や <code>\U</code> で行える。このオプションは BSD sed では使えないので、GNU 版 <code>gsed</code> を使おう。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># 小文字にする</span>
+$ <span class="token function">find</span> <span class="token builtin class-name">.</span> -type f -maxdepth <span class="token number">1</span> -name <span class="token string">'prefix-*'</span> <span class="token operator">|</span> <span class="token function">sed</span> <span class="token string">'p;s/\(.*\)/\L<span class="token entity" title="\1">\1</span>/'</span>
+
+<span class="token comment"># 大文字にする</span>
+$ <span class="token function">find</span> <span class="token builtin class-name">.</span> -type f -maxdepth <span class="token number">1</span> -name <span class="token string">'prefix-*'</span> <span class="token operator">|</span> <span class="token function">sed</span> <span class="token string">'p;s/\(.*\)/\U<span class="token entity" title="\1">\1</span>/'</span>
+./prefix-001.jpg
+./PREFIX-001.JPG
+./prefix-002.jpg
+./PREFIX-002.JPG
+</code></pre>
+<p>ココまでで、リネームしたいファイル名とリネーム後の文字列が交互に列挙されることになる。ココまでで止めておくと、Dry-Run 的に置換結果を確認だけできる。</p>
+<h2 id="xargs-mv-で実際に置換する"><a class="header-link" href="#xargs-mv-で実際に置換する"><span class="header-link-mark"></span></a><code>xargs mv</code> で実際に置換する</h2>
+<p>最後に、<em><code>xargs -n2 mv</code></em> を繋げれば一括リネームが実行できる。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># 全ファイルの「BEFORE」部分を「AFTER」に置換する</span>
+$ <span class="token function">find</span> <span class="token builtin class-name">.</span> -type f -maxdepth <span class="token number">1</span> <span class="token operator">|</span> <span class="token function">sed</span> <span class="token string">'p;s/BEFORE/AFTER/'</span> <span class="token operator">|</span> <span class="token function">xargs</span> -n2 <span class="token function">mv</span>
+
+<span class="token comment"># 一部ファイルを絞り込み正規表現を使って置換する</span>
+$ <span class="token function">find</span> <span class="token builtin class-name">.</span> -type f -maxdepth <span class="token number">1</span> -name <span class="token string">'prefix-*'</span> <span class="token operator">|</span> <span class="token function">sed</span> -r <span class="token string">'p;s/(prefix)-([0-9]*).jpg/<span class="token entity" title="\1">\1</span>__<span class="token entity" title="\2">\2</span>.jpeg/'</span> <span class="token operator">|</span> <span class="token function">xargs</span> -n2 <span class="token function">mv</span>
+</code></pre>
+<p>こんな感じ。</p>
+<h2 id="以上"><a class="header-link" href="#以上"><span class="header-link-mark"></span></a>以上</h2>
+<p><code>find</code>・<code>sed</code>・<code>xargs mv</code> の組み合わせで、イイカンジに対象ファイルを絞り込み、置換文字列を組み立て、実行できた。3つのコマンドの基本的なオプションしか使っておらず、ほぼ定型的に実装できるので、オプションを沢山覚えて使いこなす必要がなくシンプルだ。Dry-Run したくなった時も、オプションだなんだと考えずに <code>xargs mv</code> を外すだけで良いので、分かりやすいであろう。</p><div class="ad-rakuten">
+  <div class="ad-rakuten-image">
+    <a href="https://hb.afl.rakuten.co.jp/hgc/g00q0722.waxyc9ff.g00q0722.waxyd017/?pc=https%3A%2F%2Fitem.rakuten.co.jp%2Fbook%2F3669596%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Fbook%2Fi%2F11540346%2F">
+      <img src="https://thumbnail.image.rakuten.co.jp/@0_mall/book/cabinet/8731/87311254.jpg?_ex=128x128">
+    </a>
+  </div>
+  <div class="ad-rakuten-info">
+    <div class="ad-rakuten-title">
+      <a href="https://hb.afl.rakuten.co.jp/hgc/g00q0722.waxyc9ff.g00q0722.waxyd017/?pc=https%3A%2F%2Fitem.rakuten.co.jp%2Fbook%2F3669596%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Fbook%2Fi%2F11540346%2F">入門bash第3版 bash　2．05b　＆　3．0対応 [ キャメロン・ニューハン ]</a>
+    </div>
+    <div class="ad-rakuten-shop">
+      <a href="https://hb.afl.rakuten.co.jp/hgc/g00q0722.waxyc9ff.g00q0722.waxyd017/?pc=https%3A%2F%2Fwww.rakuten.co.jp%2Fbook%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Fbook%2F">楽天ブックス</a>
+    </div>
+    <div class="ad-rakuten-price">価格 : 3080円</div>
+  </div>
+</div>
+<div class="ad-amazon">
+  <div class="ad-amazon-image">
+    <a href="https://www.amazon.co.jp/dp/4873112540?tag=neos21-22&amp;linkCode=osi&amp;th=1&amp;psc=1">
+      <img src="https://m.media-amazon.com/images/I/519CHDKSHWL._SL160_.jpg" width="124" height="160">
+    </a>
+  </div>
+  <div class="ad-amazon-info">
+    <div class="ad-amazon-title">
+      <a href="https://www.amazon.co.jp/dp/4873112540?tag=neos21-22&amp;linkCode=osi&amp;th=1&amp;psc=1">入門bash 第3版</a>
+    </div>
+  </div>
+</div>
+<ul>
+  <li><a href="https://orebibou.com/ja/home/201704/20170406_001/">findでヒットしたファイルのみをリネームする(ファイル名にシングルクォート有り) | 俺的備忘録 〜なんかいろいろ〜</a></li>
+  <li><a href="http://ktykwsk.com/rename%E3%82%B3%E3%83%9E%E3%83%B3%E3%83%89%E3%82%92%E4%BD%BF%E3%81%88%E3%81%AA%E3%81%84%E7%92%B0%E5%A2%83%E3%81%A7%E3%83%95%E3%82%A1%E3%82%A4%E3%83%AB%E5%90%8D%E3%82%92%E4%B8%80%E6%8B%AC%E5%A4%89/">renameコマンドを使えない環境でファイル名を一括変更 | ktykwsk.com</a></li>
+  <li><a href="https://www.nemotos.net/?p=864">Linuxでfind, sedを使いながら文字列を再利用してファイル名の途中に文字列を挿入する方法</a></li>
+  <li><a href="https://www.atmarkit.co.jp/ait/articles/1610/18/news008.html">【 sed 】コマンド（応用編）――正規表現を使って文字を置き換える：Linux基本コマンドTips（57） - ＠IT</a></li>
+  <li><a href="https://expajp-tech.hatenablog.com/entry/2021/05/23/161434">grepとsedとawkをおさらいしたので役に立ちそうなことをまとめた - 部屋の隅っこで書く技術ブログ</a></li>
+</ul>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2021-06-02</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2021-06-02</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

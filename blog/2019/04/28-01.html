@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>実例に見る、バグの原因を見つけるアイデア：catch 句の中で例外が発生している - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2019/04/28-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2019/index.html">2019年</a></li>
+            <li><a href="/blog/2019/04/index.html">04月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2019-04-28</time></div>
+        <h1 id="page-title">実例に見る、バグの原因を見つけるアイデア：catch 句の中で例外が発生している</h1>
+
+<p>何かバグが起きた時、どうしてそれが起こっているのかすぐには特定できない場合がある。</p>
+<p>今回は、僕が実際に遭遇した「一見しただけでは特定しにくかったバグ」を紹介することで、似たようなバグに出会った時の参考にしていただければと思う。</p>
+<h2 id="サンプルコード"><a class="header-link" href="#サンプルコード"><span class="header-link-mark"></span></a>サンプルコード</h2>
+<p>僕が実際に遭遇したバグとサンプルコードを紹介する。JavaScript で書いているが、Java など似たような構文の言語でも同様だろう。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token comment">// 呼び出し元の関数</span>
+<span class="token keyword">function</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  logger<span class="token punctuation">.</span><span class="token method function property-access">trace</span><span class="token punctuation">(</span><span class="token string">'main() 開始'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword control-flow">try</span> <span class="token punctuation">{</span>
+    logger<span class="token punctuation">.</span><span class="token method function property-access">trace</span><span class="token punctuation">(</span><span class="token string">'main() 実処理呼び出し'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">const</span> result <span class="token operator">=</span> <span class="token function">exec</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    logger<span class="token punctuation">.</span><span class="token method function property-access">trace</span><span class="token punctuation">(</span><span class="token string">'main() 呼び出し終了・結果 = ['</span> <span class="token operator">+</span> result <span class="token operator">+</span> <span class="token string">']'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword control-flow">return</span> result<span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  <span class="token keyword control-flow">catch</span><span class="token punctuation">(</span>error<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    logger<span class="token punctuation">.</span><span class="token method function property-access">error</span><span class="token punctuation">(</span><span class="token string">'main() 例外を検知・異常終了'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    process<span class="token punctuation">.</span><span class="token method function property-access">exit</span><span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+
+<span class="token comment">// 実処理</span>
+<span class="token keyword">function</span> <span class="token function">exec</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  logger<span class="token punctuation">.</span><span class="token method function property-access">trace</span><span class="token punctuation">(</span><span class="token string">'exec() 開始'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword control-flow">try</span> <span class="token punctuation">{</span>
+    <span class="token comment">// ユーザ情報を取得するような処理 (ココはサンプルのためテキトーに)</span>
+    <span class="token keyword">const</span> userId <span class="token operator">=</span> myStorage<span class="token punctuation">.</span><span class="token method function property-access">getData</span><span class="token punctuation">(</span><span class="token string">'userData'</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token property-access">id</span><span class="token punctuation">;</span>
+    logger<span class="token punctuation">.</span><span class="token method function property-access">trace</span><span class="token punctuation">(</span><span class="token string">'exec() ユーザ ID 取得成功 = ['</span> <span class="token operator">+</span> userId <span class="token operator">+</span> <span class="token string">']'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword control-flow">return</span> userId<span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  <span class="token keyword control-flow">catch</span><span class="token punctuation">(</span>error<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token comment">// myStorage がスローする例外には詳細情報が含まれているのでその内容を出力する</span>
+    logger<span class="token punctuation">.</span><span class="token method function property-access">error</span><span class="token punctuation">(</span><span class="token string">'exec() 例外を検知'</span><span class="token punctuation">,</span> error<span class="token punctuation">.</span><span class="token property-access">details</span><span class="token punctuation">.</span><span class="token property-access">statusCode</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token comment">// 例外発生時は空値を返す実装とする</span>
+    <span class="token keyword control-flow">return</span> <span class="token string">''</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>こんなコードがあったとして。</p>
+<p><code>main()</code> 関数を実行すると、内部で <code>exec()</code> 関数が呼び出され、正常に動けば以下のようにログが出力される。</p>
+<pre><code>2019-01-01 00:00:00 [TRACE] main() 開始
+2019-01-01 00:00:01 [TRACE] main() 実処理呼び出し
+2019-01-01 00:00:02 [TRACE] exec() 開始
+2019-01-01 00:00:10 [TRACE] exec() ユーザ ID 取得成功 = [U0011]
+2019-01-01 00:00:11 [TRACE] main() 呼び出し終了・結果 = [U0011]
+</code></pre>
+<p>大抵はこのように正常系が動作するのだが、ある時コレが上手く動かなくなったとする。<em>大本のエラーは <code>myStorage.getData()</code> 関数で発生</em>するので、以下のようなログが出力されることを期待していた。</p>
+<pre><code>2019-01-01 00:00:00 [TRACE] main() 開始
+2019-01-01 00:00:01 [TRACE] main() 実処理呼び出し
+2019-01-01 00:00:02 [TRACE] exec() 開始
+2019-01-01 00:00:10 [ERROR] exec() 例外を検知 500
+2019-01-01 00:00:11 [TRACE] main() 呼び出し終了・結果 = []
+</code></pre>
+<p><code>exec()</code> 関数内の <code>catch</code> 句が例外をキャッチし、エラーコードをログ出力した上で、空の文字列を返却する。<code>main()</code> 関数から見るとエラーは握り潰されているので、正常な結果ということで、空の文字列を受け取って終了するはずだたｔ.</p>
+<p><strong>が、実際は次のようなログが出力された。</strong></p>
+<pre><code>2019-01-01 00:00:00 [TRACE] main() 開始
+2019-01-01 00:00:01 [TRACE] main() 実処理呼び出し
+2019-01-01 00:00:02 [TRACE] exec() 開始
+2019-01-01 00:00:12 [ERROR] main() 例外を検知・異常終了
+</code></pre>
+<p>今回は「一見しただけでは見つけにくかったバグを紹介する」と前置きして、順に説明しているので、原因になりそうなコード行がもうお分かりかと思う。</p>
+<p>しかし、いきなりこのログの並びだけを見ると、<strong>「<code>exec()</code> 関数は <code>try / catch</code> で囲んでいるのに、どうして <code>catch</code> 句をすり抜けて <code>main()</code> 関数に戻ってるの？！」</strong>と思うワケだ。また実際のコードはもっと処理 (行数) が多いので、何が起こっているのか余計に分かりにくくなるのだ。</p>
+<h2 id="catch-句の中で例外が発生している"><a class="header-link" href="#catch-句の中で例外が発生している"><span class="header-link-mark"></span></a><code>catch</code> 句の中で例外が発生している</h2>
+<p>さて、このような奇妙なログの並び方をする理由は、<code>exec()</code> 関数の <code>catch</code> 句内にある、以下のコードが原因だ。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword control-flow">catch</span><span class="token punctuation">(</span>error<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token comment">// myStorage がスローする例外には詳細情報が含まれているのでその内容を出力する</span>
+  logger<span class="token punctuation">.</span><span class="token method function property-access">error</span><span class="token punctuation">(</span><span class="token string">'exec() 例外を検知'</span><span class="token punctuation">,</span> error<span class="token punctuation">.</span><span class="token property-access">details</span><span class="token punctuation">.</span><span class="token property-access">statusCode</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p><code>error</code> オブジェクトの中には <code>details</code> というオブジェクト・プロパティがあり、その中に <code>statusCode</code> というプロパティがある、という前提で、このようにコーディングしていた。</p>
+<p>しかし、<code>myStorage.getData()</code> 関数がスローした <code>error</code> オブジェクトが <strong><code>details</code> オブジェクトを持っていなかった場合</strong>は、以下のような例外が発生する。</p>
+<pre><code>TypeError: Cannot read property 'statusCode' of undefined
+</code></pre>
+<p><strong><code>catch</code> 句の中で発生した例外は、呼び出し元に伝搬する。</strong>エラーログを出力するためのこの行で例外が発生した場合は、「<code>exec() 例外を検知</code>」というエラーログが出力されないまま、呼び出し元である <code>main()</code> 関数の <code>catch</code> 句が例外を拾い、突然「<code>main() 例外を検知・異常終了</code>」と出力されたように見える、というワケだ。</p>
+<p>例外を捕捉するための <code>catch</code> 句の中で例外が発生している、という可能性は、最初はなかなか思い当たらないだろう。しかし、おかしな動きをしている時は、「ココでキャッチしている<strong>はず</strong>だから…」といった思い込みを捨て、<em><code>catch</code> 句の中に問題はないか</em>と調べる癖を付けたい。</p>
+<h2 id="「ログ出力処理」そのものが悪影響を及ぼす"><a class="header-link" href="#「ログ出力処理」そのものが悪影響を及ぼす"><span class="header-link-mark"></span></a>「ログ出力処理」そのものが悪影響を及ぼす</h2>
+<p>また、この例で厄介なのは、<em>エラーの内容を把握するために仕込んだはずのログ出力処理自体に問題</em>があって、エラーの詳細が表に現れなかったところだ。</p>
+<p>「正常ログが出る<em>はず</em>」「異常ログが出る<em>はず</em>」と思っているのに、想定していたどちらのログも出なかった場合は、<strong>ログ出力処理部分に問題はないか</strong>をチェックするようにしたい。</p>
+<h2 id="ログ出力処理で例外を出さないようにする"><a class="header-link" href="#ログ出力処理で例外を出さないようにする"><span class="header-link-mark"></span></a>ログ出力処理で例外を出さないようにする</h2>
+<p>ロギング処理は、システムの動作に影響を与えてはならない。パフォーマンスが明らかに低下するほど大量のログを出力したり、今回のようにログ出力処理が悪さをして、システム異常を引き起こしたりしてはならない。</p>
+<p><code>catch</code> 句の中では、ログ出力も含めて余計な操作や処理をしないようにしたい。どうしても何か処理する必要があるのであれば、極端な話、<code>catch</code> 句の中に <code>try / catch</code> を書いてでも、ログ出力による問題を引き起こさないようにしたいところだ。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword">function</span> <span class="token function">exec</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  logger<span class="token punctuation">.</span><span class="token method function property-access">trace</span><span class="token punctuation">(</span><span class="token string">'exec() 開始'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword control-flow">try</span> <span class="token punctuation">{</span>
+    <span class="token keyword">const</span> userId <span class="token operator">=</span> myStorage<span class="token punctuation">.</span><span class="token method function property-access">getData</span><span class="token punctuation">(</span><span class="token string">'userData'</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token property-access">id</span><span class="token punctuation">;</span>
+    logger<span class="token punctuation">.</span><span class="token method function property-access">trace</span><span class="token punctuation">(</span><span class="token string">'exec() ユーザ ID 取得成功 = ['</span> <span class="token operator">+</span> userId <span class="token operator">+</span> <span class="token string">']'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword control-flow">return</span> userId<span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  <span class="token keyword control-flow">catch</span><span class="token punctuation">(</span>error<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    logger<span class="token punctuation">.</span><span class="token method function property-access">error</span><span class="token punctuation">(</span><span class="token string">'exec() 例外を検知'</span><span class="token punctuation">,</span> error<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    
+    <span class="token comment">// 極端ではあるが同様の例外は防げる例</span>
+    <span class="token keyword control-flow">try</span> <span class="token punctuation">{</span>
+      logger<span class="token punctuation">.</span><span class="token method function property-access">error</span><span class="token punctuation">(</span><span class="token string">'exec() 例外の詳細コード'</span><span class="token punctuation">,</span> error<span class="token punctuation">.</span><span class="token property-access">details</span><span class="token punctuation">.</span><span class="token property-access">statusCode</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+    <span class="token keyword control-flow">catch</span><span class="token punctuation">(</span>innerError<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      logger<span class="token punctuation">.</span><span class="token method function property-access">error</span><span class="token punctuation">(</span><span class="token string">'exec() 例外の詳細コードなし・未知のエラー'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+    
+    <span class="token keyword control-flow">return</span> <span class="token string">''</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>JavaScript の場合であれば、ログ出力したい値を直接ロガーに渡すのではなく、<em>ログ出力したい値を返す「関数」</em>を渡すようなラッパーを実装すれば、ロギングによる例外発生を防げるだろう。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token comment">// INFO ログを出力するロガーのラッパー関数</span>
+<span class="token keyword">function</span> <span class="token function">infoLogWrap</span><span class="token punctuation">(</span><span class="token parameter">fn</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token keyword control-flow">try</span> <span class="token punctuation">{</span>
+    <span class="token keyword">const</span> results <span class="token operator">=</span> <span class="token function">fn</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment">// 引数で受け取った関数を実行して値の配列を得る</span>
+    logger<span class="token punctuation">.</span><span class="token method function property-access">info</span><span class="token punctuation">(</span><span class="token spread operator">...</span>results<span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment">// 配列を展開してログ出力する</span>
+  <span class="token punctuation">}</span>
+  <span class="token keyword control-flow">catch</span><span class="token punctuation">(</span>error<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    logger<span class="token punctuation">.</span><span class="token method function property-access">error</span><span class="token punctuation">(</span><span class="token string">'ログ出力に失敗'</span><span class="token punctuation">,</span> error<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+
+<span class="token comment">// ↓ 呼び出し元となるコード</span>
+
+<span class="token comment">// ログ出力したい値を配列で返す関数を作り、それをラッパー関数の引数に与える</span>
+<span class="token function">infoLogWrap</span><span class="token punctuation">(</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">[</span>errorObj<span class="token punctuation">.</span><span class="token property-access">details</span><span class="token punctuation">.</span><span class="token property-access">statusCode</span><span class="token punctuation">,</span> <span class="token function">convertValues</span><span class="token punctuation">(</span>myValues<span class="token punctuation">)</span><span class="token punctuation">]</span> <span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// 分かりやすく書くなら以下と同義</span>
+<span class="token keyword">const</span> <span class="token function-variable function">myFn</span> <span class="token operator">=</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token keyword control-flow">return</span> <span class="token punctuation">[</span>
+    errorObj<span class="token punctuation">.</span><span class="token property-access">details</span><span class="token punctuation">.</span><span class="token property-access">statusCode</span><span class="token punctuation">,</span>
+    <span class="token function">convertValues</span><span class="token punctuation">(</span>myValues<span class="token punctuation">)</span>
+  <span class="token punctuation">]</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+<span class="token function">infoLogWrap</span><span class="token punctuation">(</span>myFn<span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p><code>infoLogWrap()</code> 関数の呼び出し元は、関数を定義したまでで、まだ実行していない。実際に関数を実行して値を得るのは <code>infoLogWrap()</code> 関数の中、<code>try / catch</code> で囲まれている部分なので、<code>errorObj</code> に <code>details</code> プロパティがなかろうと、<code>convertValues()</code> 関数で問題が起ころうと、呼び出し元では例外が発生しない。代わりに「<code>ログ出力に失敗</code>」という用意しておいたエラーログが出ることになるが、コレを検知したらロギング処理をコード修正していけば良いだろう。</p>
+<h2 id="まとめ"><a class="header-link" href="#まとめ"><span class="header-link-mark"></span></a>まとめ</h2>
+<ul>
+  <li><code>catch</code> 句の中で例外が発生している可能性を疑う</li>
+  <li>ロギングのための処理が例外を発生させている可能性を疑う</li>
+</ul>
+<p>バグを見つける際の参考になれば。</p>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2019-04-28</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2019-04-28</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

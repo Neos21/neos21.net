@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>撮影した動画ファイルを iOS アプリ内に保存し、任意のタイミングでフォトライブラリに書き出す Swift コード - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2019/01/11-02.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2019/index.html">2019年</a></li>
+            <li><a href="/blog/2019/01/index.html">01月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2019-01-11</time></div>
+        <h1 id="page-title">撮影した動画ファイルを iOS アプリ内に保存し、任意のタイミングでフォトライブラリに書き出す Swift コード</h1>
+
+<p>以前、スーパースロー動画を撮るための Swift コードを紹介した。</p>
+<ul>
+  <li><a href="/blog/2018/06/04-01.html">iOS アプリで 120fps・240fps のスローモーション動画を撮るための Swift 4 実装</a></li>
+</ul>
+<p>この時は <code>AVCaptureSession#startRunning()</code> までで、実際の動画の撮影については触れていなかった。そこで今回は、このコードを利用した動画撮影のコードを掲載しておく。</p>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#%E6%A4%9C%E8%A8%BC%E7%92%B0%E5%A2%83">検証環境</a></li>
+  <li><a href="#%E3%81%BE%E3%81%9A%E3%81%AF%E3%82%B3%E3%83%BC%E3%83%89%E5%85%A8%E9%87%8F">まずはコード全量</a></li>
+  <li><a href="#%E3%82%B3%E3%83%BC%E3%83%89%E3%81%AE%E8%AA%AC%E6%98%8E">コードの説明</a>
+    <ul>
+      <li><a href="#%E9%8C%B2%E7%94%BB%E9%96%8B%E5%A7%8B%E6%99%82%E3%81%AB%E3%83%95%E3%82%A1%E3%82%A4%E3%83%AB%E5%90%8D%E3%81%A8%E4%BF%9D%E5%AD%98%E5%A0%B4%E6%89%80%E3%82%92%E6%8C%87%E5%AE%9A%E3%81%97%E3%81%A6%E3%81%84%E3%82%8B">録画開始時にファイル名と保存場所を指定している</a></li>
+      <li><a href="#%E9%8C%B2%E7%94%BB%E5%81%9C%E6%AD%A2%E7%94%A8%E3%81%AE%E9%96%A2%E6%95%B0%E3%81%AF%E5%8D%98%E3%81%AB-stoprecording-%E3%82%92%E5%91%BC%E3%81%B6%E3%81%A0%E3%81%91">録画停止用の関数は単に <code>stopRecording()</code> を呼ぶだけ</a></li>
+      <li><a href="#%E9%8C%B2%E7%94%BB%E5%AE%8C%E4%BA%86%E6%99%82%E3%81%AB%E8%87%AA%E5%8B%95%E5%AE%9F%E8%A1%8C%E3%81%95%E3%82%8C%E3%82%8B-fileoutput-%E3%81%A7%E3%81%AF%E4%BD%95%E3%82%82%E3%81%97%E3%81%AA%E3%81%84">録画完了時に自動実行される <code>fileOutput()</code> では何もしない</a></li>
+      <li><a href="#%E3%82%A2%E3%83%97%E3%83%AA%E5%86%85%E3%81%AB%E4%BF%9D%E5%AD%98%E3%81%95%E3%82%8C%E3%81%9F%E5%8B%95%E7%94%BB%E3%83%95%E3%82%A1%E3%82%A4%E3%83%AB%E3%82%92%E3%83%95%E3%82%A9%E3%83%88%E3%83%A9%E3%82%A4%E3%83%96%E3%83%A9%E3%83%AA%E3%81%AB%E6%9B%B8%E3%81%8D%E5%87%BA%E3%81%99">アプリ内に保存された動画ファイルをフォトライブラリに書き出す</a></li>
+    </ul>
+  </li>
+  <li><a href="#%E4%BB%A5%E4%B8%8A">以上</a></li>
+  <li><a href="#%E5%8F%82%E8%80%83%E6%96%87%E7%8C%AE">参考文献</a></li>
+</ul>
+<h2 id="検証環境"><a class="header-link" href="#検証環境"><span class="header-link-mark"></span></a>検証環境</h2>
+<ul>
+  <li>macOS Mojave</li>
+  <li>Xcode v10.1</li>
+  <li>Swift v4.2.1</li>
+  <li>iOS v12.0.1</li>
+</ul>
+<h2 id="まずはコード全量"><a class="header-link" href="#まずはコード全量"><span class="header-link-mark"></span></a>まずはコード全量</h2>
+<p>まずは <code>ViewController.swift</code> のコード全量を載せる。</p>
+<pre class="language-swift"><code class="language-swift"><span class="token keyword">import</span> <span class="token builtin">UIKit</span>
+<span class="token keyword">import</span> <span class="token builtin">AVFoundation</span>
+<span class="token keyword">import</span> <span class="token builtin">Photos</span>
+
+<span class="token keyword">class</span> <span class="token class-name">ViewController</span><span class="token punctuation">:</span> <span class="token builtin">UIViewController</span><span class="token punctuation">,</span> <span class="token builtin">AVCaptureFileOutputRecordingDelegate</span> <span class="token punctuation">{</span>
+  <span class="token comment">/// セッション</span>
+  <span class="token keyword">var</span> session<span class="token punctuation">:</span> <span class="token builtin">AVCaptureSession</span><span class="token operator">!</span>
+  <span class="token comment">/// ビデオデバイス</span>
+  <span class="token keyword">var</span> videoDevice<span class="token punctuation">:</span> <span class="token builtin">AVCaptureDevice</span><span class="token operator">!</span>
+  <span class="token comment">/// オーディオデバイス</span>
+  <span class="token keyword">var</span> audioDevice<span class="token punctuation">:</span> <span class="token builtin">AVCaptureDevice</span><span class="token operator">!</span>
+  <span class="token comment">/// ファイル出力</span>
+  <span class="token keyword">var</span> fileOutput<span class="token punctuation">:</span> <span class="token builtin">AVCaptureMovieFileOutput</span><span class="token operator">!</span>
+  
+  <span class="token comment">/// 初期表示時の処理 : セッションの用意</span>
+  <span class="token keyword">override</span> <span class="token keyword">func</span> <span class="token function">viewDidLoad</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token keyword">super</span><span class="token punctuation">.</span><span class="token function">viewDidLoad</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+    <span class="token comment">// セッション生成</span>
+    session <span class="token operator">=</span> <span class="token function">AVCaptureSession</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+    <span class="token comment">// 入力 : 背面カメラ</span>
+    videoDevice <span class="token operator">=</span> <span class="token builtin">AVCaptureDevice</span><span class="token punctuation">.</span><span class="token keyword">default</span><span class="token punctuation">(</span><span class="token punctuation">.</span>builtInWideAngleCamera<span class="token punctuation">,</span> <span class="token keyword">for</span><span class="token punctuation">:</span> <span class="token punctuation">.</span>video<span class="token punctuation">,</span> position<span class="token punctuation">:</span> <span class="token punctuation">.</span>back<span class="token punctuation">)</span>
+    <span class="token keyword">let</span> videoInput <span class="token operator">=</span> <span class="token keyword">try</span><span class="token operator">!</span> <span class="token builtin">AVCaptureDeviceInput</span><span class="token punctuation">.</span><span class="token keyword">init</span><span class="token punctuation">(</span>device<span class="token punctuation">:</span> videoDevice<span class="token punctuation">)</span>
+    session<span class="token punctuation">.</span><span class="token function">addInput</span><span class="token punctuation">(</span>videoInput<span class="token punctuation">)</span>
+    <span class="token comment">// フォーマット指定</span>
+    <span class="token function">switchFormat</span><span class="token punctuation">(</span>desiredFps<span class="token punctuation">:</span> <span class="token number">60.0</span><span class="token punctuation">)</span>
+    <span class="token comment">// 入力 : マイク</span>
+    audioDevice <span class="token operator">=</span> <span class="token builtin">AVCaptureDevice</span><span class="token punctuation">.</span><span class="token keyword">default</span><span class="token punctuation">(</span><span class="token keyword">for</span><span class="token punctuation">:</span> <span class="token punctuation">.</span>audio<span class="token punctuation">)</span>
+    <span class="token keyword">let</span> audioInput <span class="token operator">=</span> <span class="token keyword">try</span><span class="token operator">!</span> <span class="token builtin">AVCaptureDeviceInput</span><span class="token punctuation">.</span><span class="token keyword">init</span><span class="token punctuation">(</span>device<span class="token punctuation">:</span> audioDevice<span class="token punctuation">)</span>
+    session<span class="token punctuation">.</span><span class="token function">addInput</span><span class="token punctuation">(</span>audioInput<span class="token punctuation">)</span>
+    <span class="token comment">// 出力</span>
+    fileOutput <span class="token operator">=</span> <span class="token function">AVCaptureMovieFileOutput</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+    session<span class="token punctuation">.</span><span class="token function">addOutput</span><span class="token punctuation">(</span>fileOutput<span class="token punctuation">)</span>
+    <span class="token comment">// セッション開始</span>
+    session<span class="token punctuation">.</span><span class="token function">startRunning</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+  <span class="token punctuation">}</span>
+  
+  <span class="token comment">/// 録画完了時の処理 : オーバーライドしておくだけでココでは何もしない</span>
+  <span class="token comment">///</span>
+  <span class="token comment">/// - parameter output: AVCaptureFileOutput (アンダースコアは外部引数名を省略するもの・呼び出し元でも外部引数名を書かなくて呼び出せるようになる)</span>
+  <span class="token comment">/// - parameter outputFileURL: URL (Option キーで参照できるドキュメントコメントを見ると内部引数名でコメントを書くっぽいので内部引数名を採用)</span>
+  <span class="token comment">/// - parameter connections: AVCaptureConnection</span>
+  <span class="token comment">/// - parameter error: Error</span>
+  <span class="token keyword">func</span> <span class="token function">fileOutput</span><span class="token punctuation">(</span><span class="token number">_</span> output<span class="token punctuation">:</span> <span class="token builtin">AVCaptureFileOutput</span><span class="token punctuation">,</span> didFinishRecordingTo outputFileURL<span class="token punctuation">:</span> <span class="token constant">URL</span><span class="token punctuation">,</span> from connections<span class="token punctuation">:</span> <span class="token punctuation">[</span><span class="token builtin">AVCaptureConnection</span><span class="token punctuation">]</span><span class="token punctuation">,</span> error<span class="token punctuation">:</span> <span class="token builtin">Error</span><span class="token operator">?</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token function">print</span><span class="token punctuation">(</span><span class="token string">"録画完了"</span><span class="token punctuation">)</span>
+    <span class="token comment">// XXX : もし録画完了時にフォトライブラリに書き出したければココで処理する</span>
+  <span class="token punctuation">}</span>
+  
+  <span class="token comment">/// 指定の FPS のフォーマットに切り替える (その FPS で最大解像度のフォーマットを選ぶ)</span>
+  <span class="token comment">///</span>
+  <span class="token comment">/// - parameter desiredFps: 切り替えたい FPS (AVFrameRateRange.maxFrameRate が Double なので合わせる)</span>
+  <span class="token keyword">private</span> <span class="token keyword">func</span> <span class="token function">switchFormat</span><span class="token punctuation">(</span>desiredFps<span class="token punctuation">:</span> <span class="token builtin">Double</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token keyword">let</span> isRunning <span class="token operator">=</span> session<span class="token punctuation">.</span>isRunning
+    <span class="token keyword">if</span> isRunning <span class="token punctuation">{</span> session<span class="token punctuation">.</span><span class="token function">stopRunning</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">}</span>  <span class="token comment">// セッションが始動中なら一時的に停止しておく</span>
+    
+    <span class="token comment">// 取得したフォーマットを格納する変数</span>
+    <span class="token keyword">var</span> selectedFormat<span class="token punctuation">:</span> <span class="token builtin">AVCaptureDevice</span><span class="token punctuation">.</span><span class="token builtin">Format</span><span class="token operator">!</span> <span class="token operator">=</span> <span class="token constant">nil</span>
+    <span class="token comment">// そのフレームレートの中で一番大きい解像度を取得する</span>
+    <span class="token keyword">var</span> currentMaxWidth<span class="token punctuation">:</span> <span class="token builtin">Int32</span> <span class="token operator">=</span> <span class="token number">0</span>
+    
+    <span class="token comment">// フォーマットを探る</span>
+    <span class="token keyword">for</span> format <span class="token keyword">in</span> videoDevice<span class="token punctuation">.</span>formats <span class="token punctuation">{</span>
+      <span class="token comment">// フォーマット内の情報を抜き出す (for in と書いているが1つの format につき1つの range しかない)</span>
+      <span class="token keyword">for</span> range<span class="token punctuation">:</span> <span class="token builtin">AVFrameRateRange</span> <span class="token keyword">in</span> format<span class="token punctuation">.</span>videoSupportedFrameRateRanges <span class="token punctuation">{</span>
+        <span class="token keyword">let</span> description <span class="token operator">=</span> format<span class="token punctuation">.</span>formatDescription <span class="token keyword">as</span> <span class="token builtin">CMFormatDescription</span>  <span class="token comment">// フォーマットの説明</span>
+        <span class="token keyword">let</span> dimensions <span class="token operator">=</span> <span class="token function">CMVideoFormatDescriptionGetDimensions</span><span class="token punctuation">(</span>description<span class="token punctuation">)</span>  <span class="token comment">// 幅・高さ情報を抜き出す</span>
+        <span class="token keyword">let</span> width <span class="token operator">=</span> dimensions<span class="token punctuation">.</span>width  <span class="token comment">// 幅</span>
+        
+        <span class="token comment">// 指定のフレームレートで一番大きな解像度を得る (1920px 以上は選ばない)</span>
+        <span class="token keyword">if</span> desiredFps <span class="token operator">==</span> range<span class="token punctuation">.</span>maxFrameRate <span class="token operator">&#x26;&#x26;</span> currentMaxWidth <span class="token operator">&#x3C;=</span> width <span class="token operator">&#x26;&#x26;</span> width <span class="token operator">&#x3C;=</span> <span class="token number">1920</span> <span class="token punctuation">{</span>
+          selectedFormat <span class="token operator">=</span> format
+          currentMaxWidth <span class="token operator">=</span> width
+        <span class="token punctuation">}</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span>
+    
+    <span class="token comment">// フォーマットが取得できていれば設定する</span>
+    <span class="token keyword">if</span> selectedFormat <span class="token operator">!=</span> <span class="token constant">nil</span> <span class="token punctuation">{</span>
+      <span class="token keyword">do</span> <span class="token punctuation">{</span>
+        <span class="token keyword">try</span> videoDevice<span class="token punctuation">.</span><span class="token function">lockForConfiguration</span><span class="token punctuation">(</span><span class="token punctuation">)</span>  <span class="token comment">// ロックできなければ例外を投げる</span>
+        videoDevice<span class="token punctuation">.</span>activeFormat <span class="token operator">=</span> selectedFormat
+        videoDevice<span class="token punctuation">.</span>activeVideoMinFrameDuration <span class="token operator">=</span> <span class="token function">CMTimeMake</span><span class="token punctuation">(</span>value<span class="token punctuation">:</span> <span class="token number">1</span><span class="token punctuation">,</span> timescale<span class="token punctuation">:</span> <span class="token function">Int32</span><span class="token punctuation">(</span>desiredFps<span class="token punctuation">)</span><span class="token punctuation">)</span>  <span class="token comment">// Swift 4.2.1 になって</span>
+        videoDevice<span class="token punctuation">.</span>activeVideoMaxFrameDuration <span class="token operator">=</span> <span class="token function">CMTimeMake</span><span class="token punctuation">(</span>value<span class="token punctuation">:</span> <span class="token number">1</span><span class="token punctuation">,</span> timescale<span class="token punctuation">:</span> <span class="token function">Int32</span><span class="token punctuation">(</span>desiredFps<span class="token punctuation">)</span><span class="token punctuation">)</span>  <span class="token comment">// value と timescale の引数名を書かないといけなくなった</span>
+        videoDevice<span class="token punctuation">.</span><span class="token function">unlockForConfiguration</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+        <span class="token keyword">if</span> isRunning <span class="token punctuation">{</span> session<span class="token punctuation">.</span><span class="token function">startRunning</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">}</span>  <span class="token comment">// セッションが始動中だった場合は一時停止していたものを再開する</span>
+      <span class="token punctuation">}</span>
+      <span class="token keyword">catch</span> <span class="token punctuation">{</span>
+        <span class="token function">print</span><span class="token punctuation">(</span><span class="token string">"フォーマット・フレームレートが指定できなかった : <span class="token interpolation"><span class="token delimiter variable">\(</span>desiredFps<span class="token delimiter variable">)</span></span> fps"</span><span class="token punctuation">)</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span>
+    <span class="token keyword">else</span> <span class="token punctuation">{</span>
+      <span class="token function">print</span><span class="token punctuation">(</span><span class="token string">"フォーマットが取得できなかった : <span class="token interpolation"><span class="token delimiter variable">\(</span>desiredFps<span class="token delimiter variable">)</span></span> fps"</span><span class="token punctuation">)</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span>
+  
+  <span class="token comment">/// 録画を開始する : ボタンからこの関数を呼び出してあげる</span>
+  <span class="token keyword">private</span> <span class="token keyword">func</span> <span class="token function">startRecording</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token comment">// Documents ディレクトリ直下にファイルを生成する</span>
+    <span class="token keyword">let</span> paths <span class="token operator">=</span> <span class="token function">NSSearchPathForDirectoriesInDomains</span><span class="token punctuation">(</span><span class="token punctuation">.</span>documentDirectory<span class="token punctuation">,</span> <span class="token punctuation">.</span>userDomainMask<span class="token punctuation">,</span> <span class="token boolean">true</span><span class="token punctuation">)</span>
+    <span class="token keyword">let</span> documentsDirectory <span class="token operator">=</span> paths<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span> <span class="token keyword">as</span> <span class="token builtin">String</span>
+    
+    <span class="token comment">// 現在時刻をファイル名に付与することでファイル重複を防ぐ : "myvideo-20190101125900999.mp4" な形式になる</span>
+    <span class="token keyword">let</span> formatter <span class="token operator">=</span> <span class="token function">DateFormatter</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+    formatter<span class="token punctuation">.</span>dateFormat <span class="token operator">=</span> <span class="token string">"yyyyMMddHHmmssSSS"</span>
+    <span class="token keyword">let</span> filePath<span class="token punctuation">:</span> <span class="token builtin">String</span><span class="token operator">?</span> <span class="token operator">=</span> <span class="token string">"<span class="token interpolation"><span class="token delimiter variable">\(</span>documentsDirectory<span class="token delimiter variable">)</span></span>/myvideo-<span class="token interpolation"><span class="token delimiter variable">\(</span>formatter<span class="token punctuation">.</span><span class="token function">string</span><span class="token punctuation">(</span>from<span class="token punctuation">:</span> <span class="token function">Date</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token delimiter variable">)</span></span>).mp4"</span>
+    <span class="token keyword">let</span> fileURL <span class="token operator">=</span> <span class="token function">NSURL</span><span class="token punctuation">(</span>fileURLWithPath<span class="token punctuation">:</span> filePath<span class="token operator">!</span><span class="token punctuation">)</span>
+    
+    <span class="token function">print</span><span class="token punctuation">(</span><span class="token string">"録画開始 : <span class="token interpolation"><span class="token delimiter variable">\(</span>filePath<span class="token operator">!</span><span class="token delimiter variable">)</span></span>"</span><span class="token punctuation">)</span>
+    fileOutput<span class="token operator">?</span><span class="token punctuation">.</span><span class="token function">startRecording</span><span class="token punctuation">(</span>to<span class="token punctuation">:</span> fileURL <span class="token keyword">as</span> <span class="token constant">URL</span><span class="token punctuation">,</span> recordingDelegate<span class="token punctuation">:</span> <span class="token keyword">self</span><span class="token punctuation">)</span>
+    
+    <span class="token comment">// XXX : あとココでプレビュー表示とか…</span>
+  <span class="token punctuation">}</span>
+  
+  <span class="token comment">/// 録画を停止する : ボタンからこの関数を呼び出してあげる</span>
+  <span class="token keyword">private</span> <span class="token keyword">func</span> <span class="token function">stopRecording</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token function">print</span><span class="token punctuation">(</span><span class="token string">"録画停止"</span><span class="token punctuation">)</span>
+    fileOutput<span class="token operator">?</span><span class="token punctuation">.</span><span class="token function">stopRecording</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+    
+    <span class="token comment">// XXX : あとココでプレビュー表示の取り消しとか…</span>
+  <span class="token punctuation">}</span>
+  
+  <span class="token comment">/// アプリ内に保存した mp4 ファイルをフォトライブラリに書き出す : ボタンからこの関数を呼び出してあげる</span>
+  <span class="token keyword">private</span> <span class="token keyword">func</span> <span class="token function">outputVideos</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token comment">// Documents ディレクトリの URL</span>
+    <span class="token keyword">let</span> documentDirectoryURL <span class="token operator">=</span> <span class="token builtin">FileManager</span><span class="token punctuation">.</span><span class="token keyword">default</span><span class="token punctuation">.</span><span class="token function">urls</span><span class="token punctuation">(</span><span class="token keyword">for</span><span class="token punctuation">:</span> <span class="token punctuation">.</span>documentDirectory<span class="token punctuation">,</span> <span class="token keyword">in</span><span class="token punctuation">:</span> <span class="token punctuation">.</span>userDomainMask<span class="token punctuation">)</span><span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span>
+    <span class="token keyword">do</span> <span class="token punctuation">{</span>
+      <span class="token comment">// Documents ディレクトリ配下のファイル一覧を取得する</span>
+      <span class="token keyword">let</span> contentUrls <span class="token operator">=</span> <span class="token keyword">try</span> <span class="token builtin">FileManager</span><span class="token punctuation">.</span><span class="token keyword">default</span><span class="token punctuation">.</span><span class="token function">contentsOfDirectory</span><span class="token punctuation">(</span>at<span class="token punctuation">:</span> documentDirectoryURL<span class="token punctuation">,</span> includingPropertiesForKeys<span class="token punctuation">:</span> <span class="token constant">nil</span><span class="token punctuation">)</span>
+      <span class="token keyword">for</span> contentUrl <span class="token keyword">in</span> contentUrls <span class="token punctuation">{</span>
+        <span class="token comment">// 拡張子で判定する</span>
+        <span class="token keyword">if</span> contentUrl<span class="token punctuation">.</span>pathExtension <span class="token operator">==</span> <span class="token string">"mp4"</span> <span class="token punctuation">{</span>
+          <span class="token comment">// mp4 ファイルならフォトライブラリに書き出す</span>
+          <span class="token builtin">PHPhotoLibrary</span><span class="token punctuation">.</span><span class="token function">shared</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">performChanges</span><span class="token punctuation">(</span><span class="token punctuation">{</span>
+            <span class="token builtin">PHAssetChangeRequest</span><span class="token punctuation">.</span><span class="token function">creationRequestForAssetFromVideo</span><span class="token punctuation">(</span>atFileURL<span class="token punctuation">:</span> contentUrl<span class="token punctuation">)</span>
+          <span class="token punctuation">}</span><span class="token punctuation">)</span> <span class="token punctuation">{</span> <span class="token punctuation">(</span>isCompleted<span class="token punctuation">,</span> error<span class="token punctuation">)</span> <span class="token keyword">in</span>
+            <span class="token keyword">if</span> isCompleted <span class="token punctuation">{</span>
+              <span class="token comment">// フォトライブラリに書き出し成功</span>
+              <span class="token keyword">do</span> <span class="token punctuation">{</span>
+                <span class="token keyword">try</span> <span class="token builtin">FileManager</span><span class="token punctuation">.</span><span class="token keyword">default</span><span class="token punctuation">.</span><span class="token function">removeItem</span><span class="token punctuation">(</span>atPath<span class="token punctuation">:</span> contentUrl<span class="token punctuation">.</span>path<span class="token punctuation">)</span>
+                <span class="token function">print</span><span class="token punctuation">(</span><span class="token string">"フォトライブラリ書き出し・ファイル削除成功 : <span class="token interpolation"><span class="token delimiter variable">\(</span>contentUrl<span class="token punctuation">.</span>lastPathComponent<span class="token delimiter variable">)</span></span>"</span><span class="token punctuation">)</span>
+              <span class="token punctuation">}</span>
+              <span class="token keyword">catch</span> <span class="token punctuation">{</span>
+                <span class="token function">print</span><span class="token punctuation">(</span><span class="token string">"フォトライブラリ書き出し後のファイル削除失敗 : <span class="token interpolation"><span class="token delimiter variable">\(</span>contentUrl<span class="token punctuation">.</span>lastPathComponent<span class="token delimiter variable">)</span></span>"</span><span class="token punctuation">)</span>
+              <span class="token punctuation">}</span>
+            <span class="token punctuation">}</span>
+            <span class="token keyword">else</span> <span class="token punctuation">{</span>
+              <span class="token function">print</span><span class="token punctuation">(</span><span class="token string">"フォトライブラリ書き出し失敗 : <span class="token interpolation"><span class="token delimiter variable">\(</span>contentUrl<span class="token punctuation">.</span>lastPathComponent<span class="token delimiter variable">)</span></span>"</span><span class="token punctuation">)</span>
+            <span class="token punctuation">}</span>
+          <span class="token punctuation">}</span>
+        <span class="token punctuation">}</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span>
+    <span class="token keyword">catch</span> <span class="token punctuation">{</span>
+      <span class="token function">print</span><span class="token punctuation">(</span><span class="token string">"ファイル一覧取得エラー"</span><span class="token punctuation">)</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>長くなったが以上である。</p>
+<h2 id="コードの説明"><a class="header-link" href="#コードの説明"><span class="header-link-mark"></span></a>コードの説明</h2>
+<p>今回のコードの構成は、以下のようになっている。</p>
+<pre class="language-swift"><code class="language-swift"><span class="token keyword">class</span> <span class="token class-name">ViewController</span><span class="token punctuation">:</span> <span class="token builtin">UIViewController</span><span class="token punctuation">,</span> <span class="token builtin">AVCaptureFileOutputRecordingDelegate</span> <span class="token punctuation">{</span>
+  <span class="token comment">// 初期表示時の処理</span>
+  <span class="token keyword">override</span> <span class="token keyword">func</span> <span class="token function">viewDidLoad</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span> <span class="token punctuation">}</span>
+  <span class="token comment">// 録画完了時に自動的に呼ばれる・AVCaptureFileOutputRecordingDelegate が実装を必須にしているモノ</span>
+  <span class="token keyword">func</span> <span class="token function">fileOutput</span><span class="token punctuation">(</span><span class="token number">_</span> output<span class="token punctuation">:</span> <span class="token builtin">AVCaptureFileOutput</span><span class="token punctuation">,</span> didFinishRecordingTo outputFileURL<span class="token punctuation">:</span> <span class="token constant">URL</span><span class="token punctuation">,</span> from connections<span class="token punctuation">:</span> <span class="token punctuation">[</span><span class="token builtin">AVCaptureConnection</span><span class="token punctuation">]</span><span class="token punctuation">,</span> error<span class="token punctuation">:</span> <span class="token builtin">Error</span><span class="token operator">?</span><span class="token punctuation">)</span> <span class="token punctuation">{</span> <span class="token punctuation">}</span>
+  
+  <span class="token comment">// 以下プライベート関数</span>
+  
+  <span class="token comment">// フォーマットの指定 : 今回のコードでは 60fps 固定にしたが、必要に応じて 120fps・240fps なども設定可能</span>
+  <span class="token keyword">private</span> <span class="token keyword">func</span> <span class="token function">switchFormat</span><span class="token punctuation">(</span>desiredFps<span class="token punctuation">:</span> <span class="token builtin">Double</span><span class="token punctuation">)</span> <span class="token punctuation">{</span> <span class="token punctuation">}</span>
+  <span class="token comment">// 録画開始用の処理</span>
+  <span class="token keyword">private</span> <span class="token keyword">func</span> <span class="token function">startRecording</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span> <span class="token punctuation">}</span>
+  <span class="token comment">// 録画停止用の処理</span>
+  <span class="token keyword">private</span> <span class="token keyword">func</span> <span class="token function">stopRecording</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span> <span class="token punctuation">}</span>
+  <span class="token comment">// 動画ファイルをフォトライブラリに書き出してアプリ内からは削除する処理</span>
+  <span class="token keyword">private</span> <span class="token keyword">func</span> <span class="token function">outputVideos</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span> <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>これらのコードは一旦そのままにし、あとは画面 (<code>Main.storyboard</code>) にボタンなどを配置して、ボタンタップ時にプライベート関数を呼び出すようにすれば良い。最低限必要になるのは、</p>
+<ol>
+  <li>録画開始ボタン</li>
+  <li>録画停止ボタン</li>
+  <li>動画ファイルの書き出しボタン</li>
+</ol>
+<p>ぐらいだろうか。</p>
+<h3 id="録画開始時にファイル名と保存場所を指定している"><a class="header-link" href="#録画開始時にファイル名と保存場所を指定している"><span class="header-link-mark"></span></a>録画開始時にファイル名と保存場所を指定している</h3>
+<p>今回のポイントは、動画の録画開始時にファイル名と保存場所を指定していること。<code>startRecording()</code> を再掲する。</p>
+<pre class="language-swift"><code class="language-swift"><span class="token comment">/// 録画を開始する : ボタンからこの関数を呼び出してあげる</span>
+<span class="token keyword">private</span> <span class="token keyword">func</span> <span class="token function">startRecording</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token comment">// Documents ディレクトリ直下にファイルを生成する</span>
+  <span class="token keyword">let</span> paths <span class="token operator">=</span> <span class="token function">NSSearchPathForDirectoriesInDomains</span><span class="token punctuation">(</span><span class="token punctuation">.</span>documentDirectory<span class="token punctuation">,</span> <span class="token punctuation">.</span>userDomainMask<span class="token punctuation">,</span> <span class="token boolean">true</span><span class="token punctuation">)</span>
+  <span class="token keyword">let</span> documentsDirectory <span class="token operator">=</span> paths<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span> <span class="token keyword">as</span> <span class="token builtin">String</span>
+  
+  <span class="token comment">// 現在時刻をファイル名に付与することでファイル重複を防ぐ : "myvideo-20190101125900999.mp4" な形式になる</span>
+  <span class="token keyword">let</span> formatter <span class="token operator">=</span> <span class="token function">DateFormatter</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+  formatter<span class="token punctuation">.</span>dateFormat <span class="token operator">=</span> <span class="token string">"yyyyMMddHHmmssSSS"</span>
+  <span class="token keyword">let</span> filePath<span class="token punctuation">:</span> <span class="token builtin">String</span><span class="token operator">?</span> <span class="token operator">=</span> <span class="token string">"<span class="token interpolation"><span class="token delimiter variable">\(</span>documentsDirectory<span class="token delimiter variable">)</span></span>/myvideo-<span class="token interpolation"><span class="token delimiter variable">\(</span>formatter<span class="token punctuation">.</span><span class="token function">string</span><span class="token punctuation">(</span>from<span class="token punctuation">:</span> <span class="token function">Date</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token delimiter variable">)</span></span>).mp4"</span>
+  <span class="token keyword">let</span> fileURL <span class="token operator">=</span> <span class="token function">NSURL</span><span class="token punctuation">(</span>fileURLWithPath<span class="token punctuation">:</span> filePath<span class="token operator">!</span><span class="token punctuation">)</span>
+  
+  <span class="token function">print</span><span class="token punctuation">(</span><span class="token string">"録画開始 : <span class="token interpolation"><span class="token delimiter variable">\(</span>filePath<span class="token operator">!</span><span class="token delimiter variable">)</span></span>"</span><span class="token punctuation">)</span>
+  fileOutput<span class="token operator">?</span><span class="token punctuation">.</span><span class="token function">startRecording</span><span class="token punctuation">(</span>to<span class="token punctuation">:</span> fileURL <span class="token keyword">as</span> <span class="token constant">URL</span><span class="token punctuation">,</span> recordingDelegate<span class="token punctuation">:</span> <span class="token keyword">self</span><span class="token punctuation">)</span>
+  
+  <span class="token comment">// XXX : あとココでプレビュー表示とか…</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>このように、<code>/Documents/</code> ディレクトリ配下に <code>myvideo-20190101125900999.mp4</code> といった形式のファイル名で保存するように設定している。<code>/Library/Caches/</code> や <code>/tmp/</code> はシステムによる自動削除の危険があるので、<code>/Documents/</code> ディレクトリを使用している。もしココで指定した名前のファイルが既に存在する場合は自動的に上書きされるので、ファイル名を固定にしてあえて重複させるようにしておけば、動画ファイルは常に最新の1つのみ保持するような作りにもできる。</p>
+<p>この辺のコードは <code>AVFoundation</code> で動画撮影する系の記事から借用しただけ。</p>
+<p>また、<code>// XXX</code> コメントで示しているとおり、このままだと動画の撮影状況を表示するためのプレビューがないままなので、そこは別途実装してやること。</p>
+<h3 id="録画停止用の関数は単に-stoprecording-を呼ぶだけ"><a class="header-link" href="#録画停止用の関数は単に-stoprecording-を呼ぶだけ"><span class="header-link-mark"></span></a>録画停止用の関数は単に <code>stopRecording()</code> を呼ぶだけ</h3>
+<p>録画停止は、<code>fileOutput.stopRecording()</code> を呼ぶだけ。コレを呼ぶと、次に紹介する <code>fileOutput()</code> メソッドが自動的に実行される、という関係。</p>
+<pre class="language-swift"><code class="language-swift"><span class="token comment">/// 録画を停止する : ボタンからこの関数を呼び出してあげる</span>
+<span class="token keyword">private</span> <span class="token keyword">func</span> <span class="token function">stopRecording</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token function">print</span><span class="token punctuation">(</span><span class="token string">"録画停止"</span><span class="token punctuation">)</span>
+  fileOutput<span class="token operator">?</span><span class="token punctuation">.</span><span class="token function">stopRecording</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+  
+  <span class="token comment">// XXX : あとココでプレビュー表示の取り消しとか…</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>前述のとおり、プレビュー表示に関するコードはないので、プレビュー表示用のレイヤーを非表示にするなどの処理はココでやると良いかと。</p>
+<h3 id="録画完了時に自動実行される-fileoutput-では何もしない"><a class="header-link" href="#録画完了時に自動実行される-fileoutput-では何もしない"><span class="header-link-mark"></span></a>録画完了時に自動実行される <code>fileOutput()</code> では何もしない</h3>
+<p>次に、<code>AVCaptureFileOutputRecordingDelegate</code> を実装する際に必須となる <code>fileOutput()</code> メソッドだが、この中では特に何もしない。</p>
+<pre class="language-swift"><code class="language-swift"><span class="token comment">/// 録画完了時の処理 : オーバーライドしておくだけでココでは何もしない</span>
+<span class="token comment">///</span>
+<span class="token comment">/// - parameter output: AVCaptureFileOutput (アンダースコアは外部引数名を省略するもの・呼び出し元でも外部引数名を書かなくて呼び出せるようになる)</span>
+<span class="token comment">/// - parameter outputFileURL: URL (Option キーで参照できるドキュメントコメントを見ると内部引数名でコメントを書くっぽいので内部引数名を採用)</span>
+<span class="token comment">/// - parameter connections: AVCaptureConnection</span>
+<span class="token comment">/// - parameter error: Error</span>
+<span class="token keyword">func</span> <span class="token function">fileOutput</span><span class="token punctuation">(</span><span class="token number">_</span> output<span class="token punctuation">:</span> <span class="token builtin">AVCaptureFileOutput</span><span class="token punctuation">,</span> didFinishRecordingTo outputFileURL<span class="token punctuation">:</span> <span class="token constant">URL</span><span class="token punctuation">,</span> from connections<span class="token punctuation">:</span> <span class="token punctuation">[</span><span class="token builtin">AVCaptureConnection</span><span class="token punctuation">]</span><span class="token punctuation">,</span> error<span class="token punctuation">:</span> <span class="token builtin">Error</span><span class="token operator">?</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token function">print</span><span class="token punctuation">(</span><span class="token string">"録画完了"</span><span class="token punctuation">)</span>
+  <span class="token comment">// XXX : もし録画完了時にフォトライブラリに書き出したければココで処理する</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>以下の文献では <code>capture()</code> メソッドが必須、と紹介されているが、多分バージョン違いによるもの。</p>
+<ul>
+  <li>参考：<a href="https://dev.classmethod.jp/smartphone/ios-avfoundatio-avcapturemoviefileoutput/">iOS AVFoundation(AVCaptureMovieFileOutput)を使用したビデオ録画を作ってみた ｜ DevelopersIO</a></li>
+</ul>
+<p>引数 <code>outputFileURL</code> で、録画を終了させた動画ファイル名が分かるので、この場でフォトライブラリに書き出して、<code>/Documents/</code> 配下からはファイルを削除するよう実装しても良い。そのためのコードは後述する書き出し処理が参考になるだろう。</p>
+<p>さて、録画開始時に <code>/Documents/</code> 配下に動画ファイルを保存するよう指定し、録画停止時には何もしない、とすることで、アプリ内に動画ファイルが溜まっていく作りになるのだ。このままではフォトライブラリにも書き出されない。</p>
+<h3 id="アプリ内に保存された動画ファイルをフォトライブラリに書き出す"><a class="header-link" href="#アプリ内に保存された動画ファイルをフォトライブラリに書き出す"><span class="header-link-mark"></span></a>アプリ内に保存された動画ファイルをフォトライブラリに書き出す</h3>
+<p>さて、アプリ内に動画ファイルを溜め込めるようになったのは良いが、このままではアプリ内に溜まりっぱなしで取り出せない (Xcode から「Download Container」などして引き抜く、といったことはできるが…)。</p>
+<p>そこで、アプリ内に保存されている mp4 ファイルをまとめてフォトライブラリ (= カメラロール) に書き出し、アプリ内からは動画ファイルを削除する処理を作る。それが以下の <code>outputVideos()</code> だ。</p>
+<pre class="language-swift"><code class="language-swift"><span class="token comment">/// アプリ内に保存した mp4 ファイルをフォトライブラリに書き出す : ボタンからこの関数を呼び出してあげる</span>
+<span class="token keyword">private</span> <span class="token keyword">func</span> <span class="token function">outputVideos</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token comment">// Documents ディレクトリの URL</span>
+  <span class="token keyword">let</span> documentDirectoryURL <span class="token operator">=</span> <span class="token builtin">FileManager</span><span class="token punctuation">.</span><span class="token keyword">default</span><span class="token punctuation">.</span><span class="token function">urls</span><span class="token punctuation">(</span><span class="token keyword">for</span><span class="token punctuation">:</span> <span class="token punctuation">.</span>documentDirectory<span class="token punctuation">,</span> <span class="token keyword">in</span><span class="token punctuation">:</span> <span class="token punctuation">.</span>userDomainMask<span class="token punctuation">)</span><span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span>
+  <span class="token keyword">do</span> <span class="token punctuation">{</span>
+    <span class="token comment">// Documents ディレクトリ配下のファイル一覧を取得する</span>
+    <span class="token keyword">let</span> contentUrls <span class="token operator">=</span> <span class="token keyword">try</span> <span class="token builtin">FileManager</span><span class="token punctuation">.</span><span class="token keyword">default</span><span class="token punctuation">.</span><span class="token function">contentsOfDirectory</span><span class="token punctuation">(</span>at<span class="token punctuation">:</span> documentDirectoryURL<span class="token punctuation">,</span> includingPropertiesForKeys<span class="token punctuation">:</span> <span class="token constant">nil</span><span class="token punctuation">)</span>
+    <span class="token keyword">for</span> contentUrl <span class="token keyword">in</span> contentUrls <span class="token punctuation">{</span>
+      <span class="token comment">// 拡張子で判定する</span>
+      <span class="token keyword">if</span> contentUrl<span class="token punctuation">.</span>pathExtension <span class="token operator">==</span> <span class="token string">"mp4"</span> <span class="token punctuation">{</span>
+        <span class="token comment">// mp4 ファイルならフォトライブラリに書き出す</span>
+        <span class="token builtin">PHPhotoLibrary</span><span class="token punctuation">.</span><span class="token function">shared</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">performChanges</span><span class="token punctuation">(</span><span class="token punctuation">{</span>
+          <span class="token builtin">PHAssetChangeRequest</span><span class="token punctuation">.</span><span class="token function">creationRequestForAssetFromVideo</span><span class="token punctuation">(</span>atFileURL<span class="token punctuation">:</span> contentUrl<span class="token punctuation">)</span>
+        <span class="token punctuation">}</span><span class="token punctuation">)</span> <span class="token punctuation">{</span> <span class="token punctuation">(</span>isCompleted<span class="token punctuation">,</span> error<span class="token punctuation">)</span> <span class="token keyword">in</span>
+          <span class="token keyword">if</span> isCompleted <span class="token punctuation">{</span>
+            <span class="token comment">// フォトライブラリに書き出し成功</span>
+            <span class="token keyword">do</span> <span class="token punctuation">{</span>
+              <span class="token keyword">try</span> <span class="token builtin">FileManager</span><span class="token punctuation">.</span><span class="token keyword">default</span><span class="token punctuation">.</span><span class="token function">removeItem</span><span class="token punctuation">(</span>atPath<span class="token punctuation">:</span> contentUrl<span class="token punctuation">.</span>path<span class="token punctuation">)</span>
+              <span class="token function">print</span><span class="token punctuation">(</span><span class="token string">"フォトライブラリ書き出し・ファイル削除成功 : <span class="token interpolation"><span class="token delimiter variable">\(</span>contentUrl<span class="token punctuation">.</span>lastPathComponent<span class="token delimiter variable">)</span></span>"</span><span class="token punctuation">)</span>
+            <span class="token punctuation">}</span>
+            <span class="token keyword">catch</span> <span class="token punctuation">{</span>
+              <span class="token function">print</span><span class="token punctuation">(</span><span class="token string">"フォトライブラリ書き出し後のファイル削除失敗 : <span class="token interpolation"><span class="token delimiter variable">\(</span>contentUrl<span class="token punctuation">.</span>lastPathComponent<span class="token delimiter variable">)</span></span>"</span><span class="token punctuation">)</span>
+            <span class="token punctuation">}</span>
+          <span class="token punctuation">}</span>
+          <span class="token keyword">else</span> <span class="token punctuation">{</span>
+            <span class="token function">print</span><span class="token punctuation">(</span><span class="token string">"フォトライブラリ書き出し失敗 : <span class="token interpolation"><span class="token delimiter variable">\(</span>contentUrl<span class="token punctuation">.</span>lastPathComponent<span class="token delimiter variable">)</span></span>"</span><span class="token punctuation">)</span>
+          <span class="token punctuation">}</span>
+        <span class="token punctuation">}</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span>
+  <span class="token keyword">catch</span> <span class="token punctuation">{</span>
+    <span class="token function">print</span><span class="token punctuation">(</span><span class="token string">"ファイル一覧取得エラー"</span><span class="token punctuation">)</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p><code>FileManager.default.contentsOfDirectory()</code> を使って、<code>/Documents/</code> ディレクトリ配下からファイル一覧を取得する。そしてコレをループし、<code>NSURL#pathExtension</code> で拡張子を参照する。録画開始時に指定したように、<code>mp4</code> なファイルだったら書き出し対象として扱う。</p>
+<p>フォトライブラリへの書き出しは <code>PHAssetChangeRequest.creationRequestForAssetFromVideo()</code> とかいう関数を使う。書き出しに成功したら、<code>FileManager.default.removeItem()</code> を使って、アプリ内に保存されているファイルを削除する。</p>
+<p>この辺、<code>try</code> とか <code>do-catch</code> とかよく分かっていなくて、コードのネストが深くなってる。<code>for</code> で回すのもイマイチな気がするのだが、フォトライブラリへの書き出しが非同期に行われてタイミングがおかしくなるので、書き出しの成功を <code>isCompleted</code> で確認してからファイルを消すようにしている。もっと Swift 勉強しないとキレイなコードにならんち…。</p>
+<p>しかしひとまずはコレで、アプリ内の動画ファイルをフォトライブラリに書き出した上で削除できるようになった。</p>
+<p>コレについても、もう少し UI 面を加工していけば、アプリ内の動画ファイル一覧をカメラロールちっくに画面に表示し、選択した動画ファイルのみエクスポートする、みたいにも作れるだろう。</p>
+<h2 id="以上"><a class="header-link" href="#以上"><span class="header-link-mark"></span></a>以上</h2>
+<p>動画ファイルの扱い方が全く分からなくて色々調べたが、随分すんなりと実装できた。</p>
+<p>Swift らしいエレガントな書き方がまだ分かっておらず、コードの行数もかさむし、ネストが深くなりがち。<code>!</code> と <code>?</code> の使い分けとかも定石を知らないので勉強しないと。</p>
+<h2 id="参考文献"><a class="header-link" href="#参考文献"><span class="header-link-mark"></span></a>参考文献</h2>
+<p>今回実装するにあたって参照した文献。</p>
+<ul>
+  <li>フォトライブラリへの書き出しについて
+    <ul>
+      <li><a href="https://dev.classmethod.jp/smartphone/ios-avfoundatio-avcapturemoviefileoutput/">iOS AVFoundation(AVCaptureMovieFileOutput)を使用したビデオ録画を作ってみた ｜ DevelopersIO</a> … <code>capture()</code> メソッドだがフォトライブラリへの書き出し方</li>
+      <li><a href="https://qiita.com/daigou26/items/74bbdfce46db8898fb47">Swift4で動画を撮影・保存する - Qiita</a> … こっちは <code>fileOutput()</code> で紹介されている</li>
+    </ul>
+  </li>
+  <li>他のファイル形式でアプリ内にファイルを保存する手順など
+    <ul>
+      <li><a href="http://developers.goalist.co.jp/entry/2017/09/19/162903">ファイルを出力してアプリ内に保存してみた@Swift3 - Goalist Developers Blog</a> … テキストと View (PDF) の保存</li>
+      <li><a href="http://c-geru.com/as_blind_side/2014/07/saveinapp2.html">【Xcode】データをアプリ内に保存するためのメモ2（画像編） | AS blind side</a> … 画像ファイルの保存 (Objective-C)</li>
+      <li><a href="http://swift-salaryman.com/nsfilemanager.php">NSFileManagerでAPP保存領域のデータ操作（作成・保存・移動・削除・置換・コピー・ディレクトリ作成等） - Swiftサラリーマン</a> … テキストファイルの保存</li>
+      <li><a href="https://qiita.com/icecocoa6/items/f674cdecf8e1d0f6bae7">重複しないファイル名 - Qiita</a> … ファイル名の重複を防ぐ連番の作り方</li>
+    </ul>
+  </li>
+  <li>動画の保存に関するところ
+    <ul>
+      <li><a href="https://superhahnah.com/swift-export-movie/">Swift 動画をエクスポート・保存する | Hahnah's Toybox</a> … 動画の URL を指定してアプリ内に書き出し。なんか面倒臭い…。ただ、ファイルの上書きはできないらしいので消してから書き出している</li>
+      <li><a href="https://qiita.com/ppengotsu/items/ec57280c8107f347e22e">Swiftで動画ダウンロードして、シェアする方法 - Qiita</a>… 動画の URL (HTTP ダウンロード) から <code>data</code> を得て、<code>NSSearchPathForDirectoriesInDomains()</code> で <code>DocumentDirectory</code> を指定し、<code>data.write(to: URL)</code> で保存</li>
+      <li><a href="https://stackoverflow.com/questions/11100417/save-video-with-avfoundation/11100635#11100635">iphone - Save video with AVFoundation - Stack Overflow</a> … <code>writeToFile()</code> というメソッド</li>
+      <li><a href="https://stackoverflow.com/questions/36536044/swift-video-to-document-directory/39791782#39791782">save - swift video to document directory - Stack Overflow</a> … Swift3。URL から Data を取り出し <code>write(fileURLWithPath)</code> で保存。削除時は FileManager (NSFileManager) を使っている</li>
+      <li><a href="https://qiita.com/orimomo/items/a22ab921decd41df7dfa">【Swift4】URL先の画像をアプリ内に保存＆ロードする - Qiita</a> … 画像だが、保存する URL パスを作って <code>write()</code>。ファイルの存在チェックもしている</li>
+      <li><a href="https://qiita.com/tototti/items/8646405f47cc56a59722">今こそ復習したい、iOSアプリのディレクトリ構成 - Qiita</a> … 保存先ディレクトリ。Documents は同期できる (設定すれば)。Caches・Tmp は自動削除される恐れが高い</li>
+      <li><a href="https://qiita.com/aquaviter/items/d3471e279f316a56272a">iTunesからiOSデバイスのDocumentsフォルダにアクセスするためには - Qiita</a> … Documents を iTunes で確認できるようにする <code>plist</code> 設定</li>
+    </ul>
+  </li>
+  <li>保存後の再生関連 (アプリ内で再生するには)
+    <ul>
+      <li><a href="https://teratail.com/questions/74321">Xcode - 動画ファイルをアプリ内に保存、保存した動画を取り出すソースコードはどのようになりますでしょうか？｜teratail</a></li>
+      <li><a href="https://joyplot.com/documents/2016/10/22/swift-play-video/">Swift3.0 iOSでAVPlayerとAVPlayerViewControllerによる動画再生 - JoyPlotドキュメント</a> … 動画再生は AVPlayer に URL 渡せばできるぽい。NSData (バイナリデータ) として <code>writeToFile()</code> する？</li>
+      <li><a href="https://joyplot.com/documents/2016/11/03/swift-fileurl-path/">Swift3.0 パスとファイルURLの違いと相互変換の方法 - JoyPlotドキュメント</a> … Swift におけるパス (String 型) とファイル URL (URL 型) の違い</li>
+      <li><a href="https://qiita.com/yakimeron/items/34a65397c1041c0b2a0c">iosの動画再生周りの基礎を調べた - Qiita</a></li>
+      <li><a href="https://qiita.com/kei4eva4/items/6023489ee86f84bd6d53">iOSで動画を再生する - Qiita</a></li>
+      <li><a href="https://teratail.com/questions/121763">iOS - Swift iOS ドキュメントディレクトリに保存されている動画の再生｜teratail</a> … ファイル再生時の URL 指定方法</li>
+    </ul>
+  </li>
+  <li>ファイル操作について
+    <ul>
+      <li><a href="https://ja.stackoverflow.com/questions/40381/%E3%82%A2%E3%83%97%E3%83%AA%E5%86%85%E3%81%A7%E4%BF%9D%E5%AD%98%E3%81%97%E3%81%9F%E3%83%95%E3%82%A1%E3%82%A4%E3%83%AB%E3%81%AE%E4%B8%80%E8%A6%A7%E3%82%92%E5%8F%96%E5%BE%97%E3%81%97%E3%81%9F%E3%81%84">swift - アプリ内で保存したファイルの一覧を取得したい - スタック・オーバーフロー</a> … URL を使うのが主流だとか。<code>FileManager.default.contentsOfDirector()</code> でファイル名一覧が取れている</li>
+      <li><a href="https://qiita.com/nomunomu/items/69632904303cf6b762dd">NSFileManagerでAPP保存領域のデータを操作する - Qiita</a></li>
+    </ul>
+  </li>
+</ul>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2019-01-11</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2019-01-11</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

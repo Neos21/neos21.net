@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>npm v5.6.0 にしたら npm install でフリーズする件の対処法 - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2018/03/31-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2018/index.html">2018年</a></li>
+            <li><a href="/blog/2018/03/index.html">03月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2018-03-31</time></div>
+        <h1 id="page-title">npm v5.6.0 にしたら npm install でフリーズする件の対処法</h1>
+
+<p>Node.js v8.9.4・npm v5.6.0 にアップデートして、<code>package-lock.json</code> が存在する状態で <code>npm install</code> を行うと、<code>loadAllDepsIntoIdealTree</code> といった表示のところでフリーズする事象に遭遇した。その問題と対処法の紹介。</p>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#%E4%BA%8B%E8%B1%A1">事象</a></li>
+  <li><a href="#%E8%A9%A6%E3%81%97%E3%81%A6%E3%83%80%E3%83%A1%E3%81%A0%E3%81%A3%E3%81%9F%E7%AD%96">試してダメだった策</a></li>
+  <li><a href="#%E4%B8%8A%E6%89%8B%E3%81%8F%E8%A1%8C%E3%81%A3%E3%81%9F%E6%96%B9%E6%B3%95%EF%BC%9Anpm-v551-%E3%81%AB%E4%B8%8B%E3%81%92%E3%82%8B">上手く行った方法：npm v5.5.1 に下げる</a></li>
+  <li><a href="#%E5%8E%9F%E5%9B%A0%E3%82%92%E7%8B%AC%E8%87%AA%E8%AA%BF%E6%9F%BB">原因を独自調査</a></li>
+</ul>
+<h2 id="事象"><a class="header-link" href="#事象"><span class="header-link-mark"></span></a>事象</h2>
+<p>発生する条件は以下のとおり。</p>
+<ul>
+  <li>Node.js v8.9.4・npm v5.6.0 環境</li>
+  <li>一度 <code>npm install</code> が終了して、<code>package-lock.json</code> が存在する状態</li>
+</ul>
+<p>この状態で、<code>$ npm install --verbose</code> とやってみると、以下のようになる。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">npm</span> <span class="token function">install</span> --verbose
+<span class="token function">npm</span> info it worked <span class="token keyword">if</span> it ends with ok
+<span class="token function">npm</span> verb cli <span class="token punctuation">[</span> <span class="token string">'/Users/Neo/.nodebrew/node/v8.9.4/bin/node'</span>,
+<span class="token function">npm</span> verb cli   <span class="token string">'/Users/Neo/.nodebrew/current/bin/npm'</span>,
+<span class="token function">npm</span> verb cli   <span class="token string">'install'</span>,
+<span class="token function">npm</span> verb cli   <span class="token string">'--verbose'</span> <span class="token punctuation">]</span>
+<span class="token function">npm</span> info using npm@5.6.0
+<span class="token function">npm</span> info using node@v8.9.4
+<span class="token function">npm</span> verb npm-session fecbba3501330a9a
+<span class="token function">npm</span> info lifecycle example@1.0.0~preinstall: example@1.0.0
+⸨  ░░░░░░░░░░░░░░░░⸩ ⠧ loadDep:zone.js: sill <span class="token function">install</span> loadAllDepsIntoIdealTree
+</code></pre>
+<p>ココから10分くらい放置すると、処理が再開する、という挙動だった。</p>
+<p>この事象自体は Windows でも Mac でも発生するのだが、ハングするプロジェクトとしないプロジェクトがあった。どうも、Node.js・npm のバージョンと、対象のプロジェクトの依存パッケージとに関係があるらしい。</p>
+<p>同様の事象を報告する Issue は挙がっていたが、イマイチハッキリせず…。色々調べてみた。</p>
+<ul>
+  <li>参考：<a href="https://github.com/npm/npm/issues/18108">❤️ NPM freezes at `loadIdealTree` when password-protected SSH key is not in an SSH agent ❤️ · Issue #18108 · npm/npm · GitHub</a></li>
+  <li>参考：<a href="https://github.com/npm/npm/issues/17444">npm install fails with "ENOENT: no such file or directory" on .DELETE files · Issue #17444 · npm/npm · GitHub</a></li>
+</ul>
+<h2 id="試してダメだった策"><a class="header-link" href="#試してダメだった策"><span class="header-link-mark"></span></a>試してダメだった策</h2>
+<p>最初はただフリーズしているだけかと思ったが、10分間放っておくと処理が再開することが分かった。</p>
+<p>ということは、何らかのタイムアウトを待っているのか？と思い、タイムアウトや通信リトライに関係しそうな項目を <code>.npmrc</code> に書いてみた。</p>
+<pre class="language-properties"><code class="language-properties"><span class="token attr-name">searchstaleness</span><span class="token punctuation">=</span><span class="token attr-value">5</span>
+<span class="token attr-name">cache-lock-stale</span><span class="token punctuation">=</span><span class="token attr-value">5000</span>
+<span class="token attr-name">cache-lock-retries</span><span class="token punctuation">=</span><span class="token attr-value">1</span>
+<span class="token attr-name">cache-lock-wait</span><span class="token punctuation">=</span><span class="token attr-value">5000</span>
+<span class="token attr-name">fetch-retries</span><span class="token punctuation">=</span><span class="token attr-value">1</span>
+<span class="token attr-name">fetch-retry-factor</span><span class="token punctuation">=</span><span class="token attr-value">1</span>
+<span class="token attr-name">fetch-retry-mintimeout</span><span class="token punctuation">=</span><span class="token attr-value">5000</span>
+<span class="token attr-name">fetch-retry-maxtimeout</span><span class="token punctuation">=</span><span class="token attr-value">5000</span>
+</code></pre>
+<p>しかし効果なし。</p>
+<p>次に、<code>ssh-add</code> コマンドをどうこうしろとかいう回答があったのでやってみた。</p>
+<ul>
+  <li>参考：<a href="https://github.com/npm/npm/issues/17228#issuecomment-346965324">npm install gets stuck at sill install loadIdealTree · Issue #17228 · npm/npm · GitHub</a></li>
+  <li>参考：<a href="https://superuser.com/questions/88470/how-to-use-mac-os-x-keychain-with-ssh-keys/1155833#1155833">macos - How to use Mac OS X Keychain with SSH keys? - Super User</a></li>
+</ul>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># SSH の秘密鍵を作る : -K オプションで指定した秘密鍵ファイルをキーチェーンに保存できる</span>
+$ ssh-add -K ~/.ssh/id_rsa
+<span class="token comment"># -A オプションで全ての鍵をキーチェーンに登録する</span>
+$ ssh-add -A
+<span class="token comment"># 作った鍵が存在するか確認する</span>
+$ ssh-add -l
+
+<span class="token comment"># 以下のようなファイルを作る</span>
+$ <span class="token function">touch</span> ~/.ssh/config
+
+<span class="token comment"># 中身は以下のようにする : SSH 接続時に鍵を持って行って使ってくれる</span>
+Host *
+  UseKeychain <span class="token function">yes</span>
+  AddKeysToAgent <span class="token function">yes</span>
+  IdentityFile ~/.ssh/id_rsa
+</code></pre>
+<p>しかし効果なし。</p>
+<p>さらに、<code>$ npm i -g npm@5.7.1</code>コマンドで npm を最新版にアップデートして実施してみたが、これも効果なし。</p>
+<h2 id="上手く行った方法：npm-v551-に下げる"><a class="header-link" href="#上手く行った方法：npm-v551-に下げる"><span class="header-link-mark"></span></a>上手く行った方法：npm v5.5.1 に下げる</h2>
+<p>以下の記事を見ると、<em>「npm のバージョンを下げたら上手く行った」</em>との報告が。</p>
+<ul>
+  <li>参考：<a href="https://stackoverflow.com/questions/47721447/cant-install-cordova-with-npm-5-6-0">javascript - Can't install cordova with npm 5.6.0 - Stack Overflow</a>
+    <ul>
+      <li>npm v5.3.0 に下げると上手く行った人。</li>
+    </ul>
+  </li>
+  <li>参考：<a href="https://github.com/dpa99c/cordova-check-plugins/issues/26">Can't install with Node 9.2.1 · Issue #26 · dpa99c/cordova-check-plugins · GitHub</a>
+    <ul>
+      <li>npm v5.5.1 に下げると上手く行った人。</li>
+    </ul>
+  </li>
+</ul>
+<p>Node.js のリリース一覧を見ると、Node.js のバージョンごとに、付属する npm のバージョンが記録されている。コレによると、Node.js v8 系で npm v5.5.1 が入るのは、v8.9.3 までらしい。</p>
+<ul>
+  <li>参考：<a href="https://nodejs.org/ja/download/releases/">リリース一覧 | Node.js</a></li>
+</ul>
+<p>これまで使用していたのは Node.js v8 系の最新版である v8.9.4 だったが、ここから1つ前の <strong>v8.9.3 に下げ、npm v5.5.1 をインストール</strong>してみた。</p>
+<p>この状態で <code>npm install</code> してみると、今度はハング・フリーズすることなくインストールが成功した。</p>
+<h2 id="原因を独自調査"><a class="header-link" href="#原因を独自調査"><span class="header-link-mark"></span></a>原因を独自調査</h2>
+<p>今回、この事象が発生するプロジェクトと発生しないプロジェクトがあった。両者で基本パッケージには差異がないのだが、片方はマイナーな Cordova プラグインをインストールする都合上、<code>package.json</code> にバージョン番号が記載されず、<strong><code>git+https://</code> で始まる URL</strong> が記載されていた。</p>
+<p>どうもこの「バージョン番号が記載されないパッケージ」が存在すると、インストール時に10分間ハングするようであった。回避策らしい回避策も他になかったので、今回は npm のバージョンを v5.5.1 に下げることでしのいだ。</p>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2018-03-31</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2018-03-31</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

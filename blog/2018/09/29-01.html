@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>WebAPI サーバと通信テストをするための Node.js スクリプトを作ってみる - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2018/09/29-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2018/index.html">2018年</a></li>
+            <li><a href="/blog/2018/09/index.html">09月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2018-09-29</time></div>
+        <h1 id="page-title">WebAPI サーバと通信テストをするための Node.js スクリプトを作ってみる</h1>
+
+<p>Express で WebAPI サーバを作って、実際にデータをやり取りできるかテストするために、Node.js スクリプトを作ってみた。</p>
+<p>今回の Node.js スクリプトで使用するのは、Node.js 組み込みの <code>http</code> モジュールのみ。依存パッケージがないのでシンプルかと。</p>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#%E3%83%99%E3%83%BC%E3%82%B9%E3%82%B9%E3%82%AF%E3%83%AA%E3%83%97%E3%83%88">ベーススクリプト</a></li>
+  <li><a href="#get-%E9%80%9A%E4%BF%A1-find-%E3%81%AE%E3%83%86%E3%82%B9%E3%83%88">GET 通信 (Find) のテスト</a></li>
+  <li><a href="#post-%E9%80%9A%E4%BF%A1-create-%E3%81%AE%E3%83%86%E3%82%B9%E3%83%88">POST 通信 (Create) のテスト</a></li>
+  <li><a href="#put-%E9%80%9A%E4%BF%A1-update-%E3%81%AE%E3%83%86%E3%82%B9%E3%83%88">PUT 通信 (Update) のテスト</a></li>
+  <li><a href="#delete-%E9%80%9A%E4%BF%A1-destroy-%E3%81%AE%E3%83%86%E3%82%B9%E3%83%88">DELETE 通信 (Destroy) のテスト</a></li>
+  <li><a href="#%E5%AE%9F%E8%A1%8C%E3%81%97%E3%81%A6%E3%81%BF%E3%82%8B">実行してみる</a></li>
+</ul>
+<h2 id="ベーススクリプト"><a class="header-link" href="#ベーススクリプト"><span class="header-link-mark"></span></a>ベーススクリプト</h2>
+<p>まずは HTTP 通信の共通処理をまとめた <code>base.js</code> を作成する。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token comment">/* tests/base.js */</span>
+
+<span class="token keyword">const</span> http <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'http'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token doc-comment comment">/**
+ * HTTP 通信テスト関数
+ * 
+ * <span class="token keyword">@param</span> <span class="token parameter">postDataObj</span> 送信するデータオブジェクト
+ * <span class="token keyword">@param</span> <span class="token parameter">requestOptions</span> オプション : path と method を指定する
+ */</span>
+module<span class="token punctuation">.</span><span class="token method-variable function-variable method function property-access">exports</span> <span class="token operator">=</span> <span class="token punctuation">(</span><span class="token parameter">postDataObj<span class="token punctuation">,</span> requestOptions</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token comment">// オブジェクトから文字列化する</span>
+  <span class="token keyword">const</span> postData <span class="token operator">=</span> <span class="token known-class-name class-name">JSON</span><span class="token punctuation">.</span><span class="token method function property-access">stringify</span><span class="token punctuation">(</span>postDataObj<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token comment">// オプション情報をマージする</span>
+  <span class="token keyword">const</span> options <span class="token operator">=</span> <span class="token known-class-name class-name">Object</span><span class="token punctuation">.</span><span class="token method function property-access">assign</span><span class="token punctuation">(</span><span class="token punctuation">{</span>
+    <span class="token comment">// サーバのホストをココで指定しておく : この場合は localhost:8080</span>
+    host<span class="token operator">:</span> <span class="token string">'localhost'</span><span class="token punctuation">,</span>
+    port<span class="token operator">:</span> <span class="token number">8080</span><span class="token punctuation">,</span>
+    headers<span class="token operator">:</span> <span class="token punctuation">{</span>
+      <span class="token string">'Content-Type'</span><span class="token operator">:</span> <span class="token string">'application/json'</span><span class="token punctuation">,</span>
+      <span class="token string">'Content-Length'</span><span class="token operator">:</span> <span class="token maybe-class-name">Buffer</span><span class="token punctuation">.</span><span class="token method function property-access">byteLength</span><span class="token punctuation">(</span>postData<span class="token punctuation">)</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span> requestOptions<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  
+  <span class="token comment">// リクエスト送信開始</span>
+  <span class="token keyword">const</span> req <span class="token operator">=</span> http<span class="token punctuation">.</span><span class="token method function property-access">request</span><span class="token punctuation">(</span>options<span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token parameter">res</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+    <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">Status  : </span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>res<span class="token punctuation">.</span><span class="token property-access">statusCode</span><span class="token interpolation-punctuation punctuation">}</span></span><span class="token template-punctuation string">`</span></span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">Headers : </span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span><span class="token known-class-name class-name">JSON</span><span class="token punctuation">.</span><span class="token method function property-access">stringify</span><span class="token punctuation">(</span>res<span class="token punctuation">.</span><span class="token property-access">headers</span><span class="token punctuation">)</span><span class="token interpolation-punctuation punctuation">}</span></span><span class="token template-punctuation string">`</span></span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    
+    res<span class="token punctuation">.</span><span class="token method function property-access">setEncoding</span><span class="token punctuation">(</span><span class="token string">'utf8'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    res<span class="token punctuation">.</span><span class="token method function property-access">on</span><span class="token punctuation">(</span><span class="token string">'data'</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token parameter">chunk</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+      <span class="token comment">// (未整形のままレスポンスデータを出力する)</span>
+      <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">Body    : </span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>chunk<span class="token interpolation-punctuation punctuation">}</span></span><span class="token template-punctuation string">`</span></span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      
+      <span class="token comment">// 整形して出力できそうなら出力する</span>
+      <span class="token keyword control-flow">try</span> <span class="token punctuation">{</span>
+        <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token known-class-name class-name">JSON</span><span class="token punctuation">.</span><span class="token method function property-access">stringify</span><span class="token punctuation">(</span><span class="token known-class-name class-name">JSON</span><span class="token punctuation">.</span><span class="token method function property-access">parse</span><span class="token punctuation">(</span>chunk<span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token keyword null nil">null</span><span class="token punctuation">,</span> <span class="token string">'  '</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span>
+      <span class="token keyword control-flow">catch</span><span class="token punctuation">(</span>e<span class="token punctuation">)</span> <span class="token punctuation">{</span> <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  
+  <span class="token comment">// エラー時</span>
+  req<span class="token punctuation">.</span><span class="token method function property-access">on</span><span class="token punctuation">(</span><span class="token string">'error'</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token parameter">error</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+    <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">Problem With Request : </span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>error<span class="token punctuation">.</span><span class="token property-access">message</span><span class="token interpolation-punctuation punctuation">}</span></span><span class="token template-punctuation string">`</span></span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  
+  req<span class="token punctuation">.</span><span class="token method function property-access">write</span><span class="token punctuation">(</span>postData<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  req<span class="token punctuation">.</span><span class="token method function property-access">end</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+</code></pre>
+<p>次に、テストしたい内容に合わせて、<code>base.js</code> を利用したファイルを作っていく。</p>
+<h2 id="get-通信-find-のテスト"><a class="header-link" href="#get-通信-find-のテスト"><span class="header-link-mark"></span></a>GET 通信 (Find) のテスト</h2>
+<pre class="language-javascript"><code class="language-javascript"><span class="token comment">/* tests/get.js */</span>
+
+<span class="token keyword">const</span> base <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'./base'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// POST するデータなし</span>
+<span class="token keyword">const</span> postData <span class="token operator">=</span> <span class="token punctuation">{</span><span class="token punctuation">}</span><span class="token punctuation">;</span>
+<span class="token comment">// http://localhost:8080/api/users に GET 通信する</span>
+<span class="token keyword">const</span> options <span class="token operator">=</span> <span class="token punctuation">{</span>
+  path<span class="token operator">:</span> <span class="token string">'/api/users'</span><span class="token punctuation">,</span>
+  method<span class="token operator">:</span> <span class="token string">'GET'</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+<span class="token comment">// テスト実行</span>
+<span class="token function">base</span><span class="token punctuation">(</span>postData<span class="token punctuation">,</span> options<span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<h2 id="post-通信-create-のテスト"><a class="header-link" href="#post-通信-create-のテスト"><span class="header-link-mark"></span></a>POST 通信 (Create) のテスト</h2>
+<pre class="language-javascript"><code class="language-javascript"><span class="token comment">/* tests/post.js */</span>
+
+<span class="token keyword">const</span> base <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'./base'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// 追加したいデータを用意する</span>
+<span class="token keyword">const</span> postData <span class="token operator">=</span> <span class="token punctuation">{</span>
+  <span class="token string">'name'</span><span class="token operator">:</span> <span class="token string">'テストユーザ'</span><span class="token punctuation">,</span>
+  <span class="token string">'age'</span> <span class="token operator">:</span> <span class="token number">99</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+<span class="token comment">// POST 送信する</span>
+<span class="token keyword">const</span> options <span class="token operator">=</span> <span class="token punctuation">{</span>
+  path<span class="token operator">:</span> <span class="token string">'/api/users'</span><span class="token punctuation">,</span>
+  method<span class="token operator">:</span> <span class="token string">'POST'</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+<span class="token comment">// テスト実行</span>
+<span class="token function">base</span><span class="token punctuation">(</span>postData<span class="token punctuation">,</span> options<span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<h2 id="put-通信-update-のテスト"><a class="header-link" href="#put-通信-update-のテスト"><span class="header-link-mark"></span></a>PUT 通信 (Update) のテスト</h2>
+<pre class="language-javascript"><code class="language-javascript"><span class="token comment">/* tests/put.js */</span>
+
+<span class="token keyword">const</span> base <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'./base'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// 更新したいフィールドのみデータを用意する</span>
+<span class="token keyword">const</span> postData <span class="token operator">=</span> <span class="token punctuation">{</span>
+  <span class="token string">'name'</span><span class="token operator">:</span> <span class="token string">'改姓テストユーザ'</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+<span class="token comment">// PUT 送信する</span>
+<span class="token keyword">const</span> options <span class="token operator">=</span> <span class="token punctuation">{</span>
+  path<span class="token operator">:</span> <span class="token string">'/api/users/25'</span><span class="token punctuation">,</span>  <span class="token comment">// ID を指定する</span>
+  method<span class="token operator">:</span> <span class="token string">'PUT'</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+<span class="token comment">// テスト実行</span>
+<span class="token function">base</span><span class="token punctuation">(</span>postData<span class="token punctuation">,</span> options<span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<h2 id="delete-通信-destroy-のテスト"><a class="header-link" href="#delete-通信-destroy-のテスト"><span class="header-link-mark"></span></a>DELETE 通信 (Destroy) のテスト</h2>
+<pre class="language-javascript"><code class="language-javascript"><span class="token comment">/* tests/delete.js */</span>
+
+<span class="token keyword">const</span> base <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'./base'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// POST するデータなし</span>
+<span class="token keyword">const</span> postData <span class="token operator">=</span> <span class="token punctuation">{</span><span class="token punctuation">}</span><span class="token punctuation">;</span>
+<span class="token comment">// DELETE 通信する</span>
+<span class="token keyword">const</span> options <span class="token operator">=</span> <span class="token punctuation">{</span>
+  path<span class="token operator">:</span> <span class="token string">'/api/users/39'</span><span class="token punctuation">,</span>  <span class="token comment">// ID を指定する</span>
+  method<span class="token operator">:</span> <span class="token string">'DELETE'</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+<span class="token comment">// テスト実行</span>
+<span class="token function">base</span><span class="token punctuation">(</span>postData<span class="token punctuation">,</span> options<span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<h2 id="実行してみる"><a class="header-link" href="#実行してみる"><span class="header-link-mark"></span></a>実行してみる</h2>
+<p>これでスクリプトの用意は完了。</p>
+<p>あとは <code>$ node ./tests/get.js</code> とか <code>$ node ./tests/update.js</code> とかいう風にスクリプトを実行すると、指定のリクエストデータをサーバに送信し、レスポンス情報がコンソールに出力されるだろう。</p>
+<p>Node.js 標準モジュールだけでもこんなことができて、よきよき。</p>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2018-09-29</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2018-09-29</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>GitHub リポジトリのサイズを取得する curl + jq ワンライナーとブックマークレット - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2020/05/06-02.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2020/index.html">2020年</a></li>
+            <li><a href="/blog/2020/05/index.html">05月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2020-05-06</time></div>
+        <h1 id="page-title">GitHub リポジトリのサイズを取得する curl + jq ワンライナーとブックマークレット</h1>
+
+<p>GitHub リポジトリをダウンロードした時、どのくらいのファイルサイズになるのか事前に確認したい時がある。</p>
+<p>GitHub API を使うと、リポジトリのサイズが KB 単位で取得できるので、コレを利用する。</p>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#curl--jq-%E3%81%A7%E5%8F%96%E5%BE%97%E3%81%99%E3%82%8B%E3%83%AF%E3%83%B3%E3%83%A9%E3%82%A4%E3%83%8A%E3%83%BC"><code>curl</code> + <code>jq</code> で取得するワンライナー</a></li>
+  <li><a href="#%E3%83%96%E3%83%83%E3%82%AF%E3%83%9E%E3%83%BC%E3%82%AF%E3%83%AC%E3%83%83%E3%83%88%E3%81%AB%E3%81%97%E3%81%A6%E3%81%BF%E3%82%8B">ブックマークレットにしてみる</a></li>
+</ul>
+<h2 id="curl--jq-で取得するワンライナー"><a class="header-link" href="#curl--jq-で取得するワンライナー"><span class="header-link-mark"></span></a><code>curl</code> + <code>jq</code> で取得するワンライナー</h2>
+<p>まずは最もシンプルに、次のようなワンライナーを書けばサイズが取得できることを確認する。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">curl</span> -sS https://api.github.com/repos/Homebrew/homebrew-core <span class="token operator">|</span> jq -r <span class="token string">'(.size|tostring) + "KB : " + ((.size / 1000)|floor|tostring) + "MB"'</span>
+291169KB <span class="token builtin class-name">:</span> 291MB
+</code></pre>
+<p>取得できる値は KB 単位なので、1000 で割って MB 単位も出力しておく。</p>
+<p>次にコレを関数化してみる。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token keyword">function</span> get-repo-<span class="token function-name function">size</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token function">curl</span> -sS <span class="token string">"https://api.github.com/repos/<span class="token variable">$1</span>"</span> <span class="token operator">|</span> jq -r <span class="token string">'(.size|tostring) + "KB : " + ((.size / 1000)|floor|tostring) + "MB"'</span>
+<span class="token punctuation">}</span>
+
+$ get-repo-size <span class="token string">'Homebrew/homebrew-core'</span>
+291169KB <span class="token builtin class-name">:</span> 291MB
+</code></pre>
+<p>こんな風に、<code>ユーザ名/リポジトリ名</code> を引数に渡すだけでリポジトリのファイルサイズを取得できるようになった。</p>
+<h2 id="ブックマークレットにしてみる"><a class="header-link" href="#ブックマークレットにしてみる"><span class="header-link-mark"></span></a>ブックマークレットにしてみる</h2>
+<p>続いて、GitHub リポジトリを閲覧中に、そのリポジトリのファイルサイズを取得するワンライナーを作ってみた。</p>
+<ul>
+  <li>普通に組んでみた</li>
+</ul>
+<pre class="language-javascript"><code class="language-javascript"><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token keyword">const</span> <span class="token function-variable function">getText</span> <span class="token operator">=</span> <span class="token punctuation">(</span><span class="token parameter">query</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+    <span class="token keyword">const</span> elem <span class="token operator">=</span> <span class="token dom variable">document</span><span class="token punctuation">.</span><span class="token method function property-access">querySelector</span><span class="token punctuation">(</span>query<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword control-flow">return</span> elem <span class="token operator">?</span> elem<span class="token punctuation">.</span><span class="token property-access">innerText</span> <span class="token operator">:</span> <span class="token keyword null nil">null</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span><span class="token punctuation">;</span>
+  <span class="token keyword">const</span> owner <span class="token operator">=</span> <span class="token function">getText</span><span class="token punctuation">(</span><span class="token string">'.author'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">const</span> repo  <span class="token operator">=</span> <span class="token function">getText</span><span class="token punctuation">(</span><span class="token string">'.mr-2>a'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword control-flow">if</span><span class="token punctuation">(</span><span class="token operator">!</span>owner <span class="token operator">||</span> <span class="token operator">!</span>repo<span class="token punctuation">)</span> <span class="token keyword control-flow">return</span><span class="token punctuation">;</span>
+  <span class="token keyword">const</span> xhr <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">XMLHttpRequest</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  xhr<span class="token punctuation">.</span><span class="token property-access">timeout</span> <span class="token operator">=</span> <span class="token number">5000</span><span class="token punctuation">;</span>
+  xhr<span class="token punctuation">.</span><span class="token method function property-access">addEventListener</span><span class="token punctuation">(</span><span class="token string">'load'</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+    <span class="token keyword control-flow">try</span> <span class="token punctuation">{</span>
+      <span class="token keyword">const</span> size <span class="token operator">=</span> <span class="token known-class-name class-name">JSON</span><span class="token punctuation">.</span><span class="token method function property-access">parse</span><span class="token punctuation">(</span>xhr<span class="token punctuation">.</span><span class="token property-access">response</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token property-access">size</span><span class="token punctuation">;</span>
+      <span class="token function">alert</span><span class="token punctuation">(</span><span class="token template-string"><span class="token template-punctuation string">`</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>size<span class="token interpolation-punctuation punctuation">}</span></span><span class="token string">KB\n</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span><span class="token known-class-name class-name">Math</span><span class="token punctuation">.</span><span class="token method function property-access">floor</span><span class="token punctuation">(</span>size<span class="token operator">/</span><span class="token number">1000</span><span class="token punctuation">)</span><span class="token interpolation-punctuation punctuation">}</span></span><span class="token string">MB</span><span class="token template-punctuation string">`</span></span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span> <span class="token keyword control-flow">catch</span><span class="token punctuation">(</span>e<span class="token punctuation">)</span> <span class="token punctuation">{</span><span class="token punctuation">}</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  xhr<span class="token punctuation">.</span><span class="token method function property-access">open</span><span class="token punctuation">(</span><span class="token string">'GET'</span><span class="token punctuation">,</span> <span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">https://api.github.com/repos/</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>owner<span class="token interpolation-punctuation punctuation">}</span></span><span class="token string">/</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>repo<span class="token interpolation-punctuation punctuation">}</span></span><span class="token template-punctuation string">`</span></span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  xhr<span class="token punctuation">.</span><span class="token method function property-access">send</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>ページ中の <code>.author</code> 要素や、<code>.mr-2 > a</code> 要素から、ユーザ名やリポジトリ名を取得して、XMLHttpRequest を使って GitHub API をコールしている。</p>
+<p>コレを1行にすればとりあえず動くが、もう少しコードを短くしてみる。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token parameter">getText<span class="token punctuation">,</span> xhr<span class="token punctuation">,</span> owner<span class="token punctuation">,</span> repo<span class="token punctuation">,</span> size</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  owner <span class="token operator">=</span> <span class="token function">getText</span><span class="token punctuation">(</span><span class="token string">'.author'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  repo  <span class="token operator">=</span> <span class="token function">getText</span><span class="token punctuation">(</span><span class="token string">'.mr-2>a'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword control-flow">if</span><span class="token punctuation">(</span><span class="token operator">!</span>owner <span class="token operator">||</span> <span class="token operator">!</span>repo<span class="token punctuation">)</span> <span class="token keyword control-flow">return</span><span class="token punctuation">;</span>
+  xhr<span class="token punctuation">.</span><span class="token method function property-access">open</span><span class="token punctuation">(</span><span class="token string">'GET'</span><span class="token punctuation">,</span> <span class="token string">'https://api.github.com/repos/'</span> <span class="token operator">+</span> owner <span class="token operator">+</span> <span class="token string">'/'</span> <span class="token operator">+</span> repo<span class="token punctuation">,</span> <span class="token boolean">false</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  xhr<span class="token punctuation">.</span><span class="token method function property-access">send</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  size <span class="token operator">=</span> <span class="token known-class-name class-name">JSON</span><span class="token punctuation">.</span><span class="token method function property-access">parse</span><span class="token punctuation">(</span>xhr<span class="token punctuation">.</span><span class="token property-access">response</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token property-access">size</span><span class="token punctuation">;</span>
+  <span class="token function">alert</span><span class="token punctuation">(</span>size <span class="token operator">+</span> <span class="token string">'KB\n'</span> <span class="token operator">+</span> <span class="token known-class-name class-name">Math</span><span class="token punctuation">.</span><span class="token method function property-access">floor</span><span class="token punctuation">(</span>size <span class="token operator">/</span> <span class="token number">1000</span><span class="token punctuation">)</span> <span class="token operator">+</span> <span class="token string">'MB'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">(</span>
+  <span class="token punctuation">(</span><span class="token parameter">query<span class="token punctuation">,</span> elem</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+    elem <span class="token operator">=</span> <span class="token dom variable">document</span><span class="token punctuation">.</span><span class="token method function property-access">querySelector</span><span class="token punctuation">(</span>query<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword control-flow">return</span> elem <span class="token operator">?</span> elem<span class="token punctuation">.</span><span class="token property-access">innerText</span> <span class="token operator">:</span> <span class="token keyword null nil">null</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token keyword">new</span> <span class="token class-name">XMLHttpRequest</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+<span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>XMLHttpRequest を同期処理にし、<code>try / catch</code> を外した。GitHub 以外のページで実行した場合は、まず <code>getText()</code> 関数の結果が空になるはずなので、Ajax も実行されないかと踏んで省略した。あとテンプレートリテラルよりも <code>+</code> での文字列結合の方が、Uglify した時に2文字短くできたのでコチラにした。</p>
+<p>コレを1行のブックマークレットにすると次のとおり。</p>
+<pre class="language-javascript"><code class="language-javascript">javascript<span class="token operator">:</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token parameter">g<span class="token punctuation">,</span>x<span class="token punctuation">,</span>o<span class="token punctuation">,</span>r<span class="token punctuation">,</span>s</span><span class="token punctuation">)</span><span class="token arrow operator">=></span><span class="token punctuation">{</span>o<span class="token operator">=</span><span class="token function">g</span><span class="token punctuation">(</span><span class="token string">'.author'</span><span class="token punctuation">)</span><span class="token punctuation">,</span>r<span class="token operator">=</span><span class="token function">g</span><span class="token punctuation">(</span><span class="token string">'.mr-2>a'</span><span class="token punctuation">)</span><span class="token punctuation">,</span>o<span class="token operator">&#x26;&#x26;</span>r<span class="token operator">&#x26;&#x26;</span><span class="token punctuation">(</span>x<span class="token punctuation">.</span><span class="token method function property-access">open</span><span class="token punctuation">(</span><span class="token string">'GET'</span><span class="token punctuation">,</span><span class="token string">'https://api.github.com/repos/'</span><span class="token operator">+</span>o<span class="token operator">+</span><span class="token string">'/'</span><span class="token operator">+</span>r<span class="token punctuation">,</span><span class="token operator">!</span><span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">,</span>x<span class="token punctuation">.</span><span class="token method function property-access">send</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span>s<span class="token operator">=</span><span class="token known-class-name class-name">JSON</span><span class="token punctuation">.</span><span class="token method function property-access">parse</span><span class="token punctuation">(</span>x<span class="token punctuation">.</span><span class="token property-access">response</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token property-access">size</span><span class="token punctuation">,</span><span class="token function">alert</span><span class="token punctuation">(</span>s<span class="token operator">+</span><span class="token string">'KB\n'</span><span class="token operator">+</span><span class="token known-class-name class-name">Math</span><span class="token punctuation">.</span><span class="token method function property-access">floor</span><span class="token punctuation">(</span>s<span class="token operator">/</span><span class="token number">1e3</span><span class="token punctuation">)</span><span class="token operator">+</span><span class="token string">'MB'</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token parameter">q<span class="token punctuation">,</span>e</span><span class="token punctuation">)</span><span class="token arrow operator">=></span><span class="token punctuation">(</span>e<span class="token operator">=</span><span class="token dom variable">document</span><span class="token punctuation">.</span><span class="token method function property-access">querySelector</span><span class="token punctuation">(</span>q<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token operator">?</span>e<span class="token punctuation">.</span><span class="token property-access">innerText</span><span class="token operator">:</span><span class="token keyword null nil">null</span><span class="token punctuation">,</span><span class="token keyword">new</span> <span class="token class-name">XMLHttpRequest</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>コレを実行すると、</p>
+<pre><code>291169KB
+291MB
+</code></pre>
+<p>といった情報が <code>alert()</code> で表示される。</p>
+<hr>
+<p>必要十分～。</p>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2020-05-06</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2020-05-06</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

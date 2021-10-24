@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>Babel を試す環境に Gulp-Plumber を入れて自動ビルドに備える - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2016/10/09-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2016/index.html">2016年</a></li>
+            <li><a href="/blog/2016/10/index.html">10月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2016-10-09</time></div>
+        <h1 id="page-title">Babel を試す環境に Gulp-Plumber を入れて自動ビルドに備える</h1>
+
+<p>前回の記事で、Babel を使って ES2015 の記法で書いたファイルを ES5 の記法に直す環境ができた。</p>
+<ul>
+  <li><a href="/blog/2016/10/06-01.html">Babel にリベンジ！ES2015 ってやつを勉強する環境を作るぜ！</a></li>
+</ul>
+<p>今回はこのトランスパイルを、ファイルが更新されたときに自動的に行うようにしたい。</p>
+<h2 id="browserify-とか-watchify-とか"><a class="header-link" href="#browserify-とか-watchify-とか"><span class="header-link-mark"></span></a>Browserify とか Watchify とか</h2>
+<p>これらはある一つのファイル (エントリーポイント) から別のファイルを <code>require</code> ないしは <code>import</code> する作りにしておく。変換させると、読み込んだ別ファイルごとまとめて1つのファイルにしてくれる。</p>
+<p>Web サイトを作るにあたってはこうした作りでも構わないのだろうが、今のところは「ES2015 の記法をサクッと試したい」のが目的であり、全く新しいファイルを作っては色んなコードを書いて、変換された結果を確認したりしたい。</p>
+<p>だから Browserify や Watchify でファイルを結合したい欲がなかったので、今回は流した。単純に <code>gulp.watch()</code> を使うことにする。</p>
+<h2 id="gulp-plumber-で-gulpwatch-が止まらないようにする"><a class="header-link" href="#gulp-plumber-で-gulpwatch-が止まらないようにする"><span class="header-link-mark"></span></a>Gulp-Plumber で <code>gulp.watch()</code> が止まらないようにする</h2>
+<p>Gulp-Plumber という Gulp プラグインを入れると、ファイルの変更時に <code>gulp.watch()</code> でエラーが出た場合でも、ファイルの監視を止めないようにしてくれる。まずはこれを入れてみる。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">npm</span> i -D gulp-plumber
+</code></pre>
+<p>次に <code>gulpfile.babel.js</code> に書いた <code>build</code> タスクに Gulp-Plumber を追加する。</p>
+<pre class="language-javascript"><code class="language-javascript">gulp<span class="token punctuation">.</span><span class="token method function property-access">task</span><span class="token punctuation">(</span><span class="token string">"build"</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span>
+  gulp<span class="token punctuation">.</span><span class="token method function property-access">src</span><span class="token punctuation">(</span><span class="token string">"src/scripts/**/*.js"</span><span class="token punctuation">)</span>
+      <span class="token punctuation">.</span><span class="token method function property-access">pipe</span><span class="token punctuation">(</span>$<span class="token punctuation">.</span><span class="token method function property-access">plumber</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>    <span class="token comment">// Gulp-Plumber をかませてファイル変更時のエラー回避</span>
+      <span class="token punctuation">.</span><span class="token method function property-access">pipe</span><span class="token punctuation">(</span>$<span class="token punctuation">.</span><span class="token method function property-access">babel</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+      <span class="token punctuation">.</span><span class="token method function property-access">pipe</span><span class="token punctuation">(</span>gulp<span class="token punctuation">.</span><span class="token method function property-access">dest</span><span class="token punctuation">(</span><span class="token string">"dist/scripts"</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+<span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>ここまでで、<code>gulp build</code> を叩いた時に正常時は挙動が変わらないことを確認しておく。</p>
+<h2 id="watch-タスクを作る"><a class="header-link" href="#watch-タスクを作る"><span class="header-link-mark"></span></a>watch タスクを作る</h2>
+<p>以下のように watch コマンドを書く。</p>
+<pre class="language-javascript"><code class="language-javascript">gulp<span class="token punctuation">.</span><span class="token method function property-access">task</span><span class="token punctuation">(</span><span class="token string">"watch"</span><span class="token punctuation">,</span> <span class="token keyword">function</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  gulp<span class="token punctuation">.</span><span class="token method function property-access">watch</span><span class="token punctuation">(</span><span class="token string">"src/scripts/**/*.js"</span><span class="token punctuation">,</span> <span class="token punctuation">[</span><span class="token string">"build"</span><span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>このタスクをコンソールから呼んでおくと、<code>src/scripts/ 配下の</code>.js<code>ファイルの変更に合わせて</code>build` タスクが動く。なんか Ctrl + C で停止するときの効きが悪いような。しばらく待つと効くんだけど、なんだこれ。</p>
+<pre class="language-bash"><code class="language-bash">$ gulp <span class="token function">watch</span>
+
+<span class="token punctuation">[</span><span class="token number">14</span>:20:38<span class="token punctuation">]</span> Requiring external module babel-register
+<span class="token punctuation">[</span><span class="token number">14</span>:20:39<span class="token punctuation">]</span> Using gulpfile P:<span class="token punctuation">\</span>BabelES2015Test<span class="token punctuation">\</span>gulpfile.babel.js
+<span class="token punctuation">[</span><span class="token number">14</span>:20:39<span class="token punctuation">]</span> Starting <span class="token string">'watch'</span><span class="token punctuation">..</span>.
+<span class="token punctuation">[</span><span class="token number">14</span>:20:39<span class="token punctuation">]</span> Finished <span class="token string">'watch'</span> after <span class="token number">13</span> ms
+</code></pre>
+<p>watch タスクを立ち上げたまま、<code>src/scripts/sample.js</code> の中身を適当に間違えて保存してみる。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># 自動的に build タスクが動く</span>
+<span class="token punctuation">[</span><span class="token number">14</span>:20:43<span class="token punctuation">]</span> Starting <span class="token string">'build'</span><span class="token punctuation">..</span>.
+<span class="token punctuation">[</span><span class="token number">14</span>:20:43<span class="token punctuation">]</span> Plumber found unhandled error:
+ SyntaxError <span class="token keyword">in</span> plugin <span class="token string">'gulp-babel'</span>
+Message:
+    P:<span class="token punctuation">\</span>BabelES2015Test<span class="token punctuation">\</span>src<span class="token punctuation">\</span>scripts<span class="token punctuation">\</span>sample.js: Unexpected token <span class="token punctuation">(</span><span class="token number">5</span>:16<span class="token punctuation">)</span>
+<span class="token punctuation">[</span><span class="token number">14</span>:20:43<span class="token punctuation">]</span> Finished <span class="token string">'build'</span> after <span class="token number">172</span> ms
+</code></pre>
+<p>このように、ファイル中のエラーを検知してビルドが中止されたことが分かる。次は正しく直して保存。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token punctuation">[</span><span class="token number">14</span>:20:50<span class="token punctuation">]</span> Starting <span class="token string">'build'</span><span class="token punctuation">..</span>.
+<span class="token punctuation">[</span><span class="token number">14</span>:20:50<span class="token punctuation">]</span> Finished <span class="token string">'build'</span> after <span class="token number">76</span> ms
+<span class="token comment"># 正常終了した。</span>
+</code></pre>
+<h2 id="デフォルトタスクを作る"><a class="header-link" href="#デフォルトタスクを作る"><span class="header-link-mark"></span></a>デフォルトタスクを作る</h2>
+<p><code>gulp watch</code> と打たずに <code>gulp</code> と打っただけで動いてくれるように、default タスクを書く。</p>
+<pre class="language-javascript"><code class="language-javascript">gulp<span class="token punctuation">.</span><span class="token method function property-access">task</span><span class="token punctuation">(</span><span class="token string">"default"</span><span class="token punctuation">,</span> <span class="token punctuation">[</span><span class="token string">"watch"</span><span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>これで <code>gulp</code> とコマンドを打ってみる。</p>
+<pre class="language-bash"><code class="language-bash">$ gulp
+
+<span class="token punctuation">[</span><span class="token number">14</span>:35:28<span class="token punctuation">]</span> Requiring external module babel-register
+<span class="token punctuation">[</span><span class="token number">14</span>:35:29<span class="token punctuation">]</span> Using gulpfile P:<span class="token punctuation">\</span>BabelES2015Test<span class="token punctuation">\</span>gulpfile.babel.js
+<span class="token punctuation">[</span><span class="token number">14</span>:35:29<span class="token punctuation">]</span> Starting <span class="token string">'watch'</span><span class="token punctuation">..</span>.
+<span class="token punctuation">[</span><span class="token number">14</span>:35:29<span class="token punctuation">]</span> Finished <span class="token string">'watch'</span> after <span class="token number">15</span> ms
+<span class="token punctuation">[</span><span class="token number">14</span>:35:29<span class="token punctuation">]</span> Starting <span class="token string">'default'</span><span class="token punctuation">..</span>.
+<span class="token punctuation">[</span><span class="token number">14</span>:35:29<span class="token punctuation">]</span> Finished <span class="token string">'default'</span> after <span class="token number">16</span> μs
+</code></pre>
+<p>おっけ～。これで ES2015 の記法をアレコレ試して、保存した瞬間に変換させることができるようになった。</p>
+<h2 id="リポジトリをドウゾ"><a class="header-link" href="#リポジトリをドウゾ"><span class="header-link-mark"></span></a>リポジトリをドウゾ</h2>
+<p>ここまでの内容を以下の GitHub リポジトリに格納しておいた。</p>
+<ul>
+  <li><a href="https://github.com/Neos21/boilerplate-babel-es2015">GitHub - Neos21/BabelES2015Test: Gulp と Babel を使って ES2015 (ES6) を書く環境を作りました</a></li>
+</ul>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2016-10-09</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2016-10-09</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

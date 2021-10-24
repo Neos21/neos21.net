@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>OpenAPI Generator CLI を使ってみた - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2021/10/24-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2021/index.html">2021年</a></li>
+            <li><a href="/blog/2021/10/index.html">10月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2021-10-24</time></div>
+        <h1 id="page-title">OpenAPI Generator CLI を使ってみた</h1>
+
+<p>RESTful な API を記述するためのフォーマットとして、OpenAPI というモノがある。以前は Swagger と呼ばれていて、Swagger 2.0 をベースに拡張・改称されたのが OpenAPI らしい。特に OpenAPI だから、Swagger だからという違いはないみたいで、名称は気にしなくて良さそう。</p>
+<p>OpenAPI は YAML ないしは JSON 形式で API 仕様書を記述するのだが、それを HTML 化するツールとして <em>Swagger UI</em> というモノがある。</p>
+<p>そして今回試すのは、YAML や JSON で書いた仕様書を基に、色々なプログラミング言語でのコードを自動生成してくれるツールである、<strong>OpenAPI Generator CLI</strong> である。</p>
+<ul>
+  <li><a href="https://github.com/OpenAPITools/openapi-generator-cli">OpenAPITools/openapi-generator-cli: A node package wrapper for https://github.com/OpenAPITools/openapi-generator</a></li>
+</ul>
+<p>類似するツールとして <em>Swagger CodeGen</em> というツールもあるようだが、Swagger CodeGen の方がバグが多いと見聞きしたので、今回は OpenAPI Generator CLI を試してみた。</p>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#%E3%82%BB%E3%83%83%E3%83%88%E3%82%A2%E3%83%83%E3%83%97">セットアップ</a></li>
+  <li><a href="#%E5%AF%BE%E5%BF%9C%E8%A8%80%E8%AA%9E">対応言語</a></li>
+  <li><a href="#%E8%A9%A6%E3%81%97%E3%81%AB%E5%AE%9F%E8%A1%8C%E3%81%97%E3%81%A6%E3%81%BF%E3%81%9F">試しに実行してみた</a></li>
+  <li><a href="#%E5%85%A8%E7%84%B6%E4%BD%BF%E3%81%88%E3%82%93">全然使えん</a></li>
+</ul>
+<h2 id="セットアップ"><a class="header-link" href="#セットアップ"><span class="header-link-mark"></span></a>セットアップ</h2>
+<p>OpenAPI Generator CLI は npm パッケージとしてインストールできる。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">npm</span> init -y
+$ <span class="token function">npm</span> i -D @openapitools/openapi-generator-cli
+</code></pre>
+<p>以下のような <code>package.json</code> が用意できていれば OK。</p>
+<pre class="language-json"><code class="language-json"><span class="token punctuation">{</span>
+  <span class="token property">"name"</span><span class="token operator">:</span> <span class="token string">"practice-openapi-generator"</span><span class="token punctuation">,</span>
+  <span class="token property">"private"</span><span class="token operator">:</span> <span class="token boolean">true</span><span class="token punctuation">,</span>
+  <span class="token property">"scripts"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+    <span class="token property">"og"</span><span class="token operator">:</span> <span class="token string">"openapi-generator-cli"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token property">"devDependencies"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+    <span class="token property">"@openapitools/openapi-generator-cli"</span><span class="token operator">:</span> <span class="token string">"2.4.12"</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>npm-run-scripts で <code>og</code> というエイリアス的な名前を用意したので、まずは以下のように実行してみる。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">npm</span> run og
+
+Download <span class="token number">5.2</span>.1 <span class="token punctuation">..</span>.
+Downloaded <span class="token number">5.2</span>.1
+Did <span class="token builtin class-name">set</span> selected version to <span class="token number">5.2</span>.1
+Usage: openapi-generator-cli <span class="token operator">&#x3C;</span>command<span class="token operator">></span> <span class="token punctuation">[</span><span class="token operator">&#x3C;</span>args<span class="token operator">></span><span class="token punctuation">]</span>
+
+Options:
+  --custom-generator <span class="token operator">&#x3C;</span>generator<span class="token operator">></span>  Custom generator jar
+
+Commands:
+  version-manager                 Manage used / installed generator version
+  author                          Utilities <span class="token keyword">for</span> authoring generators or customizing templates.
+  batch                           Generate code <span class="token keyword">in</span> batch via external configs.
+  config-help                     Config <span class="token builtin class-name">help</span> <span class="token keyword">for</span> chosen lang
+  generate <span class="token punctuation">[</span>options<span class="token punctuation">]</span>              Generate code with the specified generator.
+  <span class="token builtin class-name">help</span>                            Display <span class="token builtin class-name">help</span> information about openapi-generator
+  list                            Lists the available generators
+  meta                            MetaGenerator. Generator <span class="token keyword">for</span> creating a new template <span class="token builtin class-name">set</span> and configuration <span class="token keyword">for</span> Codegen.  The output will be based on the
+                                  language you specify, and includes default templates to include.
+  validate                        Validate specification
+  version                         Show version information used <span class="token keyword">in</span> tooling
+</code></pre>
+<p>初回は裏で OpenAPI をダウンロードしているようだ。この CLI は OpenAPI Generator というツールをラップしているモノで、OpenAPI Generator は Java 製のようだ。<code>node_modules/@openapitools/openapi-generator-cli/</code> 配下を見ると、<code>5.2.1.jar</code> がダウンロードされていた。</p>
+<p>どんな言語のコードを出力できるのかは以下のように確認できる。</p>
+<h2 id="対応言語"><a class="header-link" href="#対応言語"><span class="header-link-mark"></span></a>対応言語</h2>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">npm</span> run og list
+
+The following generators are available:
+
+CLIENT generators:
+    - ada
+    - android
+    - apex
+    - <span class="token function">bash</span>
+    - c
+    - clojure
+    - cpp-qt-client
+    - cpp-restsdk
+    - cpp-tiny <span class="token punctuation">(</span>beta<span class="token punctuation">)</span>
+    - cpp-tizen
+    - cpp-ue4 <span class="token punctuation">(</span>beta<span class="token punctuation">)</span>
+    - crystal <span class="token punctuation">(</span>beta<span class="token punctuation">)</span>
+    - csharp
+    - csharp-netcore
+    - dart
+    - dart-dio
+    - dart-dio-next <span class="token punctuation">(</span>experimental<span class="token punctuation">)</span>
+    - dart-jaguar
+    - eiffel
+    - elixir
+    - elm
+    - erlang-client
+    - erlang-proper
+    - go
+    - groovy
+    - haskell-http-client
+    - java
+    - java-micronaut-client <span class="token punctuation">(</span>beta<span class="token punctuation">)</span>
+    - javascript
+    - javascript-apollo <span class="token punctuation">(</span>beta<span class="token punctuation">)</span>
+    - javascript-closure-angular
+    - javascript-flowtyped
+    - jaxrs-cxf-client
+    - jmeter
+    - k6 <span class="token punctuation">(</span>beta<span class="token punctuation">)</span>
+    - kotlin
+    - lua <span class="token punctuation">(</span>beta<span class="token punctuation">)</span>
+    - nim <span class="token punctuation">(</span>beta<span class="token punctuation">)</span>
+    - objc
+    - ocaml
+    - perl
+    - php
+    - php-dt <span class="token punctuation">(</span>beta<span class="token punctuation">)</span>
+    - powershell <span class="token punctuation">(</span>beta<span class="token punctuation">)</span>
+    - python <span class="token punctuation">(</span>experimental<span class="token punctuation">)</span>
+    - python-legacy
+    - r
+    - ruby
+    - rust
+    - scala-akka
+    - scala-gatling
+    - scala-sttp <span class="token punctuation">(</span>beta<span class="token punctuation">)</span>
+    - scalaz
+    - swift5
+    - typescript <span class="token punctuation">(</span>experimental<span class="token punctuation">)</span>
+    - typescript-angular
+    - typescript-aurelia
+    - typescript-axios
+    - typescript-fetch
+    - typescript-inversify
+    - typescript-jquery
+    - typescript-nestjs <span class="token punctuation">(</span>experimental<span class="token punctuation">)</span>
+    - typescript-node
+    - typescript-redux-query
+    - typescript-rxjs
+
+SERVER generators:
+    - ada-server
+    - aspnetcore
+    - cpp-pistache-server
+    - cpp-qt-qhttpengine-server
+    - cpp-restbed-server
+    - csharp-nancyfx
+    - erlang-server
+    - fsharp-functions <span class="token punctuation">(</span>beta<span class="token punctuation">)</span>
+    - fsharp-giraffe-server <span class="token punctuation">(</span>beta<span class="token punctuation">)</span>
+    - go-echo-server <span class="token punctuation">(</span>beta<span class="token punctuation">)</span>
+    - go-gin-server
+    - go-server
+    - graphql-nodejs-express-server
+    - haskell
+    - java-inflector
+    - java-msf4j
+    - java-pkmst
+    - java-play-framework
+    - java-undertow-server
+    - java-vertx-web <span class="token punctuation">(</span>beta<span class="token punctuation">)</span>
+    - jaxrs-cxf
+    - jaxrs-cxf-cdi
+    - jaxrs-cxf-extended
+    - jaxrs-jersey
+    - jaxrs-resteasy
+    - jaxrs-resteasy-eap
+    - jaxrs-spec
+    - kotlin-server
+    - kotlin-spring
+    - kotlin-vertx <span class="token punctuation">(</span>beta<span class="token punctuation">)</span>
+    - nodejs-express-server <span class="token punctuation">(</span>beta<span class="token punctuation">)</span>
+    - php-laravel
+    - php-lumen
+    - php-mezzio-ph
+    - php-slim4
+    - php-symfony
+    - python-aiohttp
+    - python-blueplanet
+    - python-fastapi <span class="token punctuation">(</span>beta<span class="token punctuation">)</span>
+    - python-flask
+    - ruby-on-rails
+    - ruby-sinatra
+    - rust-server
+    - scala-akka-http-server <span class="token punctuation">(</span>beta<span class="token punctuation">)</span>
+    - scala-finch
+    - scala-lagom-server
+    - scala-play-server
+    - scalatra
+    - spring
+
+DOCUMENTATION generators:
+    - asciidoc
+    - cwiki
+    - dynamic-html
+    - html
+    - html2
+    - markdown <span class="token punctuation">(</span>beta<span class="token punctuation">)</span>
+    - openapi
+    - openapi-yaml
+    - plantuml <span class="token punctuation">(</span>beta<span class="token punctuation">)</span>
+
+SCHEMA generators:
+    - avro-schema <span class="token punctuation">(</span>beta<span class="token punctuation">)</span>
+    - graphql-schema
+    - ktorm-schema <span class="token punctuation">(</span>beta<span class="token punctuation">)</span>
+    - mysql-schema
+    - protobuf-schema <span class="token punctuation">(</span>beta<span class="token punctuation">)</span>
+    - wsdl-schema <span class="token punctuation">(</span>beta<span class="token punctuation">)</span>
+
+CONFIG generators:
+    - apache2
+</code></pre>
+<p>RoR (Ruby on Rails) やら Play Framework やら、サーバサイドの言語はもちろん、Angular などのようなクライアントサイド向けの言語・フレームワークにも対応しているようだ。</p>
+<h2 id="試しに実行してみた"><a class="header-link" href="#試しに実行してみた"><span class="header-link-mark"></span></a>試しに実行してみた</h2>
+<p>試しに Angular 向けのコードを生成してみた。YAML ファイルは、OpenAPI Generator CLI が用意しているサンプルファイルをそのまま使ってみた。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">npm</span> run og -- generate -g typescript-angular -i https://raw.githubusercontent.com/OpenAPITools/openapi-generator-cli/master/examples/v2.0/yaml/petstore-minimal.yaml
+
+<span class="token punctuation">[</span>main<span class="token punctuation">]</span> INFO  o.o.codegen.DefaultGenerator - Generating with <span class="token assign-left variable">dryRun</span><span class="token operator">=</span>false
+<span class="token punctuation">[</span>main<span class="token punctuation">]</span> INFO  o.o.c.ignore.CodegenIgnoreProcessor - No .openapi-generator-ignore <span class="token function">file</span> found.
+<span class="token punctuation">[</span>main<span class="token punctuation">]</span> INFO  o.o.codegen.DefaultGenerator - OpenAPI Generator: typescript-angular <span class="token punctuation">(</span>client<span class="token punctuation">)</span>
+<span class="token punctuation">[</span>main<span class="token punctuation">]</span> INFO  o.o.codegen.DefaultGenerator - Generator <span class="token string">'typescript-angular'</span> is considered stable.
+<span class="token punctuation">[</span>main<span class="token punctuation">]</span> INFO  o.o.c.l.AbstractTypeScriptClientCodegen - Hint: Environment variable <span class="token string">'TS_POST_PROCESS_FILE'</span> <span class="token punctuation">(</span>optional<span class="token punctuation">)</span> not defined. E.g. to <span class="token function">format</span> the <span class="token builtin class-name">source</span> code, please try <span class="token string">'export TS_POST_PROCESS_FILE="/usr/local/bin/prettier --write"'</span> <span class="token punctuation">(</span>Linux/Mac<span class="token punctuation">)</span>
+<span class="token punctuation">[</span>main<span class="token punctuation">]</span> INFO  o.o.c.l.AbstractTypeScriptClientCodegen - Note: To <span class="token builtin class-name">enable</span> <span class="token function">file</span> post-processing, <span class="token string">'enablePostProcessFile'</span> must be <span class="token builtin class-name">set</span> to <span class="token variable"><span class="token variable">`</span><span class="token boolean">true</span><span class="token variable">`</span></span> <span class="token punctuation">(</span>--enable-post-process-file <span class="token keyword">for</span> CLI<span class="token punctuation">)</span>.
+<span class="token punctuation">[</span>main<span class="token punctuation">]</span> INFO  o.o.c.l.TypeScriptAngularClientCodegen - generating code <span class="token keyword">for</span> Angular <span class="token number">11.0</span>.0 <span class="token punctuation">..</span>.
+<span class="token punctuation">[</span>main<span class="token punctuation">]</span> INFO  o.o.c.l.TypeScriptAngularClientCodegen -   <span class="token punctuation">(</span>you can <span class="token keyword">select</span> the angular version by setting the additionalProperty ngVersion<span class="token punctuation">)</span>
+<span class="token punctuation">[</span>main<span class="token punctuation">]</span> INFO  o.o.codegen.TemplateManager - writing <span class="token function">file</span> ./model/./pet.ts
+<span class="token punctuation">[</span>main<span class="token punctuation">]</span> WARN  o.o.codegen.DefaultCodegen - Empty operationId found <span class="token keyword">for</span> path: get /pets. Renamed to auto-generated operationId: petsGet
+<span class="token punctuation">[</span>main<span class="token punctuation">]</span> INFO  o.o.codegen.TemplateManager - writing <span class="token function">file</span> ./api/default.service.ts
+<span class="token punctuation">[</span>main<span class="token punctuation">]</span> INFO  o.o.codegen.TemplateManager - writing <span class="token function">file</span> ./model/models.ts
+<span class="token punctuation">[</span>main<span class="token punctuation">]</span> INFO  o.o.codegen.TemplateManager - writing <span class="token function">file</span> ./api/api.ts
+<span class="token punctuation">[</span>main<span class="token punctuation">]</span> INFO  o.o.codegen.TemplateManager - writing <span class="token function">file</span> ./index.ts
+<span class="token punctuation">[</span>main<span class="token punctuation">]</span> INFO  o.o.codegen.TemplateManager - writing <span class="token function">file</span> ./api.module.ts
+<span class="token punctuation">[</span>main<span class="token punctuation">]</span> INFO  o.o.codegen.TemplateManager - writing <span class="token function">file</span> ./configuration.ts
+<span class="token punctuation">[</span>main<span class="token punctuation">]</span> INFO  o.o.codegen.TemplateManager - writing <span class="token function">file</span> ./variables.ts
+<span class="token punctuation">[</span>main<span class="token punctuation">]</span> INFO  o.o.codegen.TemplateManager - writing <span class="token function">file</span> ./encoder.ts
+<span class="token punctuation">[</span>main<span class="token punctuation">]</span> INFO  o.o.codegen.TemplateManager - writing <span class="token function">file</span> /home/practice-openapi-generator/./.gitignore
+<span class="token punctuation">[</span>main<span class="token punctuation">]</span> INFO  o.o.codegen.TemplateManager - writing <span class="token function">file</span> ./git_push.sh
+<span class="token punctuation">[</span>main<span class="token punctuation">]</span> INFO  o.o.codegen.TemplateManager - writing <span class="token function">file</span> ./README.md
+<span class="token punctuation">[</span>main<span class="token punctuation">]</span> INFO  o.o.codegen.TemplateManager - writing <span class="token function">file</span> /home/practice-openapi-generator/./.openapi-generator-ignore
+<span class="token punctuation">[</span>main<span class="token punctuation">]</span> INFO  o.o.codegen.TemplateManager - writing <span class="token function">file</span> ./.openapi-generator/VERSION
+<span class="token punctuation">[</span>main<span class="token punctuation">]</span> INFO  o.o.codegen.TemplateManager - writing <span class="token function">file</span> ./.openapi-generator/FILES
+<span class="token comment">################################################################################</span>
+<span class="token comment"># Thanks for using OpenAPI Generator.                                          #</span>
+<span class="token comment"># Please consider donation to help us maintain this project 🙏                 #</span>
+<span class="token comment"># https://opencollective.com/openapi_generator/donate                          #</span>
+<span class="token comment">################################################################################</span>
+</code></pre>
+<p>Angular プロジェクトとして完全に動作するようなコードではなく、API をコールする Service クラス関連が出力されていた。</p>
+<p>確かに Angular 特有の <code>HttpClient</code> なんかを使ったコードは生成されていたが、<strong>恐ろしく可読性が悪く、どういう風に使ったらいいのか分からないようなコードだった。</strong>型定義の仕方も綺麗ではなく、コレを「TypeScript 対応」と言っていいのか悩ましいところだ。</p>
+<p>OpenAPI 特有のユーティリティっぽいコードが結構生成されていた。<em>この CLI ツールを使うと、API 仕様書とコードを同期してくれる機能があるらしい</em>ので、そのためのコードが散在しているようだ。Opinionated なプロジェクト・コードになりそうだし、依存関係が増えてちょっと嫌だな…。</p>
+<p>続いて、Node.js Express サーバ向けのコードを生成させてみた。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">npm</span> run og -- generate -g nodejs-express-server -i https://raw.githubusercontent.com/OpenAPITools/openapi-generator-cli/master/examples/v2.0/yaml/petstore-minimal.yaml
+
+<span class="token punctuation">[</span>main<span class="token punctuation">]</span> INFO  o.o.codegen.DefaultGenerator - Generating with <span class="token assign-left variable">dryRun</span><span class="token operator">=</span>false
+<span class="token punctuation">[</span>main<span class="token punctuation">]</span> INFO  o.o.c.ignore.CodegenIgnoreProcessor - No .openapi-generator-ignore <span class="token function">file</span> found.
+<span class="token punctuation">[</span>main<span class="token punctuation">]</span> INFO  o.o.codegen.DefaultGenerator - OpenAPI Generator: nodejs-express-server <span class="token punctuation">(</span>server<span class="token punctuation">)</span>
+<span class="token punctuation">[</span>main<span class="token punctuation">]</span> INFO  o.o.codegen.DefaultGenerator - Generator <span class="token string">'nodejs-express-server'</span> is considered beta.
+<span class="token punctuation">[</span>main<span class="token punctuation">]</span> INFO  o.o.c.l.NodeJSExpressServerCodegen - Environment variable JS_POST_PROCESS_FILE not defined so the JS code may not be properly formatted. To define it, try <span class="token string">'export JS_POST_PROCESS_FILE="/usr/local/bin/js-beautify -r -f"'</span> <span class="token punctuation">(</span>Linux/Mac<span class="token punctuation">)</span>
+<span class="token punctuation">[</span>main<span class="token punctuation">]</span> INFO  o.o.c.l.NodeJSExpressServerCodegen - NOTE: To <span class="token builtin class-name">enable</span> <span class="token function">file</span> post-processing, <span class="token string">'enablePostProcessFile'</span> must be <span class="token builtin class-name">set</span> to <span class="token variable"><span class="token variable">`</span><span class="token boolean">true</span><span class="token variable">`</span></span> <span class="token punctuation">(</span>--enable-post-process-file <span class="token keyword">for</span> CLI<span class="token punctuation">)</span>.
+<span class="token punctuation">[</span>main<span class="token punctuation">]</span> WARN  o.o.codegen.DefaultCodegen - Empty operationId found <span class="token keyword">for</span> path: GET /pets. Renamed to auto-generated operationId: petsGET
+<span class="token punctuation">[</span>main<span class="token punctuation">]</span> INFO  o.o.codegen.TemplateManager - writing <span class="token function">file</span> ./services/DefaultService.js
+<span class="token punctuation">[</span>main<span class="token punctuation">]</span> INFO  o.o.codegen.TemplateManager - writing <span class="token function">file</span> ./controllers/DefaultController.js
+<span class="token punctuation">[</span>main<span class="token punctuation">]</span> INFO  o.o.codegen.TemplateManager - writing <span class="token function">file</span> ./api/openapi.yaml
+<span class="token punctuation">[</span>main<span class="token punctuation">]</span> INFO  o.o.codegen.TemplateManager - writing <span class="token function">file</span> ./config.js
+<span class="token punctuation">[</span>main<span class="token punctuation">]</span> INFO  o.o.codegen.TemplateManager - writing <span class="token function">file</span> ./expressServer.js
+<span class="token punctuation">[</span>main<span class="token punctuation">]</span> INFO  o.o.codegen.TemplateManager - writing <span class="token function">file</span> ./index.js
+<span class="token punctuation">[</span>main<span class="token punctuation">]</span> INFO  o.o.codegen.TemplateManager - writing <span class="token function">file</span> ./logger.js
+<span class="token punctuation">[</span>main<span class="token punctuation">]</span> INFO  o.o.codegen.TemplateManager - writing <span class="token function">file</span> ./.eslintrc.json
+<span class="token punctuation">[</span>main<span class="token punctuation">]</span> INFO  o.o.codegen.TemplateManager - writing <span class="token function">file</span> ./utils/openapiRouter.js
+<span class="token punctuation">[</span>main<span class="token punctuation">]</span> INFO  o.o.codegen.TemplateManager - writing <span class="token function">file</span> ./controllers/index.js
+<span class="token punctuation">[</span>main<span class="token punctuation">]</span> INFO  o.o.codegen.TemplateManager - writing <span class="token function">file</span> ./controllers/Controller.js
+<span class="token punctuation">[</span>main<span class="token punctuation">]</span> INFO  o.o.codegen.TemplateManager - writing <span class="token function">file</span> ./services/index.js
+<span class="token punctuation">[</span>main<span class="token punctuation">]</span> INFO  o.o.codegen.TemplateManager - writing <span class="token function">file</span> ./services/Service.js
+<span class="token punctuation">[</span>main<span class="token punctuation">]</span> INFO  o.o.codegen.TemplateManager - writing <span class="token function">file</span> ./package.json
+<span class="token punctuation">[</span>main<span class="token punctuation">]</span> INFO  o.o.codegen.TemplateManager - writing <span class="token function">file</span> ./README.md
+<span class="token punctuation">[</span>main<span class="token punctuation">]</span> INFO  o.o.codegen.TemplateManager - writing <span class="token function">file</span> /home/practice-openapi-generator/./.openapi-generator-ignore
+<span class="token punctuation">[</span>main<span class="token punctuation">]</span> INFO  o.o.codegen.TemplateManager - writing <span class="token function">file</span> ./.openapi-generator/VERSION
+<span class="token punctuation">[</span>main<span class="token punctuation">]</span> INFO  o.o.codegen.TemplateManager - writing <span class="token function">file</span> ./.openapi-generator/FILES
+<span class="token comment">################################################################################</span>
+<span class="token comment"># Thanks for using OpenAPI Generator.                                          #</span>
+<span class="token comment"># Please consider donation to help us maintain this project 🙏                 #</span>
+<span class="token comment"># https://opencollective.com/openapi_generator/donate                          #</span>
+<span class="token comment">################################################################################</span>
+</code></pre>
+<p><strong>コチラもなかなか酷い。</strong>なぜかロギングライブラリとして <code>winston</code> を使うようなコードを生成していたり、Express 本体に取り込まれていてもう不要になっている <code>body-parser</code> などが依存関係に入っていたり、テスティングツールである Chai や Mocha がインストールされたり。ファイル名もケースがバラバラで、スゲー扱いづらい。</p>
+<h2 id="全然使えん"><a class="header-link" href="#全然使えん"><span class="header-link-mark"></span></a>全然使えん</h2>
+<p>OpenAPI Generator を開発されたのは日本人らしい。Swagger CodeGen などをベースにフォークして、コミュニティ主導で開発されているようだ。以下の開発者によるスライド解説によれば、自動生成されたコードはそのままにして、ロジックを書く時は継承・委譲する考えらしい。</p>
+<ul>
+  <li><a href="https://speakerdeck.com/akihito_nakano/gunmaweb34">平静を保ち、コードを生成せよ 〜 OpenAPI Generator誕生の背景と軌跡 〜 / gunmaweb34 - Speaker Deck</a></li>
+</ul>
+<p>設計思想はとても好き。コミュニティベースで開発されていて、現状の対応状況がまちまちなのも分かる。コレから発展していったらいいなと思うツールではある。</p>
+<p>ただ、現状吐かれるコードを見る限り、このレベルのコードを自動生成されてもなぁ…コレをベースに開発したくはないな…という感じ。</p>
+<p>デモや PoC のために、モックサーバを一気にガッと作っておしまい、というような場面なら使いどころはあるかもしれないが、API 仕様書とコードの同期を取って運用保守していくようなプロダクションレベルでは、まだちょっと使えないかな…。</p>
+<p>なるべくコードを書かないようにしたい、とか、ドキュメントとコードの乖離を防ぎたい、とかいう思いは自分もあるので、こういうアプローチもあるのだなーという勉強にはなった。</p><div class="ad-amazon">
+  <div class="ad-amazon-image">
+    <a href="https://www.amazon.co.jp/dp/4798167010?tag=neos21-22&amp;linkCode=osi&amp;th=1&amp;psc=1">
+      <img src="https://m.media-amazon.com/images/I/61R1gv+YWlL._SL160_.jpg" width="126" height="160">
+    </a>
+  </div>
+  <div class="ad-amazon-info">
+    <div class="ad-amazon-title">
+      <a href="https://www.amazon.co.jp/dp/4798167010?tag=neos21-22&amp;linkCode=osi&amp;th=1&amp;psc=1">Web APIの設計 (Programmer's SELECTION)</a>
+    </div>
+  </div>
+</div>
+<div class="ad-rakuten">
+  <div class="ad-rakuten-image">
+    <a href="https://hb.afl.rakuten.co.jp/hgc/g00reb42.waxycf23.g00reb42.waxyd080/?pc=https%3A%2F%2Fitem.rakuten.co.jp%2Frakutenkobo-ebooks%2F4cb1cd2e34173db3be3256d1206fe70f%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Frakutenkobo-ebooks%2Fi%2F15063552%2F">
+      <img src="https://thumbnail.image.rakuten.co.jp/@0_mall/rakutenkobo-ebooks/cabinet/9976/2000003769976.jpg?_ex=128x128">
+    </a>
+  </div>
+  <div class="ad-rakuten-info">
+    <div class="ad-rakuten-title">
+      <a href="https://hb.afl.rakuten.co.jp/hgc/g00reb42.waxycf23.g00reb42.waxyd080/?pc=https%3A%2F%2Fitem.rakuten.co.jp%2Frakutenkobo-ebooks%2F4cb1cd2e34173db3be3256d1206fe70f%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Frakutenkobo-ebooks%2Fi%2F15063552%2F">オープンデータ時代の標準Web API　SPARQL【電子書籍】[ 加藤 文彦 ]</a>
+    </div>
+    <div class="ad-rakuten-shop">
+      <a href="https://hb.afl.rakuten.co.jp/hgc/g00reb42.waxycf23.g00reb42.waxyd080/?pc=https%3A%2F%2Fwww.rakuten.co.jp%2Frakutenkobo-ebooks%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Frakutenkobo-ebooks%2F">楽天Kobo電子書籍ストア</a>
+    </div>
+    <div class="ad-rakuten-price">価格 : 1540円</div>
+  </div>
+</div>
+<ul>
+  <li>参考：<a href="https://qiita.com/amuyikam/items/e8a45daae59c68be0fc8">OpenAPI generatorを試してみる - Qiita</a></li>
+  <li>参考：<a href="https://qiita.com/kannkyo/items/b6d5943df95943aadc77">openapi-generator-cliを使ってみた - Qiita</a></li>
+  <li>参考：<a href="https://qiita.com/rockinruuula1227/items/36d0495adf72f7dafe30">API仕様書をOpenAPIで作成、クライアント・スタブを自動生成する - Qiita</a></li>
+</ul>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2021-10-24</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2021-10-24</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

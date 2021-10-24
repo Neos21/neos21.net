@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>Angular4 で強制的に DOM 要素の変更を検知させて画面描画を更新させたいとき - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2017/09/05-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2017/index.html">2017年</a></li>
+            <li><a href="/blog/2017/09/index.html">09月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2017-09-05</time></div>
+        <h1 id="page-title">Angular4 で強制的に DOM 要素の変更を検知させて画面描画を更新させたいとき</h1>
+
+<p>Cordova アプリで Bluetooth 通信を行う cordova-plugin-bluetoothle を使っていて遭遇し、発見したこと。</p>
+<ul>
+  <li>参考：<a href="https://github.com/randdusing/cordova-plugin-bluetoothle">GitHub - randdusing/cordova-plugin-bluetoothle: Bluetooth Low Energy Phonegap Plugin</a></li>
+</ul>
+<p>cordova-plugin-bluetoothle では、Bluetooth 接続の状況が変わるたびにネイティブコードが反応して、<code>bluetoothle.initializePeripheral()</code> メソッドのコールバック関数が自動的に実行されるという特殊な動きをする。</p>
+<p>これを Angular4 の中で使ったときに、ある問題が起きた。</p>
+<pre class="language-javascript"><code class="language-javascript">bluetoothle<span class="token punctuation">.</span><span class="token method function property-access">initializePeripheral</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token parameter">result</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token comment">// 本来はペリフェラル端末としての初期化処理が成功した時にこのコールバック関数が実行される</span>
+  
+  <span class="token comment">// Angular のデータバインディングを使って、画面上にメッセージを表示する</span>
+  <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">msg</span> <span class="token operator">=</span> <span class="token string">'ペリフェラル端末の初期化を行いました。'</span><span class="token punctuation">;</span>
+  
+  <span class="token keyword control-flow">if</span><span class="token punctuation">(</span>result<span class="token punctuation">.</span><span class="token property-access">status</span> <span class="token operator">===</span> <span class="token string">'subscribed'</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token comment">// しかし、ペリフェラル端末に対しセントラル端末から subscribe() 要求があったときなども</span>
+    <span class="token comment">// このコールバック関数が実行される</span>
+    
+    <span class="token comment">// ココでデータバインディングしようとしても画面描画が更新されない</span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">msg</span> <span class="token operator">=</span> <span class="token string">'セントラル端末が subscribe し始めました'</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  <span class="token keyword control-flow">else</span> <span class="token keyword control-flow">if</span><span class="token punctuation">(</span>result<span class="token punctuation">.</span><span class="token property-access">status</span> <span class="token operator">===</span> <span class="token string">'readRequested'</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token comment">// セントラル端末から read() 要求があった場合も発火する</span>
+    
+    <span class="token comment">// ここも画面描画が更新されず…</span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">msg</span> <span class="token operator">=</span> <span class="token string">'セントラル端末から read() 要求がありました'</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token parameter">error</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token comment">// エラー時のコールバック関数 (省略)</span>
+<span class="token punctuation">}</span><span class="token punctuation">,</span> <span class="token punctuation">{</span>
+  <span class="token comment">// パラメータ (省略)</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>初期化処理のために実行した時は、JavaScript から <code>bluetoothle.initializePeripheral()</code> を叩いているので、コールバック関数内でコンポーネントのプロパティを変更すれば、Angular がそれを自動検知して画面描画が自動的に更新される。つまり、「ペリフェラル端末の初期化を行いました。」のメッセージは画面に表示されるワケである。</p>
+<p>しかし、セントラル端末から subscribe() されたり read() されたりしたときにネイティブコードが反応してコールバック関数が実行された場合、画面上で発生するイベントとは別のタイミングで動作するために Angular がプロパティの変更を検知して画面描画を更新できないようだ。</p>
+<p>そこで色々調べたところ、<strong><code>ChangeDetectorRef#detectChanges()</code></strong> というメソッドを叩くと、強制的に画面描画を更新できるようだ。</p>
+<pre class="language-typescript"><code class="language-typescript"><span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">ChangeDetectorRef</span> <span class="token punctuation">}</span></span> <span class="token keyword">from</span> <span class="token string">'@angular/core'</span><span class="token punctuation">;</span>
+
+<span class="token comment">// コンポーネントのコンストラクタで ChangeDetectorRef を DI しておく</span>
+<span class="token keyword">constructor</span><span class="token punctuation">(</span><span class="token keyword">private</span> changeDetectorRef<span class="token operator">:</span> <span class="token maybe-class-name">ChangeDetectorRef</span><span class="token punctuation">)</span> <span class="token punctuation">{</span> <span class="token punctuation">}</span>
+
+<span class="token comment">// コンポーネントのメソッド</span>
+<span class="token function">peripheral</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  bluetoothle<span class="token punctuation">.</span><span class="token method function property-access">initializePeripheral</span><span class="token punctuation">(</span><span class="token punctuation">(</span>result<span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+    <span class="token comment">// 本来はペリフェラル端末としての初期化処理が成功した時にこのコールバック関数が実行される</span>
+    
+    <span class="token comment">// Angular のデータバインディングを使って、画面上にメッセージを表示する</span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">msg</span> <span class="token operator">=</span> <span class="token string">'ペリフェラル端末の初期化を行いました。'</span><span class="token punctuation">;</span>
+    
+    <span class="token keyword">if</span><span class="token punctuation">(</span>result<span class="token punctuation">.</span><span class="token property-access">status</span> <span class="token operator">===</span> <span class="token string">'subscribed'</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token comment">// しかし、ペリフェラル端末に対しセントラル端末から subscribe() 要求があったときなども</span>
+      <span class="token comment">// このコールバック関数が実行される</span>
+      
+      <span class="token comment">// ココでデータバインディングしようとしても画面描画が更新されない</span>
+      <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">msg</span> <span class="token operator">=</span> <span class="token string">'セントラル端末が subscribe し始めました'</span><span class="token punctuation">;</span>
+      <span class="token comment">// ★そこで強制的に画面描画を更新させる</span>
+      <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">changeDetectorRef</span><span class="token punctuation">.</span><span class="token method function property-access">detectChanges</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+    <span class="token keyword">else</span> <span class="token keyword">if</span><span class="token punctuation">(</span>result<span class="token punctuation">.</span><span class="token property-access">status</span> <span class="token operator">===</span> <span class="token string">'readRequested'</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token comment">// セントラル端末から read() 要求があった場合も発火する</span>
+      
+      <span class="token comment">// ここも画面描画が更新されず…</span>
+      <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">msg</span> <span class="token operator">=</span> <span class="token string">'セントラル端末から read() 要求がありました'</span><span class="token punctuation">;</span>
+      <span class="token comment">// ★そこで強制的に画面描画を更新させる</span>
+      <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">changeDetectorRef</span><span class="token punctuation">.</span><span class="token method function property-access">detectChanges</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span> <span class="token punctuation">(</span>error<span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+    <span class="token comment">// エラー時のコールバック関数 (省略)</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span> <span class="token punctuation">{</span>
+    <span class="token comment">// パラメータ (省略)</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>こんな作りにして、<code>ChangeDetectorRef#detectChanges()</code> を叩いてやれば良い。</p>
+<p>これで「セントラル端末が subscribe し始めました」とか「セントラル端末から read() 要求がありました」といった、特殊なタイミングで発火したときも画面表示を更新できる。</p>
+<ul>
+  <li>参考：<a href="https://angular.io/api/core/ChangeDetectorRef">Angular Docs</a></li>
+  <li>参考：<a href="http://qiita.com/laco0416/items/8901219737f606d68d54">Angular2はいかにしてオブジェクトの変更を監視しているのか - Qiita</a></li>
+  <li>参考：<a href="http://qiita.com/Quramy/items/83f4fbc6755309f78ad2">Angular 2とZone.jsとテストの話 - Qiita</a></li>
+  <li>参考：<a href="http://qiita.com/laco0416/items/523d96ddbfe55c4e6949">日本語訳：Angular 2 Change Detection Explained - Qiita</a></li>
+</ul>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2017-09-05</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2017-09-05</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

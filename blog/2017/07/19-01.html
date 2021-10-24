@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>Wiredep・Gulp-Inject・Gulp-Useref で HTML ファイルからの CSS・JS 読み込みを自動化 - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2017/07/19-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2017/index.html">2017年</a></li>
+            <li><a href="/blog/2017/07/index.html">07月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2017-07-19</time></div>
+        <h1 id="page-title">Wiredep・Gulp-Inject・Gulp-Useref で HTML ファイルからの CSS・JS 読み込みを自動化</h1>
+
+<p>HTML ファイルから必要な Bower コンポーネントや自分で作ってビルドしたファイル群を読み込ませたり、そのファイル構成を変更したりするのが中々だるい。</p>
+<p>そこで、HTML に書く style 要素・script 要素を整理してくれる Gulp 関連ツールとして、<strong>Wiredep・Gulp-Inject・Gulp-Useref</strong> の3つを紹介する。</p>
+<h2 id="実際のコードはコチラ"><a class="header-link" href="#実際のコードはコチラ"><span class="header-link-mark"></span></a>実際のコードはコチラ</h2>
+<p>今回紹介したパッケージとサンプルコードを利用し、AngularJS + Cordova なアプリで Appium を使った E2E テストを行うサンプルプロジェクトを作成した。以下を参考にしてほしい。</p>
+<ul>
+  <li><a href="https://github.com/Neos21/example-angular-js-cordova-appium">GitHub - Neos21/AngularJSCordovaAppium: AngularJS + Cordova + Appium な環境で iOS アプリの E2E テストを行うサンプル</a></li>
+</ul>
+<p><strong><code>gulpfile.js</code> はコチラ。</strong></p>
+<ul>
+  <li><a href="https://github.com/Neos21/example-angular-js-cordova-appium/blob/master/gulpfile.js">AngularJSCordovaAppium/gulpfile.js at master · Neos21/AngularJSCordovaAppium · GitHub</a></li>
+</ul>
+<h2 id="まずは3つのツールをインストールしておく"><a class="header-link" href="#まずは3つのツールをインストールしておく"><span class="header-link-mark"></span></a>まずは3つのツールをインストールしておく</h2>
+<p>説明の前に、3つのツールと、Gulp のインストールをしておく。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># Gulp-Load-Plugins は require() の手間を省くため導入</span>
+$ <span class="token function">npm</span> i -D gulp gulp-load-plugins
+$ <span class="token function">npm</span> i -D wiredep gulp-inject gulp-useref
+</code></pre>
+<p>あとは <code>package.json</code> の <code>scripts</code> に、<code>"gulp": "gulp"</code> というタスクを追加しておけば、<code>$ npm run gulp</code> でローカルインストールした Gulp が使えるようになる。</p>
+<h2 id="wiredep-とは"><a class="header-link" href="#wiredep-とは"><span class="header-link-mark"></span></a>Wiredep とは</h2>
+<p><strong>Wiredep</strong> は、Wiredep を使うプロジェクトの <em><code>bower.json</code> の <code>dependencies</code> に記載されている Bower Components から main ファイルを取得</em>し、そのファイルを読み込むタグを HTML 中に書き込んでくれるツール。</p>
+<h3 id="html-側の設定"><a class="header-link" href="#html-側の設定"><span class="header-link-mark"></span></a>HTML 側の設定</h3>
+<p>HTML 中の、Wiredep に link 要素を注入して欲しい場所には</p>
+<pre class="language-html"><code class="language-html"><span class="token comment">&#x3C;!-- bower:css --></span>
+<span class="token comment">&#x3C;!-- endbower --></span>
+</code></pre>
+<p>というコメントを入れておき、script 要素を注入して欲しい場所には</p>
+<pre class="language-html"><code class="language-html"><span class="token comment">&#x3C;!-- bower:js --></span>
+<span class="token comment">&#x3C;!-- endbower --></span>
+</code></pre>
+<p>と書くだけだ。Wiredep によって、このコメント部分に link 要素や script 要素が挿入される。</p>
+<h3 id="main-ファイルの定義が足りない場合は"><a class="header-link" href="#main-ファイルの定義が足りない場合は"><span class="header-link-mark"></span></a><code>main</code> ファイルの定義が足りない場合は</h3>
+<p>Bower Components によっては、その Bower コンポーネントの <code>bower.json</code> に記載の <code>main</code> ファイルだけでは必要なファイルが読み込めない場合がある。その場合は別途、自プロジェクトの <code>bower.json</code> に <code>overrides</code> として読み込むべきファイルを定義し直してやると良い。</p>
+<p>例えば Angular UI Bootstrap の bower.json は以下のようになっているが、これでは CSS ファイルが足りない。</p>
+<pre class="language-json"><code class="language-json"><span class="token comment">// ./bower_components/angular-bootstrap/bower.json</span>
+<span class="token property">"main"</span><span class="token operator">:</span> <span class="token punctuation">[</span><span class="token string">"./ui-bootstrap-tpls.js"</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
+</code></pre>
+<p>そこで、自身の <code>bower.json</code> に以下のようにして CSS ファイルも読み込むよう、<code>main</code> を書き換える設定を入れてやる。</p>
+<pre class="language-json"><code class="language-json"><span class="token comment">// ./bower.json</span>
+<span class="token property">"overrides"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+  <span class="token property">"angular-bootstrap"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+    <span class="token property">"main"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
+      <span class="token string">"./ui-bootstrap-csp.css"</span><span class="token punctuation">,</span>
+      <span class="token string">"./ui-bootstrap-tpls.js"</span>
+    <span class="token punctuation">]</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<h3 id="gulp-での処理方法とその結果"><a class="header-link" href="#gulp-での処理方法とその結果"><span class="header-link-mark"></span></a>Gulp での処理方法とその結果</h3>
+<p>Gulp スクリプトにおいては、以下のようにしてやる。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword">const</span> gulp <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'gulp'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+gulp<span class="token punctuation">.</span><span class="token method function property-access">task</span><span class="token punctuation">(</span><span class="token string">'html-inject'</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token comment">// Wiredep のストリームを取得する</span>
+  <span class="token keyword">const</span> wiredep <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'wiredep'</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token property-access">stream</span><span class="token punctuation">;</span>
+  <span class="token keyword control-flow">return</span> gulp
+    <span class="token punctuation">.</span><span class="token method function property-access">src</span><span class="token punctuation">(</span><span class="token string">'./src/index.html'</span><span class="token punctuation">)</span>    <span class="token comment">// 元とする ./src/index.html を得る</span>
+    <span class="token punctuation">.</span><span class="token method function property-access">pipe</span><span class="token punctuation">(</span><span class="token function">wiredep</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>            <span class="token comment">// Wiredep にコメント部分を処理させる</span>
+    <span class="token punctuation">.</span><span class="token method function property-access">pipe</span><span class="token punctuation">(</span>gulp<span class="token punctuation">.</span><span class="token method function property-access">dest</span><span class="token punctuation">(</span><span class="token string">'./www'</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment">// ./www/ 配下に加工した index.html を出力する</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>コレだけ。</p>
+<p>こうして Wiredep に処理された HTML (<code>./www/index.html</code>) は、以下のようになっている。</p>
+<pre class="language-html"><code class="language-html"><span class="token comment">&#x3C;!-- bower:css --></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>link</span> <span class="token attr-name">rel</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>stylesheet<span class="token punctuation">"</span></span> <span class="token attr-name">href</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>../bower_components/angular-bootstrap/ui-bootstrap-csp.css<span class="token punctuation">"</span></span> <span class="token punctuation">/></span></span>
+<span class="token comment">&#x3C;!-- endbower --></span>
+
+<span class="token comment">&#x3C;!-- bower:js --></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>script</span> <span class="token attr-name">src</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>../bower_components/angular/angular.js<span class="token punctuation">"</span></span><span class="token punctuation">></span></span><span class="token script"></span><span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>script</span><span class="token punctuation">></span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>script</span> <span class="token attr-name">src</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>../bower_components/angular-bootstrap/ui-bootstrap-tpls.js<span class="token punctuation">"</span></span><span class="token punctuation">></span></span><span class="token script"></span><span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>script</span><span class="token punctuation">></span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>script</span> <span class="token attr-name">src</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>../bower_components/angular-route/angular-route.js<span class="token punctuation">"</span></span><span class="token punctuation">></span></span><span class="token script"></span><span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>script</span><span class="token punctuation">></span></span>
+<span class="token comment">&#x3C;!-- endbower --></span>
+</code></pre>
+<p>つまり、出力先ディレクトリから見た相対パスで <code>bower_components</code> ディレクトリ配下へのリンクを作っているだけだ。</p>
+<p>これだけでは必要なファイルをビルド対象のディレクトリ (この場合 <code>./www/</code> 配下) に取り込めておらず、使い勝手が悪いので、あとで Gulp-Useref を使って調整する。</p>
+<p>その前に Gulp-Inject の説明をする。</p>
+<h2 id="gulp-inject-とは"><a class="header-link" href="#gulp-inject-とは"><span class="header-link-mark"></span></a>Gulp-Inject とは</h2>
+<p><strong>Gulp-Inject</strong> というツールも、Wiredep とよく似ている。コチラは Bower Components に限らず、<em>指定したファイルを読み込むための link 要素や script 要素を HTML 中に挿入してくれる</em>というモノだ。</p>
+<h3 id="html-側の設定-1"><a class="header-link" href="#html-側の設定-1"><span class="header-link-mark"></span></a>HTML 側の設定</h3>
+<p>HTML 側での書き方は Wiredep と同じくコメントで記載する。link 要素を出力したい場所には</p>
+<pre class="language-html"><code class="language-html"><span class="token comment">&#x3C;!-- inject:css --></span>
+<span class="token comment">&#x3C;!-- endinject --></span>
+</code></pre>
+<p>と記載し、script 要素を出力したい場所には</p>
+<pre class="language-html"><code class="language-html"><span class="token comment">&#x3C;!-- inject:js --></span>
+<span class="token comment">&#x3C;!-- endinject --></span>
+</code></pre>
+<p>と記載する。</p>
+<h3 id="gulp-での処理方法とその結果-1"><a class="header-link" href="#gulp-での処理方法とその結果-1"><span class="header-link-mark"></span></a>Gulp での処理方法とその結果</h3>
+<p>今回はこのコメント部分に、別タスクで予めビルドしておいた CSS ファイルと JS ファイルを読み込むための設定をしてみる。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword">const</span> gulp <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'gulp'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token comment">// Gulp-Load-Plugins を使って Gulp-Inject を $.inject() で使えるようにする</span>
+<span class="token keyword">const</span> $ <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'gulp-load-plugins'</span><span class="token punctuation">)</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+gulp<span class="token punctuation">.</span><span class="token method function property-access">task</span><span class="token punctuation">(</span><span class="token string">'html-inject'</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token keyword control-flow">return</span> gulp
+    <span class="token punctuation">.</span><span class="token method function property-access">src</span><span class="token punctuation">(</span><span class="token string">'./src/index.html'</span><span class="token punctuation">)</span>    <span class="token comment">// 元とする ./src/index.html を得る</span>
+    <span class="token punctuation">.</span><span class="token method function property-access">pipe</span><span class="token punctuation">(</span>$<span class="token punctuation">.</span><span class="token method function property-access">inject</span><span class="token punctuation">(</span>             <span class="token comment">// Gulp-Inject を使用する</span>
+      gulp<span class="token punctuation">.</span><span class="token method function property-access">src</span><span class="token punctuation">(</span><span class="token punctuation">[</span>
+        <span class="token string">'./www/css/index.css'</span><span class="token punctuation">,</span>  <span class="token comment">// link 要素で出力したい CSS ファイルを指定</span>
+        <span class="token string">'./www/js/index.js'</span>     <span class="token comment">// script 要素で出力したい JS ファイルを指定</span>
+      <span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span> relative<span class="token operator">:</span> <span class="token boolean">true</span> <span class="token punctuation">}</span>        <span class="token comment">// 相対パス指定</span>
+    <span class="token punctuation">)</span><span class="token punctuation">)</span>
+    <span class="token punctuation">.</span><span class="token method function property-access">pipe</span><span class="token punctuation">(</span>gulp<span class="token punctuation">.</span><span class="token method function property-access">dest</span><span class="token punctuation">(</span><span class="token string">'./www'</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment">// ./www/ 配下に加工した index.html を出力する</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>このように、挿入したい CSS・JS ファイルを配列で指定するだけ。</p>
+<p>こうして生成された <code>./www/index.html</code> 配下のようになっている。</p>
+<pre class="language-html"><code class="language-html"><span class="token comment">&#x3C;!-- inject:css --></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>link</span> <span class="token attr-name">rel</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>stylesheet<span class="token punctuation">"</span></span> <span class="token attr-name">href</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>../www/css/index.css<span class="token punctuation">"</span></span><span class="token punctuation">></span></span>
+<span class="token comment">&#x3C;!-- endinject --></span>
+
+<span class="token comment">&#x3C;!-- inject:js --></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>script</span> <span class="token attr-name">src</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>../www/js/index.js<span class="token punctuation">"</span></span><span class="token punctuation">></span></span><span class="token script"></span><span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>script</span><span class="token punctuation">></span></span>
+<span class="token comment">&#x3C;!-- endinject --></span>
+</code></pre>
+<p>確かに指定した <code>./www/css/index.css</code> と <code>./www/js/index.js</code> がリンクされている。しかし、なぜか相対パスの指定が <code>../www/</code> と冗長的な書き方になってしまっている。特段問題はないと思うが気持ち悪いので、これもこの後紹介する Gulp-Useref で修正する。</p>
+<h2 id="wiredep-と-gulp-inject-を同時に指定する"><a class="header-link" href="#wiredep-と-gulp-inject-を同時に指定する"><span class="header-link-mark"></span></a>Wiredep と Gulp-Inject を同時に指定する</h2>
+<p>さて、今回は Wiredep と Gulp-Inject を使って、同じ <code>./src/index.html</code> ファイルを編集したいので、1つのタスクにまとめてやる。難しいことはなく、IN と OUT (<code>src()</code> と <code>dest()</code>) は同じなので、<code>.pipe()</code> を増やしてやるだけで良い。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword">const</span> gulp <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'gulp'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">const</span> $ <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'gulp-load-plugins'</span><span class="token punctuation">)</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+gulp<span class="token punctuation">.</span><span class="token method function property-access">task</span><span class="token punctuation">(</span><span class="token string">'html-inject'</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token keyword">const</span> wiredep <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'wiredep'</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token property-access">stream</span><span class="token punctuation">;</span>
+  <span class="token keyword control-flow">return</span> gulp
+    <span class="token punctuation">.</span><span class="token method function property-access">src</span><span class="token punctuation">(</span><span class="token string">'./src/index.html'</span><span class="token punctuation">)</span>    <span class="token comment">// IN</span>
+    <span class="token punctuation">.</span><span class="token method function property-access">pipe</span><span class="token punctuation">(</span><span class="token function">wiredep</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>            <span class="token comment">// Wiredep</span>
+    <span class="token punctuation">.</span><span class="token method function property-access">pipe</span><span class="token punctuation">(</span>$<span class="token punctuation">.</span><span class="token method function property-access">inject</span><span class="token punctuation">(</span>             <span class="token comment">// Gulp-Inject</span>
+      gulp<span class="token punctuation">.</span><span class="token method function property-access">src</span><span class="token punctuation">(</span><span class="token punctuation">[</span>
+        <span class="token string">'./www/css/index.css'</span><span class="token punctuation">,</span>
+        <span class="token string">'./www/js/index.js'</span>
+      <span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span> relative<span class="token operator">:</span> <span class="token boolean">true</span> <span class="token punctuation">}</span>
+    <span class="token punctuation">)</span><span class="token punctuation">)</span>
+    <span class="token punctuation">.</span><span class="token method function property-access">pipe</span><span class="token punctuation">(</span>gulp<span class="token punctuation">.</span><span class="token method function property-access">dest</span><span class="token punctuation">(</span><span class="token string">'./www'</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment">// OUT</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<h2 id="gulp-useref-とは"><a class="header-link" href="#gulp-useref-とは"><span class="header-link-mark"></span></a>Gulp-Useref とは</h2>
+<p><strong>Gulp-Useref</strong> は、<em>HTML コメントで囲んだ範囲内の link 要素・script 要素のファイル群を1ファイルに結合して出力</em>し、<strong>その1ファイルのみにリンクする link 要素・script 要素に HTML を書き換えてくれる</strong>ものだ。</p>
+<h3 id="html-側の設定-2"><a class="header-link" href="#html-側の設定-2"><span class="header-link-mark"></span></a>HTML 側の設定</h3>
+<p>実例で紹介しよう。まずは以下が <code>./src/index.html</code> の加工前の状態だ (「▼」部分は説明書きで実際は記載していない)。入れ子の関係を分かりやすくするためインデントを付けているが、必須ではない。</p>
+<pre class="language-html"><code class="language-html"><span class="token comment">&#x3C;!-- build:css css/vendor.css --></span>
+  ▼ Wiredep で Bower から CSS ファイルを注入する場所
+  <span class="token comment">&#x3C;!-- bower:css --></span>
+  <span class="token comment">&#x3C;!-- endbower --></span>
+<span class="token comment">&#x3C;!-- endbuild --></span>
+    
+<span class="token comment">&#x3C;!-- build:css css/index.css --></span>
+  ▼ Gulp-Inject で指定した CSS ファイルを注入する場所
+  <span class="token comment">&#x3C;!-- inject:css --></span>
+  <span class="token comment">&#x3C;!-- endinject --></span>
+<span class="token comment">&#x3C;!-- endbuild --></span>
+
+<span class="token comment">&#x3C;!-- build:js js/vendor.js --></span>
+  ▼ Wiredep で Bower から JS ファイルを注入する場所
+  <span class="token comment">&#x3C;!-- bower:js --></span>
+  <span class="token comment">&#x3C;!-- endbower --></span>
+<span class="token comment">&#x3C;!-- endbuild --></span>
+
+<span class="token comment">&#x3C;!-- build:js js/index.js --></span>
+  ▼ Gulp-Inject で指定した JS ファイルを注入する場所
+  <span class="token comment">&#x3C;!-- inject:js --></span>
+  <span class="token comment">&#x3C;!-- endinject --></span>
+<span class="token comment">&#x3C;!-- endbuild --></span>
+</code></pre>
+<p>ココに登場している、<code>build:css</code> とか <code>build:js</code> といったコメントが、Gulp-Useref が使うコメントだ。一番最初のコメントを例に取ると、</p>
+<pre class="language-html"><code class="language-html"><span class="token comment">&#x3C;!-- build:css css/vendor.css --></span>
+<span class="token comment">&#x3C;!-- endbuild --></span>
+</code></pre>
+<p>これで1セットだ。このコメントの範囲内にある CSS ファイル (link 要素) のみを抽出し、<code>css/vendor.css</code> という1つのファイルに結合する。ファイルを結合したら、<code>css/vendor.css</code> への link 要素のみをこのコメント部分に配置する、というワケだ。パスはその HTML ファイルから見ての相対パスになる。</p>
+<h3 id="wiredep-と-gulp-inject-を先に実行する"><a class="header-link" href="#wiredep-と-gulp-inject-を先に実行する"><span class="header-link-mark"></span></a>Wiredep と Gulp-Inject を先に実行する</h3>
+<p>まずは先程紹介した、Wiredep + Gulp-Inject による注入タスクを実行し、<code>./www/index.html</code> を出力する。以下のようになっているはずだ。</p>
+<pre class="language-html"><code class="language-html"><span class="token comment">&#x3C;!-- build:css css/vendor.css --></span>
+  <span class="token comment">&#x3C;!-- Wiredep --></span>
+  <span class="token comment">&#x3C;!-- bower:css --></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>link</span> <span class="token attr-name">rel</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>stylesheet<span class="token punctuation">"</span></span> <span class="token attr-name">href</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>../bower_components/angular-bootstrap/ui-bootstrap-csp.css<span class="token punctuation">"</span></span> <span class="token punctuation">/></span></span>
+  <span class="token comment">&#x3C;!-- endbower --></span>
+<span class="token comment">&#x3C;!-- endbuild --></span>
+
+<span class="token comment">&#x3C;!-- build:css css/index.css --></span>
+  <span class="token comment">&#x3C;!-- inject:css --></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>link</span> <span class="token attr-name">rel</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>stylesheet<span class="token punctuation">"</span></span> <span class="token attr-name">href</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>../www/css/index.css<span class="token punctuation">"</span></span><span class="token punctuation">></span></span>
+  <span class="token comment">&#x3C;!-- endinject --></span>
+<span class="token comment">&#x3C;!-- endbuild --></span>
+
+<span class="token comment">&#x3C;!-- build:js js/vendor.js --></span>
+  <span class="token comment">&#x3C;!-- bower:js --></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>script</span> <span class="token attr-name">src</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>../bower_components/angular/angular.js<span class="token punctuation">"</span></span><span class="token punctuation">></span></span><span class="token script"></span><span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>script</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>script</span> <span class="token attr-name">src</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>../bower_components/angular-bootstrap/ui-bootstrap-tpls.js<span class="token punctuation">"</span></span><span class="token punctuation">></span></span><span class="token script"></span><span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>script</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>script</span> <span class="token attr-name">src</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>../bower_components/angular-route/angular-route.js<span class="token punctuation">"</span></span><span class="token punctuation">></span></span><span class="token script"></span><span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>script</span><span class="token punctuation">></span></span>
+  <span class="token comment">&#x3C;!-- endbower --></span>
+<span class="token comment">&#x3C;!-- endbuild --></span>
+
+<span class="token comment">&#x3C;!-- build:js js/index.js --></span>
+  <span class="token comment">&#x3C;!-- inject:js --></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>script</span> <span class="token attr-name">src</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>../www/js/index.js<span class="token punctuation">"</span></span><span class="token punctuation">></span></span><span class="token script"></span><span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>script</span><span class="token punctuation">></span></span>
+  <span class="token comment">&#x3C;!-- endinject --></span>
+<span class="token comment">&#x3C;!-- endbuild --></span>
+</code></pre>
+<p>Wiredep と Gulp-Inject によって link 要素・script 要素が挿入されている。</p>
+<h3 id="gulp-useref-による処理とその結果"><a class="header-link" href="#gulp-useref-による処理とその結果"><span class="header-link-mark"></span></a>Gulp-Useref による処理とその結果</h3>
+<p>次に、この <code>./www/index.html</code> に対して Gulp-Useref を適用するタスクを作成する。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword">const</span> gulp <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'gulp'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">const</span> $ <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'gulp-load-plugins'</span><span class="token punctuation">)</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// ./www/index.html を生成する「html-inject」タスクを事前実行するタスクとして依存指定しておく</span>
+gulp<span class="token punctuation">.</span><span class="token method function property-access">task</span><span class="token punctuation">(</span><span class="token string">'html-useref'</span><span class="token punctuation">,</span> <span class="token punctuation">[</span><span class="token string">'html-inject'</span><span class="token punctuation">]</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token keyword control-flow">return</span> gulp
+    <span class="token punctuation">.</span><span class="token method function property-access">src</span><span class="token punctuation">(</span><span class="token string">'./www/index.html'</span><span class="token punctuation">)</span>    <span class="token comment">// 前タスクで生成した ./www/index.html を取得する</span>
+    <span class="token punctuation">.</span><span class="token method function property-access">pipe</span><span class="token punctuation">(</span>$<span class="token punctuation">.</span><span class="token method function property-access">useref</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>           <span class="token comment">// Gulp-Useref を適用する</span>
+    <span class="token punctuation">.</span><span class="token method function property-access">pipe</span><span class="token punctuation">(</span>gulp<span class="token punctuation">.</span><span class="token method function property-access">dest</span><span class="token punctuation">(</span><span class="token string">'./www'</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment">// ./www/ 配下に index.html を再度出力する</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>つまり、Wiredep と Gulp-Inject を行ったファイルを再度取得して Gulp-Useref を適用しているのだ。HTML ファイルの位置は <code>./www/</code> 配下になるので、ココからの相対パスだと <code>&#x3C;!-- build:css css/vendor.css --></code> という指定では <code>./www/css/vendor.css</code> が生成される、という寸法になる。</p>
+<p>これで <code>./www/index.html</code> は以下のような記載になる。</p>
+<pre class="language-html"><code class="language-html"><span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>link</span> <span class="token attr-name">rel</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>stylesheet<span class="token punctuation">"</span></span> <span class="token attr-name">href</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>css/vendor.css<span class="token punctuation">"</span></span><span class="token punctuation">></span></span>
+
+<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>link</span> <span class="token attr-name">rel</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>stylesheet<span class="token punctuation">"</span></span> <span class="token attr-name">href</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>css/index.css<span class="token punctuation">"</span></span><span class="token punctuation">></span></span>
+
+<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>script</span> <span class="token attr-name">src</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>js/vendor.js<span class="token punctuation">"</span></span><span class="token punctuation">></span></span><span class="token script"></span><span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>script</span><span class="token punctuation">></span></span>
+
+<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>script</span> <span class="token attr-name">src</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>js/index.js<span class="token punctuation">"</span></span><span class="token punctuation">></span></span><span class="token script"></span><span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>script</span><span class="token punctuation">></span></span>
+</code></pre>
+<p>Wiredep によって複数の link 要素・script 要素が列挙されていた部分は、<code>./www/css/vendor.css</code>・<code>./www/js/vendor.js</code> という1つずつのファイルにまとめられた。</p>
+<p>おまけに冗長的なパス指定になっていた <code>index.css</code>・<code>index.js</code> があった link 要素・script 要素にも Gulp-Useref を噛ませることによって、パス指定を整形することができた。指定しているファイルが最初から1つずつしかないので、実質的にファイルの結合は発生していない。</p>
+<p>コメントも消えて良い感じだ。</p>
+<p>ファイルの結合と生成、そして HTML ファイル内の link 要素・script 要素の書き換えまでを一気にやってくれるのが Gulp-Useref なのだ。</p>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2017-07-19</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2017-07-19</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

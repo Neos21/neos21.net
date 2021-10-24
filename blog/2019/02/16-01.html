@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>JavaScript で文字列のバイト数を求める (POST・PUT リクエストやレスポンスの文字列が途中で切れる問題) - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2019/02/16-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2019/index.html">2019年</a></li>
+            <li><a href="/blog/2019/02/index.html">02月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2019-02-16</time></div>
+        <h1 id="page-title">JavaScript で文字列のバイト数を求める (POST・PUT リクエストやレスポンスの文字列が途中で切れる問題)</h1>
+
+<p>Node.js の組み込みモジュールである <code>http</code> モジュールを使用して、POST メソッドや PUT メソッドでデータを送信する処理があったのだけど、どうも送信データの末尾20バイトぐらいが欠損してしまっていた。</p>
+<p>一連のデータ送信処理は海外のサイトからいただいてきたモノだったので、直感的に「(英語圏には登場しない) 全角文字が悪さしてる？」と思ったのだが、何が悪いか、何を変えたら上手く直るのか分からなかった。</p>
+<p>んで、コードをよく読むと、リクエストヘッダに指定している <code>Content-Length</code> が怪しく感じた。<code>req.body.length</code> と、送信する文字列の <code>.length</code> を指定していた。</p>
+<pre class="language-javascript"><code class="language-javascript">request<span class="token punctuation">.</span><span class="token method function property-access">setHeader</span><span class="token punctuation">(</span><span class="token string">'Content-Length'</span><span class="token punctuation">,</span> req<span class="token punctuation">.</span><span class="token property-access">body</span><span class="token punctuation">.</span><span class="token property-access">length</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>そこでよくよく調べてみると、文字列の<strong>バイト数</strong>を求めるには、<strong><code>Buffer.byteLength()</code></strong> というメソッドを使うようだ。</p>
+<ul>
+  <li>参考：<a href="https://hokaccha.hatenablog.com/entry/20111014/1318569956">文字列のバイト数を求める - hokaccha memo</a></li>
+</ul>
+<pre class="language-javascript"><code class="language-javascript">request<span class="token punctuation">.</span><span class="token method function property-access">setHeader</span><span class="token punctuation">(</span><span class="token string">'Content-Length'</span><span class="token punctuation">,</span> <span class="token maybe-class-name">Buffer</span><span class="token punctuation">.</span><span class="token method function property-access">byteLength</span><span class="token punctuation">(</span>req<span class="token punctuation">.</span><span class="token property-access">body</span><span class="token punctuation">,</span> <span class="token string">'utf8'</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>このように書き換えたら上手くいった。Content-Length 指定、こんな大事だったのね…。</p>
+<hr>
+<p>そしてコレを書こうと思って Node.js のドキュメンテーションを開いたら、サンプルコードにモロに <code>Buffer.byteLentgh()</code> 書いてあった…。</p>
+<blockquote>
+  <h3 id="requestgetheadername"><a class="header-link" href="#requestgetheadername"><span class="header-link-mark"></span></a>request.getHeader(name)</h3>
+  <p><code>javascript request.setHeader('content-type', 'text/html'); request.setHeader('Content-Length', Buffer.byteLength(body));</code></p>
+</blockquote>
+<p>よく読もうね、自分…。</p>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2019-02-16</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2019-02-16</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

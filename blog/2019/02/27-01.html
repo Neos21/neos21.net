@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>LINE Messaging API を使ってオウム返しする Node.js 製チャットボットを作ってみる - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2019/02/27-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2019/index.html">2019年</a></li>
+            <li><a href="/blog/2019/02/index.html">02月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2019-02-27</time></div>
+        <h1 id="page-title">LINE Messaging API を使ってオウム返しする Node.js 製チャットボットを作ってみる</h1>
+
+<p>突然だが、<em>LINE Messaging API</em> というモノを使って、簡単なチャットボットを作ってみる。</p>
+<p>完成すると、LINE アプリでチャットボット用アカウントを友達登録して、トーク画面から会話できるようになる。メッセージの処理はしないので、ただユーザの発言をオウム返しする Chat Bot だが…。</p>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#line-developers-%E3%81%AB%E7%99%BB%E9%8C%B2%E3%81%99%E3%82%8B">LINE Developers に登録する</a></li>
+  <li><a href="#%E3%83%97%E3%83%AD%E3%83%90%E3%82%A4%E3%83%80%E3%82%92%E4%BD%9C%E6%88%90%E3%81%99%E3%82%8B">プロバイダを作成する</a></li>
+  <li><a href="#messaging-api-%E3%83%81%E3%83%A3%E3%83%8D%E3%83%AB%E3%82%92%E4%BD%9C%E6%88%90%E3%81%99%E3%82%8B">Messaging API チャネルを作成する</a></li>
+  <li><a href="#%E3%83%81%E3%83%A3%E3%83%8D%E3%83%AB%E6%83%85%E5%A0%B1%E3%82%92%E5%8F%96%E5%BE%97%E3%81%99%E3%82%8B">チャネル情報を取得する</a></li>
+  <li><a href="#nodejs-express-%E3%82%B5%E3%83%BC%E3%83%90%E3%82%92%E5%AE%9F%E8%A3%85%E3%81%99%E3%82%8B">Node.js Express サーバを実装する</a></li>
+  <li><a href="#webhook-%E3%82%B5%E3%83%BC%E3%83%90%E3%82%92-heroku-%E3%81%AB%E3%83%87%E3%83%97%E3%83%AD%E3%82%A4%E3%81%99%E3%82%8B">Webhook サーバを Heroku にデプロイする</a></li>
+  <li><a href="#webhook-%E8%A8%AD%E5%AE%9A%E3%82%92%E8%A1%8C%E3%81%86">Webhook 設定を行う</a></li>
+  <li><a href="#line-%E3%82%A2%E3%83%97%E3%83%AA%E3%81%A7%E5%AE%9F%E9%9A%9B%E3%81%AB%E8%A9%A6%E3%81%97%E3%81%A6%E3%81%BF%E3%82%8B">LINE アプリで実際に試してみる</a></li>
+  <li><a href="#%E4%BB%A5%E4%B8%8A">以上</a></li>
+</ul>
+<h2 id="line-developers-に登録する"><a class="header-link" href="#line-developers-に登録する"><span class="header-link-mark"></span></a>LINE Developers に登録する</h2>
+<p>まずは、「LINE Developers」という開発者用プログラムに登録する。普段 LINE アプリで使っている LINE アカウントを紐付けて登録できるようになる。</p>
+<ul>
+  <li><a href="https://developers.line.biz/ja/">LINE Developers</a></li>
+</ul>
+<p>登録は上の公式サイトより。登録が完了すると、<strong>LINE Developers Console</strong> と呼ばれる管理画面に遷移する。</p>
+<h2 id="プロバイダを作成する"><a class="header-link" href="#プロバイダを作成する"><span class="header-link-mark"></span></a>プロバイダを作成する</h2>
+<p>LINE Developers Console が開けたら、<em>「新規プロバイダー作成」</em>ボタンから、プロバイダと呼ばれる「くくり」を作る。1つのプロバイダの中に、いくつかの「チャネル」を作れるようになっている。「チャネル」というのが、チャットボットアカウント1つに相当する感じ。</p>
+<h2 id="messaging-api-チャネルを作成する"><a class="header-link" href="#messaging-api-チャネルを作成する"><span class="header-link-mark"></span></a>Messaging API チャネルを作成する</h2>
+<p>プロバイダを登録したら、「Messaging API」用の<em>「チャネル作成する」</em>ボタンがあると思うので、コレを押下する。</p>
+<p>登録時、「プラン」より<strong>「Developer Trial」</strong>プランを選ぶ。友達登録数などに制限はあるものの、無料で Push API などを利用できる。企業向けの「Phone Number Push API」や「Switcher API」なんかは「Developer Trial」プランでも試せないのであしからず。</p>
+<ul>
+  <li>参考：<a href="https://japan.cnet.com/article/35115483/">LINE、「友だち」登録なしで電気料金や宅配時間をプッシュ通知へ - CNET Japan</a> … Phone Number Push API</li>
+  <li>参考：<a href="https://www.oracle.co.jp/events/platform2017/download/pdfs/ocps17_3-c.pdf">https://www.oracle.co.jp/events/platform2017/download/pdfs/ocps17_3-c.pdf</a> … Switcher API
+    <ul>
+      <li>LINE ってこういうエンプラ向けの情報全然公開してくれないよね…</li>
+    </ul>
+  </li>
+</ul>
+<p>チャネルが作成できたら、<em>「チャネル基本設定」画面</em>に移動する。友達登録用の QR コードが見えているので、コレを利用して友達登録をしておこう。デフォルトで自動応答メッセージ機能などが組み込まれており、一応の応答は得られるので、まずは「自分で開発用アカウントを作った感」は味わえるかと。</p>
+<h2 id="チャネル情報を取得する"><a class="header-link" href="#チャネル情報を取得する"><span class="header-link-mark"></span></a>チャネル情報を取得する</h2>
+<p>LINE Messaging API は、ユーザからの発言をまず「LINE 社のサーバ」が受け取り、それを「自前の Webhook サーバ」で受信する。受信したメッセージに応じて応答メッセージを構築し、「LINE Messaging API サーバ」に返信すると、ユーザに応答メッセージが返される、という仕組みになっている。</p>
+<p>これから<em>「自前の Webhook サーバ」</em>を作るワケだが、その際、ちゃんと LINE から送られてきたリクエストなのか、自分が作ったチャネルでのやり取りなのか、といったことを検証するために、チャネルに関する以下の情報が必要になる。</p>
+<ul>
+  <li>Channel ID</li>
+  <li>Channel Secret</li>
+  <li>Channel Access Token</li>
+</ul>
+<p>これらの文字列は、先程の<em>「チャネル基本設定」画面</em>で閲覧、もしくは発行できる。</p>
+<p>「Channel ID」は最初から決まっているので控えておく。「Channel Secret」も最初から発行されているが、後から別のモノに再発行したりもできる。コレが漏洩すると不正な操作をされかねないので、厳重に管理しよう。</p>
+<p>「Channel Access Token」は、「チャネル基本設定」画面の下部、<strong>「アクセストークン (ロングターム)」</strong>という画面から発行できる。初回であっても「再発行」ボタンだが、押下する。「失効までの時間」とやらを尋ねられるが、コレは、古いチャネルアクセストークンを失効させるまでの有効期限であり、これから発行するチャネルアクセストークンには関係ない。「0 時間」(失効しない) を選んでおけば OK。</p>
+<p>この「アクセストークン (ロングターム)」欄から発行できるチャネルアクセストークンは、この後の「再発行」時に、時間を指定して失効させるまではずっと利用できる。開発中はコレで問題ないだろう。</p>
+<blockquote>
+  <p>新しく発行したロングタームのアクセストークンは再発行ボタンを再度押す(+指定した経過時間)まではずっと有効です。</p>
+  <ul>
+    <li>参考：<a href="https://teratail.com/questions/125325">LINE Messaging API - LINEのMessaging APIで使うアクセストークン（ロングターム）について教えてください。｜teratail</a></li>
+  </ul>
+</blockquote>
+<p>コレとは別に、LINE API をコールしてもチャネルアクセストークンを取得できる。コチラは発行日から30日間で失効するモノで、直近に発行した30個のチャネルアクセストークンが有効となる。本番利用するモノはコチラがメインとなるだろうか。</p>
+<ul>
+  <li>参考：<a href="https://developers.line.biz/ja/reference/messaging-api/#issue-channel-access-token">Messaging APIリファレンス</a></li>
+</ul>
+<h2 id="nodejs-express-サーバを実装する"><a class="header-link" href="#nodejs-express-サーバを実装する"><span class="header-link-mark"></span></a>Node.js Express サーバを実装する</h2>
+<p>さて、いよいよ Webhook サーバの実装だ。</p>
+<p>ちなみに <strong>Webhook</strong> とは、POST メソッドによるリクエストを契機として何らかの処理を行うサーバの仕組みのことだ。別に特殊なツールやフレームワークを使う必要はなく、POST リクエストを受け付けて何かすれば、それはもう Webhook サーバなのである。</p>
+<ul>
+  <li>参考：<a href="https://qiita.com/soarflat/items/ed970f6dc59b2ab76169">Webhookとは？ - Qiita</a></li>
+</ul>
+<p>Node.js で Webhook サーバを実装する際は、LINE 公式が提供している <strong><code>@line/bot-sdk</code></strong> という npm パッケージを利用すると良いだろう。Express サーバ向けの専用ミドルウェアも提供されているので、Express + <code>@line/bot-sdk</code> な組み合わせで実装することにしよう。</p>
+<ul>
+  <li><a href="https://github.com/line/line-bot-sdk-nodejs">GitHub - line/line-bot-sdk-nodejs: Node.js SDK for LINE Messaging API</a></li>
+</ul>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># 作業用ディレクトリの準備</span>
+$ <span class="token function">mkdir</span> my-line-chat-bot <span class="token operator">&#x26;&#x26;</span> <span class="token builtin class-name">cd</span> <span class="token variable">$_</span>
+$ <span class="token function">npm</span> init -y
+
+<span class="token comment"># パッケージのインストール</span>
+$ <span class="token function">npm</span> <span class="token function">install</span> -S @line/bot-sdk express
+
+<span class="token comment"># メイン処理を書くファイルを用意</span>
+$ <span class="token function">touch</span> index.js
+</code></pre>
+<p>オウム返し用の実装だが、実は <code>@line/bot-sdk</code> パッケージ内にサンプル実装が一式揃っているので、コレを利用してみよう。</p>
+<ul>
+  <li><a href="https://github.com/line/line-bot-sdk-nodejs/tree/master/examples/echo-bot">line-bot-sdk-nodejs/examples/echo-bot at master · line/line-bot-sdk-nodejs · GitHub</a></li>
+  <li><a href="https://github.com/line/line-bot-sdk-nodejs/blob/master/examples/echo-bot/index.js">line-bot-sdk-nodejs/index.js at master · line/line-bot-sdk-nodejs · GitHub</a></li>
+</ul>
+<p>ただし、この公式のサンプル実装は、後述する<em>「Webhook 接続確認」でエラーを返してしまう</em>作りになっているので、そこだけちょっと改善しておこう。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword">const</span> line <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'@line/bot-sdk'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">const</span> express <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'express'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// 環境変数からチャネルアクセストークンとチャネルシークレットを取得する</span>
+<span class="token keyword">const</span> config <span class="token operator">=</span> <span class="token punctuation">{</span>
+  channelAccessToken<span class="token operator">:</span> process<span class="token punctuation">.</span><span class="token property-access">env</span><span class="token punctuation">.</span><span class="token constant">CHANNEL_ACCESS_TOKEN</span><span class="token punctuation">,</span>
+  channelSecret<span class="token operator">:</span> process<span class="token punctuation">.</span><span class="token property-access">env</span><span class="token punctuation">.</span><span class="token constant">CHANNEL_SECRET</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+<span class="token comment">// LINE クライアントを生成する : `channelSecret` が未定義だと例外が投げられる</span>
+<span class="token keyword">const</span> client <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">line<span class="token punctuation">.</span>Client</span><span class="token punctuation">(</span>config<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// Express アプリを生成する</span>
+<span class="token keyword">const</span> app <span class="token operator">=</span> <span class="token function">express</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// LINE Bot SDK が提供するミドルウェアを挟み込み、リクエストヘッダの署名検証や JSON パースなどを任せてしまう</span>
+app<span class="token punctuation">.</span><span class="token method function property-access">post</span><span class="token punctuation">(</span><span class="token string">'/callback'</span><span class="token punctuation">,</span> line<span class="token punctuation">.</span><span class="token method function property-access">middleware</span><span class="token punctuation">(</span>config<span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token parameter">req<span class="token punctuation">,</span> res</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token comment">// 1回のリクエストに複数のメッセージが含まれていたりすることもあるので</span>
+  <span class="token comment">// イベントの配列を1件ずつ取得して処理してやる</span>
+  <span class="token keyword">const</span> events <span class="token operator">=</span> req<span class="token punctuation">.</span><span class="token property-access">body</span><span class="token punctuation">.</span><span class="token property-access">events</span><span class="token punctuation">;</span>
+  <span class="token known-class-name class-name">Promise</span><span class="token punctuation">.</span><span class="token method function property-access">all</span><span class="token punctuation">(</span>events<span class="token punctuation">.</span><span class="token method function property-access">map</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token parameter">event</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+    <span class="token comment">// イベント1件を処理する・エラー時も例外を伝播しないようにしておく</span>
+    <span class="token keyword control-flow">return</span> <span class="token function">handleEvent</span><span class="token punctuation">(</span>event<span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token keyword control-flow">catch</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span> <span class="token keyword control-flow">return</span> <span class="token keyword null nil">null</span><span class="token punctuation">;</span> <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span>
+    <span class="token punctuation">.</span><span class="token method function property-access">then</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token parameter">result</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+      <span class="token comment">// 全てのイベントの処理が終わったら LINE API サーバには 200 を返す</span>
+      res<span class="token punctuation">.</span><span class="token method function property-access">status</span><span class="token punctuation">(</span><span class="token number">200</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">json</span><span class="token punctuation">(</span><span class="token punctuation">{</span><span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">end</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token doc-comment comment">/**
+ * イベント1件を処理する
+ * 
+ * <span class="token keyword">@param</span> <span class="token class-name"><span class="token punctuation">{</span><span class="token operator">*</span><span class="token punctuation">}</span></span> <span class="token parameter">event</span> イベント
+ * <span class="token keyword">@return</span> <span class="token class-name"><span class="token punctuation">{</span>Promise<span class="token punctuation">}</span></span> テキストメッセージイベントの場合は client.pushMessage() の結果、それ以外は null
+ */</span>
+<span class="token keyword">function</span> <span class="token function">handleEvent</span><span class="token punctuation">(</span><span class="token parameter">event</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token comment">// メッセージイベントではない場合、テキスト以外のメッセージの場合は何も処理しない</span>
+  <span class="token keyword control-flow">if</span><span class="token punctuation">(</span>event<span class="token punctuation">.</span><span class="token property-access">type</span> <span class="token operator">!==</span> <span class="token string">'message'</span> <span class="token operator">||</span> event<span class="token punctuation">.</span><span class="token property-access">message</span><span class="token punctuation">.</span><span class="token property-access">type</span> <span class="token operator">!==</span> <span class="token string">'text'</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token keyword control-flow">return</span> <span class="token known-class-name class-name">Promise</span><span class="token punctuation">.</span><span class="token method function property-access">resolve</span><span class="token punctuation">(</span><span class="token keyword null nil">null</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  
+  <span class="token comment">// 返信用メッセージを組み立てる : ユーザからのメッセージにカギカッコを付けて返信してみる</span>
+  <span class="token keyword">const</span> echoMessage <span class="token operator">=</span> <span class="token punctuation">{</span>
+    type<span class="token operator">:</span> <span class="token string">'text'</span><span class="token punctuation">,</span>
+    text<span class="token operator">:</span> <span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">「</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>event<span class="token punctuation">.</span><span class="token property-access">message</span><span class="token punctuation">.</span><span class="token property-access">text</span><span class="token interpolation-punctuation punctuation">}</span></span><span class="token string">」</span><span class="token template-punctuation string">`</span></span>
+  <span class="token punctuation">}</span><span class="token punctuation">;</span>
+  
+  <span class="token comment">// Reply API を利用してリプライする</span>
+  <span class="token keyword control-flow">return</span> client<span class="token punctuation">.</span><span class="token method function property-access">replyMessage</span><span class="token punctuation">(</span>event<span class="token punctuation">.</span><span class="token property-access">replyToken</span><span class="token punctuation">,</span> echoMessage<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token comment">// Push API を利用する場合は以下のようにする</span>
+  <span class="token comment">// return client.pushMessage(event.source.userId, echoMessage);</span>
+<span class="token punctuation">}</span>
+
+<span class="token comment">// サーバを起動する</span>
+<span class="token keyword">const</span> port <span class="token operator">=</span> process<span class="token punctuation">.</span><span class="token property-access">env</span><span class="token punctuation">.</span><span class="token constant">PORT</span> <span class="token operator">||</span> <span class="token number">8080</span><span class="token punctuation">;</span>
+app<span class="token punctuation">.</span><span class="token method function property-access">listen</span><span class="token punctuation">(</span>port<span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">Listening on </span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>port<span class="token interpolation-punctuation punctuation">}</span></span><span class="token template-punctuation string">`</span></span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>このように実装すると、<code>/callback</code> パスに対する POST リクエストを契機に、LINE ユーザへの返信を行えるようになる。</p>
+<p>「LINE から送られるイベント」とは何か、というのは、以下のページを見ると良いだろう。メッセージイベントの他に、フォローをしたとか、アカウント連携をしたとか、そういうユーザの操作も「イベント」として送信されてくるのだ。</p>
+<ul>
+  <li>参考：<a href="https://developers.line.biz/ja/reference/messaging-api/#webhook-event-objects">Messaging APIリファレンス</a></li>
+</ul>
+<p>単純に大人数が使うチャネルに成長して、複数のユーザが同時にメッセージを送ったような場合も、このイベントが複数格納される場合がある。1回のリクエストにつき、複数の返信を行わないといけない場合もあるので、<code>Promise.all()</code> でイベントを分割して1件ずつ処理している。</p>
+<p>ユーザへの返信は <code>client.replyMessage()</code> 関数内で行われている。<code>/callback</code> パスへのレスポンスがどうであろうと、実はあまり関係ないのだ。そのため、<code>Promise.all()</code> 内で例外を発生させないようにし、<code>/callback</code> パスのレスポンスとしては必ず <code>200</code> を返すようにした。</p>
+<h2 id="webhook-サーバを-heroku-にデプロイする"><a class="header-link" href="#webhook-サーバを-heroku-にデプロイする"><span class="header-link-mark"></span></a>Webhook サーバを Heroku にデプロイする</h2>
+<p>さて、Webhook サーバを実装したはいいものの、コレを実際に LINE と連携させるには、コレを HTTPS サーバに配置しないといけない。以前はオレオレ証明書を利用したローカルサーバでも LINE からの通信を受信できたようだが、現在はできなくなっているので、今回は無料で Node.js アプリをデプロイできる <em>Heroku</em> を利用する。</p>
+<p>Heroku アカウントの用意や、デプロイするための設定事項は、以下の記事を参照されたし。</p>
+<ul>
+  <li><a href="/blog/2018/12/05-01.html">Heroku に登録して Express サーバをデプロイして動かしてみる</a></li>
+</ul>
+<p>主なところだと、<code>package.json</code> に <code>scripts.start</code> プロパティを設定してサーバが起動するように設定しておくのと、<code>engines</code> プロパティを記載しておくことくらいか。</p>
+<p>あと、Heroku の管理画面より、以下の2つの環境変数を設定しておくこと。</p>
+<ul>
+  <li><code>CHANNEL_ACCESS_TOKEN</code> : チャネルアクセストークン (管理画面「アクセストークン (ロングターム)」欄から発行したヤツ)</li>
+  <li><code>CHANNEL_SECRET</code> : チャネルシークレット (管理画面「Channel Secret」欄の文字列)</li>
+</ul>
+<p>コレで、<code>$ git push heroku master</code> と Push してやろう。<code>https://my-line-chat-bot.herokuapp.com/callback</code> といった URL が用意できれば OK だ。</p>
+<h2 id="webhook-設定を行う"><a class="header-link" href="#webhook-設定を行う"><span class="header-link-mark"></span></a>Webhook 設定を行う</h2>
+<p>コレで、オウム返し処理を行う Webhook サーバが用意できたので、コイツを Messaging API チャネルに組み込んでやる。</p>
+<p>「チャネル基本設定」画面に移動したら、以下のように設定を変更していく。</p>
+<ul>
+  <li>「自動応答メッセージ」 : 「利用する」から<em>「利用しない」</em>に変更する
+    <ul>
+      <li>コレまで自動応答していたデフォルトメッセージを返さないようにする。Webhook サーバと併用してしまうと、「自動応答メッセージ」と「Webhook サーバからの返信」が両方届いてしまう変な Bot になってしまう</li>
+    </ul>
+  </li>
+  <li>「Webhook 送信」 : <em>「利用する」</em>に変更する
+    <ul>
+      <li>「Webhook URL」を設定してもコレを忘れると Webhook サーバが利用されない</li>
+    </ul>
+  </li>
+  <li>「Webhook URL」 : Heroku にアップした Webhook サーバの <code>/callback</code> パスまでの URL を入力する
+    <ul>
+      <li>「この URL に POST リクエストを送ってください」という設定なので、<code>https://my-line-chat-bot.herokuapp.com/callback</code> といった URL を指定してやる</li>
+      <li>設定してから少し待つと「接続確認」ボタンが表示されるので、コレを押して疎通確認してみる。POST リクエストに対して 200 を返してくるかどうかで、上手くいっているかを教えてくれる</li>
+    </ul>
+  </li>
+</ul>
+<p>コレで設定完了。設定の反映はほとんど即時で行われるが、気になるようなら数分待ってから動作検証してみよう。</p>
+<h2 id="line-アプリで実際に試してみる"><a class="header-link" href="#line-アプリで実際に試してみる"><span class="header-link-mark"></span></a>LINE アプリで実際に試してみる</h2>
+<p>コレで LINE 側の設定が終わったので、実際に LINE アプリでチャットボットに向かってトークしてみよう。Webhook サーバがリクエストを受信し、メッセージイベントを検知して Reply API をコールしてくれたら、メッセージが返信されてくるはずだ。</p>
+<h2 id="以上"><a class="header-link" href="#以上"><span class="header-link-mark"></span></a>以上</h2>
+<p>最も簡単なサンプルはこんな感じ。</p>
+<p>画像をやり取りするとか、Flex Message と呼ばれるリッチな応答を返すとか、複雑なことをやろうとすると、もう少し作り込みが必要になってくるが、今回はこの辺で。</p>
+<ul>
+  <li><a href="https://qiita.com/at_1016/items/9f97dc1c561182c18182">【PHP】LINE Messaging APIをつかってオウム返し BOT つくってみた - Qiita</a> … PHP で実装するサンプル</li>
+  <li><a href="https://qiita.com/jeq/items/07a5cdc793a5a3ebac26">LINE BOTの初心者がBotを作ろうと思い立ってから動かせるようになるまで - Qiita</a></li>
+</ul>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2019-02-27</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2019-02-27</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

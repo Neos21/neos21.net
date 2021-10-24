@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>ブラウザ上で3ファイル以上のテキストファイルの差分を確認できる Angular アプリ「Multiple Diff」を作った - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2018/07/24-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2018/index.html">2018年</a></li>
+            <li><a href="/blog/2018/07/index.html">07月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2018-07-24</time></div>
+        <h1 id="page-title">ブラウザ上で3ファイル以上のテキストファイルの差分を確認できる Angular アプリ「Multiple Diff」を作った</h1>
+
+<p>以前、<em>「3ファイル以上を横並びにして差分を確認することはできないか」</em>という話をした。</p>
+<ul>
+  <li><a href="/blog/2018/06/29-01.html">一度に3ファイル以上の Diff を取りたい</a></li>
+</ul>
+<p>「Rekisa」という Windows 用フリーソフトが一番自分の理想に近かったのだが、コレを自分でも作って改良できないかやってみた。</p>
+<p>結果、色々と挫折しつつも、それなりに差分が確認できる Angular アプリとして落ち着けることができた。以下の <em>Angular Utilities</em> より、<strong>Multiple Diff</strong> のページを参照してもらいたい。</p>
+<ul>
+  <li><strong><a href="https://neos21.github.io/angular-utilities/">Angular Utilities</a></strong></li>
+</ul>
+<p>用途としては、自分が作っている npm パッケージ群の <code>package.json</code> を横並びにして、同じバージョンのライブラリを使っているかとか、プロパティの書きぶりが揃っているかとかを確認できたりすると思う。</p>
+<p>以下、このアプリを作るまでの詳細を語る。</p>
+<h2 id="差分の求め方"><a class="header-link" href="#差分の求め方"><span class="header-link-mark"></span></a>差分の求め方</h2>
+<p>差分チェックのやり方は単純。行単位の完全一致でしか見ていない。</p>
+<p>ファイル A・B・C の3ファイルがあったとして、差分比較は「A・B」「B・C」「C・A」の3回に分けて行っている。</p>
+<p>「A と B」の比較時は、A のテキストを1行ずつループし、その行に合致する行が B に登場したら印を付けている。A の行データには <code>isDiffNext</code>、B の行データには <code>isDiffPrev</code> といったフラグを持たせ、「A から見て B に一致する行があるか」<em>「B から見て A に一致する行があるか」</em>をそれぞれ管理している。</p>
+<p>同様に「B と C」も比較するワケだが、この時、B の行データには<em>「B から見て A に一致する行があるか」</em>のデータが既に入っている。このデータは <code>isDiffPrev</code> というフラグで管理しているので、<strong>「B から見て C に一致する行があるか」</strong>という情報は <code>isDiffNext</code> フラグで管理する。</p>
+<p>こうすることで、ファイル B のある行が、</p>
+<ul>
+  <li>左に置かれる = 前のファイルである、「ファイル A」の行と一致するか否か</li>
+  <li>右に置かれる = 次のファイルである、「ファイル C」の行と一致するか否か</li>
+</ul>
+<p>という2つの情報が保たれる。</p>
+<p>ついでに、最終ファイルである C と、最初のファイルである A も比較して置いてある。「マリオブラザーズ」的な、「画面右端と左端が繋がっている感」がある (伝わるかなコレ…)。</p>
+<p>1行内で文字単位で差分がある時に、「似た行」としての判定はキツそうだったので止めた。</p>
+<h2 id="差分の見せ方"><a class="header-link" href="#差分の見せ方"><span class="header-link-mark"></span></a>差分の見せ方</h2>
+<p>一番困ったのがココ。</p>
+<p>各テキストファイルの情報は、内部的には行ごとのデータに分割して、前後のファイルとの差分の有無などを管理している。よってこの配列データを順に表示すれば良いワケだが、<strong>全ファイルを横並びにして「一致行」と「差分行」を揃えて表示する仕組みが作れなかった。</strong></p>
+<p>2ファイル間の Diff の場合、お互いに「次に一致する行まで」で表示する行を下にズラして、適宜調整用の空行などを入れてやれば、「一致している行」と「差分がある行」を揃えて表示できる。</p>
+<ul>
+  <li>参考：<a href="http://dsp74118.blogspot.com/2013/12/vba-exceldiff.html">VBA Excelで簡易Diff | dsp74118の補完庫</a> … Excel VBA での例。A 列と C 列のデータを1行ずつ見ていって、ズレがあれば行をシフトしている。</li>
+</ul>
+<p>比較対象が3ファイルの時までは、ギリギリなんとかなりそうだった。同一の行データがあるか判定する際、<em>何行離れているか</em>という情報は取得していたので、<strong>中央に置かれるファイル B を基準に、</strong></p>
+<ul>
+  <li>左にあるファイル A との差分行数</li>
+  <li>右にあるファイル C との差分行数</li>
+</ul>
+<p>をチェックしながら、左右のファイル A・C もしくはファイル B 自身の行をズラしていけば、できなくはなさそうだった。</p>
+<p>しかし、コレが4ファイル以上も可変で取得できるとなると、単純に左右のファイルをチェックするだけではダメだった。</p>
+<table>
+  <thead>
+    <tr>
+      <th>行</th>
+      <th>ファイル A</th>
+      <th>ファイル B</th>
+      <th>ファイル C</th>
+      <th>ファイル D</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>1</td>
+      <td><code>{{{{</code></td>
+      <td><code>{</code></td>
+      <td><code>{</code></td>
+      <td><code>{{{{</code></td>
+    </tr>
+    <tr>
+      <td>2</td>
+      <td><code>  "name": "project-a",</code></td>
+      <td><code>  "name": "project-b",</code></td>
+      <td><code>  "name": "project-c",</code></td>
+      <td><code>  "name": "project-d",</code></td>
+    </tr>
+    <tr>
+      <td>3</td>
+      <td><code>  "version": "0.0.1",</code></td>
+      <td><code>  "version": "0.0.1",</code></td>
+      <td><code>  "version": "0.0.2",</code></td>
+      <td><code>  "dependencies": {</code></td>
+    </tr>
+    <tr>
+      <td>4</td>
+      <td><code>  "dependencies": {</code></td>
+      <td><code>  "private": true,</code></td>
+      <td><code>  "private": true,</code></td>
+      <td><code>    "@neos21/ccc": "0.0.1",</code></td>
+    </tr>
+    <tr>
+      <td>5</td>
+      <td><code>    "@neos21/neos21": "0.0.0"</code></td>
+      <td><code>  "dependencies": {</code></td>
+      <td><code>  "dependencies": {</code></td>
+      <td><code>    "@neos21/req-cmd": "0.0.1",</code></td>
+    </tr>
+    <tr>
+      <td>6</td>
+      <td><code>  }</code></td>
+      <td><code>    "@neos21/ccc": "0.0.1",</code></td>
+      <td><code>    "@neos21/neos21": "0.0.0"</code></td>
+      <td><code>    "@neos21/neos21": "0.0.0"</code></td>
+    </tr>
+    <tr>
+      <td>7</td>
+      <td><code>}</code></td>
+      <td><code>    "@neos21/neos21": "0.0.0"</code></td>
+      <td><code>  }</code></td>
+      <td><code>  }</code></td>
+    </tr>
+    <tr>
+      <td>8</td>
+      <td></td>
+      <td><code>  }</code></td>
+      <td><code>}</code></td>
+      <td><code>}</code></td>
+    </tr>
+    <tr>
+      <td>9</td>
+      <td></td>
+      <td><code>}</code></td>
+      <td></td>
+      <td></td>
+    </tr>
+  </tbody>
+</table>
+<p>例えばこんなデータがあった時、人力で「差分行」と「一致行」を比べて、表示する行位置を揃えるとすると、以下のようになると思う。というか、<em>以下のようにしたかった。</em></p>
+<table>
+  <thead>
+    <tr>
+      <th>行</th>
+      <th>ファイル A</th>
+      <th>ファイル B</th>
+      <th>ファイル C</th>
+      <th>ファイル D</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>1</td>
+      <td><code>{{{{</code></td>
+      <td>■(調整用空行)</td>
+      <td>■(調整用空行)</td>
+      <td><code>{{{{</code></td>
+    </tr>
+    <tr>
+      <td>2</td>
+      <td>■</td>
+      <td><code>{</code></td>
+      <td><code>{</code></td>
+      <td>■</td>
+    </tr>
+    <tr>
+      <td>3</td>
+      <td><code>  "name": "project-a",</code>(差)</td>
+      <td><code>  "name": "project-b",</code>(差)</td>
+      <td><code>  "name": "project-c",</code>(差)</td>
+      <td><code>  "name": "project-d",</code>(差)</td>
+    </tr>
+    <tr>
+      <td>4</td>
+      <td><code>  "version": "0.0.1",</code>(同)</td>
+      <td><code>  "version": "0.0.1",</code>(同)</td>
+      <td><code>  "version": "0.0.2",</code>(差)</td>
+      <td>■</td>
+    </tr>
+    <tr>
+      <td>5</td>
+      <td>■</td>
+      <td><code>  "private": true,</code></td>
+      <td><code>  "private": true,</code></td>
+      <td>■</td>
+    </tr>
+    <tr>
+      <td>6</td>
+      <td><code>  "dependencies": {</code></td>
+      <td><code>  "dependencies": {</code></td>
+      <td><code>  "dependencies": {</code></td>
+      <td><code>  "dependencies": {</code></td>
+    </tr>
+    <tr>
+      <td>7</td>
+      <td>■</td>
+      <td><code>    "@neos21/ccc": "0.0.1",</code></td>
+      <td>■</td>
+      <td><code>    "@neos21/ccc": "0.0.1",</code></td>
+    </tr>
+    <tr>
+      <td>8</td>
+      <td>■</td>
+      <td>■</td>
+      <td>■</td>
+      <td><code>    "@neos21/req-cmd": "0.0.1",</code></td>
+    </tr>
+    <tr>
+      <td>9</td>
+      <td><code>    "@neos21/neos21": "0.0.0"</code></td>
+      <td><code>    "@neos21/neos21": "0.0.0"</code></td>
+      <td><code>    "@neos21/neos21": "0.0.0"</code></td>
+      <td><code>    "@neos21/neos21": "0.0.0"</code></td>
+    </tr>
+    <tr>
+      <td>10</td>
+      <td><code>  }</code></td>
+      <td><code>  }</code></td>
+      <td><code>  }</code></td>
+      <td><code>  }</code></td>
+    </tr>
+    <tr>
+      <td>11</td>
+      <td><code>}</code></td>
+      <td><code>}</code></td>
+      <td><code>}</code></td>
+      <td><code>}</code></td>
+    </tr>
+  </tbody>
+</table>
+<p>同じ行同士が横に並ぶよう、調整用の空行を適当な数だけ入れるのが難しい。隣のファイルの一致行とのオフセット情報だけでは、適切な空行が開けきれない。例えば「ファイル D」の4・5行目に調整用の空行があるが、「ファイル B」の <code>"version"</code> と <code>"private"</code> の間にさらに行があったりすると、「ファイル D」からはその行数が把握しきれない。</p>
+<p>3行目の <code>"name"</code> 部分のように、差分行同士でも、行数が合わせられるならズラして表示したくなかったりもする。</p>
+<p>最初に触れた「Rekisa」というフリーソフトは、この一致行と差分行を空行で揃えるのではなく、ファイルとファイルの間に斜めの対応線を入れることで表現していた。</p>
+<p>ファイルごとのループの中で、行ごとのループを作って処理していくような作りだとして…。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token comment">// 擬似コード。</span>
+
+<span class="token keyword control-flow">for</span><span class="token punctuation">(</span>file <span class="token keyword">of</span> files<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token comment">// ループの最初は、file は「ファイル A」を掴んでいるものとする</span>
+  <span class="token keyword control-flow">for</span><span class="token punctuation">(</span>line <span class="token keyword">of</span> file<span class="token punctuation">.</span><span class="token property-access">lines</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token comment">// ループの最初は、line は「ファイル A」の1行目を掴んでいるものとする。</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>この <code>line</code> を基準に、ファイル B 〜 C の同じ行を比較したりしたとして、何を継続条件・終了条件にして、「ファイル B はココに空行を入れよう」とか「ファイル C がこうだから自分 = ファイル A の現在行に空行を追加しよう」とか決めたらいいんだろうか。バカだから整理しきれなかった。</p>
+<p>想定しているファイルも、基本は構造がよく似たファイルばかりが4・5ファイル並ぶようなイメージでいたが、ぜんぜん違うファイルを置かれた時にぐっちゃぐちゃに破綻するのではないか、と思って、行シフトは止めることにした。</p>
+<hr>
+<p>あと、行をズラすのではなく、「一致行を1行目とした、行のグループを作る」ということも考えた。以下のようなデータ構造だ。</p>
+<pre class="language-javascript"><code class="language-javascript">texts <span class="token operator">=</span> <span class="token punctuation">[</span>
+  <span class="token punctuation">{</span>
+    name<span class="token operator">:</span> <span class="token string">'file-A'</span><span class="token punctuation">,</span>
+    data<span class="token operator">:</span> <span class="token punctuation">[</span>
+      <span class="token punctuation">[</span>
+        <span class="token punctuation">{</span> line<span class="token operator">:</span> <span class="token number">1</span><span class="token punctuation">,</span> text<span class="token operator">:</span> <span class="token string">'1行目'</span>    <span class="token punctuation">,</span> isSameNext<span class="token operator">:</span> <span class="token boolean">true</span> <span class="token punctuation">,</span> isSamePrev<span class="token operator">:</span> <span class="token boolean">false</span> <span class="token punctuation">}</span><span class="token punctuation">,</span>
+        <span class="token punctuation">{</span> line<span class="token operator">:</span> <span class="token number">2</span><span class="token punctuation">,</span> text<span class="token operator">:</span> <span class="token string">'2行目 AAA'</span><span class="token punctuation">,</span> isSameNext<span class="token operator">:</span> <span class="token boolean">false</span><span class="token punctuation">,</span> isSamePrev<span class="token operator">:</span> <span class="token boolean">false</span> <span class="token punctuation">}</span>
+      <span class="token punctuation">]</span><span class="token punctuation">,</span>
+      <span class="token punctuation">[</span>
+        <span class="token punctuation">{</span> line<span class="token operator">:</span> <span class="token number">3</span><span class="token punctuation">,</span> text<span class="token operator">:</span> <span class="token string">'3行目'</span>    <span class="token punctuation">,</span> isSameNext<span class="token operator">:</span> <span class="token boolean">true</span> <span class="token punctuation">,</span> isSamePrev<span class="token operator">:</span> <span class="token boolean">true</span>  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+        <span class="token punctuation">{</span> line<span class="token operator">:</span> <span class="token number">4</span><span class="token punctuation">,</span> text<span class="token operator">:</span> <span class="token string">'4行目 AAA'</span><span class="token punctuation">,</span> isSameNext<span class="token operator">:</span> <span class="token boolean">false</span><span class="token punctuation">,</span> isSamePrev<span class="token operator">:</span> <span class="token boolean">false</span> <span class="token punctuation">}</span>
+      <span class="token punctuation">]</span>
+    <span class="token punctuation">]</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    name<span class="token operator">:</span> <span class="token string">'file-B'</span><span class="token punctuation">,</span>
+    data<span class="token operator">:</span> <span class="token punctuation">[</span>
+      <span class="token punctuation">[</span>
+        <span class="token punctuation">{</span> line<span class="token operator">:</span> <span class="token number">1</span><span class="token punctuation">,</span> text<span class="token operator">:</span> <span class="token string">'1行目'</span>    <span class="token punctuation">,</span> isSameNext<span class="token operator">:</span> <span class="token boolean">false</span><span class="token punctuation">,</span> isSamePrev<span class="token operator">:</span> <span class="token boolean">true</span>  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+        <span class="token punctuation">{</span> line<span class="token operator">:</span> <span class="token number">2</span><span class="token punctuation">,</span> text<span class="token operator">:</span> <span class="token string">'2行目 BBB'</span><span class="token punctuation">,</span> isSameNext<span class="token operator">:</span> <span class="token boolean">false</span><span class="token punctuation">,</span> isSamePrev<span class="token operator">:</span> <span class="token boolean">false</span> <span class="token punctuation">}</span>
+      <span class="token punctuation">]</span><span class="token punctuation">,</span>
+      <span class="token punctuation">[</span>
+        <span class="token punctuation">{</span> line<span class="token operator">:</span> <span class="token number">3</span><span class="token punctuation">,</span> text<span class="token operator">:</span> <span class="token string">'3行目'</span>    <span class="token punctuation">,</span> isSameNext<span class="token operator">:</span> <span class="token boolean">true</span> <span class="token punctuation">,</span> isSamePrev<span class="token operator">:</span> <span class="token boolean">true</span>  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+        <span class="token punctuation">{</span> line<span class="token operator">:</span> <span class="token number">4</span><span class="token punctuation">,</span> text<span class="token operator">:</span> <span class="token string">'4行目 BBB'</span><span class="token punctuation">,</span> isSameNext<span class="token operator">:</span> <span class="token boolean">false</span><span class="token punctuation">,</span> isSamePrev<span class="token operator">:</span> <span class="token boolean">false</span> <span class="token punctuation">}</span>
+      <span class="token punctuation">]</span>
+    <span class="token punctuation">]</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    name<span class="token operator">:</span> <span class="token string">'file-C'</span><span class="token punctuation">,</span>
+    data<span class="token operator">:</span> <span class="token punctuation">[</span>
+      <span class="token punctuation">[</span>
+        <span class="token punctuation">{</span> line<span class="token operator">:</span> <span class="token number">1</span><span class="token punctuation">,</span> text<span class="token operator">:</span> <span class="token string">'1行目 CCC'</span><span class="token punctuation">,</span> isSameNext<span class="token operator">:</span> <span class="token boolean">false</span><span class="token punctuation">,</span> isSamePrev<span class="token operator">:</span> <span class="token boolean">false</span> <span class="token punctuation">}</span><span class="token punctuation">,</span>
+        <span class="token punctuation">{</span> line<span class="token operator">:</span> <span class="token number">2</span><span class="token punctuation">,</span> text<span class="token operator">:</span> <span class="token string">'2行目 CCC'</span><span class="token punctuation">,</span> isSameNext<span class="token operator">:</span> <span class="token boolean">false</span><span class="token punctuation">,</span> isSamePrev<span class="token operator">:</span> <span class="token boolean">false</span> <span class="token punctuation">}</span>
+      <span class="token punctuation">]</span><span class="token punctuation">,</span>
+      <span class="token punctuation">[</span>
+        <span class="token punctuation">{</span> line<span class="token operator">:</span> <span class="token number">3</span><span class="token punctuation">,</span> text<span class="token operator">:</span> <span class="token string">'3行目'</span>    <span class="token punctuation">,</span> isSameNext<span class="token operator">:</span> <span class="token boolean">true</span> <span class="token punctuation">,</span> isSamePrev<span class="token operator">:</span> <span class="token boolean">true</span>  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+        <span class="token punctuation">{</span> line<span class="token operator">:</span> <span class="token number">4</span><span class="token punctuation">,</span> text<span class="token operator">:</span> <span class="token string">'4行目 CCC'</span><span class="token punctuation">,</span> isSameNext<span class="token operator">:</span> <span class="token boolean">false</span><span class="token punctuation">,</span> isSamePrev<span class="token operator">:</span> <span class="token boolean">false</span> <span class="token punctuation">}</span>
+      <span class="token punctuation">]</span>
+    <span class="token punctuation">]</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">]</span><span class="token punctuation">;</span>
+</code></pre>
+<p>うーん伝わるだろうか…。こんなデータ構造にできれば、各ファイルの <code>data</code> プロパティの配列ごとに上揃えで表示すればキレイに並べられるんじゃないか？と思ったのだ。</p>
+<table>
+  <thead>
+    <tr>
+      <th>行グループ</th>
+      <th>file-A</th>
+      <th>file-B</th>
+      <th>file-C</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>1</td>
+      <td><code>texts[0].data[0]</code></td>
+      <td><code>texts[1].data[0]</code></td>
+      <td><code>texts[2].data[0]</code></td>
+    </tr>
+    <tr>
+      <td>2</td>
+      <td><code>texts[0].data[1]</code></td>
+      <td><code>texts[1].data[1]</code></td>
+      <td><code>texts[2].data[1]</code></td>
+    </tr>
+  </tbody>
+</table>
+<p>こういうワケだ。</p>
+<p>だがコレも、結局複数ファイルをチェックしていって行グループ自体をズラして配置する必要が出てくると分かり、断念。「数を合わせる」ってのが無理だった。</p>
+<h2 id="結局、差分行はこう見せることにした"><a class="header-link" href="#結局、差分行はこう見せることにした"><span class="header-link-mark"></span></a>結局、差分行はこう見せることにした</h2>
+<p>そんなこんなで、行シフトは無理だなーと判断し、ある1行に対して左右のファイルとの差分を2色で表現するようにした。つまり、</p>
+<ul>
+  <li>右隣のファイルと差分がある行は、その行の右半分を赤色に</li>
+  <li>左隣のファイルと差分がある行は、その行の左半分を緑色に</li>
+</ul>
+<p>することにした。</p>
+<p>テキストの入れ方は2種類で、テキストエリアに直接書くか、テキストファイルをアップロードするか、だ。アップロードといってもサーバに保存しているワケではなく、中身を読み込んでテキストエリアに入れたら終わり。テキストエリアに入ったテキストはその後編集もできるので、その場で差分をなくすよう書き換えられる。</p>
+<h2 id="それ以外に困ったこと"><a class="header-link" href="#それ以外に困ったこと"><span class="header-link-mark"></span></a>それ以外に困ったこと</h2>
+<p>地味に詰まったのは、<code>table</code> 要素内で高さを 100% にすること。<code>td</code> 要素に <code>height: 100%</code> とするだけではダメなのだ。<code>height</code> のパーセンテージは、<code>height: auto</code> 以外の高さが明示的に指定されている親要素に遡って算出しようとするため、<em><code>table</code> 要素に <code>table-layout: fixed</code> と <code>height: 100%</code> を指定することで対応した。</em></p>
+<p>また、列を動的に追加できるテーブルにしたので、幅の固定もちょっと面倒だった。こちらも <code>table</code> 要素に <code>table-layout: fixed</code> を書いておいて、<code>width: 100%</code> とすると上手く行った。</p>
+<hr>
+<p>あと、行の左半分と右半分に差分を表現する背景色を付けているのだが、<code>position: absolute</code> で配置した関係上、テキストの表示領域を横スクロールした時に位置が固定できなかったので、<code>scroll</code> イベントを見て <code>scrollLeft</code> の値を <code>style</code> 属性でブチ込むようにした。ウィンドウのリサイズ時などの挙動にちょっとバグが残るのでご利用は計画的に。</p>
+<pre class="language-html"><code class="language-html"><span class="token comment">&#x3C;!-- 1ファイルの Diff 結果を表示する領域。この .diff-result-wrapper が横スクロールできる。onScrollView() 関数で、scrollLeft の値を変数 text に保持させる --></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>div</span> <span class="token attr-name">*ngIf</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>text.diffResult<span class="token punctuation">"</span></span> <span class="token attr-name">class</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>diff-result-wrapper<span class="token punctuation">"</span></span> <span class="token attr-name">(scroll)</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>onScrollView($event, i)<span class="token punctuation">"</span></span><span class="token punctuation">></span></span>
+  <span class="token comment">&#x3C;!-- 1行ごとにループする。ng-container はレンダリングされない要素なので、処理のまとまりを表現したい時とかに適宜使う --></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>ng-container</span> <span class="token attr-name">*ngFor</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>let line of text.diffResult<span class="token punctuation">"</span></span><span class="token punctuation">></span></span>
+    <span class="token comment">&#x3C;!-- 1行のデータを .diff-line で囲む --></span>
+    <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>div</span> <span class="token attr-name">class</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>diff-line<span class="token punctuation">"</span></span><span class="token punctuation">></span></span>
+      <span class="token comment">&#x3C;!--
+        ::before、::after 疑似要素でもできるとは思うが、ちょっと挙動に違和感があったので空要素を作った。
+        - .is-diff-next : 行の右半分に赤背景を付ける
+        - .is-diff-prev : 行の左半分に緑背景を付ける
+        両者に [ngStyle] で left もしくは right の値を入れている。
+      --></span>
+      <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>div</span> <span class="token attr-name">class</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>is-diff-next<span class="token punctuation">"</span></span> <span class="token attr-name">*ngIf</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>line.isDiffNext<span class="token punctuation">"</span></span> <span class="token attr-name">[ngStyle]</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>{ <span class="token punctuation">'</span>right<span class="token punctuation">'</span>: -text.scrollLeft + <span class="token punctuation">'</span>px<span class="token punctuation">'</span> }<span class="token punctuation">"</span></span><span class="token punctuation">></span></span><span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>span</span><span class="token punctuation">></span></span><span class="token entity named-entity" title=" ">&#x26;nbsp;</span><span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>span</span><span class="token punctuation">></span></span><span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>div</span><span class="token punctuation">></span></span>
+      <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>div</span> <span class="token attr-name">class</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>is-diff-prev<span class="token punctuation">"</span></span> <span class="token attr-name">*ngIf</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>line.isDiffPrev<span class="token punctuation">"</span></span> <span class="token attr-name">[ngStyle]</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>{ <span class="token punctuation">'</span>left<span class="token punctuation">'</span> :  text.scrollLeft + <span class="token punctuation">'</span>px<span class="token punctuation">'</span> }<span class="token punctuation">"</span></span><span class="token punctuation">></span></span><span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>span</span><span class="token punctuation">></span></span><span class="token entity named-entity" title=" ">&#x26;nbsp;</span><span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>span</span><span class="token punctuation">></span></span><span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>div</span><span class="token punctuation">></span></span>
+      <span class="token comment">&#x3C;!-- コレが1行の表示部分 --></span>
+      <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>div</span> <span class="token attr-name">class</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>diff-line-text<span class="token punctuation">"</span></span><span class="token punctuation">></span></span>{{ line.text }}<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>div</span><span class="token punctuation">></span></span>
+    <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>div</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>ng-container</span><span class="token punctuation">></span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>div</span><span class="token punctuation">></span></span>
+</code></pre>
+<pre class="language-scss"><code class="language-scss"><span class="token comment">// Diff 結果を表示するセル</span>
+<span class="token selector">td.cell-diff-result </span><span class="token punctuation">{</span>
+  <span class="token property">height</span><span class="token punctuation">:</span> <span class="token number">100</span><span class="token unit">%</span><span class="token punctuation">;</span>  <span class="token comment">// 前述のセルの高さの件</span>
+  
+  <span class="token comment">// DIff 結果を表示する欄</span>
+  <span class="token selector">.diff-result-wrapper </span><span class="token punctuation">{</span>
+    <span class="token property">min-height</span><span class="token punctuation">:</span> <span class="token number">100</span><span class="token unit">%</span><span class="token punctuation">;</span>  <span class="token comment">// セルの高さいっぱいに表示領域を広げる (横スクロールバーの位置を揃えたいので)</span>
+    <span class="token property">padding</span><span class="token punctuation">:</span> <span class="token number">.5</span><span class="token unit">em</span> <span class="token number">0</span><span class="token punctuation">;</span>
+    <span class="token property">overflow-x</span><span class="token punctuation">:</span> scroll<span class="token punctuation">;</span>  <span class="token comment">// 横スクロールバーを表示する</span>
+    
+    <span class="token comment">// 差分行のみ色付けする</span>
+    <span class="token selector">.diff-line </span><span class="token punctuation">{</span>
+      <span class="token property">position</span><span class="token punctuation">:</span> relative<span class="token punctuation">;</span>  <span class="token comment">// 子要素たちの基準とする</span>
+      <span class="token property">padding</span><span class="token punctuation">:</span> <span class="token number">0</span> <span class="token number">.5</span><span class="token unit">em</span><span class="token punctuation">;</span>
+      <span class="token property">white-space</span><span class="token punctuation">:</span> pre<span class="token punctuation">;</span>  <span class="token comment">// スペースを表示し、折返しされないようにする</span>
+      
+      <span class="token comment">// .is-diff-next・.is-diff-prev より上に配置するため z-index を指定</span>
+      <span class="token selector">.diff-line-text </span><span class="token punctuation">{</span>
+        <span class="token property">position</span><span class="token punctuation">:</span> relative<span class="token punctuation">;</span>
+        <span class="token property">z-index</span><span class="token punctuation">:</span> <span class="token number">9999</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span>
+      
+      <span class="token comment">// 右隣と差分がある行 : 右半分を赤くする。width は若干 .is-diff-prev と被るように。.diff-line-text の下に置くため z-index を指定</span>
+      <span class="token selector">.is-diff-next </span><span class="token punctuation">{</span>
+        <span class="token property">position</span><span class="token punctuation">:</span> absolute<span class="token punctuation">;</span>
+        <span class="token property">top</span><span class="token punctuation">:</span> <span class="token number">0</span><span class="token punctuation">;</span>
+        <span class="token property">right</span><span class="token punctuation">:</span> <span class="token number">0</span><span class="token punctuation">;</span>
+        <span class="token property">z-index</span><span class="token punctuation">:</span> <span class="token number">1</span><span class="token punctuation">;</span>
+        <span class="token property">width</span><span class="token punctuation">:</span> <span class="token number">55</span><span class="token unit">%</span><span class="token punctuation">;</span>
+        <span class="token property">background</span><span class="token punctuation">:</span> <span class="token function">linear-gradient</span><span class="token punctuation">(</span>to right<span class="token punctuation">,</span> <span class="token color"><span class="token function">rgba</span><span class="token punctuation">(</span><span class="token number">255</span><span class="token punctuation">,</span> <span class="token number">255</span><span class="token punctuation">,</span> <span class="token number">255</span><span class="token punctuation">,</span> <span class="token number">0</span><span class="token punctuation">)</span></span><span class="token punctuation">,</span> <span class="token color"><span class="token function">rgba</span><span class="token punctuation">(</span><span class="token number">255</span><span class="token punctuation">,</span> <span class="token number">200</span><span class="token punctuation">,</span> <span class="token number">200</span><span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">)</span></span> <span class="token number">30</span><span class="token unit">%</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        
+        <span class="token comment">// 行の高さを確保するために &#x26;nbsp; を配置している span は非表示にする</span>
+        <span class="token selector">span </span><span class="token punctuation">{</span> <span class="token property">visibility</span><span class="token punctuation">:</span> hidden<span class="token punctuation">;</span> <span class="token punctuation">}</span>
+      <span class="token punctuation">}</span>
+      
+      <span class="token comment">// 左隣と差分がある行 : 左半分を緑にする。width は若干 .is-diff-next と被るように。.diff-line-text の下に置くため z-index を指定</span>
+      <span class="token selector">.is-diff-prev </span><span class="token punctuation">{</span>
+        <span class="token property">position</span><span class="token punctuation">:</span> absolute<span class="token punctuation">;</span>
+        <span class="token property">top</span><span class="token punctuation">:</span> <span class="token number">0</span><span class="token punctuation">;</span>
+        <span class="token property">left</span><span class="token punctuation">:</span> <span class="token number">0</span><span class="token punctuation">;</span>
+        <span class="token property">z-index</span><span class="token punctuation">:</span> <span class="token number">1</span><span class="token punctuation">;</span>
+        <span class="token property">width</span><span class="token punctuation">:</span> <span class="token number">55</span><span class="token unit">%</span><span class="token punctuation">;</span>
+        <span class="token property">background</span><span class="token punctuation">:</span> <span class="token function">linear-gradient</span><span class="token punctuation">(</span>to right<span class="token punctuation">,</span> <span class="token color"><span class="token function">rgba</span><span class="token punctuation">(</span><span class="token number">200</span><span class="token punctuation">,</span> <span class="token number">255</span><span class="token punctuation">,</span> <span class="token number">200</span><span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">)</span></span> <span class="token number">70</span><span class="token unit">%</span><span class="token punctuation">,</span> <span class="token color"><span class="token function">rgba</span><span class="token punctuation">(</span><span class="token number">255</span><span class="token punctuation">,</span> <span class="token number">255</span><span class="token punctuation">,</span> <span class="token number">255</span><span class="token punctuation">,</span> <span class="token number">0</span><span class="token punctuation">)</span></span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        
+        <span class="token comment">// 行の高さを確保するために &#x26;nbsp; を配置している span は非表示にする</span>
+        <span class="token selector">span </span><span class="token punctuation">{</span> <span class="token property">visibility</span><span class="token punctuation">:</span> hidden<span class="token punctuation">;</span> <span class="token punctuation">}</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<pre class="language-typescript"><code class="language-typescript"><span class="token doc-comment comment">/** プレビューを横スクロールした時にカラーリング要素の配置を調整するため、横スクロール位置を控える */</span>
+<span class="token keyword">public</span> <span class="token function">onScrollView</span><span class="token punctuation">(</span>event<span class="token operator">:</span> <span class="token maybe-class-name">Event</span><span class="token punctuation">,</span> index<span class="token operator">:</span> <span class="token builtin">number</span><span class="token punctuation">)</span><span class="token operator">:</span> <span class="token keyword">void</span> <span class="token punctuation">{</span>
+  <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token operator">!</span>event <span class="token operator">||</span> <span class="token operator">!</span>event<span class="token punctuation">.</span><span class="token property-access">target</span> <span class="token operator">||</span> event<span class="token punctuation">.</span><span class="token property-access">target</span><span class="token punctuation">[</span><span class="token string">'scrollLeft'</span><span class="token punctuation">]</span> <span class="token operator">===</span> <span class="token keyword">undefined</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token keyword">return</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  
+  <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">texts</span><span class="token punctuation">[</span>index<span class="token punctuation">]</span><span class="token punctuation">.</span><span class="token property-access">scrollLeft</span> <span class="token operator">=</span> event<span class="token punctuation">.</span><span class="token property-access">target</span><span class="token punctuation">[</span><span class="token string">'scrollLeft'</span><span class="token punctuation">]</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>コレだけ。</p>
+<hr>
+<p>それから、<code>input[type="file"]</code> 要素の内容をリセットする方法。同名のファイルを再度アップした時も Change イベントを走らせたかったので、ファイルをアップした時に <code>input[type="file"]</code> 要素をリセットしようかと思ったのだが、<code>input[type="file"]</code> の <code>value</code> 属性値を書き換えようとすると、セキュリティ上の理由でエラーになるようだった。</p>
+<p>そこで、DOM 要素ごと非表示にする <code>*ngIf</code> ディレクティブを利用して、「ファイルをアップしたら <code>input[type="file"]</code> 要素を一度 DOM から削除し、再度表示させる」という動きにしてみた。DOM 要素を一度削って再度突っ込めば、セキュリティ上の理由で <code>value</code> 属性値が保存されない <code>input[type="file"]</code> 要素をリセットできるというワケだ。</p>
+<pre class="language-html"><code class="language-html"><span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>input</span> <span class="token attr-name">type</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>file<span class="token punctuation">"</span></span> <span class="token attr-name">(change)</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>loadFile($event, i)<span class="token punctuation">"</span></span> <span class="token attr-name">*ngIf</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>!text.file<span class="token punctuation">"</span></span><span class="token punctuation">></span></span>
+</code></pre>
+<pre class="language-typescript"><code class="language-typescript"><span class="token doc-comment comment">/** ファイルを読み込む */</span>
+<span class="token keyword">public</span> <span class="token function">loadFile</span><span class="token punctuation">(</span>event<span class="token operator">:</span> <span class="token maybe-class-name">Event</span><span class="token punctuation">,</span> index<span class="token operator">:</span> <span class="token builtin">number</span><span class="token punctuation">)</span><span class="token operator">:</span> <span class="token keyword">void</span> <span class="token punctuation">{</span>
+  <span class="token comment">// ファイルを取得 (入力チェックなどの処理は省略…)</span>
+  <span class="token keyword">const</span> file <span class="token operator">=</span> event<span class="token punctuation">.</span><span class="token property-access">target</span><span class="token punctuation">[</span><span class="token string">'files'</span><span class="token punctuation">]</span><span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">;</span>
+  
+  <span class="token comment">// ファイルリーダを用意する</span>
+  <span class="token keyword">const</span> reader <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name"><span class="token maybe-class-name">FileReader</span></span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token comment">// ファイルを読み込んだらデータをセットする</span>
+  reader<span class="token punctuation">.</span><span class="token method-variable function-variable method function property-access">onload</span> <span class="token operator">=</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">texts</span><span class="token punctuation">[</span>index<span class="token punctuation">]</span><span class="token punctuation">.</span><span class="token property-access">name</span> <span class="token operator">=</span> file<span class="token punctuation">.</span><span class="token property-access">name</span><span class="token punctuation">;</span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">texts</span><span class="token punctuation">[</span>index<span class="token punctuation">]</span><span class="token punctuation">.</span><span class="token property-access">raw</span> <span class="token operator">=</span> reader<span class="token punctuation">.</span><span class="token property-access">result</span><span class="token punctuation">;</span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token method function property-access">execDiff</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment">// 読み込んだデータで Diff を再実行</span>
+    
+    <span class="token comment">// ファイルアップロード欄をリセットする</span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">texts</span><span class="token punctuation">[</span>index<span class="token punctuation">]</span><span class="token punctuation">.</span><span class="token property-access">file</span> <span class="token operator">=</span> <span class="token boolean">true</span><span class="token punctuation">;</span>  <span class="token comment">// コレで *ngIf により要素が DOM ツリーから消されて非表示になる</span>
+    <span class="token comment">// すぐに false に変えても上手く反映されないので、setTimeout でタイミングをズラして再表示させる</span>
+    <span class="token function">setTimeout</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+      <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">texts</span><span class="token punctuation">[</span>index<span class="token punctuation">]</span><span class="token punctuation">.</span><span class="token property-access">file</span> <span class="token operator">=</span> <span class="token boolean">false</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span><span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span><span class="token punctuation">;</span>
+  
+  <span class="token comment">// ファイル読み込みを実行する</span>
+  reader<span class="token punctuation">.</span><span class="token method function property-access">readAsText</span><span class="token punctuation">(</span>file<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>なかなか乱暴…。</p>
+<h2 id="以上"><a class="header-link" href="#以上"><span class="header-link-mark"></span></a>以上</h2>
+<p>巷で「3ファイルまで」の差分比較しかしてくれないツールが多い理由が何となく分かった気がする。今回はサラッと流したが Diff のアルゴリズムも突き詰めていくと難しくなりそうだし、表示時の行シフトができないのだ。</p>
+<p>何か上手いやり方があったら教えてください。</p>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2018-07-24</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2018-07-24</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>Angular v4.3 で追加された HttpClient を使ってみた - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2017/08/09-02.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2017/index.html">2017年</a></li>
+            <li><a href="/blog/2017/08/index.html">08月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2017-08-09</time></div>
+        <h1 id="page-title">Angular v4.3 で追加された HttpClient を使ってみた</h1>
+
+<p>Angular v4.3 で新たに追加された HttpClient というモジュールを使ってみた。</p>
+<p>これは既存の Http モジュールとは別モノで提供されていて、JSON のパースを勝手にやってくれたり、レスポンスの型指定ができたりと便利なようなので、ちょっとだけ使ってみた。</p>
+<h2 id="angular-v43-プロジェクトを用意する"><a class="header-link" href="#angular-v43-プロジェクトを用意する"><span class="header-link-mark"></span></a>Angular v4.3 プロジェクトを用意する</h2>
+<p>前提環境は Angular CLI で作れる Angular アプリの雛形相当。これに Angular v4.3 のモジュール群をインストールする。</p>
+<p>Angular は毎週パッチバージョンが上がるので、執筆時点では v4.3.2 になっている。<code>npm outdated</code> でバージョンを確認し、<code>npm update</code> で <code>@angular</code> の各パッケージを v4.3.2 にアップデートする。<code>npm-check-updates</code> というパッケージを使えば一気に更新できるので、これをグローバルインストールして <code>ncu -a</code> とするのが楽かも。</p>
+<h2 id="httpclient-モジュールを追加する"><a class="header-link" href="#httpclient-モジュールを追加する"><span class="header-link-mark"></span></a>HttpClient モジュールを追加する</h2>
+<p>次にアプリのモジュールに HttpClient モジュールを追加する。</p>
+<pre class="language-typescript"><code class="language-typescript"><span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">NgModule</span> <span class="token punctuation">}</span></span> <span class="token keyword">from</span> <span class="token string">'@angular/core'</span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">BrowserModule</span> <span class="token punctuation">}</span></span> <span class="token keyword">from</span> <span class="token string">'@angular/platform-browser'</span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">HttpClientModule</span> <span class="token punctuation">}</span></span> <span class="token keyword">from</span> <span class="token string">'@angular/common/http'</span><span class="token punctuation">;</span>  <span class="token comment">// ← コレ</span>
+
+@<span class="token function"><span class="token maybe-class-name">NgModule</span></span><span class="token punctuation">(</span><span class="token punctuation">{</span>
+  imports<span class="token operator">:</span> <span class="token punctuation">[</span>
+    <span class="token maybe-class-name">BrowserModule</span><span class="token punctuation">,</span>
+    <span class="token maybe-class-name">HttpClientModule</span>  <span class="token comment">// ← コレ</span>
+  <span class="token punctuation">]</span><span class="token punctuation">,</span>
+  <span class="token comment">// 以下略</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span>
+<span class="token keyword">export</span> <span class="token keyword">class</span> <span class="token class-name"><span class="token maybe-class-name">AppModule</span></span> <span class="token punctuation">{</span><span class="token punctuation">}</span>
+</code></pre>
+<h2 id="httpclient-を使用するサービスを作る"><a class="header-link" href="#httpclient-を使用するサービスを作る"><span class="header-link-mark"></span></a>HttpClient を使用するサービスを作る</h2>
+<p>次に HttpClient を使用するサービスを作る。ココでは GET・POST 通信をそれぞれ行うメソッドを用意した。</p>
+<pre class="language-typescript"><code class="language-typescript"><span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">Injectable</span> <span class="token punctuation">}</span></span> <span class="token keyword">from</span> <span class="token string">'@angular/core'</span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">HttpClient</span><span class="token punctuation">,</span> <span class="token maybe-class-name">HttpParams</span> <span class="token punctuation">}</span></span> <span class="token keyword">from</span> <span class="token string">'@angular/common/http'</span><span class="token punctuation">;</span>
+
+<span class="token doc-comment comment">/**
+ * GET・POST 通信を行うサンプル
+ */</span>
+@<span class="token function"><span class="token maybe-class-name">Injectable</span></span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+<span class="token keyword">export</span> <span class="token keyword">class</span> <span class="token class-name"><span class="token maybe-class-name">SampleService</span></span> <span class="token punctuation">{</span>
+  <span class="token doc-comment comment">/**
+   * コンストラクタ
+   * 
+   * <span class="token keyword">@param</span> <span class="token parameter">http</span> HttpClient を DI する
+   */</span>
+  <span class="token keyword">constructor</span><span class="token punctuation">(</span><span class="token keyword">private</span> http<span class="token operator">:</span> <span class="token maybe-class-name">HttpClient</span><span class="token punctuation">)</span> <span class="token punctuation">{</span> <span class="token punctuation">}</span>
+  
+  <span class="token doc-comment comment">/**
+   * GET 通信のサンプル
+   * 
+   * <span class="token keyword">@return</span> GET 通信の結果を持った Promise
+   */</span>
+  <span class="token keyword">get</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator">:</span> <span class="token known-class-name class-name">Promise</span><span class="token operator">&#x3C;</span><span class="token builtin">any</span><span class="token operator">></span> <span class="token punctuation">{</span>
+    <span class="token keyword">const</span> url <span class="token operator">=</span> <span class="token string">'http://example.com/sample-api'</span><span class="token punctuation">;</span>
+    <span class="token keyword">const</span> myParameter <span class="token operator">=</span> <span class="token string">'MyParameterValue'</span><span class="token punctuation">;</span>
+    
+    <span class="token keyword">return</span> <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">http</span><span class="token punctuation">.</span><span class="token keyword">get</span><span class="token punctuation">(</span>url<span class="token punctuation">,</span> <span class="token punctuation">{</span>
+      params<span class="token operator">:</span> <span class="token keyword">new</span> <span class="token class-name"><span class="token maybe-class-name">HttpParams</span></span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token keyword">set</span><span class="token punctuation">(</span><span class="token string">'myParameter'</span><span class="token punctuation">,</span> myParameterValue<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">toPromise</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  
+  <span class="token doc-comment comment">/**
+   * POST 通信のサンプル
+   * 
+   * <span class="token keyword">@return</span> POST 通信の結果を持った Promise
+   */</span>
+  <span class="token function">save</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator">:</span> <span class="token known-class-name class-name">Promise</span><span class="token operator">&#x3C;</span><span class="token builtin">any</span><span class="token operator">></span> <span class="token punctuation">{</span>
+    <span class="token keyword">const</span> url <span class="token operator">=</span> <span class="token string">'http://example.com/sample-api'</span><span class="token punctuation">;</span>
+    <span class="token keyword">const</span> body <span class="token operator">=</span> <span class="token punctuation">{</span>
+      myPostData<span class="token operator">:</span> <span class="token string">'MyPostDataValue'</span>
+    <span class="token punctuation">}</span><span class="token punctuation">;</span>
+    
+    <span class="token keyword">return</span> <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">http</span><span class="token punctuation">.</span><span class="token method function property-access">post</span><span class="token punctuation">(</span>url<span class="token punctuation">,</span> body<span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">toPromise</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<h2 id="get-通信のサンプル"><a class="header-link" href="#get-通信のサンプル"><span class="header-link-mark"></span></a>GET 通信のサンプル</h2>
+<p>一番簡単な GET 通信のサンプルは以下のとおり。</p>
+<pre class="language-typescript"><code class="language-typescript"><span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">http</span><span class="token punctuation">.</span><span class="token keyword">get</span><span class="token punctuation">(</span>url<span class="token punctuation">)</span>
+  <span class="token punctuation">.</span><span class="token method function property-access">subscribe</span><span class="token punctuation">(</span><span class="token punctuation">(</span>response<span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+    <span class="token comment">// response は Object 型</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>これで指定の URL に GET 通信ができる。</p>
+<p>これまでの Http モジュールは戻り値が <code>Observable&#x3C;Response></code> であり、JSON パースする必要があったが、HttpClient では <code>Observable&#x3C;Object></code> で返されるので JSON パースが要らなくなった。</p>
+<p>上述の SampleService では、パラメータを指定している他、Observable を Promise に変換している。以下のように扱うことができる。</p>
+<pre class="language-typescript"><code class="language-typescript"><span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">http</span><span class="token punctuation">.</span><span class="token keyword">get</span><span class="token punctuation">(</span>url<span class="token punctuation">,</span> <span class="token punctuation">{</span>
+  params<span class="token operator">:</span> <span class="token keyword">new</span> <span class="token class-name"><span class="token maybe-class-name">HttpParams</span></span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token keyword">set</span><span class="token punctuation">(</span><span class="token string">'myParameter'</span><span class="token punctuation">,</span> <span class="token string">'MyParameterValue'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token comment">// レスポンスのフォーマットを指定する場合は以下</span>
+  responseType<span class="token operator">:</span> <span class="token string">'text'</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span>
+  <span class="token punctuation">.</span><span class="token method function property-access">toPromise</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+  <span class="token punctuation">.</span><span class="token method function property-access">then</span><span class="token punctuation">(</span><span class="token punctuation">(</span>response<span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+    <span class="token comment">// 処理</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>これで、<code>【url】?myParameter=MyParameterValue</code> という URL で GET 通信したのと同じ結果が得られる。</p>
+<h2 id="post-通信のサンプル"><a class="header-link" href="#post-通信のサンプル"><span class="header-link-mark"></span></a>POST 通信のサンプル</h2>
+<p>POST 通信の場合も、基本的なやり方は同じ。</p>
+<pre class="language-typescript"><code class="language-typescript"><span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">http</span><span class="token punctuation">.</span><span class="token method function property-access">post</span><span class="token punctuation">(</span>url<span class="token punctuation">,</span> <span class="token punctuation">{</span>
+  myPostData<span class="token operator">:</span> <span class="token string">'MyPostDataValue'</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span>
+  <span class="token punctuation">.</span><span class="token method function property-access">subscribe</span><span class="token punctuation">(</span><span class="token punctuation">(</span>response<span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+    <span class="token comment">// 成功</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span> <span class="token punctuation">(</span>error<span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+    <span class="token comment">// 失敗</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>GET パラメータに対応する、POST 時の body は Object で記せば良い。</p>
+<p>これも SampleService の方では Promise 化している。</p>
+<pre class="language-typescript"><code class="language-typescript"><span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">http</span><span class="token punctuation">.</span><span class="token method function property-access">post</span><span class="token punctuation">(</span>url<span class="token punctuation">,</span> body<span class="token punctuation">)</span>
+  <span class="token punctuation">.</span><span class="token method function property-access">toPromise</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+  <span class="token punctuation">.</span><span class="token method function property-access">then</span><span class="token punctuation">(</span><span class="token punctuation">(</span>response<span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+    <span class="token comment">// 成功</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span>
+  <span class="token punctuation">.</span><span class="token keyword">catch</span><span class="token punctuation">(</span><span class="token punctuation">(</span>error<span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+    <span class="token comment">// 失敗</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<h2 id="ユニットテストのやり方"><a class="header-link" href="#ユニットテストのやり方"><span class="header-link-mark"></span></a>ユニットテストのやり方</h2>
+<p>HttpClient モジュールはユニットテストでのモック化も楽になっている。少しだけつまづいたところがあるので紹介。</p>
+<pre class="language-typescript"><code class="language-typescript"><span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">HttpClientTestingModule</span><span class="token punctuation">,</span> <span class="token maybe-class-name">HttpTestingController</span> <span class="token punctuation">}</span></span> <span class="token keyword">from</span> <span class="token string">'@angular/common/http/testing'</span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> inject<span class="token punctuation">,</span> <span class="token maybe-class-name">TestBed</span> <span class="token punctuation">}</span></span> <span class="token keyword">from</span> <span class="token string">'@angular/core/testing'</span><span class="token punctuation">;</span>
+
+<span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">SampleService</span> <span class="token punctuation">}</span></span> <span class="token keyword">from</span> <span class="token string">'./sample.service'</span><span class="token punctuation">;</span>
+
+<span class="token function">describe</span><span class="token punctuation">(</span><span class="token string">'SampleService'</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token function">beforeEach</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+    <span class="token maybe-class-name">TestBed</span><span class="token punctuation">.</span><span class="token method function property-access">configureTestingModule</span><span class="token punctuation">(</span><span class="token punctuation">{</span>
+      imports<span class="token operator">:</span> <span class="token punctuation">[</span><span class="token maybe-class-name">HttpClientTestingModule</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
+      providers<span class="token operator">:</span> <span class="token punctuation">[</span><span class="token maybe-class-name">SampleService</span><span class="token punctuation">]</span>
+    <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  
+  <span class="token comment">// テスト対象サービス</span>
+  <span class="token keyword">let</span> sut<span class="token punctuation">;</span>
+  <span class="token comment">// 通信先のモック</span>
+  <span class="token keyword">let</span> httpMock
+  <span class="token comment">// テスト対象サービス・モックの用意</span>
+  <span class="token function">beforeEach</span><span class="token punctuation">(</span><span class="token function">inject</span><span class="token punctuation">(</span><span class="token punctuation">[</span><span class="token maybe-class-name">SampleService</span><span class="token punctuation">,</span> <span class="token maybe-class-name">HttpTestingController</span><span class="token punctuation">]</span><span class="token punctuation">,</span> <span class="token punctuation">(</span>sampleService<span class="token operator">:</span> <span class="token maybe-class-name">SampleService</span><span class="token punctuation">,</span> httpTestingController<span class="token operator">:</span> <span class="token maybe-class-name">HttpTestingController</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+    sut <span class="token operator">=</span> sampleService<span class="token punctuation">;</span>
+    httpMock <span class="token operator">=</span> httpTestingController<span class="token punctuation">;</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  
+  <span class="token function">it</span><span class="token punctuation">(</span><span class="token string">'GET 通信を行う'</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+    <span class="token comment">// アクセスを期待する URL : HttpParams を指定している場合はパラメータを含めて URL とする</span>
+    <span class="token keyword">const</span> url <span class="token operator">=</span> <span class="token string">'http://example.com/sample-api?myParameter=MyParameterValue'</span><span class="token punctuation">;</span>
+    <span class="token comment">// モックの戻り値</span>
+    <span class="token keyword">const</span> result <span class="token operator">=</span> <span class="token string">'Mock GET Result'</span><span class="token punctuation">;</span>
+    
+    <span class="token comment">// テスト対象関数の実行</span>
+    sut<span class="token punctuation">.</span><span class="token keyword">get</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+      <span class="token punctuation">.</span><span class="token method function property-access">then</span><span class="token punctuation">(</span><span class="token punctuation">(</span>data<span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+        <span class="token comment">// モックとして返却したデータが受け取れていること</span>
+        <span class="token function">expect</span><span class="token punctuation">(</span>data<span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">toEqual</span><span class="token punctuation">(</span>result<span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span><span class="token punctuation">)</span>
+      <span class="token punctuation">.</span><span class="token keyword">catch</span><span class="token punctuation">(</span><span class="token punctuation">(</span>error<span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+        <span class="token function">fail</span><span class="token punctuation">(</span><span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">GET 通信のテストに失敗 : </span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>error<span class="token interpolation-punctuation punctuation">}</span></span><span class="token template-punctuation string">`</span></span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    
+    <span class="token comment">// モック API を用意する</span>
+    <span class="token keyword">const</span> request <span class="token operator">=</span> httpMock<span class="token punctuation">.</span><span class="token method function property-access">expectOne</span><span class="token punctuation">(</span>url<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token comment">// モック API からの応答を返す</span>
+    request<span class="token punctuation">.</span><span class="token method function property-access">flush</span><span class="token punctuation">(</span>result<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token comment">// モック化した API がコールされたか検証する</span>
+    httpMock<span class="token punctuation">.</span><span class="token method function property-access">verify</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  
+  <span class="token function">it</span><span class="token punctuation">(</span><span class="token string">'POST 通信を行う'</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+    <span class="token comment">// アクセスを期待する URL</span>
+    <span class="token keyword">const</span> url <span class="token operator">=</span> <span class="token string">'http://example.com/sample-api'</span><span class="token punctuation">;</span>
+    <span class="token comment">// モックの戻り値</span>
+    <span class="token keyword">const</span> result <span class="token operator">=</span> <span class="token string">'Mock POST Result'</span><span class="token punctuation">;</span>
+    
+    <span class="token comment">// テスト対象関数の実行</span>
+    service<span class="token punctuation">.</span><span class="token method function property-access">post</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+      <span class="token punctuation">.</span><span class="token method function property-access">then</span><span class="token punctuation">(</span><span class="token punctuation">(</span>data<span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+        <span class="token comment">// モックとして返却したデータが受け取れていること</span>
+        <span class="token function">expect</span><span class="token punctuation">(</span>data<span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">toEqual</span><span class="token punctuation">(</span>result<span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span><span class="token punctuation">)</span>
+      <span class="token punctuation">.</span><span class="token keyword">catch</span><span class="token punctuation">(</span><span class="token punctuation">(</span>error<span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+        <span class="token function">fail</span><span class="token punctuation">(</span><span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">POST 通信のテストに失敗 : </span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>error<span class="token interpolation-punctuation punctuation">}</span></span><span class="token template-punctuation string">`</span></span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    
+    <span class="token comment">// モック API を用意する</span>
+    <span class="token keyword">const</span> request <span class="token operator">=</span> httpMock<span class="token punctuation">.</span><span class="token method function property-access">expectOne</span><span class="token punctuation">(</span>url<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token comment">// モック API からの応答を返す</span>
+    request<span class="token punctuation">.</span><span class="token method function property-access">flush</span><span class="token punctuation">(</span>result<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token comment">// モック化した API がコールされたか検証する</span>
+    httpMock<span class="token punctuation">.</span><span class="token method function property-access">verify</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<ul>
+  <li>テスト時は <code>HttpClientTestingModule</code> を <code>imports</code> に指定する。</li>
+  <li><code>HttpTestingController</code> がモック API を担当する。<code>HttpTestingController#expectOne()</code> の引数に指定した URL に対してアクセスがあれば OK となる。</li>
+  <li><em>GET 通信にパラメータを指定している場合は、パラメータを含めて URL が一致しないとテストが通らない。</em></li>
+  <li><code>HttpTestingController#verify()</code> で、「アクセスを待ち構えていたけど呼ばれなかった URL」が分かったりする。</li>
+</ul>
+<p>こんな感じ。他にも色々便利な機能があるっぽいけど、新しすぎて文献不足。</p>
+<h2 id="参考"><a class="header-link" href="#参考"><span class="header-link-mark"></span></a>参考</h2>
+<ul>
+  <li><a href="https://angular.io/guide/http">Angular Docs</a></li>
+  <li><a href="http://qiita.com/ponday/items/1ec0e500cd801286845e">Angular 4.3で追加されたHttpClientModuleについてのメモ - Qiita</a></li>
+  <li><a href="http://blog.angular-university.io/angular-http/">Angular HTTP Client - QuickStart Guide</a></li>
+  <li><a href="https://netbasal.com/a-taste-from-the-new-angular-http-client-38fcdc6b359b">A Taste From The New Angular HTTP Client – Netanel Basal</a></li>
+  <li><a href="https://alligator.io/angular/httpclient-intro/">Introduction to Angular's HttpClient ← Alligator.io</a></li>
+  <li><a href="http://blog.ninja-squad.com/2017/07/17/http-client-module/">Angular - How to use HttpClientModule? | Ninja Squad</a></li>
+</ul>
+<p>「Observable って何？」という方は以下などをドウゾ。簡単に言うと高機能 Promise。</p>
+<ul>
+  <li><a href="http://qiita.com/laco0416/items/364c5923f77458c468ac#promise-vs-observable">Angular2のHttpモジュールを眺めてベストプラクティスを考える - Qiita</a></li>
+  <li><a href="http://reactivex.io/rxjs/class/es6/Observable.js~Observable.html">Observable | RxJS API Document</a></li>
+</ul>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2017-08-09</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2017-08-09</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

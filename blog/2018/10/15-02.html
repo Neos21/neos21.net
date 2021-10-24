@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>tar で複数ファイルを圧縮する時にワイルドカードと変数を併用する - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2018/10/15-02.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2018/index.html">2018年</a></li>
+            <li><a href="/blog/2018/10/index.html">10月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2018-10-15</time></div>
+        <h1 id="page-title">tar で複数ファイルを圧縮する時にワイルドカードと変数を併用する</h1>
+
+<p>以下のように、ある DB のデータをテーブル別にファイルを毎日吐き出すディレクトリがあるとする。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">ls</span> -1
+data-fuga01.db
+data-fuga02.db
+data-fuga03.db
+  <span class="token comment"># …中略…</span>
+data-fuga29.db
+data-fuga30.db
+data-fuga31.db
+data-hoge01.db
+data-hoge02.db
+data-hoge03.db
+  <span class="token comment"># …中略…</span>
+data-hoge29.db
+data-hoge30.db
+data-hoge31.db
+</code></pre>
+<p><code>data-fuga*.db</code> は <code>fuga</code> テーブルのデータを、<code>data-hoge*.db</code> は <code>hoge</code> テーブルのデータをエクスポートしたファイルで、末尾の2桁の数字は、その月の日付を表している。</p>
+<p>こういう状況で、<strong>「その日の <code>.db</code> ファイルをまとめて1つの <code>.tar.gz</code> ファイルに圧縮するシェルスクリプトを作りたい」</strong>というのが今回の目的。</p>
+<hr>
+<p>例えば今日が30日なら、<code>data-fuga30.db</code> と <code>data-hoge30.db</code> を圧縮してまとめたいので、</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">tar</span> -cvzf dest30.tar.gz data-fuga30.db data-hoge30.db
+</code></pre>
+<p>というコマンドを叩けば、<code>dest30.tar.gz</code> ファイルに圧縮してまとめられる。</p>
+<hr>
+<p>当日の日付2桁は別途求めて、変数 <code>$TODAY</code> に格納したのだが、<code>tar</code> コマンドの引数でワイルドカードとの併用がうまくいかず苦戦した。</p>
+<p>ダブルクォートで囲んだりするのはダメで、結局以下のようにした。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># 変数 $TODAY は別途用意してある</span>
+<span class="token builtin class-name">echo</span> <span class="token variable">$TODAY</span>
+<span class="token number">30</span>
+
+$ <span class="token function">tar</span> -cvzf dest<span class="token variable">$TODAY</span>.gz *<span class="token variable"><span class="token variable">$(</span><span class="token builtin class-name">echo</span> $TODAY<span class="token variable">)</span></span>.db
+a data-fuga30.db
+a data-hoge30.db
+</code></pre>
+<p><strong><code>*$(echo $TODAY).db</code></strong> ココがミソ。最初のアスタリスク <code>*</code> でワイルドカードを指定しつつ、<code>$(echo $TODAY)</code> で、変数 <code>$TODAY</code> を出力する。コレに拡張子 <code>.db</code> を持つもの、ということで、<em>最終的に <code>*30.db</code></em> という文字列を構築できた。</p>
+<p>こうしたコマンドを持つシェルスクリプトを用意しておけば、毎日その日の日付ごとにファイルをまとめられるので、翌日31日にこのシェルスクリプトが叩かれたら <code>*31.db</code> に合致するファイルたちを圧縮できる、というワケだ。</p>
+<p>他にうまいやり方あるかしら？あったら教えてください。</p>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2018-10-15</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2018-10-15</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

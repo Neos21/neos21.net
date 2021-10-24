@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>Redmine を API 経由で操作する node-redmine - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2018/09/24-02.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2018/index.html">2018年</a></li>
+            <li><a href="/blog/2018/09/index.html">09月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2018-09-24</time></div>
+        <h1 id="page-title">Redmine を API 経由で操作する node-redmine</h1>
+
+<p>普段 Redmine を利用しているが、似たようなチケットをまとめて一括作成したり、チケット情報を抽出・整形したりしたい時に、GUI では限界があったので、何か良いやり方がないか調べてみた。</p>
+<p>すると、Redmine も API が用意されており、JSON をぶん投げれば Issue の登録やら何やらができるみたいだった。</p>
+<ul>
+  <li>参考：<a href="http://www.redmine.org/projects/redmine/wiki/Rest_api">Rest api - Redmine</a></li>
+</ul>
+<p>JSON を使うなら、シェルスクリプトで <code>curl</code> したりするよりは、Node.js スクリプトで書いた方がオブジェクトとして扱いやすいかな…と思い、もう少し調べてみると、<strong>node-redmine</strong> という npm モジュールが公開されていた。</p>
+<ul>
+  <li><a href="https://github.com/zanran/node-redmine">GitHub - zanran/node-redmine: node-redmine is a nodejs library which supports 100% features of Redmine's REST API.</a></li>
+</ul>
+<p>コードの中身を見ると、<code>create_issue()</code> とか <code>update_issue()</code> とかいったメソッドが用意されていて、内部で Redmine API 向けの URL に変換している、簡単な作り。でもコレがかなり助かる。</p>
+<p>実際に使ってみよう。</p>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#%E6%9C%80%E3%82%82%E3%82%B7%E3%83%B3%E3%83%97%E3%83%AB%E3%81%AB%E3%83%81%E3%82%B1%E3%83%83%E3%83%88%E4%B8%80%E8%A6%A7%E3%82%92%E5%8F%96%E5%BE%97%E3%81%99%E3%82%8B%E3%81%BE%E3%81%A7">最もシンプルにチケット一覧を取得するまで</a></li>
+  <li><a href="#api-%E8%AA%8D%E8%A8%BC%E9%83%A8%E5%88%86%E3%82%92%E5%85%B1%E9%80%9A%E5%8C%96%E3%81%99%E3%82%8B">API 認証部分を共通化する</a></li>
+  <li><a href="#%E8%A9%A6%E3%81%97%E3%81%A6%E3%81%BF%E3%81%9F-api">試してみた API</a></li>
+  <li><a href="#%E8%A4%87%E6%95%B0%E3%83%81%E3%82%B1%E3%83%83%E3%83%88%E3%82%92%E4%B8%80%E6%8B%AC%E7%99%BB%E9%8C%B2%E3%81%99%E3%82%8B">複数チケットを一括登録する</a></li>
+  <li><a href="#%E4%BB%A5%E4%B8%8A">以上</a></li>
+</ul>
+<h2 id="最もシンプルにチケット一覧を取得するまで"><a class="header-link" href="#最もシンプルにチケット一覧を取得するまで"><span class="header-link-mark"></span></a>最もシンプルにチケット一覧を取得するまで</h2>
+<p>まずは適当な作業ディレクトリを作り、node-redmine をインストールしておく。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">mkdir</span> practice-redmine-api/ <span class="token operator">&#x26;&#x26;</span> <span class="token builtin class-name">cd</span> <span class="token variable">$_</span>
+$ <span class="token function">npm</span> init -y
+$ <span class="token function">npm</span> <span class="token function">install</span> -S node-redmine
+
+$ <span class="token function">touch</span> list-issues.js
+</code></pre>
+<p>次に、<code>list-issues.js</code> を以下のようにコーディングしていく。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword">const</span> <span class="token maybe-class-name">Redmine</span> <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'node-redmine'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token keyword">const</span> hostName <span class="token operator">=</span> <span class="token string">'http://my-redmine.com/'</span><span class="token punctuation">;</span>  <span class="token comment">// Redmine の URL</span>
+<span class="token keyword">const</span> config <span class="token operator">=</span> <span class="token punctuation">{</span>
+  apiKey<span class="token operator">:</span> <span class="token string">'【API キー】'</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+<span class="token keyword">const</span> redmine <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">Redmine</span><span class="token punctuation">(</span>hostName<span class="token punctuation">,</span> config<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// Issue を5件取得する</span>
+redmine<span class="token punctuation">.</span><span class="token method function property-access">issues</span><span class="token punctuation">(</span><span class="token punctuation">{</span>
+  limit<span class="token operator">:</span> <span class="token number">5</span>
+<span class="token punctuation">}</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token parameter">error<span class="token punctuation">,</span> data</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token keyword control-flow">if</span><span class="token punctuation">(</span>error<span class="token punctuation">)</span> <span class="token keyword control-flow">throw</span> error<span class="token punctuation">;</span>
+  
+  <span class="token comment">// JSON を2スペースで整形して表示する</span>
+  data<span class="token punctuation">.</span><span class="token property-access">issues</span><span class="token punctuation">.</span><span class="token method function property-access">forEach</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token parameter">issue</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+    <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token known-class-name class-name">JSON</span><span class="token punctuation">.</span><span class="token method function property-access">stringify</span><span class="token punctuation">(</span>issue<span class="token punctuation">,</span> <span class="token keyword null nil">null</span><span class="token punctuation">,</span> <span class="token string">'  '</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>コレを実行すると以下のようになる。</p>
+<pre class="language-bash"><code class="language-bash">$ node ./list-issues.js
+<span class="token punctuation">{</span>
+  <span class="token string">"id"</span><span class="token builtin class-name">:</span> <span class="token number">99</span>,
+  <span class="token string">"project"</span><span class="token builtin class-name">:</span> <span class="token punctuation">{</span>
+    <span class="token string">"id"</span><span class="token builtin class-name">:</span> <span class="token number">1</span>,
+    <span class="token string">"name"</span><span class="token builtin class-name">:</span> <span class="token string">"オレオレ Redmine"</span>
+  <span class="token punctuation">}</span>,
+  // 中略……
+  <span class="token string">"assigned_to"</span><span class="token builtin class-name">:</span> <span class="token punctuation">{</span>
+    <span class="token string">"id"</span><span class="token builtin class-name">:</span> <span class="token number">1</span>,
+    <span class="token string">"name"</span><span class="token builtin class-name">:</span> <span class="token string">"Neo"</span>
+  <span class="token punctuation">}</span>,
+  <span class="token string">"subject"</span><span class="token builtin class-name">:</span> <span class="token string">"あの問題を解決する"</span>,
+  <span class="token string">"description"</span><span class="token builtin class-name">:</span> <span class="token string">"h1. ほげほげ<span class="token entity" title="\r">\r</span><span class="token entity" title="\n">\n</span>ふがふが"</span>,
+  <span class="token string">"start_date"</span><span class="token builtin class-name">:</span> <span class="token string">"2018-01-01"</span>,
+  <span class="token string">"due_date"</span><span class="token builtin class-name">:</span> <span class="token string">"2018-12-31"</span>,
+  <span class="token string">"created_on"</span><span class="token builtin class-name">:</span> <span class="token string">"2018-01-01T00:00:00Z"</span>,
+  <span class="token string">"updated_on"</span><span class="token builtin class-name">:</span> <span class="token string">"2018-01-01T00:00:00Z"</span>
+<span class="token punctuation">}</span>
+<span class="token punctuation">{</span>
+  // <span class="token number">2</span>件目の Issue…
+<span class="token punctuation">}</span>
+// 以下略…
+</code></pre>
+<p>こりゃ簡単だ！</p>
+<h2 id="api-認証部分を共通化する"><a class="header-link" href="#api-認証部分を共通化する"><span class="header-link-mark"></span></a>API 認証部分を共通化する</h2>
+<p>Issue が取得できたので、Issue を登録したり更新したりする、別のスクリプトを書いてみようと思う。</p>
+<p>ただその前に、先程のスクリプトの冒頭に書いた、API 認証部分を共通化しようと思う。</p>
+<p><code>redmine-api-base.js</code> というファイルを作り、以下のように書く。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword">const</span> <span class="token maybe-class-name">Redmine</span> <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'node-redmine'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token keyword">const</span> hostName <span class="token operator">=</span> <span class="token string">'http://my-redmine.com/'</span><span class="token punctuation">;</span>  <span class="token comment">// Redmine の URL</span>
+<span class="token keyword">const</span> config <span class="token operator">=</span> <span class="token punctuation">{</span>
+  apiKey<span class="token operator">:</span> <span class="token string">'【API キー】'</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+<span class="token keyword">const</span> redmine <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">Redmine</span><span class="token punctuation">(</span>hostName<span class="token punctuation">,</span> config<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+module<span class="token punctuation">.</span><span class="token property-access">exports</span> <span class="token operator">=</span> redmine<span class="token punctuation">;</span>
+</code></pre>
+<p>先程の <code>list-issues.js</code> は以下のように直す。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword">const</span> redmine <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'./redmine-api-base'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+redmine<span class="token punctuation">.</span><span class="token method function property-access">issues</span><span class="token punctuation">(</span><span class="token punctuation">{</span>
+  limit<span class="token operator">:</span> <span class="token number">5</span>
+<span class="token punctuation">}</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token parameter">error<span class="token punctuation">,</span> data</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>  <span class="token comment">// 以下略…</span>
+</code></pre>
+<p>このスクリプトのように1回しか使わないなら、イチイチ変数化しないで以下のように書いてしまっても良い。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'./redmine-api-base'</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">issues</span><span class="token punctuation">(</span><span class="token punctuation">{</span>
+  limit<span class="token operator">:</span> <span class="token number">5</span>
+<span class="token punctuation">}</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token parameter">error<span class="token punctuation">,</span> data</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>  <span class="token comment">// 以下略…</span>
+</code></pre>
+<p>今後はこのノリで、やりたいことに合わせたスクリプトを作ってみる。</p>
+<h2 id="試してみた-api"><a class="header-link" href="#試してみた-api"><span class="header-link-mark"></span></a>試してみた API</h2>
+<p>試しに使ってみた API は以下のとおり。<code>callback</code> は、全て <code>(error, data) => { }</code> という2つの仮引数を渡してくれる。</p>
+<ul>
+  <li><code>redmine.issues({ 【検索条件など】 }, callback)</code></li>
+  <li><code>redmine.get_issue_by_id(【Issue ID】, {}, callback)</code></li>
+  <li><code>redmine.create_issue({ 'issue': 【Issue オブジェクト】 }, callback)</code></li>
+  <li><code>redmine.update_issue(【Issue ID】, { 'issue': 【更新したいフィールドのみ書いた Issue オブジェクト】, callback)</code></li>
+  <li><code>redmine.get_user_by_id(【User ID】, {}, callback)</code></li>
+</ul>
+<p>他にもあるので、ソースを見ながら使ってみよう。</p>
+<ul>
+  <li>参考：<a href="https://github.com/zanran/node-redmine/blob/master/lib/redmine.js">node-redmine/redmine.js at master · zanran/node-redmine · GitHub</a></li>
+</ul>
+<h2 id="複数チケットを一括登録する"><a class="header-link" href="#複数チケットを一括登録する"><span class="header-link-mark"></span></a>複数チケットを一括登録する</h2>
+<p>複数のチケットを一括登録するには、API への POST 通信を順次実行するのが良いかと思う。色々試行錯誤して、以下のような <code>bulk-create-issues.js</code> というスクリプトを作った。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword">const</span> redmine <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'./redmine-api-base'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// 登録データの配列</span>
+<span class="token keyword">const</span> issues <span class="token operator">=</span> <span class="token punctuation">[</span>
+  <span class="token punctuation">{</span>
+    <span class="token string">'project_id'</span>    <span class="token operator">:</span> <span class="token number">1</span><span class="token punctuation">,</span>             <span class="token comment">// プロジェクト ID</span>
+    <span class="token string">'tracker_id'</span>    <span class="token operator">:</span> <span class="token number">10</span><span class="token punctuation">,</span>            <span class="token comment">// トラッカー ID</span>
+    <span class="token string">'subject'</span>       <span class="token operator">:</span> <span class="token string">'ある課題 1'</span><span class="token punctuation">,</span>  <span class="token comment">// チケット名</span>
+    <span class="token string">'description'</span>   <span class="token operator">:</span> <span class="token string">'説明'</span><span class="token punctuation">,</span>        <span class="token comment">// 説明 : 改行は「\r\n\」で書ける</span>
+    <span class="token string">'assigned_to_id'</span><span class="token operator">:</span> <span class="token number">14</span><span class="token punctuation">,</span>            <span class="token comment">// 担当者 ID</span>
+    <span class="token string">'start_date'</span>    <span class="token operator">:</span> <span class="token string">'2018-05-01'</span><span class="token punctuation">,</span>  <span class="token comment">// 開始日 : 文字列 'YYYY-MM-DD'</span>
+    <span class="token string">'due_date'</span>      <span class="token operator">:</span> <span class="token string">'2018-09-30'</span>   <span class="token comment">// 期日   : 文字列 'YYYY-MM-DD'</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    <span class="token string">'project_id'</span>    <span class="token operator">:</span> <span class="token number">1</span><span class="token punctuation">,</span>
+    <span class="token string">'tracker_id'</span>    <span class="token operator">:</span> <span class="token number">10</span><span class="token punctuation">,</span>
+    <span class="token string">'subject'</span>       <span class="token operator">:</span> <span class="token string">'ある課題 2'</span><span class="token punctuation">,</span>
+    <span class="token string">'description'</span>   <span class="token operator">:</span> <span class="token string">'似たような説明'</span><span class="token punctuation">,</span>
+    <span class="token string">'assigned_to_id'</span><span class="token operator">:</span> <span class="token number">18</span><span class="token punctuation">,</span>
+    <span class="token string">'start_date'</span>    <span class="token operator">:</span> <span class="token string">'2018-05-01'</span><span class="token punctuation">,</span>
+    <span class="token string">'due_date'</span>      <span class="token operator">:</span> <span class="token string">'2018-09-30'</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">]</span><span class="token punctuation">;</span>
+
+<span class="token comment">// 1件ずつ登録していく</span>
+issues<span class="token punctuation">.</span><span class="token method function property-access">reduce</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token parameter">prevPromise<span class="token punctuation">,</span> issue</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token keyword control-flow">return</span> prevPromise
+    <span class="token punctuation">.</span><span class="token method function property-access">then</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+      <span class="token keyword control-flow">return</span> <span class="token keyword">new</span> <span class="token class-name">Promise</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token parameter">resolve<span class="token punctuation">,</span> reject</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+        redmine<span class="token punctuation">.</span><span class="token method function property-access">create_issue</span><span class="token punctuation">(</span><span class="token punctuation">{</span>
+          <span class="token string">'issue'</span><span class="token operator">:</span> issue
+        <span class="token punctuation">}</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token parameter">error<span class="token punctuation">,</span> data</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+          <span class="token keyword control-flow">if</span><span class="token punctuation">(</span>error<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+            <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">error</span><span class="token punctuation">(</span><span class="token string">'登録失敗 : '</span><span class="token punctuation">,</span> error<span class="token punctuation">)</span><span class="token punctuation">;</span>
+            <span class="token keyword control-flow">return</span> <span class="token function">reject</span><span class="token punctuation">(</span>error<span class="token punctuation">)</span><span class="token punctuation">;</span>
+          <span class="token punctuation">}</span>
+          
+          <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'登録成功'</span><span class="token punctuation">,</span> data<span class="token punctuation">)</span><span class="token punctuation">;</span>
+          <span class="token function">resolve</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">,</span> <span class="token known-class-name class-name">Promise</span><span class="token punctuation">.</span><span class="token method function property-access">resolve</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>以前紹介した、配列データを直列で順次実行する Promise チェーンを作った。</p>
+<p>実際は、登録データ (<code>issues</code>) を作る方が大変。Redmine プロジェクトの設定に合わせて、色々指定しておかないといけないプロパティが多い。ココらへんは、既に作ってある Issue を <code>issues()</code> か <code>get_issue_by_id()</code> で取得してみて、「この項目はこの値にしておこう」というモノを控えておくと良い。</p>
+<p>元データを Excel などで作ってあれば、CSV 形式で吐き出しておいて、CSV ファイルを読み込んだら JSON 形式の配列に変換する、という風にやれば良さそう。</p>
+<h2 id="以上"><a class="header-link" href="#以上"><span class="header-link-mark"></span></a>以上</h2>
+<p>Redmine の一括操作もコレで楽チン！</p>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2018-09-24</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2018-09-24</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

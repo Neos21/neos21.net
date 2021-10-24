@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>Docker コンテナの出力を jq にパイプしたらインデントが崩れるのを直す - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2020/10/15-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2020/index.html">2020年</a></li>
+            <li><a href="/blog/2020/10/index.html">10月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2020-10-15</time></div>
+        <h1 id="page-title">Docker コンテナの出力を jq にパイプしたらインデントが崩れるのを直す</h1>
+
+<p><code>docker run</code> や <code>docker exec</code> を使って、AWS CLI 的な CLI ツールを動かす。実行結果は JSON 形式で返ってくるので、コレをパイプして <code>jq</code> で整形しようと思った。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># 「get status」的なサブコマンドを実行しているイメージ</span>
+$ docker run --rm -it my-cli-container get status <span class="token operator">|</span> jq <span class="token string">'.'</span>
+<span class="token punctuation">{</span>
+                <span class="token string">"status"</span><span class="token builtin class-name">:</span> <span class="token punctuation">{</span>
+                                <span class="token string">"name"</span><span class="token builtin class-name">:</span> <span class="token string">"HOGE',
+                                                "</span>created<span class="token string">": "</span><span class="token number">2020</span>-01-01<span class="token string">",
+                                                                "</span>info<span class="token string">": "</span>Running"
+                                                                                <span class="token punctuation">}</span>
+                                                                                                <span class="token punctuation">}</span>
+</code></pre>
+<p>出力結果はイメージだが、なぜかこんな風に、どんどんインデントが増えていくような見た目になってしまった。</p>
+<h2 id="対策2つ"><a class="header-link" href="#対策2つ"><span class="header-link-mark"></span></a>対策2つ</h2>
+<p>jq の GitHub Issues にドンズバの質問が挙がっていて、解決策も分かった。</p>
+<ul>
+  <li>参考：<a href="https://github.com/stedolan/jq/issues/1414">Long tab indent and alignment · Issue #1414 · stedolan/jq · GitHub</a></li>
+</ul>
+<p>まず、自分で導いた対処法は、Bash の<strong>コマンド置換 (<code>$()</code> やバッククォートでコマンドを囲むアレ)</strong> を使うモノ。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token builtin class-name">echo</span> <span class="token string">"<span class="token variable"><span class="token variable">$(</span>docker run --rm -it my-cli-container get status<span class="token variable">)</span></span>"</span> <span class="token operator">|</span> jq <span class="token string">'.'</span>
+</code></pre>
+<p>こんな風にすればインデントが崩れなくなった。</p>
+<ul>
+  <li>参考：<a href="https://qiita.com/mashumashu/items/bbc3a79bc779fe8c4f99">bash Tips - コマンド置換と算術式展開、パラメータ展開 - Qiita</a></li>
+</ul>
+<p>GitHub Issues で見つけた対処法は、<em>moreutils の <code>sponge</code> コマンドを挟む</em>、というモノ。</p>
+<p><code>sponge</code> コマンドは以前も紹介したが、標準入力を一旦蓄えて、標準出力に流せるコマンド。</p>
+<ul>
+  <li><a href="/blog/2020/07/28-01.html">moreutils の中の便利そうなコマンド : sponge と vidir</a></li>
+  <li>参考：<a href="https://joeyh.name/code/moreutils/">moreutils</a></li>
+</ul>
+<p>コレを以下のように使う。</p>
+<pre class="language-bash"><code class="language-bash">$ docker run --rm -it my-cli-container get status <span class="token operator">|</span> sponge <span class="token operator">|</span> jq <span class="token string">'.'</span>
+</code></pre>
+<h2 id="根本原因は--t-が余計だった"><a class="header-link" href="#根本原因は--t-が余計だった"><span class="header-link-mark"></span></a>根本原因は <code>-t</code> が余計だった</h2>
+<p>よくよく調べてみると、<code>docker run</code> に <code>-t</code> オプションを付けてるのが悪いんや、という指摘が。</p>
+<ul>
+  <li>参考：<a href="https://github.com/stedolan/jq/issues/2064">docker run -it | jq - breaks jq formatting · Issue #2064 · stedolan/jq · GitHub</a></li>
+</ul>
+<blockquote>
+  <p><em>It's natural</em> that we can't expect correct behavior with piping against tty output.<br><strong>Don't use <code>-t</code> flag of docker when you use pipe from its output.</strong><br><em>This behavior is not a bug of docker nor of jq.</em><br>The sponge from moreutils seems to solve the problem but I'm rather surprised that we can't see the tty output as well (like <code>echo '{"a":1}\n{"b":2}\n' >/dev/tty | jq .</code>).</p>
+</blockquote>
+<p>意識せず使っていたが、<code>-t</code> オプションを外すだけでキレイに行けた。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># -t オプションを外す</span>
+$ docker run --rm -i my-cli-container get status <span class="token operator">|</span> jq <span class="token string">'.'</span>
+
+<span class="token comment"># なんなら -i オプションもなくて大丈夫だった</span>
+$ docker run --rm my-cli-container get status <span class="token operator">|</span> jq <span class="token string">'.'</span>
+</code></pre>
+<p>マジか…。</p>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2020-10-15</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2020-10-15</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

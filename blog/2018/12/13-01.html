@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>Angular CLI で作ったアプリを Heroku にデプロイして動くようにした - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2018/12/13-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2018/index.html">2018年</a></li>
+            <li><a href="/blog/2018/12/index.html">12月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2018-12-13</time></div>
+        <h1 id="page-title">Angular CLI で作ったアプリを Heroku にデプロイして動くようにした</h1>
+
+<p>Angular CLI で生成したアプリを Heroku にデプロイして動作するようにするには、いくつか設定変更が必要だったので紹介。</p>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#%E7%92%B0%E5%A2%83%E6%83%85%E5%A0%B1">環境情報</a></li>
+  <li><a href="#angular-%E3%83%97%E3%83%AD%E3%82%B8%E3%82%A7%E3%82%AF%E3%83%88%E3%82%92%E4%BD%9C%E3%82%8B">Angular プロジェクトを作る</a></li>
+  <li><a href="#packagejson-%E3%81%AE-devdependencies-%E3%82%92-dependencies-%E3%81%AB%E7%A7%BB%E5%8B%95%E3%81%99%E3%82%8B"><code>package.json</code> の <code>devDependencies</code> を <code>dependencies</code> に移動する</a></li>
+  <li><a href="#packagejson-%E3%81%AB-engines-%E3%82%92%E8%A8%98%E8%BF%B0%E3%81%99%E3%82%8B"><code>package.json</code> に <code>engines</code> を記述する</a></li>
+  <li><a href="#postinstall-%E6%99%82%E3%81%AB-ng-build-%E3%82%92%E5%AE%9F%E8%A1%8C%E3%81%95%E3%81%9B%E3%82%8B"><code>postinstall</code> 時に <code>ng build</code> を実行させる</a></li>
+  <li><a href="#angularjson-%E3%82%92%E6%9B%B8%E3%81%8D%E6%8F%9B%E3%81%88%E3%81%A6%E3%83%95%E3%82%A1%E3%82%A4%E3%83%AB%E3%81%8C-dist-%E7%9B%B4%E4%B8%8B%E3%81%AB%E7%94%9F%E6%88%90%E3%81%95%E3%82%8C%E3%82%8B%E3%82%88%E3%81%86%E3%81%AB%E3%81%99%E3%82%8B"><code>angular.json</code> を書き換えてファイルが <code>dist/</code> 直下に生成されるようにする</a></li>
+  <li><a href="#%E5%A4%9A%E5%88%86%E4%BB%BB%E6%84%8F%EF%BC%9Ahashlocationstrategy-%E3%82%92%E4%BD%BF%E3%81%A3%E3%81%A6%E3%81%8A%E3%81%8F">多分任意：HashLocationStrategy を使っておく</a></li>
+  <li><a href="#express-%E3%82%B5%E3%83%BC%E3%83%90%E3%82%92%E7%94%A8%E6%84%8F%E3%81%99%E3%82%8B">Express サーバを用意する</a></li>
+  <li><a href="#npm-start-%E3%81%A7-express-%E3%82%B5%E3%83%BC%E3%83%90%E3%82%92%E8%B5%B7%E5%8B%95%E3%81%97%E3%81%A6%E3%82%82%E3%82%89%E3%81%86%E3%82%88%E3%81%86-packagejson-%E3%82%92%E4%BF%AE%E6%AD%A3%E3%81%99%E3%82%8B"><code>npm start</code> で Express サーバを起動してもらうよう <code>package.json</code> を修正する</a></li>
+  <li><a href="#%E3%82%B3%E3%82%B3%E3%81%BE%E3%81%A7%E3%81%AE%E5%AF%BE%E5%BF%9C%E5%86%85%E5%AE%B9%E3%81%BE%E3%81%A8%E3%82%81">ココまでの対応内容まとめ</a></li>
+  <li><a href="#heroku-%E3%81%AB%E3%83%87%E3%83%97%E3%83%AD%E3%82%A4%E3%81%99%E3%82%8B">Heroku にデプロイする</a></li>
+  <li><a href="#%E4%BB%A5%E4%B8%8A">以上</a></li>
+</ul>
+<h2 id="環境情報"><a class="header-link" href="#環境情報"><span class="header-link-mark"></span></a>環境情報</h2>
+<ul>
+  <li>Angular CLI : v7.0.4</li>
+  <li>Node.js : v10.7.0</li>
+  <li>npm : v6.1.0</li>
+  <li>OS : macOS Mojave・Windows10 で検証</li>
+</ul>
+<p>以下を前提条件とする。</p>
+<ul>
+  <li>Angular CLI に関するひととおりの知識があること (コマンド等は詳しく説明しない)</li>
+  <li>Heroku CLI がインストールしてあり、Angular プロジェクトと Heroku アプリの紐付けなどは自分でできること (細かいところまで説明しない)</li>
+</ul>
+<h2 id="angular-プロジェクトを作る"><a class="header-link" href="#angular-プロジェクトを作る"><span class="header-link-mark"></span></a>Angular プロジェクトを作る</h2>
+<p>まずは Angular CLI で Angular プロジェクトを作る。ココは普通に <code>$ ng new</code>。</p>
+<h2 id="packagejson-の-devdependencies-を-dependencies-に移動する"><a class="header-link" href="#packagejson-の-devdependencies-を-dependencies-に移動する"><span class="header-link-mark"></span></a><code>package.json</code> の <code>devDependencies</code> を <code>dependencies</code> に移動する</h2>
+<p>Heroku でのデプロイは、Heroku 上で <code>git clone</code> 相当の資材取得を行い、<em><code>npm install --production</code></em> 相当のコマンドで <code>npm install</code> が行われる。</p>
+<ul>
+  <li>参考：<a href="https://code.i-harness.com/ja/q/8d6c23">Node.js（package.json）の "devDependencies" NPMモジュールのインストールをどうやって防ぐのですか？ - CODE Q&#x26;A 問題解決</a></li>
+</ul>
+<p>すなわち、<code>devDependencies</code> に記載されたパッケージはインストールされないのだ。この仕様により、Angular CLI で生成したプロジェクトは、<code>typescript</code> パッケージなどが <code>devDependencies</code> に記載されているため、このままではビルドが上手く行われないのだ。</p>
+<p>そこで、<code>package.json</code> の <code>devDependencies</code> のうち、最低でも以下のパッケージを <code>dependencies</code> に移動しておく必要がある。</p>
+<ul>
+  <li>@angular-devkit/build-angular</li>
+  <li>@angular/cli</li>
+  <li>@angular/compiler-cli</li>
+  <li>@angular/language-service</li>
+  <li>typescript</li>
+</ul>
+<p>考え方としては、<code>ng build</code> コマンドの動作に必要なパッケージを移動しておけば良い、ということだが、心配なら全ての <code>devDependencies</code> の内容を <code>dependencies</code> に移植しても問題はない (デプロイ時の <code>npm install</code> に時間がかかるようになるだけ)。</p>
+<p>自分の場合は Karma・Jasmine・Protractor など、テスト関連ツールを省き、それ以外は全て <code>dependencies</code> に書くことにした。<code>@types</code> はトランスパイル時に必須ではないだろうし、<code>tslint</code> も別に要らない、<code>ts-node</code> はよく分からない、という感じだが、この辺はとりあえず <code>dependencies</code> に移植しておいた。</p>
+<h2 id="packagejson-に-engines-を記述する"><a class="header-link" href="#packagejson-に-engines-を記述する"><span class="header-link-mark"></span></a><code>package.json</code> に <code>engines</code> を記述する</h2>
+<p>Heroku 上で <code>npm install</code> 等を動作させるために、使用する Node.js および npm のバージョンを指定する必要があるので、<code>package.json</code> に <code>engines</code> プロパティを記述しておく。バージョン番号は <code>x</code> を使用して曖昧指定もできるので、現行の最新メジャーバージョンである Node.js v10、npm v6 系を指定しておこう。</p>
+<pre class="language-json"><code class="language-json"><span class="token property">"engines"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+  <span class="token property">"node"</span><span class="token operator">:</span> <span class="token string">"10.x"</span><span class="token punctuation">,</span>
+  <span class="token property">"npm"</span><span class="token operator">:</span> <span class="token string">"6.1.x"</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<h2 id="postinstall-時に-ng-build-を実行させる"><a class="header-link" href="#postinstall-時に-ng-build-を実行させる"><span class="header-link-mark"></span></a><code>postinstall</code> 時に <code>ng build</code> を実行させる</h2>
+<p>先程も書いたように、Heroku へのデプロイ時に、自動的に <code>npm install</code> コマンドが動作するので、この挙動を利用して、<code>postinstall</code> 時に <code>ng build</code> を実行するように <code>package.json</code> に npm-run-scripts を書いておこう。</p>
+<pre class="language-json"><code class="language-json"><span class="token property">"scripts"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+  <span class="token property">"postinstall"</span><span class="token operator">:</span> <span class="token string">"npm run build"</span><span class="token punctuation">,</span>
+  <span class="token property">"build"</span><span class="token operator">:</span> <span class="token string">"ng build --prod"</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p><code>build</code> コマンドは Angular CLI が最初から用意していると思うので、それを呼び出すだけの <code>postinstall</code> コマンドにしておくと良いだろう。</p>
+<h2 id="angularjson-を書き換えてファイルが-dist-直下に生成されるようにする"><a class="header-link" href="#angularjson-を書き換えてファイルが-dist-直下に生成されるようにする"><span class="header-link-mark"></span></a><code>angular.json</code> を書き換えてファイルが <code>dist/</code> 直下に生成されるようにする</h2>
+<p>Angular v6 以降、一つの Angular プロジェクト内に複数のアプリやライブラリを持てるようになった関係で、<code>ng build</code> 時の成果物ファイルは <code>dist/</code> 直下ではなく、<code>dist/【アプリ名】/</code> ディレクトリに出力されるようになった。</p>
+<p>今回は複数アプリを作る要件はないので、Angular v5 までと同様、<code>dist/</code> 直下に <code>index.html</code> やら <code>bundle.js</code> やらが生成されるように設定を変更しようと思う。</p>
+<p>ビルド時の出力先ディレクトリを決めているのは、<em><code>angular.json</code></em> の次の部分。</p>
+<pre class="language-json"><code class="language-json"><span class="token property">"architect"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+  <span class="token property">"build"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+    <span class="token property">"builder"</span><span class="token operator">:</span> <span class="token string">"@angular-devkit/build-angular:browser"</span><span class="token punctuation">,</span>
+    <span class="token property">"options"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+      <span class="token property">"outputPath"</span><span class="token operator">:</span> <span class="token string">"dist/【アプリ名】"</span><span class="token punctuation">,</span>  <span class="token comment">// ← ココ！</span>
+</code></pre>
+<p>この <em><code>outputPath</code></em> 部分を、<code>dist/【アプリ名】</code> から <code>dist</code> のみに修正する。</p>
+<pre class="language-json"><code class="language-json"><span class="token property">"options"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+  <span class="token property">"outputPath"</span><span class="token operator">:</span> <span class="token string">"dist"</span><span class="token punctuation">,</span>
+</code></pre>
+<p>コレで <code>ng build</code> による成果物の生成先ディレクトリを1階層上げることができた。</p>
+<h2 id="多分任意：hashlocationstrategy-を使っておく"><a class="header-link" href="#多分任意：hashlocationstrategy-を使っておく"><span class="header-link-mark"></span></a>多分任意：HashLocationStrategy を使っておく</h2>
+<p>このあと、この Angular アプリを Express にて配信するのだが、余計なルーティングの設定を避けるために、Angular アプリ内の URL 表現を、通常の PathLocationStrategy ではなく、HashLocationStrategy に変更しておこうと思う。</p>
+<p>何を言っているかというと、アプリ内のルーティングによる URL 変更を、<code>http://localhost/my-page/hoge</code> といった見た目にするのではなく、<code>http://localhost/#/my-page/hoge</code> と、ハッシュ <code>#</code> 付きの URL にしよう、というワケ。この URL なら、必ずルートパスからのハッシュリンクの形で遷移できるので、Express 側でのリダイレクト処理などが省けるかな、という狙い。</p>
+<ul>
+  <li>参考：<a href="https://angular.io/api/common/HashLocationStrategy">Angular Docs</a></li>
+</ul>
+<p>HashLocationStrategy を使うには、<code>RouterModule.forRoot()</code> を <code>imports</code> に設定する箇所で、<code>useHash: true</code> オプションを渡してやるだけ。通常 <code>--routing</code> オプションによって <code>app-routing.module.ts</code> を生成していれば、このファイルに追記して設定すれば良い。</p>
+<pre class="language-typescript"><code class="language-typescript"><span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">NgModule</span> <span class="token punctuation">}</span></span> <span class="token keyword">from</span> <span class="token string">'@angular/core'</span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">Routes</span><span class="token punctuation">,</span> <span class="token maybe-class-name">RouterModule</span> <span class="token punctuation">}</span></span> <span class="token keyword">from</span> <span class="token string">'@angular/router'</span><span class="token punctuation">;</span>
+
+<span class="token keyword">const</span> routes<span class="token operator">:</span> <span class="token maybe-class-name">Routes</span> <span class="token operator">=</span> <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token punctuation">;</span>
+
+@<span class="token function"><span class="token maybe-class-name">NgModule</span></span><span class="token punctuation">(</span><span class="token punctuation">{</span>
+  imports<span class="token operator">:</span> <span class="token punctuation">[</span><span class="token maybe-class-name">RouterModule</span><span class="token punctuation">.</span><span class="token method function property-access">forRoot</span><span class="token punctuation">(</span>routes<span class="token punctuation">,</span> <span class="token punctuation">{</span> useHash<span class="token operator">:</span> <span class="token boolean">true</span> <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">]</span><span class="token punctuation">,</span>  <span class="token comment">// ← useHash を追加</span>
+  exports<span class="token operator">:</span> <span class="token punctuation">[</span><span class="token maybe-class-name">RouterModule</span><span class="token punctuation">]</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span>
+<span class="token keyword">export</span> <span class="token keyword">class</span> <span class="token class-name"><span class="token maybe-class-name">AppRoutingModule</span></span> <span class="token punctuation">{</span> <span class="token punctuation">}</span>
+</code></pre>
+<p>ココらへんはどれだけ Express 上の設定をするかに応じて調整できるかと。今回は余計な問題を避けるためハッシュ利用にしておく。</p>
+<h2 id="express-サーバを用意する"><a class="header-link" href="#express-サーバを用意する"><span class="header-link-mark"></span></a>Express サーバを用意する</h2>
+<p>最後に、これら Angular アプリを配信するための Express サーバを用意する。<code>ng build</code> で生成された <code>dist/</code> ディレクトリ配下の静的なファイルを配信するだけなので、コードとしては簡素なモノで済ませられる。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># Express をインストールして dependencies に追加する</span>
+$ <span class="token function">npm</span> <span class="token function">install</span> --save express
+
+<span class="token comment"># Express サーバの設定を記述するファイルを作る</span>
+$ <span class="token function">touch</span> server.js
+</code></pre>
+<p><code>server.js</code> の中身は以下のとおり。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword">const</span> path <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'path'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">const</span> express <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'express'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// サーバをインスタンス化する </span>
+<span class="token keyword">const</span> app <span class="token operator">=</span> <span class="token function">express</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// 以下の設定だけで dist/index.html も返せてはいる</span>
+app<span class="token punctuation">.</span><span class="token method function property-access">use</span><span class="token punctuation">(</span>express<span class="token punctuation">.</span><span class="token method function property-access">static</span><span class="token punctuation">(</span><span class="token template-string"><span class="token template-punctuation string">`</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>__dirname<span class="token interpolation-punctuation punctuation">}</span></span><span class="token string">/dist</span><span class="token template-punctuation string">`</span></span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// ルートへのアクセス時は念のため dist/index.html を確実に返すようにしておく</span>
+app<span class="token punctuation">.</span><span class="token method function property-access">get</span><span class="token punctuation">(</span><span class="token string">'/'</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token parameter">req<span class="token punctuation">,</span> res</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  res<span class="token punctuation">.</span><span class="token method function property-access">sendFile</span><span class="token punctuation">(</span>path<span class="token punctuation">.</span><span class="token method function property-access">join</span><span class="token punctuation">(</span><span class="token template-string"><span class="token template-punctuation string">`</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>__dirname<span class="token interpolation-punctuation punctuation">}</span></span><span class="token string">/dist/index.html</span><span class="token template-punctuation string">`</span></span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// サーバ起動</span>
+<span class="token keyword">const</span> server <span class="token operator">=</span> app<span class="token punctuation">.</span><span class="token method function property-access">listen</span><span class="token punctuation">(</span>process<span class="token punctuation">.</span><span class="token property-access">env</span><span class="token punctuation">.</span><span class="token constant">PORT</span> <span class="token operator">||</span> <span class="token number">8080</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token keyword">const</span> host <span class="token operator">=</span> server<span class="token punctuation">.</span><span class="token method function property-access">address</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token property-access">address</span><span class="token punctuation">;</span>
+  <span class="token keyword">const</span> port <span class="token operator">=</span> server<span class="token punctuation">.</span><span class="token method function property-access">address</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token property-access">port</span><span class="token punctuation">;</span>
+  <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">Listening at http://</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>host<span class="token interpolation-punctuation punctuation">}</span></span><span class="token string">:</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>port<span class="token interpolation-punctuation punctuation">}</span></span><span class="token template-punctuation string">`</span></span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>一番のキモはこの部分。</p>
+<pre class="language-typescript"><code class="language-typescript">app<span class="token punctuation">.</span><span class="token method function property-access">use</span><span class="token punctuation">(</span>express<span class="token punctuation">.</span><span class="token keyword">static</span><span class="token punctuation">(</span><span class="token template-string"><span class="token template-punctuation string">`</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>__dirname<span class="token interpolation-punctuation punctuation">}</span></span><span class="token string">/dist</span><span class="token template-punctuation string">`</span></span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>コレは</p>
+<pre class="language-typescript"><code class="language-typescript">app<span class="token punctuation">.</span><span class="token method function property-access">use</span><span class="token punctuation">(</span><span class="token string">'/'</span><span class="token punctuation">,</span> express<span class="token punctuation">.</span><span class="token keyword">static</span><span class="token punctuation">(</span><span class="token template-string"><span class="token template-punctuation string">`</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>__dirname<span class="token interpolation-punctuation punctuation">}</span></span><span class="token string">/dist</span><span class="token template-punctuation string">`</span></span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>とほぼ同義で、ルート配下のパスを指定されたら、そのパスに合致するファイルを静的に返すという指定。で、参照先を <code>dist/</code> 配下にしているので、<code>ng build</code> コマンドで <code>dist/</code> 配下に生成された、<code>bundle.js</code> やら <code>favicon.ico</code> やらがこの記述で取れる、というワケ。</p>
+<p>この記述によって、<code>http://localhost:8080/index.html</code> はも返せるのだが、<code>http://localhost:8080/</code> とアクセスした時に確実に <code>index.html</code> を返すために、その下で <code>res.sendFile()</code> を使ったルーティングを定義している。</p>
+<p><code>__dirname</code> という Node.js 組み込みの変数を使っているのは、この <code>server.js</code> のパスに依存した相対パスを利用せず、フルパスで指定するため。</p>
+<h2 id="npm-start-で-express-サーバを起動してもらうよう-packagejson-を修正する"><a class="header-link" href="#npm-start-で-express-サーバを起動してもらうよう-packagejson-を修正する"><span class="header-link-mark"></span></a><code>npm start</code> で Express サーバを起動してもらうよう <code>package.json</code> を修正する</h2>
+<p>あとはこの Express サーバを <code>npm start</code> で起動できるよう、<code>package.json</code> に <code>start</code> コマンドを記述しておく。</p>
+<pre class="language-json"><code class="language-json"><span class="token property">"scripts"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+  <span class="token property">"postinstall"</span><span class="token operator">:</span> <span class="token string">"npm run build"</span><span class="token punctuation">,</span>
+  <span class="token property">"build"</span><span class="token operator">:</span> <span class="token string">"ng build --prod"</span><span class="token punctuation">,</span>
+  <span class="token property">"start"</span><span class="token operator">:</span> <span class="token string">"node server.js"</span><span class="token punctuation">,</span>
+  <span class="token property">"dev"</span><span class="token operator">:</span> <span class="token string">"ng serve"</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>Angular CLI で生成したとおりの <code>package.json</code> だと、<code>ng serve</code> コマンドを実行するために <code>start</code> コマンドが割り当てられているが、コレは外しておかないといけない。適当に <code>dev</code> コマンドでも割り当てておけば開発中にも使えるだろう。</p>
+<h2 id="ココまでの対応内容まとめ"><a class="header-link" href="#ココまでの対応内容まとめ"><span class="header-link-mark"></span></a>ココまでの対応内容まとめ</h2>
+<p>ココまでの対応内容をおさらいする。</p>
+<ul>
+  <li><code>angular.json</code>
+    <ul>
+      <li><code>outputPath</code> を <code>dist/</code> に変更</li>
+    </ul>
+  </li>
+  <li><code>package.json</code>
+    <ul>
+      <li>ビルド・デプロイ時に必要なパッケージを <code>devDependencies</code> から <code>dependencies</code> に移植する</li>
+      <li><code>engines</code> プロパティを記述する</li>
+      <li><code>postinstall</code> 時に <code>ng build --prod</code> を実行するように設定する</li>
+      <li><code>start</code> コマンドで <code>node server.js</code> を実行するように設定する</li>
+    </ul>
+  </li>
+  <li><code>server.js</code>
+    <ul>
+      <li><code>ng build</code> で生成された <code>dist/</code> ディレクトリ配下のファイルを静的に返すルーティングを実装しておく</li>
+    </ul>
+  </li>
+  <li><code>app-routing.module.ts</code>
+    <ul>
+      <li>HashLocationStrategy を使用するように変更 (任意)</li>
+    </ul>
+  </li>
+</ul>
+<p>コレで準備完了。</p>
+<h2 id="heroku-にデプロイする"><a class="header-link" href="#heroku-にデプロイする"><span class="header-link-mark"></span></a>Heroku にデプロイする</h2>
+<p>ココまでできたら、いよいよ Heroku へのデプロイだ。デプロイの仕方は通常の Node.js プロジェクトと同様、<code>$ git push heroku master</code> コマンドで Heroku に <code>git push</code> すれば良い。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">git</span> push heroku master
+</code></pre>
+<p>Heroku に向けて <code>git push</code> すると、<code>git clone</code> と <code>npm install</code> が行われ、<code>postinstall</code> コマンドが呼ばれて <code>ng build --prod</code> 処理が実行される。成果物ファイルは <code>angular.json</code> の設定どおり、<code>dist/</code> ディレクトリ直下に出力される。</p>
+<p>その後 <code>npm start</code> コマンドが呼ばれ、<code>server.js</code> に書いた Express サーバが起動する。</p>
+<p>ココまでできたら、<code>https://【アプリ名】.herokuapp.com/</code> にアクセスしてみよう。ビルドされた Angular アプリが動作しているはずだ。</p>
+<h2 id="以上"><a class="header-link" href="#以上"><span class="header-link-mark"></span></a>以上</h2>
+<p>以上の作業で、とりあえず Angular アプリを Heroku 上で動作させることはできたと思う。</p>
+<p>クライアントサイドで完結する Angular アプリなら、別に GitHub Pages に Push しても同じだが、今回は PostgreSQL も付いてくる Heroku にデプロイしたので、この後はサーバサイドも実装してみて、Angular アプリと Express サーバがうまいことやり取りして、DB も絡んで、セッション管理とかもするような Web アプリケーションを作っていきたいと思う。</p>
+<ul>
+  <li>参考：<a href="https://qiita.com/DotaKobayashi/items/0d9712c7ab31a29ebb5c">Angular CLI で作成したアプリをHerokuへデプロイする方法 - Qiita</a></li>
+  <li>参考：<a href="https://qiita.com/KashikomaSweet/items/7c823bea70b989d2663f">Angular CLIで作成したPWAをHerokuにデプロイする - Qiita</a></li>
+</ul>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2018-12-13</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2018-12-13</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

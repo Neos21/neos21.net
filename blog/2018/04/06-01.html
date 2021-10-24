@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>Bitbucket と連携して自動実行する Jenkins Declarative Pipeline ジョブの作り方 - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2018/04/06-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2018/index.html">2018年</a></li>
+            <li><a href="/blog/2018/04/index.html">04月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2018-04-06</time></div>
+        <h1 id="page-title">Bitbucket と連携して自動実行する Jenkins Declarative Pipeline ジョブの作り方</h1>
+
+<p>Bitbucket リポジトリへの Push を契機に動作する Jenkins ジョブを作ってみる。</p>
+<p>今回は Declarative Pipeline を使い、いずれかのブランチに Push があったら <em>develop</em> ブランチでテストを実行する、というモノを作ってみよう。</p>
+<p>いくつか Bitbucket のバグとかでハマったので、手順とともに注意点を紹介。</p>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#1-bitbucket-%E4%B8%8A%E3%81%A7%E3%80%8Cbitbucket-server-webhook-to-jenkins%E3%80%8D%E3%83%95%E3%83%83%E3%82%AF%E3%82%92%E8%A8%AD%E5%AE%9A%E3%81%99%E3%82%8B">1. Bitbucket 上で「Bitbucket Server Webhook to Jenkins」フックを設定する</a></li>
+  <li><a href="#2-jenkins-%E4%B8%8A%E3%81%A7-pipeline-%E3%82%B8%E3%83%A7%E3%83%96%E3%82%92%E4%BD%9C%E6%88%90%E3%81%99%E3%82%8B">2. Jenkins 上で Pipeline ジョブを作成する</a></li>
+  <li><a href="#3-jenkinsfile-%E3%82%92%E4%BD%9C%E6%88%90%E3%81%99%E3%82%8B">3. Jenkinsfile を作成する</a></li>
+  <li><a href="#4-%E3%82%B8%E3%83%A7%E3%83%96%E3%82%92%E6%89%8B%E5%8B%95%E5%AE%9F%E8%A1%8C%E3%81%99%E3%82%8B">4. ジョブを手動実行する</a></li>
+  <li><a href="#%E5%AE%8C">完</a></li>
+</ul>
+<h2 id="1-bitbucket-上で「bitbucket-server-webhook-to-jenkins」フックを設定する"><a class="header-link" href="#1-bitbucket-上で「bitbucket-server-webhook-to-jenkins」フックを設定する"><span class="header-link-mark"></span></a>1. Bitbucket 上で「Bitbucket Server Webhook to Jenkins」フックを設定する</h2>
+<p>まずは、ブラウザで Bitbucket の対象リポジトリを開き、左メニュー最下部の「設定」リンク → サブメニュー「ワークフロー」 → 「フック」リンク、と進み、<em>「Bitbucket Server Webhook to Jenkins」フックを「有効化」</em>する。</p>
+<p>設定用のモーダルが開いたら、以下のように設定する。</p>
+<ul>
+  <li>Jenkins URL：Jenkins サーバの URL を指定する</li>
+  <li>Repo Clone URL：「SSH」を選択する
+    <ul>
+      <li>右の Read-Only なテキストボックスに表示される「<code>ssh://git@ ... .git</code>」という URL は、Pipeline で使用する Git URL となるので、控えておくと良い。</li>
+    </ul>
+  </li>
+  <li>Skip SSL Certificate Validation：チェックする
+    <ul>
+      <li>必須ではないが、連携時の認証を緩めに設定しておく</li>
+    </ul>
+  </li>
+  <li><em>Omit Branch Name</em>：チェックする
+    <ul>
+      <li><strong>Jenkins のバグでココにチェックを入れないと上手く Push 連携できない</strong></li>
+      <li>参考：<a href="https://issues.jenkins-ci.org/browse/JENKINS-38447#comment-316227">JENKINS-38447 Bitbucket hooks don't work for Pipeline jobs - Jenkins JIRA</a></li>
+    </ul>
+  </li>
+  <li>ジョブの実行対象外としたいブランチがある場合は、Advanced Configration → Branch Options：「Ignore from:」を選択し、無視したいブランチ名を指定する。例えば <code>feat*</code> などとすれば、feature ブランチに Push された場合に Jenkins 連携されなくなる。</li>
+</ul>
+<p>ここまで出来たら、「Trigger Jenkins」ボタンを押下して動作確認する。「Success!」と表示されたら成功。</p>
+<p>次のようなエラーが表示される場合は、Jenkins 側が受け取ったフックを無視してしまっていると思われる。</p>
+<pre><code>Error: Jenkins response: No git jobs using repository: ssh://git@【リポジトリ URL】.git and branches: master
+No Git consumers using SCM API plugin for: ssh://git@【リポジトリ URL】.git
+</code></pre>
+<p>Jenkins サーバのコンソールログに <code>no trigger, or post-commit hooks disabled, on 【リポジトリ名】</code> といったログが出力されていると思われる。この問題は「Omit Branch Name」にチェックを入れることで回避できるはず。</p>
+<h2 id="2-jenkins-上で-pipeline-ジョブを作成する"><a class="header-link" href="#2-jenkins-上で-pipeline-ジョブを作成する"><span class="header-link-mark"></span></a>2. Jenkins 上で Pipeline ジョブを作成する</h2>
+<p>ブラウザで Jenkins のトップ画面を開き、左メニューの「新規ジョブ作成」リンクを押下、ジョブ名を決め、「パイプライン」を選択する。</p>
+<p>ジョブの設定画面に移ったら次のように設定し、「保存」する。</p>
+<ul>
+  <li>ビルドトリガ
+    <ul>
+      <li>Build when a change is pushed to BitBucket：チェックする</li>
+      <li>SCM をポーリング：チェックする。「スケジュール」は空欄のままで良い</li>
+    </ul>
+  </li>
+  <li>パイプライン
+    <ul>
+      <li>その場に Declarative Pipeline を書くなり、別の Git リポジトリから Jenkinsfile を取得するなり、やり方はおまかせ</li>
+    </ul>
+  </li>
+</ul>
+<h2 id="3-jenkinsfile-を作成する"><a class="header-link" href="#3-jenkinsfile-を作成する"><span class="header-link-mark"></span></a>3. Jenkinsfile を作成する</h2>
+<p>以下のように Jenkinsfile を作成する。</p>
+<pre class="language-groovy"><code class="language-groovy">pipeline <span class="token punctuation">{</span>
+  <span class="token comment">// エージェント : 「any」で良い</span>
+  agent any
+  <span class="token comment">// ビルドトリガ : ジョブ設定画面の「ビルドトリガ」で選択したものと同じトリガを念のため記述しておく</span>
+  triggers <span class="token punctuation">{</span>
+    <span class="token function">bitbucketPush</span><span class="token punctuation">(</span><span class="token punctuation">)</span>  <span class="token comment">// 「Build when a change is pushed to BitBucket」相当</span>
+    <span class="token function">pollSCM</span><span class="token punctuation">(</span><span class="token string">''</span><span class="token punctuation">)</span>  <span class="token comment">// 「SCM をポーリング」相当</span>
+  <span class="token punctuation">}</span>
+  options <span class="token punctuation">{</span>
+    <span class="token comment">// ビルドの保存最大数を設定する</span>
+    <span class="token function">buildDiscarder</span><span class="token punctuation">(</span><span class="token function">logRotator</span><span class="token punctuation">(</span>numToKeepStr<span class="token punctuation">:</span> <span class="token string">'5'</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+  <span class="token punctuation">}</span>
+  <span class="token comment">// 変数定義</span>
+  environment <span class="token punctuation">{</span>
+    <span class="token comment">// チェックアウトするブランチ名を指定する</span>
+    BRANCH <span class="token operator">=</span> <span class="token string">'develop'</span>
+    <span class="token comment">// プロジェクト・リポジトリ URL</span>
+    GIT_URL <span class="token operator">=</span> <span class="token string">'ssh://git@【プロジェクト・リポジトリ URL】.git'</span>
+    <span class="token comment">// リポジトリ・ブラウザ URL</span>
+    BROWSER_URL <span class="token operator">=</span> <span class="token string">'http://【Bitbucket リポジトリ・ブラウザ URL】/browse'</span>
+  <span class="token punctuation">}</span>
+  stages <span class="token punctuation">{</span>
+    <span class="token function">stage</span><span class="token punctuation">(</span><span class="token string">'Git チェックアウト'</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      steps <span class="token punctuation">{</span>
+        <span class="token comment">// Push を監視しチェックアウトする</span>
+        checkout poll<span class="token punctuation">:</span> <span class="token boolean">true</span><span class="token punctuation">,</span>
+                 scm<span class="token punctuation">:</span> <span class="token punctuation">[</span>
+                   <span class="token punctuation">$</span><span class="token keyword">class</span><span class="token punctuation">:</span> <span class="token string">'GitSCM'</span><span class="token punctuation">,</span>
+                   branches<span class="token punctuation">:</span> <span class="token punctuation">[</span><span class="token punctuation">[</span>name<span class="token punctuation">:</span> <span class="token string gstring">"origin/<span class="token expression"><span class="token punctuation">$</span><span class="token punctuation">{</span>BRANCH<span class="token punctuation">}</span></span>"</span><span class="token punctuation">]</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
+                   browser<span class="token punctuation">:</span> <span class="token punctuation">[</span>
+                     <span class="token punctuation">$</span><span class="token keyword">class</span><span class="token punctuation">:</span> <span class="token string">'BitbucketWeb'</span><span class="token punctuation">,</span>
+                     repoUrl<span class="token punctuation">:</span> <span class="token string gstring">"<span class="token expression"><span class="token punctuation">$</span><span class="token punctuation">{</span>BROWSER_URL<span class="token punctuation">}</span></span>"</span>
+                   <span class="token punctuation">]</span><span class="token punctuation">,</span>
+                   doGenerateSubmoduleConfigurations<span class="token punctuation">:</span> <span class="token boolean">false</span><span class="token punctuation">,</span>
+                   extensions<span class="token punctuation">:</span> <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
+                   submoduleCfg<span class="token punctuation">:</span> <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
+                   userRemoteConfigs<span class="token punctuation">:</span> <span class="token punctuation">[</span><span class="token punctuation">[</span>
+                     credentialsId<span class="token punctuation">:</span> <span class="token string">'【認証情報】'</span><span class="token punctuation">,</span>
+                     url<span class="token punctuation">:</span> <span class="token string gstring">"<span class="token expression"><span class="token punctuation">$</span><span class="token punctuation">{</span>GIT_URL<span class="token punctuation">}</span></span>"</span>
+                   <span class="token punctuation">]</span><span class="token punctuation">]</span>
+                 <span class="token punctuation">]</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span>
+    <span class="token function">stage</span><span class="token punctuation">(</span><span class="token string">'テスト実行'</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      steps <span class="token punctuation">{</span>
+        <span class="token comment">// ここでは npm パッケージのテストを実行するテイ</span>
+        <span class="token function">nodejs</span><span class="token punctuation">(</span>configId<span class="token punctuation">:</span> <span class="token string">'【.npmrc ファイル】'</span><span class="token punctuation">,</span> nodeJSInstallationName<span class="token punctuation">:</span> <span class="token string">'【利用する Node.js】'</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+          <span class="token comment">// Jenkins サーバの OS に応じて「bat」か「sh」を使用する</span>
+          bat <span class="token string">'npm install'</span>
+          bat <span class="token string">'npm test'</span>
+        <span class="token punctuation">}</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span>
+  post <span class="token punctuation">{</span>
+    always <span class="token punctuation">{</span>
+      <span class="token comment">// ワークスペースを削除する</span>
+      <span class="token function">deleteDir</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>「テスト実行」部分は対象のプロジェクトに合わせて適宜実装する。</p>
+<h2 id="4-ジョブを手動実行する"><a class="header-link" href="#4-ジョブを手動実行する"><span class="header-link-mark"></span></a>4. ジョブを手動実行する</h2>
+<p>作成した Pipeline ジョブの左メニューから「ビルドの実行」リンクを押下し、動作確認する。</p>
+<ul>
+  <li>Pipeline の構文エラーや、接続先誤り等がないか確認しておく。</li>
+  <li><strong>Push 時の自動連携は、一度ジョブを手動実行しておかないと有効にならない</strong>ため、ジョブを新規作成したり、ジョブ設定を変更したりした場合は、必ず一度手動実行しておくこと。</li>
+</ul>
+<blockquote>
+  <p>Git関連のプラグインは、必ず一度手動実行しておく必要があります。<br>手動実行することでJenkinsノード上でgitのcheckoutを行っているようです。</p>
+  <ul>
+    <li>参考：<a href="https://qiita.com/namutaka/items/f0e87cee7eb95c7e950d">Jenkins Pipeline で Gitlab連携がうまくいかない - Qiita</a></li>
+  </ul>
+</blockquote>
+<h2 id="完"><a class="header-link" href="#完"><span class="header-link-mark"></span></a>完</h2>
+<p>これにて作成完了。ここまで辿り着くのに地味に苦労した…。</p>
+<ul>
+  <li>参考：<a href="https://qiita.com/atsuto55/items/e3c9aa008008664392e8">WebhookとSCMポーリングの違い 〜JenkinsとGithubを連携させる〜 - Qiita</a></li>
+  <li>参考：<a href="https://papix.hatenablog.com/entry/2015/08/08/142431">JenkinsでBitbucketのコードをテストする - Masteries</a></li>
+</ul>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2018-04-06</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2018-04-06</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

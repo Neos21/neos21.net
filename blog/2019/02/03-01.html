@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>Perl CGI でリクエスト文字列をファイル書き出ししたら文字化けしたのを直した - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2019/02/03-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2019/index.html">2019年</a></li>
+            <li><a href="/blog/2019/02/index.html">02月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2019-02-03</time></div>
+        <h1 id="page-title">Perl CGI でリクエスト文字列をファイル書き出ししたら文字化けしたのを直した</h1>
+
+<p>POST 送信されたリクエスト文字列を取得し、それをファイルに書き出すという Perl CGI を書いていた。よくある掲示板システムみたいなモノだ。</p>
+<p>昔の Shift-JIS を使っていた頃とは違って、今は表示する Web ページも UTF-8、Perl スクリプトファイルも UTF-8、AJAX 通信するので当然 UTF-8、全部 UTF-8 なら文字化けなんてないだろ…と思っていたら、ファイルに書き出した文字列が盛大に化けていた。</p>
+<p>そこでよくよく調べてみると、何やら Perl では <strong><code>utf8::decode()</code></strong> という関数を使う必要があることが分かった。</p>
+<h2 id="perl-における文字コード設定色々"><a class="header-link" href="#perl-における文字コード設定色々"><span class="header-link-mark"></span></a>Perl における文字コード設定色々</h2>
+<p>Perl CGI における文字コード設定はいくつかの場所で出てくる。それぞれの効能を理解しておかないと、今回の文字化けは解消できなさそうだったので、色々調べてみた。</p>
+<p>まずスクリプトの冒頭で、ファイル全体に対して適用したいものとして記述したのは、最終的に以下の3行になった。</p>
+<pre class="language-perl"><code class="language-perl"><span class="token keyword">use</span> utf8<span class="token punctuation">;</span>
+<span class="token keyword">use</span> open <span class="token string">':encoding(UTF-8)'</span><span class="token punctuation">;</span>
+binmode<span class="token punctuation">(</span>STDOUT<span class="token punctuation">,</span> <span class="token string">':encoding(UTF-8)'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<ul>
+  <li><code>use utf8;</code>
+    <ul>
+      <li>この CGI ファイルのエンコーディングを示す。</li>
+      <li>コレにより、スクリプトが扱う全角文字データに <strong>UTF-8 フラグ</strong>が付いているよ、という宣言になるようだ。</li>
+      <li>後で分かるが、今回の文字化けはこの <strong>UTF-8 フラグが付いていない全角文字を処理したことが原因だった。</strong></li>
+    </ul>
+  </li>
+  <li><code>use open ':encoding(UTF-8)';</code>
+    <ul>
+      <li>ファイル入出力で使用する <code>open()</code> 関数のエンコーディングを示す。</li>
+      <li><code>open()</code> の第2引数で示すのと同じ内容。</li>
+      <li><code>:utf8</code> と書くとエンコードチェックしないので、省略せず <code>:encoding(UTF-8)</code> と書くのが良いようだ。</li>
+    </ul>
+  </li>
+  <li><code>binmode(STDOUT, ':encoding(UTF-8)');</code>
+    <ul>
+      <li>標準出力 <code>STDOUT</code> 向けのエンコーディングを示す。</li>
+      <li>コレがないと <code>Wide character in print</code> といったワーニングが出力される。</li>
+    </ul>
+  </li>
+</ul>
+<h2 id="utf8decode-関数"><a class="header-link" href="#utf8decode-関数"><span class="header-link-mark"></span></a><code>utf8::decode()</code> 関数</h2>
+<p>今回、リクエスト文字列を受け取って、それをファイルに書き込んでいたワケだが、リクエスト文字列は外部から拾ってきた文字列なので、Perl のスクリプト内部で使用している文字列と違って <em>UTf-8 フラグ</em>というモノが付いていなかった。</p>
+<pre class="language-perl"><code class="language-perl"><span class="token comment"># POST 送信されたリクエスト文字列を受け取る</span>
+<span class="token keyword">my</span> <span class="token variable">$queryString</span><span class="token punctuation">;</span>
+read<span class="token punctuation">(</span>STDIN<span class="token punctuation">,</span> <span class="token variable">$queryString</span><span class="token punctuation">,</span> <span class="token variable">$ENV</span><span class="token punctuation">{</span><span class="token string">'CONTENT_LENGTH'</span><span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token comment"># ↑ この $queryString には UTF-8 フラグが付いていない</span>
+
+<span class="token comment"># ただの文字列をスクリプト内で宣言する</span>
+<span class="token keyword">my</span> <span class="token variable">$exampleStr</span> <span class="token operator">=</span> <span class="token string">'テスト'</span><span class="token punctuation">;</span>
+<span class="token comment"># ↑ この $exampleStr は Perl スクリプト内で用意しているので自動的に UTF-8 フラグが付いている</span>
+</code></pre>
+<p>変数 <code>$queryString</code> は <code>key=value</code> な文字列になっているので、分解して連想配列 (ハッシュ) にする関数を組んでいた。そこで、分解した <code>value</code> に対して UTF-8 フラグを付けるため、<strong><code>utf8::decode()</code></strong> 関数を適用するようにした。</p>
+<pre class="language-perl"><code class="language-perl"><span class="token comment"># クエリ文字列を連想配列に変換する (GET・POST 対応)</span>
+<span class="token function"><span class="token keyword">sub</span> parseQueries</span> <span class="token punctuation">{</span>
+  <span class="token comment"># リクエスト情報をまとめる連想配列</span>
+  <span class="token keyword">my</span> <span class="token variable">%formData</span><span class="token punctuation">;</span>
+  
+  <span class="token comment"># QueryString を取得する</span>
+  <span class="token keyword">my</span> <span class="token variable">$queryString</span><span class="token punctuation">;</span>
+  <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token variable">$ENV</span><span class="token punctuation">{</span><span class="token string">'REQUEST_METHOD'</span><span class="token punctuation">}</span> <span class="token operator">eq</span> <span class="token string">'POST'</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    read<span class="token punctuation">(</span>STDIN<span class="token punctuation">,</span> <span class="token variable">$queryString</span><span class="token punctuation">,</span> <span class="token variable">$ENV</span><span class="token punctuation">{</span><span class="token string">'CONTENT_LENGTH'</span><span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  <span class="token keyword">else</span> <span class="token punctuation">{</span>
+    <span class="token variable">$queryString</span> <span class="token operator">=</span> <span class="token variable">$ENV</span><span class="token punctuation">{</span><span class="token string">'QUERY_STRING'</span><span class="token punctuation">}</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  
+  <span class="token comment"># 'name=value' の配列に直す</span>
+  <span class="token keyword">my</span> <span class="token variable">@queryPairs</span> <span class="token operator">=</span> split<span class="token punctuation">(</span><span class="token string">'&#x26;'</span><span class="token punctuation">,</span> <span class="token variable">$queryString</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">foreach</span> <span class="token keyword">my</span> <span class="token variable">$queryPair</span> <span class="token punctuation">(</span><span class="token variable">@queryPairs</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token keyword">my</span> <span class="token punctuation">(</span><span class="token variable">$name</span><span class="token punctuation">,</span> <span class="token variable">$value</span><span class="token punctuation">)</span> <span class="token operator">=</span> split<span class="token punctuation">(</span><span class="token string">'='</span><span class="token punctuation">,</span> <span class="token variable">$queryPair</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token comment"># パーセントエンコーディング文字列を戻す</span>
+    <span class="token variable">$value</span> <span class="token operator">=~</span> <span class="token regex">tr/+/ /</span><span class="token punctuation">;</span>
+    <span class="token variable">$value</span> <span class="token operator">=~</span> <span class="token regex">s/%([a-fA-F0-9][a-fA-F0-9])/pack('C', hex($1))/eg</span><span class="token punctuation">;</span>
+    
+    <span class="token comment"># UTF-8 フラグを付ける！</span>
+    utf8<span class="token punctuation">:</span><span class="token punctuation">:</span>decode<span class="token punctuation">(</span><span class="token variable">$value</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    
+    <span class="token variable">$formData</span><span class="token punctuation">{</span><span class="token variable">$name</span><span class="token punctuation">}</span> <span class="token operator">=</span> <span class="token variable">$value</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  
+  <span class="token keyword">return</span> <span class="token variable">%formData</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p><code>%formData</code> のキー文字列に使用する <code>$name</code> の方は、ファイルへの書き出しをしなかったので特にデコードしなかった。試してはいないが、<code>split()</code> する前に <code>$queryString</code> ごとデコードしてしまっても良いのかも。</p>
+<p>とりあえずコレでファイル書き出し時の文字化けは解消できた。</p>
+<h2 id="参考文献"><a class="header-link" href="#参考文献"><span class="header-link-mark"></span></a>参考文献</h2>
+<ul>
+  <li>参考：<a href="http://mycc.s33.xrea.com/data/pc/perl_use_utf8.html">PerlのCGIのutf-8改造で文字化けしたときの処方箋</a>
+    <ul>
+      <li>一番分かりやすかった。</li>
+    </ul>
+  </li>
+  <li>参考：<a href="https://casualdevelopers.com/tech-tips/how-to-manage-charcode-with-perl/">Perlで文字コードをいい感じに処理する方法 | Casual Developers Notes</a></li>
+</ul>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2019-02-03</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2019-02-03</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>SSH 接続先でサーバを立ち上げっぱなしにしてログアウトするための Bash の書き方 - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2018/09/26-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2018/index.html">2018年</a></li>
+            <li><a href="/blog/2018/09/index.html">09月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2018-09-26</time></div>
+        <h1 id="page-title">SSH 接続先でサーバを立ち上げっぱなしにしてログアウトするための Bash の書き方</h1>
+
+<p>自端末から、SSH で Linux (CentOS) サーバに接続し、その Linux サーバ上で Express サーバを立ち上げ、SSH 接続を切断したかった。</p>
+<p>Express サーバは、<code>$ npm install</code> 後、<code>$ node main.js</code> と叩くと起動するようになっているのだが、ターミナルを閉じたり、ログアウトしたりした時に、このプロセスを生かし続ける方法が分からず調べた。</p>
+<p>結論からいうと、Linux の <strong><code>nohup</code></strong> というコマンドを使うと実現できた。</p>
+<h2 id="hup-シグナルを無視しつつバックグラウンドプロセスで起動する"><a class="header-link" href="#hup-シグナルを無視しつつバックグラウンドプロセスで起動する"><span class="header-link-mark"></span></a>HUP シグナルを無視しつつバックグラウンドプロセスで起動する</h2>
+<p><code>nohup</code> を使って、SSH 切断後もプロセスを動かし続けるには、<strong><code>nohup 【コマンド】 &#x26;</code></strong> というイディオムを使う。</p>
+<p><code>nohup</code> コマンド自体は、SSH ログアウトなどを行った時に送信される HUP (ハングアップ) シグナルを無視するだけ。そのコマンドをバックグラウンドで動かすには、末尾に <em><code>&#x26;</code></em> を与える。</p>
+<p>というワケで、以下のように叩けば良い。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># Linux サーバに SSH 接続する</span>
+$ <span class="token function">ssh</span> -p <span class="token number">22</span> hogeuser@linux-host
+
+<span class="token comment"># Linux サーバにて以下のように実行する</span>
+<span class="token variable">$$</span> <span class="token function">nohup</span> node main.js <span class="token operator">></span> /dev/null <span class="token operator"><span class="token file-descriptor important">2</span>></span><span class="token file-descriptor important">&#x26;1</span> <span class="token operator">&#x3C;</span>/dev/null <span class="token operator">&#x26;</span>
+
+<span class="token comment"># プロンプトが戻るので、このまま exit したりして良い</span>
+<span class="token variable">$$</span> <span class="token builtin class-name">exit</span>
+</code></pre>
+<p>標準出力、エラー出力などを無視するため、リダイレクトと <code>/dev/null</code> の記述を追加してはいるが、<strong><code>nohup node main.js &#x26;</code></strong> ということだ。</p>
+<h2 id="バックグラウンドで起動しているプロセスを停止させるには"><a class="header-link" href="#バックグラウンドで起動しているプロセスを停止させるには"><span class="header-link-mark"></span></a>バックグラウンドで起動しているプロセスを停止させるには</h2>
+<p>最初の目的はこれで果たせたが、今度はこの Express サーバを止めたくなった時にどうするか、ということである。普通プロンプトを奪われたままだったら、<code>Ctrl + C</code> で終了できたのに…というところ。</p>
+<p>具体的な手法がいくつかあるのでこれから紹介するが、やろうとしていることは <em>プロセスを特定して終了させる</em>、ということだ。</p>
+<h3 id="方法1--ps-でプロセス-id-を調べて-kill-する"><a class="header-link" href="#方法1--ps-でプロセス-id-を調べて-kill-する"><span class="header-link-mark"></span></a>方法1 : <code>ps</code> でプロセス ID を調べて <code>kill</code> する</h3>
+<p>最も原始的なやり方は、<code>ps</code> コマンドで <code>node main.js</code> が動作している PID (プロセス ID) を取得して、コレを指定して <code>kill</code> コマンドを叩く、というモノ。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">ps</span> aux <span class="token operator">|</span> <span class="token function">grep</span> <span class="token punctuation">[</span>n<span class="token punctuation">]</span>ode
+Neo        <span class="token number">4954</span>   <span class="token number">0.0</span>  <span class="token number">0.5</span>  <span class="token number">5226356</span>  <span class="token number">39428</span> s000  S     <span class="token number">1</span>:32PM   <span class="token number">0</span>:00.72 node main.js
+
+<span class="token comment"># コレでプロセス ID が「4954」と分かったので、以下のように叩く</span>
+$ <span class="token function">kill</span> -9 <span class="token number">4954</span>
+
+$ <span class="token function">ps</span> aux <span class="token operator">|</span> <span class="token function">grep</span> <span class="token punctuation">[</span>n<span class="token punctuation">]</span>ode
+<span class="token comment"># 何も出なくなる = プロセスが終了できた</span>
+</code></pre>
+<p><code>grep</code> コマンドの検索文字列に <em><code>[n]ode</code></em> と書いているが、<em>先頭の文字列を <code>[]</code> で囲むと、<code>grep</code> コマンド自身のプロセスを除外できる</em>という小技だ。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># 「[n]」と書かないと、以下のように grep コマンド自身も表示されてしまう</span>
+$ <span class="token function">ps</span> aux <span class="token operator">|</span> <span class="token function">grep</span> node
+Neo        <span class="token number">4980</span>   <span class="token number">0.0</span>  <span class="token number">0.0</span>  <span class="token number">4267768</span>    <span class="token number">896</span> s000  S+    <span class="token number">1</span>:32PM   <span class="token number">0</span>:00.00 <span class="token function">grep</span> --color node
+Neo        <span class="token number">4954</span>   <span class="token number">0.0</span>  <span class="token number">0.5</span>  <span class="token number">5226356</span>  <span class="token number">39428</span> s000  S     <span class="token number">1</span>:32PM   <span class="token number">0</span>:00.72 node main.js
+</code></pre>
+<h3 id="方法2--pgrep-でプロセス-id-を取得して-kill-する"><a class="header-link" href="#方法2--pgrep-でプロセス-id-を取得して-kill-する"><span class="header-link-mark"></span></a>方法2 : <code>pgrep</code> でプロセス ID を取得して <code>kill</code> する</h3>
+<p><code>pgrep</code> という便利なコマンドがある。<code>ps | grep</code> を一気にやってくれるようなコマンドだ。このコマンドはプロセス ID だけを返すので、コレを直接 <code>kill</code> コマンドに渡してしまえば終了できる。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># 比較のため、「方法1」のやり方でプロセスを確認しておく</span>
+$ <span class="token function">ps</span> aux <span class="token operator">|</span> <span class="token function">grep</span> <span class="token punctuation">[</span>n<span class="token punctuation">]</span>ode
+Neo        <span class="token number">5046</span>   <span class="token number">0.0</span>  <span class="token number">0.5</span>  <span class="token number">5226868</span>  <span class="token number">39796</span> s000  S     <span class="token number">1</span>:36PM   <span class="token number">0</span>:00.62 node main.js
+
+<span class="token comment"># pgrep を使うと、検索対象のコマンドを指定して、PID のみ取得できる</span>
+$ pgrep -f <span class="token string">'node main.js'</span>
+<span class="token number">5046</span>
+
+<span class="token comment"># 「$()」構文を利用して、kill コマンドに PID を渡して終了させる</span>
+$ <span class="token function">kill</span> -9 <span class="token variable"><span class="token variable">$(</span>pgrep -f <span class="token string">'node main.js'</span><span class="token variable">)</span></span>
+
+<span class="token comment"># 以下いずれのコマンドも結果が表示されなく鳴った = 停止できた</span>
+$ <span class="token function">ps</span> aux <span class="token operator">|</span> <span class="token function">grep</span> <span class="token punctuation">[</span>n<span class="token punctuation">]</span>ode
+$ pgrep -f <span class="token string">'node main.js'</span>
+</code></pre>
+<h3 id="方法3--pkill-で対象のコマンドを指定して直接-kill-してもらう"><a class="header-link" href="#方法3--pkill-で対象のコマンドを指定して直接-kill-してもらう"><span class="header-link-mark"></span></a>方法3 : <code>pkill</code> で対象のコマンドを指定して直接 Kill してもらう</h3>
+<p>「方法2」のようなことをしなくとも、同等のことをやってくれるコマンドとして、<em><code>pkill</code></em> というコマンドが用意されている。最初からコレでよかった…。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># コレだけでプロセスを終了できる</span>
+$ <span class="token function">pkill</span> -f <span class="token string">'node main.js'</span>
+</code></pre>
+<p>以上。コレで Express サーバを立ち上げっぱなしにできるぞ〜</p>
+<ul>
+  <li>参考：<a href="http://www.atmarkit.co.jp/ait/articles/1708/24/news022.html">【 nohup 】コマンド――端末を閉じてもログアウトしても処理を続ける：Linux基本コマンドTips（137） - ＠IT</a></li>
+  <li>参考：<a href="https://tech.nikkeibp.co.jp/it/article/COLUMN/20060227/230850/">【 nohup 】 ログアウトした後もコマンドを実行し続ける | 日経 xTECH（クロステック）</a></li>
+  <li>参考：<a href="https://qiita.com/toshihirock/items/4a6b17a38f9b6e5e7116">nohupを使ってsshログアウト後もシェルスクリプトを動かす</a></li>
+</ul>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2018-09-26</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2018-09-26</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>AWS CLI v2 でスイッチロールする - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2020/12/26-02.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2020/index.html">2020年</a></li>
+            <li><a href="/blog/2020/12/index.html">12月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2020-12-26</time></div>
+        <h1 id="page-title">AWS CLI v2 でスイッチロールする</h1>
+
+<p>AWS CLI を使って作業する際、スイッチロールする必要が出たのでやり方を調べた。</p>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#aws-cli-v2-%E3%82%92%E5%89%8D%E6%8F%90%E3%81%AB%E3%81%99%E3%82%8B">AWS CLI v2 を前提にする</a></li>
+  <li><a href="#%E5%88%9D%E6%9C%9F%E3%82%BB%E3%83%83%E3%83%88%E3%82%A2%E3%83%83%E3%83%97%E3%82%92%E8%A1%8C%E3%81%86">初期セットアップを行う</a></li>
+  <li><a href="#%E3%82%B9%E3%82%A4%E3%83%83%E3%83%81%E3%83%AD%E3%83%BC%E3%83%AB%E3%81%AE%E3%81%9F%E3%82%81%E3%81%AE%E6%83%85%E5%A0%B1%E3%82%92%E5%8F%96%E5%BE%97%E3%81%99%E3%82%8B">スイッチロールのための情報を取得する</a></li>
+  <li><a href="#%E3%83%97%E3%83%AD%E3%83%95%E3%82%A1%E3%82%A4%E3%83%AB%E3%82%92%E4%BD%9C%E6%88%90%E3%81%99%E3%82%8B">プロファイルを作成する</a></li>
+  <li><a href="#%E3%82%B3%E3%83%9E%E3%83%B3%E3%83%89%E5%88%A9%E7%94%A8%E6%99%82%E3%81%AB-mfa-%E8%AA%8D%E8%A8%BC%E3%82%92%E8%A1%8C%E3%81%86">コマンド利用時に MFA 認証を行う</a></li>
+</ul>
+<h2 id="aws-cli-v2-を前提にする"><a class="header-link" href="#aws-cli-v2-を前提にする"><span class="header-link-mark"></span></a>AWS CLI v2 を前提にする</h2>
+<p>今回は Mac 環境にインストールした AWS CLI v2 を前提とする。AWS CLI v2 は以下から <code>.pkg</code> ファイルをダウンロードしインストールした。</p>
+<ul>
+  <li>参考：<a href="https://docs.aws.amazon.com/ja_jp/cli/latest/userguide/install-cliv2.html">AWS CLI バージョン 2 のインストール、更新、アンインストール - AWS Command Line Interface</a></li>
+</ul>
+<h2 id="初期セットアップを行う"><a class="header-link" href="#初期セットアップを行う"><span class="header-link-mark"></span></a>初期セットアップを行う</h2>
+<p>まずは <code>aws configure</code> コマンドで初期セットアップを行う。ココで入力する情報はスイッチロール前の IAM ユーザの情報で良い。</p>
+<pre class="language-bash"><code class="language-bash">$ aws configure
+AWS Access Key ID <span class="token punctuation">[</span>None<span class="token punctuation">]</span>: 【受領したアクセスキー ID を入力する】
+AWS Secret Access Key <span class="token punctuation">[</span>None<span class="token punctuation">]</span>: 【受領したシークレットアクセスキーを入力する】
+Default region name <span class="token punctuation">[</span>None<span class="token punctuation">]</span>: ap-northeast-1
+Default output <span class="token function">format</span> <span class="token punctuation">[</span>None<span class="token punctuation">]</span>: json
+</code></pre>
+<p>以下の2ファイルが生成されていることを確認する。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">cat</span> ~/.aws/config
+<span class="token punctuation">[</span>default<span class="token punctuation">]</span>
+region <span class="token operator">=</span> ap-northeast-1
+output <span class="token operator">=</span> json
+
+$ <span class="token function">cat</span> ~/.aws/credentials
+<span class="token punctuation">[</span>default<span class="token punctuation">]</span>
+aws_access_key_id <span class="token operator">=</span> 【アクセスキー ID】
+aws_secret_access_key <span class="token operator">=</span> 【シークレットアクセスキー】
+</code></pre>
+<h2 id="スイッチロールのための情報を取得する"><a class="header-link" href="#スイッチロールのための情報を取得する"><span class="header-link-mark"></span></a>スイッチロールのための情報を取得する</h2>
+<p>スイッチロール前のユーザで IAM マネジメントコンソールにログインする。</p>
+<p>「ユーザー」より自身のユーザ情報を開き、「認証情報」タブから「MFA デバイスの割り当て」欄の情報を取得する。</p>
+<ul>
+  <li>ex. <code>arn:aws:iam::【アカウント ID】:mfa/【ユーザ名】</code></li>
+</ul>
+<p>次に「ロール」よりスイッチロール先のロール名を開き、「ロール ARN」を取得する。</p>
+<ul>
+  <li><code>arn:aws:iam::【アカウント ID】:role/【ロール名】</code></li>
+</ul>
+<h2 id="プロファイルを作成する"><a class="header-link" href="#プロファイルを作成する"><span class="header-link-mark"></span></a>プロファイルを作成する</h2>
+<p><code>~/.aws/config</code> を開き、次のように <code>[profile]</code> セクションを追加する。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">cat</span> ~/.aws/config
+
+<span class="token punctuation">[</span>default<span class="token punctuation">]</span>
+region <span class="token operator">=</span> ap-northeast-1
+output <span class="token operator">=</span> json
+
+<span class="token punctuation">[</span>profile my-profile<span class="token punctuation">]</span>
+region <span class="token operator">=</span> ap-northeast-1
+mfa_serial <span class="token operator">=</span> arn:aws:iam::【アカウント ID】:mfa/【ユーザ名】
+role_arn <span class="token operator">=</span> arn:aws:iam::【アカウント ID】:role/【ロール名】
+source_profile <span class="token operator">=</span> default
+</code></pre>
+<h2 id="コマンド利用時に-mfa-認証を行う"><a class="header-link" href="#コマンド利用時に-mfa-認証を行う"><span class="header-link-mark"></span></a>コマンド利用時に MFA 認証を行う</h2>
+<p>以上で設定は完了。以降は、1時間に1度、コマンド実行時に MFA 認証が必要になる。以下でプロファイルの切り替えと MFA 認証の手順を参考にされたし。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># Default プロファイルで AWS CLI コマンドを使用している</span>
+$ aws sts get-caller-identity
+<span class="token punctuation">{</span>
+    <span class="token string">"UserId"</span><span class="token builtin class-name">:</span> <span class="token string">"【ユーザ ID】"</span>,
+    <span class="token string">"Account"</span><span class="token builtin class-name">:</span> <span class="token string">"【アカウント ID】"</span>,
+    <span class="token string">"Arn"</span><span class="token builtin class-name">:</span> <span class="token string">"arn:aws:iam::【アカウント ID】:user/【ユーザ名】"</span>
+<span class="token punctuation">}</span>
+
+<span class="token comment"># 追記したプロファイルで AWS CLI コマンドを使用。MFA 認証を行う</span>
+$ aws sts get-caller-identity --profile my-profile
+Enter MFA code <span class="token keyword">for</span> arn:aws:iam::【アカウント ID】:mfa/【ユーザ名】: 【MFA 認証コードを入力する】
+<span class="token punctuation">{</span>
+    <span class="token string">"UserId"</span><span class="token builtin class-name">:</span> <span class="token string">"【ユーザ ID】:botocore-session-【セッション ID】"</span>,
+    <span class="token string">"Account"</span><span class="token builtin class-name">:</span> <span class="token string">"【アカウント ID】"</span>,
+    <span class="token string">"Arn"</span><span class="token builtin class-name">:</span> <span class="token string">"arn:aws:sts::【アカウント ID】:assumed-role/【ロール名】/botocore-session-【セッション ID】"</span>
+<span class="token punctuation">}</span>
+
+<span class="token comment"># スイッチロールできていないと次のようにエラーになる</span>
+$ aws s3 <span class="token function">ls</span>
+An error occurred <span class="token punctuation">(</span>AccessDenied<span class="token punctuation">)</span> when calling the ListBuckets operation: Access Denied
+</code></pre>
+<p>以上。</p>
+<ul>
+  <li>参考：<a href="https://docs.aws.amazon.com/ja_jp/IAM/latest/UserGuide/id_roles_use_switch-role-cli.html">IAM ロールの切り替え (AWS CLI) - AWS Identity and Access Management</a></li>
+  <li>参考：<a href="https://dev.classmethod.jp/articles/cli-switch-role/">【小ネタ】AWS CLIでスイッチロールして作業を行うための設定をやってみた | Developers.IO</a></li>
+</ul>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2020-12-26</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2020-12-26</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

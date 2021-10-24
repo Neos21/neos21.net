@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>Express + Passport と Angular でセッション管理するアプリを作ってみる - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2018/12/14-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2018/index.html">2018年</a></li>
+            <li><a href="/blog/2018/12/index.html">12月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2018-12-14</time></div>
+        <h1 id="page-title">Express + Passport と Angular でセッション管理するアプリを作ってみる</h1>
+
+<p><em>サーバサイドは Express</em> で、<strong>クライアントサイドは Angular</strong> で作り、クライアントでログイン処理をしたユーザのみが、ある API にアクセスできるようにしたいと思った。よくあるログイン処理とセッション管理をサーバサイドで行いたい、ということだ。</p>
+<p>Express でそのようなログイン処理やセッション管理を行うには、<strong>Passport</strong> というライブラリを使うのがよくあるやり方みたいなので、試してみた。色々と詰まるところがあったので、困ったところのまとめを中心にメモ。</p>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#%E4%BD%BF%E7%94%A8%E3%81%99%E3%82%8B%E3%83%91%E3%83%83%E3%82%B1%E3%83%BC%E3%82%B8%E3%81%AE%E3%82%A4%E3%83%B3%E3%82%B9%E3%83%88%E3%83%BC%E3%83%AB%E3%81%A8%E8%A8%AD%E5%AE%9A">使用するパッケージのインストールと設定</a></li>
+  <li><a href="#passport-%E3%81%AE%E8%AA%8D%E8%A8%BC%E5%87%A6%E7%90%86%E3%82%92%E5%AE%9F%E8%A3%85%E3%81%99%E3%82%8B">Passport の認証処理を実装する</a></li>
+  <li><a href="#%E3%83%AD%E3%82%B0%E3%82%A4%E3%83%B3%E7%94%A8%E3%81%AE%E3%83%AB%E3%83%BC%E3%83%86%E3%82%A3%E3%83%B3%E3%82%B0%E3%82%92%E5%AE%9F%E8%A3%85%E3%81%99%E3%82%8B">ログイン用のルーティングを実装する</a></li>
+  <li><a href="#%E4%BA%8B%E5%89%8D%E3%81%AB%E3%83%AD%E3%82%B0%E3%82%A4%E3%83%B3%E8%AA%8D%E8%A8%BC%E3%81%8C%E5%BF%85%E8%A6%81%E3%81%AA-api-%E3%82%92%E5%AE%9F%E8%A3%85%E3%81%99%E3%82%8B">事前にログイン認証が必要な API を実装する</a></li>
+  <li><a href="#%E3%83%AD%E3%82%B0%E3%82%A2%E3%82%A6%E3%83%88%E7%94%A8%E3%81%AE%E3%83%AB%E3%83%BC%E3%83%86%E3%82%A3%E3%83%B3%E3%82%B0%E3%82%92%E7%94%A8%E6%84%8F%E3%81%99%E3%82%8B">ログアウト用のルーティングを用意する</a></li>
+  <li><a href="#angular-%E5%81%B4%E3%81%A7%E3%83%AD%E3%82%B0%E3%82%A4%E3%83%B3%E7%94%BB%E9%9D%A2%E3%81%AE%E5%AE%9F%E8%A3%85">Angular 側でログイン画面の実装</a></li>
+  <li><a href="#withcredentials-%E6%8C%87%E5%AE%9A%E3%82%92-httpinterceptor-%E3%81%AB%E4%BB%BB%E3%81%9B%E3%82%8B"><code>withCredentials</code> 指定を HttpInterceptor に任せる</a></li>
+  <li><a href="#%E4%BB%A5%E4%B8%8A%E3%80%82%E3%81%97%E3%81%8B%E3%81%97">以上。しかし…</a></li>
+  <li><a href="#%E5%8F%82%E8%80%83%E6%96%87%E7%8C%AE">参考文献</a></li>
+</ul>
+<h2 id="使用するパッケージのインストールと設定"><a class="header-link" href="#使用するパッケージのインストールと設定"><span class="header-link-mark"></span></a>使用するパッケージのインストールと設定</h2>
+<p>色々試行錯誤した結果、Express + Passport な環境を作るには、以下のモジュール群をインストールする必要があった。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">npm</span> <span class="token function">install</span> --save express body-parser passport passport-local express-session cookie-parser
+</code></pre>
+<ul>
+  <li>express : Express 本体</li>
+  <li>body-parser : Angular アプリと JSON でやり取りするために入れておく</li>
+  <li>passport : Passport.js 本体</li>
+  <li>passport-local : 認証ロジックを操作するライブラリ</li>
+  <li>express-session : Express でセッション管理を行うためのライブラリ</li>
+  <li>cookie-parser : express-session とともにクッキーを扱えるようにするためのライブラリ</li>
+</ul>
+<p>で、まずはセッション管理するための準備をするために、以下までを Express のメイン処理として実装した。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword">const</span> express <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'express'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">const</span> bodyParser <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'body-parser'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">const</span> passport <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'passport'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">const</span> <span class="token maybe-class-name">LocalStrategy</span> <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'passport-local'</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token property-access"><span class="token maybe-class-name">Strategy</span></span><span class="token punctuation">;</span>
+<span class="token keyword">const</span> session <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'express-session'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">const</span> cookieParser <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'cookie-parser'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// サーバをインスタンス化する</span>
+<span class="token keyword">const</span> app <span class="token operator">=</span> <span class="token function">express</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// クッキー設定</span>
+app<span class="token punctuation">.</span><span class="token method function property-access">use</span><span class="token punctuation">(</span><span class="token function">cookieParser</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// セッション設定</span>
+app<span class="token punctuation">.</span><span class="token method function property-access">use</span><span class="token punctuation">(</span><span class="token function">session</span><span class="token punctuation">(</span><span class="token punctuation">{</span>
+  secret<span class="token operator">:</span> <span class="token string">'SessionKey'</span><span class="token punctuation">,</span>      <span class="token comment">// クッキーの暗号化に使用するキー</span>
+  resave<span class="token operator">:</span> <span class="token boolean">false</span><span class="token punctuation">,</span>             <span class="token comment">// セッションチェックする領域にリクエストするたびにセッションを作り直してしまうので false</span>
+  saveUninitialized<span class="token operator">:</span> <span class="token boolean">false</span><span class="token punctuation">,</span>  <span class="token comment">// 未認証時のセッションを保存しないようにする</span>
+  cookie<span class="token operator">:</span> <span class="token punctuation">{</span>
+    maxAge<span class="token operator">:</span> <span class="token number">1000</span> <span class="token operator">*</span> <span class="token number">60</span> <span class="token operator">*</span> <span class="token number">60</span> <span class="token operator">*</span> <span class="token number">24</span> <span class="token operator">*</span> <span class="token number">7</span><span class="token punctuation">,</span>  <span class="token comment">// クッキーの有効期限をミリ秒指定 (1週間)</span>
+    secure<span class="token operator">:</span> <span class="token boolean">false</span>                     <span class="token comment">// HTTP 利用時は false にする</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// Passport の初期設定</span>
+app<span class="token punctuation">.</span><span class="token method function property-access">use</span><span class="token punctuation">(</span>passport<span class="token punctuation">.</span><span class="token method function property-access">initialize</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+app<span class="token punctuation">.</span><span class="token method function property-access">use</span><span class="token punctuation">(</span>passport<span class="token punctuation">.</span><span class="token method function property-access">session</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// Angular と POST データを受け取るための設定を行う</span>
+app<span class="token punctuation">.</span><span class="token method function property-access">use</span><span class="token punctuation">(</span>bodyParser<span class="token punctuation">.</span><span class="token method function property-access">urlencoded</span><span class="token punctuation">(</span><span class="token punctuation">{</span>
+  extended<span class="token operator">:</span> <span class="token boolean">false</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+app<span class="token punctuation">.</span><span class="token method function property-access">use</span><span class="token punctuation">(</span>bodyParser<span class="token punctuation">.</span><span class="token method function property-access">json</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// CORS を許可する</span>
+app<span class="token punctuation">.</span><span class="token method function property-access">use</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token parameter">_req<span class="token punctuation">,</span> res<span class="token punctuation">,</span> next</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  res<span class="token punctuation">.</span><span class="token method function property-access">header</span><span class="token punctuation">(</span><span class="token string">'Access-Control-Allow-Origin'</span><span class="token punctuation">,</span> <span class="token string">'http://localhost:4200'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment">// 開発環境で CORS を許可するために入れておいた</span>
+  res<span class="token punctuation">.</span><span class="token method function property-access">header</span><span class="token punctuation">(</span><span class="token string">'Access-Control-Allow-Credentials'</span><span class="token punctuation">,</span> <span class="token boolean">true</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  res<span class="token punctuation">.</span><span class="token method function property-access">header</span><span class="token punctuation">(</span><span class="token string">'Access-Control-Allow-Headers'</span><span class="token punctuation">,</span> <span class="token string">'Origin, X-Requested-With, Content-Type, Accept'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  res<span class="token punctuation">.</span><span class="token method function property-access">header</span><span class="token punctuation">(</span><span class="token string">'Access-Control-Allow-Methods'</span><span class="token punctuation">,</span> <span class="token string">'GET, POST, PUT, DELETE, OPTIONS'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token function">next</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// TODO : 1. Passport 認証処理を定義する</span>
+<span class="token comment">// TODO : 2. ログイン用のルーティングを定義する</span>
+<span class="token comment">// TODO : 3. 事前にログイン認証が必要な API のルーティングを定義する</span>
+<span class="token comment">// TODO : 4. ログアウト用のルーティングを定義する</span>
+
+<span class="token comment">// サーバ起動</span>
+<span class="token keyword">const</span> port <span class="token operator">=</span> process<span class="token punctuation">.</span><span class="token property-access">env</span><span class="token punctuation">.</span><span class="token constant">PORT</span> <span class="token operator">||</span> <span class="token number">8080</span><span class="token punctuation">;</span>
+<span class="token keyword">const</span> server <span class="token operator">=</span> app<span class="token punctuation">.</span><span class="token method function property-access">listen</span><span class="token punctuation">(</span>port<span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">Listening at http://localhost:</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>port<span class="token interpolation-punctuation punctuation">}</span></span><span class="token template-punctuation string">`</span></span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>既に Passport の初期設定とやらが入っているが、<code>initialize()</code> と <code>session()</code> は呼び出しておくだけみたい。正直よく分からん。w</p>
+<ul>
+  <li>参考：<a href="https://blog.kazu69.net/2017/03/23/http-request-using-cors/">Cross-Origin Resource Sharing(CORS)を使用したHTTPリクエスト | 69log</a> … CORS について</li>
+</ul>
+<p>以降、コード中に書いた4つの TODO 事項を埋めていく形で実装していく。</p>
+<h2 id="passport-の認証処理を実装する"><a class="header-link" href="#passport-の認証処理を実装する"><span class="header-link-mark"></span></a>Passport の認証処理を実装する</h2>
+<p>まずは、<em><code>// TODO : 1. Passport 認証処理を定義する</code></em> コメントの部分に該当する、Passport による認証ロジックを実装する。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token comment">// 認証ロジック</span>
+passport<span class="token punctuation">.</span><span class="token method function property-access">use</span><span class="token punctuation">(</span><span class="token string">'local'</span><span class="token punctuation">,</span> <span class="token keyword">new</span> <span class="token class-name">LocalStrategy</span><span class="token punctuation">(</span><span class="token punctuation">{</span>
+  usernameField<span class="token operator">:</span> <span class="token string">'userName'</span><span class="token punctuation">,</span>  <span class="token comment">// POST の body から参照するフィールド名を指定する</span>
+  passwordField<span class="token operator">:</span> <span class="token string">'password'</span><span class="token punctuation">,</span>  <span class="token comment">// POST の body から参照するフィールド名を指定する</span>
+  session<span class="token operator">:</span> <span class="token boolean">true</span><span class="token punctuation">,</span>              <span class="token comment">// セッションを有効にする</span>
+  passReqToCallback<span class="token operator">:</span> <span class="token boolean">true</span>     <span class="token comment">// 次のコールバック関数の第1引数に request を渡す</span>
+<span class="token punctuation">}</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token parameter">_req<span class="token punctuation">,</span> userName<span class="token punctuation">,</span> password<span class="token punctuation">,</span> done</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token comment">// ココでは userName と password が固定値と合致すれば、ログインして良いユーザと見なす</span>
+  <span class="token comment">// (実際は DB のデータと照合したりして実装する)</span>
+  
+  <span class="token keyword control-flow">if</span><span class="token punctuation">(</span>userName <span class="token operator">===</span> <span class="token string">'ExampleUser'</span> <span class="token operator">&#x26;&#x26;</span> password <span class="token operator">===</span> <span class="token string">'MyPassword'</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token comment">// セッションに保存したい情報を用意する</span>
+    <span class="token keyword">const</span> userInfo <span class="token operator">=</span> <span class="token punctuation">{</span>
+      id<span class="token operator">:</span> <span class="token number">1</span><span class="token punctuation">,</span>
+      userName<span class="token operator">:</span> userName
+    <span class="token punctuation">}</span><span class="token punctuation">;</span>
+    <span class="token comment">// 認証成功・第2引数で渡す内容がシリアライズされる</span>
+    <span class="token keyword control-flow">return</span> <span class="token function">done</span><span class="token punctuation">(</span><span class="token keyword null nil">null</span><span class="token punctuation">,</span> userInfo<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  <span class="token keyword control-flow">else</span> <span class="token punctuation">{</span>
+    <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">error</span><span class="token punctuation">(</span><span class="token string">'認証処理 : 失敗'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword control-flow">return</span> <span class="token function">done</span><span class="token punctuation">(</span><span class="token keyword null nil">null</span><span class="token punctuation">,</span> <span class="token boolean">false</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// シリアライズ処理</span>
+passport<span class="token punctuation">.</span><span class="token method function property-access">serializeUser</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token parameter">userInfo<span class="token punctuation">,</span> done</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token function">done</span><span class="token punctuation">(</span><span class="token keyword null nil">null</span><span class="token punctuation">,</span> userInfo<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  
+<span class="token comment">// デシリアライズ処理</span>
+passport<span class="token punctuation">.</span><span class="token method function property-access">deserializeUser</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token parameter">userInfo<span class="token punctuation">,</span> done</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token function">done</span><span class="token punctuation">(</span><span class="token keyword null nil">null</span><span class="token punctuation">,</span> userInfo<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>今回はサンプルなので、POST 送信された <code>userName</code> と <code>password</code> が、指定の固定値と合致すれば認証成功と見なす。認証の成否の決め方もザックリと、<code>done()</code> の第2引数に <code>false</code> を渡せば認証失敗、それ以外の情報を渡すと認証成功とする (実際は失敗時のハンドリングがもう少しできるが)。</p>
+<p><code>done()</code> の第2引数に渡した変数 <code>userInfo</code> がセッションに保存されるのだが、セッションへの書き出しを <code>serializeUser()</code>、セッションからの情報取得を <code>deserializeUser()</code> 関数で定義しておく必要がある。それぞれの関数はお決まりの書き方なのでこのまま。</p>
+<ul>
+  <li>参考：<a href="https://qiita.com/papi_tokei/items/9b852774114ebc7a6255">Express+Passportで簡単に認証機能を実現 - Qiita</a> … シリアライズ・デシリアライズについて。クッキーによるセッション管理が上手くできていると、クライアントサイドでは <code>connect.sid</code> というクッキーが保存される。</li>
+</ul>
+<h2 id="ログイン用のルーティングを実装する"><a class="header-link" href="#ログイン用のルーティングを実装する"><span class="header-link-mark"></span></a>ログイン用のルーティングを実装する</h2>
+<p>次に、<em><code>// TODO : 2. ログイン用のルーティングを定義する</code></em> コメント部分に該当する、ログイン用のルーティングを定義する。</p>
+<p>ログインするためのルーティング自体には、認証せずともアクセスできなくてはならない。そのルーティングにアクセスすることで、先程実装した<em>認証ロジック</em>を呼び出すように実装する。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token comment">// ログイン</span>
+app<span class="token punctuation">.</span><span class="token method function property-access">post</span><span class="token punctuation">(</span><span class="token string">'/login'</span><span class="token punctuation">,</span> passport<span class="token punctuation">.</span><span class="token method function property-access">authenticate</span><span class="token punctuation">(</span><span class="token string">'local'</span><span class="token punctuation">,</span> <span class="token punctuation">{</span> session<span class="token operator">:</span> <span class="token boolean">true</span> <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token parameter">req<span class="token punctuation">,</span> res</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token comment">// passport.use('local') で定義した認証処理が成功したらこの関数が実行される</span>
+  res<span class="token punctuation">.</span><span class="token method function property-access">json</span><span class="token punctuation">(</span><span class="token punctuation">{</span> result<span class="token operator">:</span> <span class="token string">'Login Success'</span> <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p><code>/login</code> というパスに POST 通信してきた時のルーティングとして実装する。第2引数は <code>passport.authenticate()</code> で、先程実装した認証ロジックを利用するよう、<code>passport.use('local')</code> と第1引数で指定した <code>'local'</code> を指定する。第2引数で <code>session: true</code> にしているように、セッションを有効にしている。この辺はなんか受け売りで実装している。</p>
+<p>第3引数が、通常の Express のルーティングでよく見る関数と同じモノになるのだが、この関数は、<code>passport.use('local')</code> で定義した認証ロジックで認証が成功した場合のみ辿り着く。認証に失敗した場合は呼ばれないことに留意。</p>
+<h2 id="事前にログイン認証が必要な-api-を実装する"><a class="header-link" href="#事前にログイン認証が必要な-api-を実装する"><span class="header-link-mark"></span></a>事前にログイン認証が必要な API を実装する</h2>
+<p>続いて、<em><code>// TODO : 3. 事前にログイン認証が必要な API のルーティングを定義する</code></em> コメント部分に該当するルーティングを実装する。アプリ側で事前に <code>/login</code> と POST 通信して認証に成功していないと呼び出せない URL を定義する、ということだ。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token comment">// 遷移時に認証チェックを行う関数</span>
+<span class="token keyword">function</span> <span class="token function">isLogined</span><span class="token punctuation">(</span><span class="token parameter">req<span class="token punctuation">,</span> res<span class="token punctuation">,</span> next</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token keyword control-flow">if</span><span class="token punctuation">(</span>req<span class="token punctuation">.</span><span class="token method function property-access">isAuthenticated</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token comment">// 既に認証済みなら対象の URL へのアクセスを許可する</span>
+    <span class="token function">next</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  <span class="token keyword control-flow">else</span> <span class="token punctuation">{</span>
+    <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">error</span><span class="token punctuation">(</span><span class="token string">'認証未済'</span><span class="token punctuation">,</span> error<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token comment">// Angular の HttpClient でエラーコールバックに反応させるため 401 を返す</span>
+    res<span class="token punctuation">.</span><span class="token method function property-access">status</span><span class="token punctuation">(</span><span class="token number">401</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token comment">// HttpClient のエラー時に取得できるエラーメッセージを返す</span>
+    res<span class="token punctuation">.</span><span class="token method function property-access">send</span><span class="token punctuation">(</span><span class="token punctuation">{</span>
+      error<span class="token operator">:</span> <span class="token string">'認証してください'</span>
+    <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+
+<span class="token comment">// 事前に認証しておかないとデータを取得できない API を作る</span>
+router<span class="token punctuation">.</span><span class="token method function property-access">get</span><span class="token punctuation">(</span><span class="token string">'/products'</span><span class="token punctuation">,</span> isLogined<span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token parameter">req<span class="token punctuation">,</span> res</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  res<span class="token punctuation">.</span><span class="token method function property-access">status</span><span class="token punctuation">(</span><span class="token number">200</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token comment">// 今回はダミーで固定値を返す。実際は DB から取得した値などを返すイメージ</span>
+  res<span class="token punctuation">.</span><span class="token method function property-access">json</span><span class="token punctuation">(</span><span class="token punctuation">{</span>
+    products<span class="token operator">:</span> <span class="token punctuation">[</span>
+      <span class="token punctuation">{</span> id<span class="token operator">:</span> <span class="token number">1</span><span class="token punctuation">,</span> name<span class="token operator">:</span> <span class="token string">'製品 1'</span><span class="token punctuation">,</span> price<span class="token operator">:</span> <span class="token number">500</span> <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span> id<span class="token operator">:</span> <span class="token number">2</span><span class="token punctuation">,</span> name<span class="token operator">:</span> <span class="token string">'製品 2'</span><span class="token punctuation">,</span> price<span class="token operator">:</span> <span class="token number">800</span> <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span> id<span class="token operator">:</span> <span class="token number">3</span><span class="token punctuation">,</span> name<span class="token operator">:</span> <span class="token string">'製品 3'</span><span class="token punctuation">,</span> price<span class="token operator">:</span> <span class="token number">720</span> <span class="token punctuation">}</span>
+    <span class="token punctuation">]</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p><code>isLogined</code> という自前の関数を用意した。中では <code>req.isAuthenticated()</code> という関数によって、認証済みかどうかを検証している。この <code>req.isAuthenticated()</code> という関数は passport-local が提供しているようで、シリアライズされたセッションデータと合致するクライアントからのリクエストかどうかを検証しているようだ。このあたりは各関数の先頭に <code>console.log()</code> を仕込んで、実際にアクセスした時にどのような順番で関数が動いているか確認した方が分かりやすい。</p>
+<h2 id="ログアウト用のルーティングを用意する"><a class="header-link" href="#ログアウト用のルーティングを用意する"><span class="header-link-mark"></span></a>ログアウト用のルーティングを用意する</h2>
+<p>最後に <em><code>// TODO : 4. ログアウト用のルーティングを定義する</code></em> コメント部分に相当する、ログアウト用の URL を定義しておく。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token comment">// ログアウト</span>
+router<span class="token punctuation">.</span><span class="token method function property-access">get</span><span class="token punctuation">(</span><span class="token string">'/logout'</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token parameter">req<span class="token punctuation">,</span> res</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  req<span class="token punctuation">.</span><span class="token method function property-access">logout</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  res<span class="token punctuation">.</span><span class="token method function property-access">json</span><span class="token punctuation">(</span><span class="token punctuation">{</span> result<span class="token operator">:</span> <span class="token string">'Logout Success'</span> <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>ログアウト時も、ログイン時と同じように、<code>isLogined</code> のような認証用の関数は仕込まない。ログアウトさせたい時は <code>req.logout()</code> を実行する。コレでサーバ側のセッションでシリアライズされていたデータが消去できる。</p>
+<p>以上で、サーバサイドの実装は完了だ。</p>
+<h2 id="angular-側でログイン画面の実装"><a class="header-link" href="#angular-側でログイン画面の実装"><span class="header-link-mark"></span></a>Angular 側でログイン画面の実装</h2>
+<p>さて、サーバサイドは</p>
+<ul>
+  <li><code>/login</code> に POST 通信し、<code>userName</code> と <code>password</code> を送ると認証してくれる
+    <ul>
+      <li>認証に成功したユーザの情報はセッション管理される</li>
+    </ul>
+  </li>
+  <li><code>/products</code> に GET 通信するには、事前にログイン処理が成功していないといけない</li>
+  <li><code>/logout</code> に通信するとログアウトできる</li>
+</ul>
+<p>という仕様で実装が完了した。</p>
+<p>このようなサーバに対し、Angular アプリからどうやってアクセスするかをまとめる。Angular は v7.0.2、HttpClient を使用する。Angular CLI の <code>ng new</code> でプロジェクト雛形をサクッと作った直後の状態から説明する。</p>
+<p>今回は簡単のため画面遷移を行わず、ログインフォームからログイン認証ができたらメッセージを表示する作りにしようと思う。<code>/products</code> と GET 通信するボタンはずっと表示されているが、先にログインできていないと押しても動作しない作りだ。</p>
+<ul>
+  <li><code>app.module.ts</code></li>
+</ul>
+<pre class="language-typescript"><code class="language-typescript"><span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">BrowserModule</span> <span class="token punctuation">}</span></span> <span class="token keyword">from</span> <span class="token string">'@angular/platform-browser'</span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">NgModule</span> <span class="token punctuation">}</span></span> <span class="token keyword">from</span> <span class="token string">'@angular/core'</span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">CommonModule</span> <span class="token punctuation">}</span></span> <span class="token keyword">from</span> <span class="token string">'@angular/common'</span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">FormsModule</span> <span class="token punctuation">}</span></span> <span class="token keyword">from</span> <span class="token string">'@angular/forms'</span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">HttpClientModule</span> <span class="token punctuation">}</span></span> <span class="token keyword">from</span> <span class="token string">'@angular/common/http'</span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">AppComponent</span> <span class="token punctuation">}</span></span> <span class="token keyword">from</span> <span class="token string">'./app.component'</span><span class="token punctuation">;</span>
+
+@<span class="token function"><span class="token maybe-class-name">NgModule</span></span><span class="token punctuation">(</span><span class="token punctuation">{</span>
+  imports<span class="token operator">:</span> <span class="token punctuation">[</span>
+    <span class="token maybe-class-name">BrowserModule</span><span class="token punctuation">,</span>
+    <span class="token maybe-class-name">CommonModule</span><span class="token punctuation">,</span>
+    <span class="token maybe-class-name">FormsModule</span><span class="token punctuation">,</span>
+    <span class="token maybe-class-name">HttpClientModule</span>
+  <span class="token punctuation">]</span><span class="token punctuation">,</span>
+  declarations<span class="token operator">:</span> <span class="token punctuation">[</span><span class="token maybe-class-name">AppComponent</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
+  bootstrap   <span class="token operator">:</span> <span class="token punctuation">[</span><span class="token maybe-class-name">AppComponent</span><span class="token punctuation">]</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span>
+<span class="token keyword">export</span> <span class="token keyword">class</span> <span class="token class-name"><span class="token maybe-class-name">AppModule</span></span> <span class="token punctuation">{</span> <span class="token punctuation">}</span>
+</code></pre>
+<ul>
+  <li><code>app.component.html</code></li>
+</ul>
+<pre class="language-html"><code class="language-html"><span class="token comment">&#x3C;!-- ログインフォーム --></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>dl</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>dt</span><span class="token punctuation">></span></span>ユーザ名<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>dt</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>dd</span><span class="token punctuation">></span></span><span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>input</span> <span class="token attr-name">type</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>text<span class="token punctuation">"</span></span> <span class="token attr-name">[(ngModel)]</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>userName<span class="token punctuation">"</span></span><span class="token punctuation">></span></span><span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>dd</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>dt</span><span class="token punctuation">></span></span>パスワード<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>dt</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>dd</span><span class="token punctuation">></span></span><span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>input</span> <span class="token attr-name">type</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>password<span class="token punctuation">"</span></span> <span class="token attr-name">[(ngModel)]</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>password<span class="token punctuation">"</span></span><span class="token punctuation">></span></span><span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>dd</span><span class="token punctuation">></span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>dl</span><span class="token punctuation">></span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>p</span><span class="token punctuation">></span></span><span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>button</span> <span class="token attr-name">type</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>button<span class="token punctuation">"</span></span> <span class="token attr-name">(click)</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>onLogin()<span class="token punctuation">"</span></span><span class="token punctuation">></span></span>ログイン<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>button</span><span class="token punctuation">></span></span><span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>p</span><span class="token punctuation">></span></span>
+
+<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>p</span> <span class="token attr-name">*ngIf</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>loginedMessage<span class="token punctuation">"</span></span><span class="token punctuation">></span></span>   {{ loginedMessage }}   <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>p</span><span class="token punctuation">></span></span>  <span class="token comment">&#x3C;!-- ログイン成功時のメッセージ --></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>p</span> <span class="token attr-name">*ngIf</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>loginErrorMessage<span class="token punctuation">"</span></span><span class="token punctuation">></span></span>{{ loginErrorMessage }}<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>p</span><span class="token punctuation">></span></span>  <span class="token comment">&#x3C;!-- ログイン失敗時のメッセージ --></span>
+
+<span class="token comment">&#x3C;!-- /products へアクセスするボタン --></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>p</span><span class="token punctuation">></span></span><span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>button</span> <span class="token attr-name">type</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>button<span class="token punctuation">"</span></span> <span class="token attr-name">(click)</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>findProducts()<span class="token punctuation">"</span></span><span class="token punctuation">></span></span>製品一覧を取得する<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>button</span><span class="token punctuation">></span></span><span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>p</span><span class="token punctuation">></span></span>
+<span class="token comment">&#x3C;!-- 製品一覧を取得したら表示する --></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>ul</span> <span class="token attr-name">*ngIf</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>products &#x26;&#x26; products.length<span class="token punctuation">"</span></span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>li</span> <span class="token attr-name">*ngFor</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>let product of products<span class="token punctuation">"</span></span><span class="token punctuation">></span></span>{{ product.id }} : {{ product.name }} : {{ product.price }}<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>li</span><span class="token punctuation">></span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>ul</span><span class="token punctuation">></span></span>
+<span class="token comment">&#x3C;!-- 製品一覧の取得に失敗した時のメッセージ --></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>p</span> <span class="token attr-name">*ngIf</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>findProductsErrorMessage<span class="token punctuation">"</span></span><span class="token punctuation">></span></span>{{ findProductsErrorMessage }}<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>p</span><span class="token punctuation">></span></span>
+
+<span class="token comment">&#x3C;!-- ログアウトボタン --></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>p</span><span class="token punctuation">></span></span><span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>button</span> <span class="token attr-name">type</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>button<span class="token punctuation">"</span></span> <span class="token attr-name">(click)</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>onLogout()<span class="token punctuation">"</span></span><span class="token punctuation">></span></span>ログアウト<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>button</span><span class="token punctuation">></span></span><span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>p</span><span class="token punctuation">></span></span>
+</code></pre>
+<ul>
+  <li><code>app.component.ts</code></li>
+</ul>
+<pre class="language-typescript"><code class="language-typescript"><span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">Component</span> <span class="token punctuation">}</span></span> <span class="token keyword">from</span> <span class="token string">'@angular/core'</span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">HttpClient</span> <span class="token punctuation">}</span></span> <span class="token keyword">from</span> <span class="token string">'@angular/common/http'</span><span class="token punctuation">;</span>
+
+@<span class="token function"><span class="token maybe-class-name">Component</span></span><span class="token punctuation">(</span><span class="token punctuation">{</span>
+  selector<span class="token operator">:</span> <span class="token string">'app-root'</span><span class="token punctuation">,</span>
+  templateUrl<span class="token operator">:</span> <span class="token string">'./app.component.html'</span><span class="token punctuation">,</span>
+  styleUrls<span class="token operator">:</span> <span class="token punctuation">[</span><span class="token string">'./app.component.scss'</span><span class="token punctuation">]</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span>
+<span class="token keyword">export</span> <span class="token keyword">class</span> <span class="token class-name"><span class="token maybe-class-name">AppComponent</span></span> <span class="token punctuation">{</span>
+  <span class="token keyword">public</span> userName<span class="token operator">:</span> <span class="token builtin">string</span> <span class="token operator">=</span> <span class="token string">''</span><span class="token punctuation">;</span>
+  <span class="token keyword">public</span> password<span class="token operator">:</span> <span class="token builtin">string</span> <span class="token operator">=</span> <span class="token string">''</span><span class="token punctuation">;</span>
+  
+  <span class="token keyword">public</span> loginedMessage<span class="token operator">:</span> <span class="token builtin">string</span> <span class="token operator">=</span> <span class="token string">''</span><span class="token punctuation">;</span>
+  <span class="token keyword">public</span> loginErrorMessage<span class="token operator">:</span> <span class="token builtin">string</span> <span class="token operator">=</span> <span class="token string">''</span><span class="token punctuation">;</span>
+  
+  <span class="token keyword">public</span> products<span class="token operator">:</span> <span class="token builtin">any</span><span class="token punctuation">[</span><span class="token punctuation">]</span> <span class="token operator">=</span> <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token punctuation">;</span>
+  <span class="token keyword">public</span> findProductsErrorMessage<span class="token operator">:</span> <span class="token builtin">string</span> <span class="token operator">=</span> <span class="token string">''</span><span class="token punctuation">;</span>
+  
+  <span class="token keyword">constructor</span><span class="token punctuation">(</span><span class="token keyword">private</span> httpClient<span class="token operator">:</span> <span class="token maybe-class-name">HttpClient</span><span class="token punctuation">)</span> <span class="token punctuation">{</span> <span class="token punctuation">}</span>
+  
+  <span class="token keyword">public</span> <span class="token function">onLogin</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator">:</span> <span class="token keyword">void</span> <span class="token punctuation">{</span>
+    <span class="token comment">// フィードバックメッセージのリセット</span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">loginedMessage</span> <span class="token operator">=</span> <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">loginErrorMessage</span> <span class="token operator">=</span> <span class="token string">''</span><span class="token punctuation">;</span>
+    <span class="token comment">// Express サーバに POST 通信する。リクエストボディのプロパティ名は passport.use('local') で定めたモノに合わせる</span>
+    <span class="token comment">// 第3引数の withCredentials はログイン時から全ての通信で必須</span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">httpClient</span><span class="token punctuation">.</span><span class="token method function property-access">post</span><span class="token punctuation">(</span><span class="token string">'http://localhost:8080/login'</span><span class="token punctuation">,</span> <span class="token punctuation">{</span>
+      userName<span class="token operator">:</span> <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">userName</span><span class="token punctuation">,</span>
+      password<span class="token operator">:</span> <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">password</span>
+    <span class="token punctuation">}</span><span class="token punctuation">,</span> <span class="token punctuation">{</span> withCredentials<span class="token operator">:</span> <span class="token boolean">true</span> <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">toPromise</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+      <span class="token punctuation">.</span><span class="token method function property-access">then</span><span class="token punctuation">(</span><span class="token punctuation">(</span>result<span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+        <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">loginedMessage</span> <span class="token operator">=</span> <span class="token string">'ログインしました'</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span><span class="token punctuation">)</span>
+      <span class="token punctuation">.</span><span class="token keyword">catch</span><span class="token punctuation">(</span><span class="token punctuation">(</span>error<span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+        <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">loginErrorMessage</span> <span class="token operator">=</span> <span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">ログイン失敗 : </span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span><span class="token known-class-name class-name">JSON</span><span class="token punctuation">.</span><span class="token method function property-access">stringify</span><span class="token punctuation">(</span>error<span class="token punctuation">)</span><span class="token interpolation-punctuation punctuation">}</span></span><span class="token template-punctuation string">`</span></span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  
+  <span class="token keyword">public</span> <span class="token function">findProducts</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator">:</span> <span class="token keyword">void</span> <span class="token punctuation">{</span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">products</span> <span class="token operator">=</span> <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token punctuation">;</span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">findProductsErrorMessage</span> <span class="token operator">=</span> <span class="token string">''</span><span class="token punctuation">;</span>
+    
+    <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">httpClient</span><span class="token punctuation">.</span><span class="token keyword">get</span><span class="token punctuation">(</span><span class="token string">'http://localhost:8080/products'</span><span class="token punctuation">,</span> <span class="token punctuation">{</span> withCredentials<span class="token operator">:</span> <span class="token boolean">true</span> <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">toPromise</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+      <span class="token punctuation">.</span><span class="token method function property-access">then</span><span class="token punctuation">(</span><span class="token punctuation">(</span>results<span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+        <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">products</span> <span class="token operator">=</span> results<span class="token punctuation">;</span>
+      <span class="token punctuation">}</span><span class="token punctuation">)</span>
+      <span class="token punctuation">.</span><span class="token keyword">catch</span><span class="token punctuation">(</span><span class="token punctuation">(</span>error<span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+        <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">findProductsErrorMessage</span> <span class="token operator">=</span> <span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">製品一覧取得に失敗 : </span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span><span class="token known-class-name class-name">JSON</span><span class="token punctuation">.</span><span class="token method function property-access">stringify</span><span class="token punctuation">(</span>error<span class="token punctuation">)</span><span class="token interpolation-punctuation punctuation">}</span></span><span class="token template-punctuation string">`</span></span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  
+  <span class="token keyword">public</span> <span class="token function">onLogout</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator">:</span> <span class="token keyword">void</span> <span class="token punctuation">{</span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">httpClient</span><span class="token punctuation">.</span><span class="token keyword">get</span><span class="token punctuation">(</span><span class="token string">'http://localhost:8080/logout'</span><span class="token punctuation">,</span> <span class="token punctuation">{</span> withCredentials<span class="token operator">:</span> <span class="token boolean">true</span> <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">toPromise</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+      <span class="token punctuation">.</span><span class="token method function property-access">then</span><span class="token punctuation">(</span><span class="token punctuation">(</span>_result<span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+        <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">loginedMessage</span> <span class="token operator">=</span> <span class="token string">''</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>少々コードが長くなったが、ココで重要なのは <code>HttpClient#get()</code> や <code>HttpClient#post()</code> で通信する際にオプションで指定している、<strong><code>withCredentials: true</code></strong>。コレを<em>ログイン時から全ての通信で有効に</em>しておかないと、クライアントでクッキーによるセッション管理ができない。Angular は HTML ファイルが切り替わるような画面遷移が発生しないこともあり、このような特殊な設定を入れないとセッション管理ができないようだ。</p>
+<ul>
+  <li>参考：<a href="https://kakkoyakakko2.hatenablog.com/entry/2018/05/29/215409">【Angular】Cookieベースのセッション管理を実施 - 開発覚書はてな版</a></li>
+</ul>
+<h2 id="withcredentials-指定を-httpinterceptor-に任せる"><a class="header-link" href="#withcredentials-指定を-httpinterceptor-に任せる"><span class="header-link-mark"></span></a><code>withCredentials</code> 指定を HttpInterceptor に任せる</h2>
+<p>サーバとの通信時にセッション管理を有効にするため、<code>withCredentials: true</code> の指定が必要なのは分かったが、いちいち書くのは面倒くさい。</p>
+<p>そこで、<em>HttpInterceptor</em> というモノを作って、デフォルトで全ての通信に <code>withCredentials: true</code> 指定をしてやる。こうすれば、<code>HttpClient#get()</code> などを記述する際はこのオプションの記述が不要になる。</p>
+<ul>
+  <li><code>custom-interceptor.ts</code> … こんなファイルを作成する。</li>
+</ul>
+<pre class="language-typescript"><code class="language-typescript"><span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">Injectable</span> <span class="token punctuation">}</span></span> <span class="token keyword">from</span> <span class="token string">'@angular/core'</span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">HttpInterceptor</span><span class="token punctuation">,</span> <span class="token maybe-class-name">HttpHandler</span><span class="token punctuation">,</span> <span class="token maybe-class-name">HttpEvent</span><span class="token punctuation">,</span> <span class="token maybe-class-name">HttpRequest</span> <span class="token punctuation">}</span></span> <span class="token keyword">from</span> <span class="token string">'@angular/common/http'</span><span class="token punctuation">;</span>
+
+<span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">Observable</span> <span class="token punctuation">}</span></span> <span class="token keyword">from</span> <span class="token string">'rxjs'</span><span class="token punctuation">;</span>
+
+@<span class="token function"><span class="token maybe-class-name">Injectable</span></span><span class="token punctuation">(</span><span class="token punctuation">{</span>
+  providedIn<span class="token operator">:</span> <span class="token string">'root'</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span>
+<span class="token keyword">export</span> <span class="token keyword">class</span> <span class="token class-name"><span class="token maybe-class-name">CustomInterceptor</span></span> <span class="token keyword">implements</span> <span class="token class-name"><span class="token maybe-class-name">HttpInterceptor</span></span> <span class="token punctuation">{</span>
+  <span class="token keyword">public</span> <span class="token function">intercept</span><span class="token punctuation">(</span>request<span class="token operator">:</span> <span class="token maybe-class-name">HttpRequest</span><span class="token operator">&#x3C;</span><span class="token builtin">any</span><span class="token operator">></span><span class="token punctuation">,</span> next<span class="token operator">:</span> <span class="token maybe-class-name">HttpHandler</span><span class="token punctuation">)</span><span class="token operator">:</span> <span class="token maybe-class-name">Observable</span><span class="token operator">&#x3C;</span><span class="token maybe-class-name">HttpEvent</span><span class="token operator">&#x3C;</span><span class="token builtin">any</span><span class="token operator">>></span> <span class="token punctuation">{</span>
+    <span class="token comment">// withCredentials 指定を全てのリクエストに設定する</span>
+    request <span class="token operator">=</span> request<span class="token punctuation">.</span><span class="token method function property-access">clone</span><span class="token punctuation">(</span><span class="token punctuation">{</span>
+      withCredentials<span class="token operator">:</span> <span class="token boolean">true</span>
+    <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">return</span> next<span class="token punctuation">.</span><span class="token method function property-access">handle</span><span class="token punctuation">(</span>request<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<ul>
+  <li><code>app.module.ts</code></li>
+</ul>
+<pre class="language-typescript"><code class="language-typescript"><span class="token keyword">import</span> <span class="token punctuation">{</span> <span class="token constant">HTTP_INTERCEPTORS</span> <span class="token punctuation">}</span> <span class="token keyword">from</span> <span class="token string">'@angular/common/http'</span><span class="token punctuation">;</span>
+
+<span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">CustomInterceptor</span> <span class="token punctuation">}</span></span> <span class="token keyword">from</span> <span class="token string">'./custom-interceptor'</span><span class="token punctuation">;</span>
+
+@<span class="token function"><span class="token maybe-class-name">NgModule</span></span><span class="token punctuation">(</span><span class="token punctuation">{</span>
+  imports<span class="token operator">:</span> <span class="token punctuation">[</span>
+    <span class="token comment">// 中略</span>
+  <span class="token punctuation">]</span><span class="token punctuation">,</span>
+  providers<span class="token operator">:</span> <span class="token punctuation">[</span>
+    <span class="token comment">// インターセプタを組み込む</span>
+    <span class="token punctuation">{</span>
+      provide<span class="token operator">:</span> <span class="token constant">HTTP_INTERCEPTORS</span><span class="token punctuation">,</span>
+      useClass<span class="token operator">:</span> <span class="token maybe-class-name">CustomInterceptor</span><span class="token punctuation">,</span>
+      multi<span class="token operator">:</span> <span class="token boolean">true</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">]</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span>
+<span class="token comment">// 以下略</span>
+</code></pre>
+<p>このとおり。</p>
+<ul>
+  <li>参考：<a href="https://qiita.com/puku0x/items/68c16c34975ee4e41211">HttpInterceptorの使用例メモ - Qiita</a></li>
+  <li>参考：<a href="https://stackoverflow.com/questions/47304912/angular-4-setting-withcredentials-on-every-request-cors-cookie">http - Angular 4 - setting withCredentials on every request - cors cookie - Stack Overflow</a></li>
+</ul>
+<h2 id="以上。しかし"><a class="header-link" href="#以上。しかし"><span class="header-link-mark"></span></a>以上。しかし…</h2>
+<p>以上で、サーバサイド、クライアントサイドともに実装が完了した。ローカル開発環境で試した限り、<code>ng serve</code> で起動した開発サーバの Angular アプリから、Express サーバへと通信し、ログインしたユーザ情報がセッション管理されることが確認できた。</p>
+<p>しかし、このようなアプリを Heroku にデプロイしてみたところ、うまくいかないことがあった。</p>
+<p>Heroku アプリの URL は <code>https://example.herokuapp.com/</code> と HTTPS でアクセスできるため、Express サーバの初期設定時に行っていたセッション設定で、<code>secure: true</code> にしないといけないかと思っていた。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token comment">// セッション設定</span>
+app<span class="token punctuation">.</span><span class="token method function property-access">use</span><span class="token punctuation">(</span><span class="token function">session</span><span class="token punctuation">(</span><span class="token punctuation">{</span>
+  secret<span class="token operator">:</span> <span class="token string">'SessionKey'</span><span class="token punctuation">,</span>
+  resave<span class="token operator">:</span> <span class="token boolean">false</span><span class="token punctuation">,</span>
+  saveUninitialized<span class="token operator">:</span> <span class="token boolean">false</span><span class="token punctuation">,</span>
+  cookie<span class="token operator">:</span> <span class="token punctuation">{</span>
+    maxAge<span class="token operator">:</span> <span class="token number">1000</span> <span class="token operator">*</span> <span class="token number">60</span> <span class="token operator">*</span> <span class="token number">60</span> <span class="token operator">*</span> <span class="token number">24</span> <span class="token operator">*</span> <span class="token number">7</span><span class="token punctuation">,</span>
+    secure<span class="token operator">:</span> <span class="token boolean">true</span>  <span class="token comment">// ← ココ！ HTTP 利用時は false にするモノなので、Heroku デプロイ時は true にしていた</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>しかし、この <code>cookie.secure</code> を <code>true</code> にすると、Heorku 上で上手くセッションが保持されなかった。</p>
+<p>また、Heroku にデプロイした時に <code>$ heroku logs</code> を見ていると、Express から次のようなワーニングが出力されていた。</p>
+<pre><code>Warning: connection.session() MemoryStore is not
+designed for a production environment, as it will leak
+memory, and will not scale past a single process.
+</code></pre>
+<p>どうも、express-session と passport-local を併用した、メモリ上でのセッション管理 (= データストア) は、本番運用向きではなく、メモリリークの危険もあるらしい。</p>
+<ul>
+  <li>参考：<a href="https://qiita.com/zaru/items/68b4f64c1f0d10b6a27e">Node.js + Express4を使っていて、つまづいた注意点まとめ - Qiita</a></li>
+</ul>
+<p>調べたところ、本番環境でこうしたセッション管理を行うには、MongoDB や Redis などの DB を使用することが多く、メモリキャッシュするにしても Memcached といったツールを使ったりするようだ。</p>
+<ul>
+  <li>参考：<a href="http://www.oyecode.com/2016/10/login-with-heroku-in-nodejs-applications.html">Heroku Authentication with PassportJS for Node Applications - Oyecode</a> … passport-heroku という npm パッケージを入れて LocalStrategy の代わりにしている様子</li>
+  <li>参考：<a href="https://memo.sugyan.com/entry/20110919/1316428133">HerokuでRedisを使ってNodeアプリのセッション管理 - すぎゃーんメモ</a> … redistogo アドオンを入れ、connect-redis パッケージを利用して Redis にストアしている。Heroku は Redis が使える
+    <ul>
+      <li>参考：<a href="http://hakobera.hatenablog.com/entry/20110730/1312017002">Heroku で Redis に Session を - Heroku で動く Node アプリを作る 弐 - hakobera's blog</a></li>
+    </ul>
+  </li>
+  <li>参考：<a href="https://codezine.jp/article/detail/8345">Heroku上に構築するWebアプリケーションは「Memcached」でサーバサイドセッションを管理する (1/2)：CodeZine（コードジン）</a> … Memcached というシステムでキャッシュする方法
+    <ul>
+      <li>参考：<a href="https://devcenter.heroku.com/articles/expressjs-memcache">Scaling an Express.js Application with Memcache | Heroku Dev Center</a></li>
+    </ul>
+  </li>
+</ul>
+<p>正直このあたりのサーバサイドの知識に疎い。フロントエンドオンリーでやってきたツケが回ってきた感じ…。</p>
+<p>ただ、今のところ、僕一人が個人で動かしている限りは、先程の <em><code>cookie.secure</code> を <code>false</code> にしたまま</em>であれば、Heroku 上でも上手くセッション管理できているようなので、とりあえずはこのまま運用しようかなと思う。</p>
+<p>この辺ちゃんと勉強しておかないと、本格的に Web サービスを運営したりはできないよなぁ…。焦る。</p>
+<h2 id="参考文献"><a class="header-link" href="#参考文献"><span class="header-link-mark"></span></a>参考文献</h2>
+<p>Express も Passport も、それなりに長く使われているパッケージなので、文献で採用するバージョンによって書き方がちょっとずつ違ったりで困った…。</p>
+<ul>
+  <li><a href="http://kikuchy.hatenablog.com/entry/2013/07/03/042221">Express + Passport でお手軽ユーザー認証 - Kikuchy's Second Memory</a></li>
+  <li><a href="https://garafu.blogspot.com/2017/02/express-passport-authn-authz.html">Node.js + Express + passport で 認証認可 の 仕組み を 作る - galife</a></li>
+  <li><a href="https://qiita.com/tinymouse/items/fa910bf80a038c7f9ccb">Node.js＋Express＋Passport を使ってみた - Qiita</a></li>
+  <li><a href="https://qiita.com/moomooya/items/00f89e425a3034b8ea14">Node.js + Express.js + express-sessionでセッションにデータ格納する方法 - Qiita</a></li>
+  <li><a href="http://knimon-software.github.io/www.passportjs.org/guide/username-password/">Passport | ユーザーID &#x26; パスワード</a> … 認証の基礎</li>
+  <li><a href="http://knimon-software.github.io/www.passportjs.org/guide/configure/">Passport | 設定</a> … LocalStrategy について</li>
+  <li><a href="https://github.com/didinj/mean-angular5-passport-authentication">GitHub - didinj/mean-angular5-passport-authentication: Securing MEAN Stack (Angular 5) Web Application using Passport Authentication</a> … Angular 利用。ログイン時に JWT Token を払い出し、通信時にリクエストヘッダの <code>Autoriation</code> でトークンを渡す作り
+    <ul>
+      <li><a href="https://github.com/didinj/mean-angular5-passport-authentication/blob/master/routes/api.js">mean-angular5-passport-authentication/api.js at master · didinj/mean-angular5-passport-authentication · GitHub</a></li>
+      <li><a href="https://github.com/didinj/mean-angular5-passport-authentication/blob/master/src/app/login/login.component.ts#L25-L27">mean-angular5-passport-authentication/login.component.ts at master · didinj/mean-angular5-passport-authentication · GitHub</a></li>
+      <li><a href="https://github.com/didinj/mean-angular5-passport-authentication/blob/master/src/app/book/book.component.ts#L21">mean-angular5-passport-authentication/book.component.ts at master · didinj/mean-angular5-passport-authentication · GitHub</a></li>
+    </ul>
+  </li>
+  <li><a href="https://gist.github.com/kikuchy/5912004">Passportを使ったテスト · GitHub</a></li>
+</ul>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2018-12-14</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2018-12-14</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

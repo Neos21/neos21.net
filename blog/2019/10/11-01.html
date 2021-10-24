@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>例外が発生しても異常終了しない log4js のロガーを作る - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2019/10/11-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2019/index.html">2019年</a></li>
+            <li><a href="/blog/2019/10/index.html">10月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2019-10-11</time></div>
+        <h1 id="page-title">例外が発生しても異常終了しない log4js のロガーを作る</h1>
+
+<p>Node.js でロギングする際は <em>log4js</em> をよく使っているのだが、以前、ロギング処理自体に問題があってエラーを起こしてしまった。</p>
+<p>そのコードは以下のようなコードだった。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword">let</span> result <span class="token operator">=</span> <span class="token keyword null nil">null</span><span class="token punctuation">;</span>
+<span class="token keyword control-flow">try</span> <span class="token punctuation">{</span>
+  <span class="token comment">// API をコールしてデータを取得するテイ</span>
+  result <span class="token operator">=</span> <span class="token keyword control-flow">await</span> <span class="token function">fetchAPI</span><span class="token punctuation">(</span><span class="token string">'http://example.com/users/1'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+<span class="token keyword control-flow">catch</span><span class="token punctuation">(</span>error<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token comment">// エラーオブジェクトを文字列化してログ出力しようとしたら…</span>
+  myLog4JsLogger<span class="token punctuation">.</span><span class="token method function property-access">error</span><span class="token punctuation">(</span><span class="token string">'API コールでエラー発生'</span><span class="token punctuation">,</span> <span class="token known-class-name class-name">JSON</span><span class="token punctuation">.</span><span class="token method function property-access">stringify</span><span class="token punctuation">(</span>error<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>変数 <code>myLog4JsLogger</code> でエラーログを出力する際、<code>error</code> オブジェクトを <code>JSON.stringify()</code> で文字列化して出力しようとしていた。しかしこの <code>error</code> オブジェクト、循環参照が含まれており、<code>JSON.stringify()</code> する際に <code>Converting circular structure to JSON</code> というエラーが発生してしまっていた。<code>catch</code> 句の中で例外が発生するので、このエラーは外に漏れ、異常終了に繋がってしまった。</p>
+<p>このような話は Murga の以下の記事にも書いた。</p>
+<ul>
+  <li><a href="/blog/2019/04/28-01.html">実例に見る、バグの原因を見つけるアイデア：catch 句の中で例外が発生している</a></li>
+</ul>
+<p>こんなことをやらかしたので、<em>「ロガーでロギングする時に発生したエラーは握り潰せたらいいんじゃね？」</em>と軽い気持ちで作ったのがこのラッパー。</p>
+<p><code>log4js.getLogger()</code> で取得したロガーのインスタンスをラップする。</p>
+<p>例えば以下のコードは、<code>JSON.parse()</code> に失敗すると例外が発生してしまう。</p>
+<pre class="language-javascript"><code class="language-javascript">myLogger<span class="token punctuation">.</span><span class="token method function property-access">info</span><span class="token punctuation">(</span> <span class="token known-class-name class-name">JSON</span><span class="token punctuation">.</span><span class="token method function property-access">parse</span><span class="token punctuation">(</span>jsonStr<span class="token punctuation">)</span> <span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>このように、<strong>例外が発生しそうで怖い要素は、以下のように関数でラップして渡してやる。</strong></p>
+<pre class="language-javascript"><code class="language-javascript">myLogger<span class="token punctuation">.</span><span class="token method function property-access">info</span><span class="token punctuation">(</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token known-class-name class-name">JSON</span><span class="token punctuation">.</span><span class="token method function property-access">parse</span><span class="token punctuation">(</span>jsonStr<span class="token punctuation">)</span> <span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// 以下と同じ</span>
+myLogger<span class="token punctuation">.</span><span class="token method function property-access">info</span><span class="token punctuation">(</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span> <span class="token keyword control-flow">return</span> <span class="token known-class-name class-name">JSON</span><span class="token punctuation">.</span><span class="token method function property-access">parse</span><span class="token punctuation">(</span>jsonStr<span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token punctuation">}</span> <span class="token punctuation">)</span><span class="token punctuation">;</span>
+myLogger<span class="token punctuation">.</span><span class="token method function property-access">info</span><span class="token punctuation">(</span> <span class="token keyword">function</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span> <span class="token keyword control-flow">return</span> <span class="token known-class-name class-name">JSON</span><span class="token punctuation">.</span><span class="token method function property-access">parse</span><span class="token punctuation">(</span>jsonStr<span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token punctuation">}</span> <span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>このように関数でラップしてやれば、まだ関数は実行されていないので、この時点での例外は発生しない。</p>
+<p>そして、ラッパークラス内は <code>try / catch</code> で全体を囲んだ状態で、引数に関数が渡っていればそれを実行しているので、例外が発生しても呼び出し元に影響しない、というワケ。</p>
+<p><code>async / await</code> を使って、ほとんど同じ作りで、非同期処理に対応した関数も用意してある。「Promise を返す関数」をロガーのラッパーの引数に渡してやれば良い。</p>
+<hr>
+<p>以上。ホントはそもそもロギングするモノをよく把握して実装して例外なんか起こすなよって話なんだけども。ｗ</p>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2019-10-11</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2019-10-11</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

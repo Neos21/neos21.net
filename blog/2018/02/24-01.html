@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>onerror イベントで img・script 要素の読み込みエラーをうまく検知できなかったら - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2018/02/24-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2018/index.html">2018年</a></li>
+            <li><a href="/blog/2018/02/index.html">02月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2018-02-24</time></div>
+        <h1 id="page-title">onerror イベントで img・script 要素の読み込みエラーをうまく検知できなかったら</h1>
+
+<p><code>img</code> 要素や <code>script</code> 要素に対し、<code>onerror</code> 属性を設定したり、<code>addEventListener('error')</code> とイベントハンドラを設定したりすると、その外部ファイルが読み込めなかった時に特定の処理が行える…。という記事を以前書いた。</p>
+<ul>
+  <li><a href="/blog/2018/01/21-03.html">Web ページ中の画像が読み込めなかった時に処理させる</a></li>
+</ul>
+<p>この中で、<code>DOMContentLoaded</code> イベント内で要素を特定して <code>onerror</code> イベントを一括指定すれば良い、といったことを書いたのだが、コレが上手く動作しない場合があるので、紹介しておく。</p>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#domcontentloaded-%E3%82%A4%E3%83%99%E3%83%B3%E3%83%88%E3%81%AF%E9%81%85%E3%81%99%E3%81%8E%E3%82%8B">DOMContentLoaded イベントは遅すぎる…</a></li>
+  <li><a href="#body-%E8%A6%81%E7%B4%A0%E6%9C%AB%E5%B0%BE%E3%81%AB-script-%E8%A6%81%E7%B4%A0%E3%82%92%E7%BD%AE%E3%81%8F%E3%81%A8%E8%BB%BD%E6%B8%9B%E3%81%A7%E3%81%8D%E3%82%8B"><code>body</code> 要素末尾に <code>script</code> 要素を置くと軽減できる</a></li>
+  <li><a href="#%E4%B8%80%E7%95%AA%E5%AE%89%E5%AE%9A%E3%81%97%E3%81%A6%E3%81%84%E3%82%8B%E3%81%AE%E3%81%AF-onerror-%E5%B1%9E%E6%80%A7%E5%80%A4%E3%82%92-html-%E4%B8%AD%E3%81%AB%E6%9B%B8%E3%81%8F%E6%96%B9%E6%B3%95%E3%81%A0%E3%81%A3%E3%81%9F">一番安定しているのは <code>onerror</code> 属性値を HTML 中に書く方法だった</a></li>
+  <li><a href="#%E5%8B%95%E7%9A%84%E3%81%AB%E8%A6%81%E7%B4%A0%E3%82%92%E7%94%9F%E6%88%90%E3%81%97%E3%81%9F%E6%99%82%E3%80%81%E5%A4%96%E9%83%A8%E3%83%95%E3%82%A1%E3%82%A4%E3%83%AB%E3%81%AF%E3%81%84%E3%81%A4%E8%AA%AD%E3%81%BF%E8%BE%BC%E3%81%BE%E3%82%8C%E3%82%8B%E3%81%8B">動的に要素を生成した時、外部ファイルはいつ読み込まれるか</a></li>
+  <li><a href="#%E5%8B%95%E7%9A%84%E3%81%AB%E8%BF%BD%E5%8A%A0%E3%81%99%E3%82%8B%E8%A6%81%E7%B4%A0%E3%81%AB-error-%E3%82%A4%E3%83%99%E3%83%B3%E3%83%88%E3%82%92%E4%BB%95%E8%BE%BC%E3%82%80%E3%81%B9%E3%81%8D%E3%82%BF%E3%82%A4%E3%83%9F%E3%83%B3%E3%82%B0">動的に追加する要素に Error イベントを仕込むべきタイミング</a></li>
+  <li><a href="#%E4%BB%A5%E4%B8%8A">以上</a></li>
+</ul>
+<h2 id="domcontentloaded-イベントは遅すぎる"><a class="header-link" href="#domcontentloaded-イベントは遅すぎる"><span class="header-link-mark"></span></a>DOMContentLoaded イベントは遅すぎる…</h2>
+<p>HTML 中に <code>onerror</code> 属性をベタ書きするのは気が引けるので、DOM 構築が完了したところで、<code>element.onerror</code> に関数を代入しよう、という話だった。<code>onerror</code> への代入にせよ、<code>addEventListener('error')</code> で指定するにせよ、どちらでも同じだ。</p>
+<pre class="language-html"><code class="language-html"><span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>head</span><span class="token punctuation">></span></span>
+  <span class="token comment">&#x3C;!-- …中略… --></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>script</span><span class="token punctuation">></span></span><span class="token script"><span class="token language-javascript">
+    <span class="token comment">// DOM 要素が構築できていない間にイベント追加はできないので DOMContentLoaded まで待つ</span>
+    <span class="token dom variable">document</span><span class="token punctuation">.</span><span class="token method function property-access">addEventListener</span><span class="token punctuation">(</span><span class="token string">'DOMContentLoaded'</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+      <span class="token comment">// 画像1</span>
+      <span class="token dom variable">document</span><span class="token punctuation">.</span><span class="token method function property-access">getElementById</span><span class="token punctuation">(</span><span class="token string">'not-found-1'</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method-variable function-variable method function property-access">onerror</span> <span class="token operator">=</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+        <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'画像が読み込めなかったよ'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span><span class="token punctuation">;</span>
+      
+      <span class="token comment">// 画像2</span>
+      <span class="token dom variable">document</span><span class="token punctuation">.</span><span class="token method function property-access">getElementById</span><span class="token punctuation">(</span><span class="token string">'not-found-2'</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">addEventListener</span><span class="token punctuation">(</span><span class="token string">'error'</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+        <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'画像が読み込めなかったよ'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  </span></span><span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>script</span><span class="token punctuation">></span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>head</span><span class="token punctuation">></span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>body</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>img</span> <span class="token attr-name">src</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>not-found-1.jpg<span class="token punctuation">"</span></span> <span class="token attr-name">id</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>not-found-1<span class="token punctuation">"</span></span> <span class="token attr-name">alt</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>画像1<span class="token punctuation">"</span></span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>img</span> <span class="token attr-name">src</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>not-found-2.jpg<span class="token punctuation">"</span></span> <span class="token attr-name">id</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>not-found-2<span class="token punctuation">"</span></span> <span class="token attr-name">alt</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>画像2<span class="token punctuation">"</span></span><span class="token punctuation">></span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>body</span><span class="token punctuation">></span></span>
+</code></pre>
+<p>DOMContentLoaded を待たないと、対象の要素が存在しないのにイベント設定しようとしてエラーになってしまうので、DOMContentLoaded で良いんじゃないか、と思いきや、<strong>これがうまくいかない場合がある</strong>。すなわち、この場合だとコンソールログが出力されない場合があるのだ。</p>
+<p>どうやら、<strong>DOMContentLoaded イベントまで待つと、既に画像やスクリプトの読み込みが終わっており、Error イベントが発火し終わっている場合がある</strong>ようで、うまく Error イベントを拾えないようだった。</p>
+<h2 id="body-要素末尾に-script-要素を置くと軽減できる"><a class="header-link" href="#body-要素末尾に-script-要素を置くと軽減できる"><span class="header-link-mark"></span></a><code>body</code> 要素末尾に <code>script</code> 要素を置くと軽減できる</h2>
+<p>そこで次のように、<code>body</code> 要素の最後に配置した <code>script</code> 要素にて、<code>DOMContentLoaded</code> イベントを待たずに DOM 操作してみた。コレなら、スクリプトを読み込む時点で対象の要素がみつからない、ということは回避できるだろう。</p>
+<pre class="language-html"><code class="language-html"><span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>body</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>img</span> <span class="token attr-name">src</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>not-found-1.jpg<span class="token punctuation">"</span></span> <span class="token attr-name">id</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>not-found-1<span class="token punctuation">"</span></span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>img</span> <span class="token attr-name">src</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>not-found-2.jpg<span class="token punctuation">"</span></span> <span class="token attr-name">id</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>not-found-2<span class="token punctuation">"</span></span><span class="token punctuation">></span></span>
+  
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>script</span> <span class="token attr-name">src</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>not-found-3.js<span class="token punctuation">"</span></span> <span class="token attr-name">id</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>not-found-3<span class="token punctuation">"</span></span><span class="token punctuation">></span></span><span class="token script"></span><span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>script</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>script</span> <span class="token attr-name">src</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>not-found-4.js<span class="token punctuation">"</span></span> <span class="token attr-name">id</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>not-found-4<span class="token punctuation">"</span></span><span class="token punctuation">></span></span><span class="token script"></span><span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>script</span><span class="token punctuation">></span></span>
+  
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>script</span><span class="token punctuation">></span></span><span class="token script"><span class="token language-javascript">
+    <span class="token dom variable">document</span><span class="token punctuation">.</span><span class="token method function property-access">getElementById</span><span class="token punctuation">(</span><span class="token string">'not-found-1'</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method-variable function-variable method function property-access">onerror</span> <span class="token operator">=</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+      <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'画像が読み込めなかったよ'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span><span class="token punctuation">;</span>
+    <span class="token dom variable">document</span><span class="token punctuation">.</span><span class="token method function property-access">getElementById</span><span class="token punctuation">(</span><span class="token string">'not-found-2'</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">addEventListener</span><span class="token punctuation">(</span><span class="token string">'error'</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+      <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'画像が読み込めなかったよ'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token dom variable">document</span><span class="token punctuation">.</span><span class="token method function property-access">getElementById</span><span class="token punctuation">(</span><span class="token string">'not-found-3'</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method-variable function-variable method function property-access">onerror</span> <span class="token operator">=</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+      <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'スクリプトが読み込めなかったよ'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span><span class="token punctuation">;</span>
+    <span class="token dom variable">document</span><span class="token punctuation">.</span><span class="token method function property-access">getElementById</span><span class="token punctuation">(</span><span class="token string">'not-found-4'</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">addEventListener</span><span class="token punctuation">(</span><span class="token string">'error'</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+      <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'スクリプトが読み込めなかったよ'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  </span></span><span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>script</span><span class="token punctuation">></span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>body</span><span class="token punctuation">></span></span>
+</code></pre>
+<p>この場合、<em><code>img</code> 要素に関しては、コンソールログが正しく出力された</em>。しかし、<strong><code>script</code> 要素の方はコンソールログが出力されなかった。</strong></p>
+<p><code>script</code> 要素は通常、<code>script</code> 要素が見つかった時点でスクリプトの読み込みを開始し、読み込みが完了するまで画面描画や後続のデータの読み込みをブロックする。そのため、イベントを追加するための <code>script</code> 要素が後ろにあると「もう遅い」のである。</p>
+<h2 id="一番安定しているのは-onerror-属性値を-html-中に書く方法だった"><a class="header-link" href="#一番安定しているのは-onerror-属性値を-html-中に書く方法だった"><span class="header-link-mark"></span></a>一番安定しているのは <code>onerror</code> 属性値を HTML 中に書く方法だった</h2>
+<p><code>img</code> 要素・<code>script</code> 要素いずれの場合でも必ずエラー処理ができるやり方は、HTML 中に <code>onerror</code> 属性を書いておくやり方だった。</p>
+<pre class="language-html"><code class="language-html"><span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>img</span> <span class="token attr-name">src</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>not-found.jpg<span class="token punctuation">"</span></span> <span class="token attr-name">onerror</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>console.log(<span class="token punctuation">'</span>画像が読み込めなかったよ<span class="token punctuation">'</span>);<span class="token punctuation">"</span></span><span class="token punctuation">></span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>script</span> <span class="token attr-name">src</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>not-found.js<span class="token punctuation">"</span></span> <span class="token attr-name">onerror</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>console.log(<span class="token punctuation">'</span>スクリプトが読み込めなかったよ<span class="token punctuation">'</span>);<span class="token punctuation">"</span></span><span class="token punctuation">></span></span><span class="token script"></span><span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>script</span><span class="token punctuation">></span></span>
+</code></pre>
+<hr>
+<p>さて、<code>img</code> 要素と <code>script</code> 要素とで、外部ファイルの読み込みタイミングが少し違うようだった。もう少し検証してみよう。</p>
+<h2 id="動的に要素を生成した時、外部ファイルはいつ読み込まれるか"><a class="header-link" href="#動的に要素を生成した時、外部ファイルはいつ読み込まれるか"><span class="header-link-mark"></span></a>動的に要素を生成した時、外部ファイルはいつ読み込まれるか</h2>
+<p>次は、動的に <code>img</code> 要素や <code>script</code> 要素を生成し、<code>src</code> 属性を設定して、HTML 中に <code>appendChild()</code> してみる。この処理の中で、いつ画像ファイルやスクリプトファイルの読み込みが行われているのか、開発者ツールで見てみた。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token comment">// 画像の場合</span>
+<span class="token keyword">let</span> img<span class="token punctuation">;</span>
+<span class="token keyword">function</span> <span class="token function">createImg1</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span> img <span class="token operator">=</span> <span class="token dom variable">document</span><span class="token punctuation">.</span><span class="token method function property-access">createElement</span><span class="token punctuation">(</span><span class="token string">'img'</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token punctuation">}</span>
+<span class="token keyword">function</span> <span class="token function">createImg2</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span> img<span class="token punctuation">.</span><span class="token property-access">src</span> <span class="token operator">=</span> <span class="token string">'something.jpg'</span><span class="token punctuation">;</span> <span class="token punctuation">}</span>
+<span class="token keyword">function</span> <span class="token function">createImg3</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span> <span class="token dom variable">document</span><span class="token punctuation">.</span><span class="token property-access">body</span><span class="token punctuation">.</span><span class="token method function property-access">appendChild</span><span class="token punctuation">(</span>img<span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token punctuation">}</span>
+
+<span class="token comment">// スクリプトの場合</span>
+<span class="token keyword">let</span> script<span class="token punctuation">;</span>
+<span class="token keyword">function</span> <span class="token function">createScript1</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span> script <span class="token operator">=</span> <span class="token dom variable">document</span><span class="token punctuation">.</span><span class="token method function property-access">createElement</span><span class="token punctuation">(</span><span class="token string">'script'</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token punctuation">}</span>
+<span class="token keyword">function</span> <span class="token function">createScript2</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span> script<span class="token punctuation">.</span><span class="token property-access">src</span> <span class="token operator">=</span> <span class="token string">'something.jpg'</span><span class="token punctuation">;</span> <span class="token punctuation">}</span>
+<span class="token keyword">function</span> <span class="token function">createScript3</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span> <span class="token dom variable">document</span><span class="token punctuation">.</span><span class="token property-access">body</span><span class="token punctuation">.</span><span class="token method function property-access">appendChild</span><span class="token punctuation">(</span>script<span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token punctuation">}</span>
+</code></pre>
+<p>これらの関数を1つずつ、画面上に配置したボタンから呼び出してみて、画像ファイルやスクリプトファイルが読み込まれるタイミングを調べた。</p>
+<p>Chrome ブラウザで試した結果、<em><code>img</code> 要素</em>の場合は <code>createImg2()</code>、つまり <em><code>src</code> 属性に値が代入された時</em>に読み込みが開始した。一方 <strong><code>script</code> 要素</strong>は、<code>src</code> 属性値が決まったタイミングではなく、<strong><code>appendChild()</code> した時</strong>に初めて読み込みが始まった。</p>
+<h2 id="動的に追加する要素に-error-イベントを仕込むべきタイミング"><a class="header-link" href="#動的に追加する要素に-error-イベントを仕込むべきタイミング"><span class="header-link-mark"></span></a>動的に追加する要素に Error イベントを仕込むべきタイミング</h2>
+<p>つまり、動的に追加する要素に対して Error イベントを仕込むには、<em><code>img</code> 要素は <code>src</code> 属性値を設定する前</em>、<strong><code>script</code> 要素は HTML に追加する前</strong>でないと、意図したとおりに動作しないワケだ。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token comment">// 画像の場合</span>
+<span class="token keyword">function</span> <span class="token function">createImg</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token keyword">const</span> img <span class="token operator">=</span> <span class="token dom variable">document</span><span class="token punctuation">.</span><span class="token method function property-access">createElement</span><span class="token punctuation">(</span><span class="token string">'img'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  img<span class="token punctuation">.</span><span class="token property-access">onerror</span> <span class="token operator">=</span> <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'画像が読み込めなかったよ'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment">// ← src 属性値が決まる前に設定しておく</span>
+  img<span class="token punctuation">.</span><span class="token property-access">src</span> <span class="token operator">=</span> <span class="token string">'something.jpg'</span><span class="token punctuation">;</span>
+  <span class="token dom variable">document</span><span class="token punctuation">.</span><span class="token property-access">body</span><span class="token punctuation">.</span><span class="token method function property-access">appendChild</span><span class="token punctuation">(</span>img<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+
+<span class="token comment">// スクリプトの場合</span>
+<span class="token keyword">function</span> <span class="token function">createScript</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token keyword">const</span> script <span class="token operator">=</span> <span class="token dom variable">document</span><span class="token punctuation">.</span><span class="token method function property-access">createElement</span><span class="token punctuation">(</span><span class="token string">'script'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  script<span class="token punctuation">.</span><span class="token property-access">src</span> <span class="token operator">=</span> <span class="token string">'something.jpg'</span><span class="token punctuation">;</span>
+  script<span class="token punctuation">.</span><span class="token property-access">onerror</span> <span class="token operator">=</span> <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'スクリプトが読み込めなかったよ'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment">// ← HTML に追加する前に設定しておく</span>
+  <span class="token dom variable">document</span><span class="token punctuation">.</span><span class="token property-access">body</span><span class="token punctuation">.</span><span class="token method function property-access">appendChild</span><span class="token punctuation">(</span>script<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<h2 id="以上"><a class="header-link" href="#以上"><span class="header-link-mark"></span></a>以上</h2>
+<p>外部ファイルの読み込みに失敗した時に処理したいことは時々ありうるだろうが、地味に読み込みタイミングとイベントの設定タイミングがキモになるので、注意してほしい。</p>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2018-02-24</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2018-02-24</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

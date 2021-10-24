@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>MacOS に CertBot を入れて Let&#39;s Encrypt 証明書を作ってみる - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2019/03/11-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2019/index.html">2019年</a></li>
+            <li><a href="/blog/2019/03/index.html">03月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2019-03-11</time></div>
+        <h1 id="page-title">MacOS に CertBot を入れて Let&#39;s Encrypt 証明書を作ってみる</h1>
+
+<p>時代の波には逆らえず、HTTPS 化が求められている。</p>
+<p>今回は無料で発行できる <strong>Let's Encrypt</strong> というサーバ証明書を作ってみる。</p>
+<p>ちょっとひと手間必要なので、真似する場合は<em>先に全ての手順を読んでから</em>真似してほしい。</p>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#%E5%89%8D%E6%8F%90%E6%9D%A1%E4%BB%B6">前提条件</a></li>
+  <li><a href="#certbot-%E3%81%AE%E3%82%A4%E3%83%B3%E3%82%B9%E3%83%88%E3%83%BC%E3%83%AB">CertBot のインストール</a></li>
+  <li><a href="#%E8%A8%BC%E6%98%8E%E6%9B%B8%E3%81%AE%E7%99%BA%E8%A1%8C%E7%94%B3%E8%AB%8B%E3%82%92%E5%87%BA%E3%81%99">証明書の発行申請を出す</a></li>
+  <li><a href="#acme-%E3%83%81%E3%83%A3%E3%83%AC%E3%83%B3%E3%82%B8%E3%82%92%E8%A1%8C%E3%81%86">ACME チャレンジを行う</a></li>
+  <li><a href="#%E5%AF%BE%E8%A9%B1%E3%83%97%E3%83%AD%E3%83%B3%E3%83%97%E3%83%88%E3%82%92%E9%80%B2%E3%82%81%E3%82%8B">対話プロンプトを進める</a></li>
+  <li><a href="#%E3%83%95%E3%82%A1%E3%82%A4%E3%83%AB%E3%81%AE%E4%B8%AD%E8%BA%AB%E3%83%BB%E5%BD%B9%E5%89%B2%E3%82%92%E7%90%86%E8%A7%A3%E3%81%99%E3%82%8B">ファイルの中身・役割を理解する</a>
+    <ul>
+      <li><a href="#certpem--%E3%82%B5%E3%83%BC%E3%83%90%E8%A8%BC%E6%98%8E%E6%9B%B8"><code>cert.pem</code> … サーバ証明書</a></li>
+      <li><a href="#chainpem--%E4%B8%AD%E9%96%93-ca-%E8%A8%BC%E6%98%8E%E6%9B%B8"><code>chain.pem</code> … 中間 CA 証明書</a></li>
+      <li><a href="#fullchainpem--certpem-%E3%81%A8-chainpem-%E3%82%92%E7%B5%90%E5%90%88%E3%81%97%E3%81%9F%E8%A8%BC%E6%98%8E%E6%9B%B8%E3%83%95%E3%82%A1%E3%82%A4%E3%83%AB"><code>fullchain.pem</code> : <code>cert.pem</code> と <code>chain.pem</code> を結合した証明書ファイル</a></li>
+      <li><a href="#privatekeypem--%E7%A7%98%E5%AF%86%E9%8D%B5%E3%83%95%E3%82%A1%E3%82%A4%E3%83%AB"><code>privatekey.pem</code> : 秘密鍵ファイル</a></li>
+    </ul>
+  </li>
+  <li><a href="#%E4%B8%AD%E8%BA%AB%E3%81%A8%E5%BD%A2%E5%BC%8F%E3%81%8C%E5%88%86%E3%81%8B%E3%82%8B%E3%82%88%E3%81%86%E3%81%AB%E3%83%95%E3%82%A1%E3%82%A4%E3%83%AB%E5%90%8D%E3%82%92%E5%A4%89%E3%81%88%E3%82%8B%E3%81%A8%E3%81%97%E3%81%9F%E3%82%89">中身と形式が分かるようにファイル名を変えるとしたら</a></li>
+  <li><a href="#%E4%BB%A5%E4%B8%8A">以上</a></li>
+</ul>
+<h2 id="前提条件"><a class="header-link" href="#前提条件"><span class="header-link-mark"></span></a>前提条件</h2>
+<p>Let's Encrypt 証明書を発行するための前提条件は以下のとおり。</p>
+<ul>
+  <li>DNS 設定 (ドメインとグローバル IP アドレスの紐付け) が完了していて、<code>http://example.com/</code> といった URL でアクセスできる状態であること</li>
+  <li><code>http://example.com/</code> といった URL でアクセスできること = Web サーバは 80 ポートでアクセスできる状態であること</li>
+  <li>ドメイン配下に任意のファイルを配置できる環境であること
+    <ul>
+      <li>証明書発行の際にファイル配備が必要なので、FTP でファイルをアップできる環境にしておくとか、Web サーバの実装をいじくって適切なレスポンスができるようにしておく必要がある</li>
+    </ul>
+  </li>
+</ul>
+<p>一般公開しないつもりの Web API サーバで80番ポートを開けていないとか、FTP 環境もないし実装もイジれないしでサクッとファイルをアップロードできないサーバなんかだと、今回紹介する手順では証明書の発行が困難であろう。今回紹介していない別のやり方での証明書発行もあるようなので、その際は調べてみてほしい。</p>
+<h2 id="certbot-のインストール"><a class="header-link" href="#certbot-のインストール"><span class="header-link-mark"></span></a>CertBot のインストール</h2>
+<p>まずは、Let's Encrypt の証明書を生成するためのコマンドラインツール、<code>certbot</code> をインストールする。MacOS の場合、Homebrew でインストールできる。</p>
+<pre class="language-bash"><code class="language-bash">$ brew <span class="token function">install</span> certbot
+
+$ certbot --version
+certbot <span class="token number">0.31</span>.0
+</code></pre>
+<p>こんな感じ。</p>
+<h2 id="証明書の発行申請を出す"><a class="header-link" href="#証明書の発行申請を出す"><span class="header-link-mark"></span></a>証明書の発行申請を出す</h2>
+<p>続いて、証明書の発行申請を行う。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># 発行したいドメインを指定する</span>
+$ <span class="token function">sudo</span> certbot certonly --manual --domain 【ドメイン <span class="token builtin class-name">:</span> <span class="token string">'example.com'</span> みたいな】
+
+Password:  <span class="token comment"># ★ sudo のパスワード</span>
+
+Saving debug log to /var/log/letsencrypt/letsencrypt.log
+Plugins selected: Authenticator manual, Installer None
+Enter email address <span class="token punctuation">(</span>used <span class="token keyword">for</span> urgent renewal and security notices<span class="token punctuation">)</span> <span class="token punctuation">(</span>Enter <span class="token string">'c'</span> to
+cancel<span class="token punctuation">)</span>:  <span class="token comment"># ★メールアドレスを入力する</span>
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+Please <span class="token builtin class-name">read</span> the Terms of Service at
+https://letsencrypt.org/documents/LE-SA-v1.2-November-15-2017.pdf. You must
+agree <span class="token keyword">in</span> order to register with the ACME server at
+https://acme-v02.api.letsencrypt.org/directory
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+<span class="token punctuation">(</span>A<span class="token punctuation">)</span>gree/<span class="token punctuation">(</span>C<span class="token punctuation">)</span>ancel: A  <span class="token comment"># ★利用規約への同意、「A」を入力する</span>
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+Would you be willing to share your email address with the Electronic Frontier
+Foundation, a founding partner of the Let<span class="token string">'s Encrypt project and the non-profit
+organization that develops Certbot? We'</span>d like to send you email about our work
+encrypting the web, EFF news, campaigns, and ways to support digital freedom.
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+<span class="token punctuation">(</span>Y<span class="token punctuation">)</span>es/<span class="token punctuation">(</span>N<span class="token punctuation">)</span>o: N  <span class="token comment"># ★メールアドレスを公開して良いかどうか、「N」を入力し断る</span>
+Obtaining a new certificate
+Performing the following challenges:
+http-01 challenge <span class="token keyword">for</span> 【ドメイン】
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+NOTE: The IP of this machine will be publicly logged as having requested this
+certificate. If you<span class="token string">'re running certbot in manual mode on a machine that is not
+your server, please ensure you'</span>re okay with that.
+
+Are you OK with your IP being logged?
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+<span class="token punctuation">(</span>Y<span class="token punctuation">)</span>es/<span class="token punctuation">(</span>N<span class="token punctuation">)</span>o: Y  <span class="token comment"># ★ IP アドレスのロギングをして良いか、「Y」を入力しておく</span>
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+Create a <span class="token function">file</span> containing just this data:
+
+XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+<span class="token comment"># ↑ランダムな文字列が表示される</span>
+
+And <span class="token function">make</span> it available on your web server at this URL:
+
+http://【ドメイン】/.well-known/acme-challenge/yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy
+<span class="token comment"># ↑末尾はランダムな文字列</span>
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+Press Enter to Continue
+</code></pre>
+<p><strong>ココで <code>Press Enter to Continue</code> と表示されたら、Enter を押さずに、次の処理を行う。</strong></p>
+<h2 id="acme-チャレンジを行う"><a class="header-link" href="#acme-チャレンジを行う"><span class="header-link-mark"></span></a>ACME チャレンジを行う</h2>
+<p>Let's Encrypt の証明書は、<em>DV (Domain Validation)</em>、すなわちそのドメインを所有していることを確認できれば発行してもらえる。先程の <code>certbot</code> コマンド入力時にオプション引数に渡したドメインが、今回サーバ証明書を導入したい「僕のドメイン」なワケだが、それをどうやって証明するか。</p>
+<p>Let's Encrypt の場合は、<strong>ACME プロトコル</strong>という仕組みを使って、ドメインの所有確認を行っている。先程の対話プロンプトの最後に表示された、一見ランダムな文字列と URL が、この ACME 認証に必要な情報となる。</p>
+<ul>
+  <li>参考：<a href="https://qiita.com/urakarin/items/b0fa10546f4eaf1630db">ACME - Qiita</a></li>
+  <li>参考：<a href="http://jxck.hatenablog.com/entry/letsencrypt-acme">Let's Encrypt を支える ACME プロトコル - Block Rockin' Codes</a></li>
+</ul>
+<p>対話プロトコルの最後で言っているのはすなわち、<em>「あなたがそのドメインの所有者なら、我々が発行したこの文字列を含むテキストファイルを、我々が指定した URL パスに配備できるはずだろう？」</em>ということだ。</p>
+<p>というワケで、その作業をしてやる。</p>
+<pre><code>And make it available on your web server at this URL:
+
+http://【ドメイン】/.well-known/acme-challenge/yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy
+</code></pre>
+<p>このように示された URL に沿って、<code>.well-known/acme-challenge/</code> ディレクトリを作り、その下に <code>yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy</code> という空ファイルを作る。このファイルの中に、</p>
+<pre><code>Create a file containing just this data:
+
+XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+</code></pre>
+<p>と示された文字列のみを書き込み、1行のテキストファイルとする。コレを FTP でアップロードすれば良い。</p>
+<p>FTP を使わない場合でも、Node.js Express サーバを使用している場合なんかであれば、<code>express.static()</code> を使って以下のように静的ファイルを配信できれば良いだろう。</p>
+<pre class="language-javascript"><code class="language-javascript">app<span class="token punctuation">.</span><span class="token method function property-access">use</span><span class="token punctuation">(</span><span class="token string">'/.well-known/acme-challenge/'</span><span class="token punctuation">,</span> express<span class="token punctuation">.</span><span class="token method function property-access">static</span><span class="token punctuation">(</span><span class="token string">'my-challenge'</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<ul>
+  <li>参考：<a href="https://expressjs.com/ja/starter/static-files.html">Express での静的ファイルの提供</a></li>
+</ul>
+<p>アップロードができて、手元のブラウザで</p>
+<ul>
+  <li><code>http://【ドメイン】/.well-known/acme-challenge/yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy</code></li>
+</ul>
+<p>にアクセスして、</p>
+<ul>
+  <li><code>XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX</code></li>
+</ul>
+<p>というデータがレスポンスされれば準備 OK だ。</p>
+<h2 id="対話プロンプトを進める"><a class="header-link" href="#対話プロンプトを進める"><span class="header-link-mark"></span></a>対話プロンプトを進める</h2>
+<p>ファイルの準備ができたら、<code>Press Enter to Continue</code> で止めていた対話プロンプトに戻ろう。</p>
+<pre class="language-bash"><code class="language-bash">Press Enter to Continue  <span class="token comment"># ★ Enter を押す</span>
+
+Waiting <span class="token keyword">for</span> verification<span class="token punctuation">..</span>.
+Cleaning up challenges
+
+IMPORTANT NOTES:
+ - Congratulations<span class="token operator">!</span> Your certificate and chain have been saved at:
+   /etc/letsencrypt/live/【ドメイン】/fullchain.pem
+   Your key <span class="token function">file</span> has been saved at:
+   /etc/letsencrypt/live/【ドメイン】/privkey.pem
+   Your cert will expire on <span class="token number">2019</span>-05-15. To obtain a new or tweaked
+   version of this certificate <span class="token keyword">in</span> the future, simply run certbot
+   again. To non-interactively renew *all* of your certificates, run
+   <span class="token string">"certbot renew"</span>
+ - Your account credentials have been saved <span class="token keyword">in</span> your Certbot
+   configuration directory at /etc/letsencrypt. You should <span class="token function">make</span> a
+   secure backup of this folder now. This configuration directory will
+   also contain certificates and private keys obtained by Certbot so
+   making regular backups of this folder is ideal.
+ - If you like Certbot, please consider supporting our work by:
+
+   Donating to ISRG / Let's Encrypt:   https://letsencrypt.org/donate
+   Donating to EFF:                    https://eff.org/donate-le
+</code></pre>
+<p>このように表示されたら OK だ。<code>/etc/letsencrypt/</code> ディレクトリ配下に証明書ファイル等が格納されたようだ。</p>
+<ul>
+  <li><code>/etc/letsencrypt/live/【ドメイン】/fullchain.pem</code> : 「サーバ証明書」と「中間 CA 証明書」が結合された証明書ファイル</li>
+  <li><code>/etc/letsencrypt/live/【ドメイン】/privkey.pem</code> : 秘密鍵ファイル</li>
+</ul>
+<p>手元の Mac で試したところ、<code>/etc/letsencrypt/</code> 配下のディレクトリにはアクセス権がなかったので、Finder 上で設定してファイルにアクセスできるようにしておこう。</p>
+<p>先程の <code>/etc/letsencrypt/live/</code> 配下のファイルはシンボリックリンクになっている。実際のファイルは以下にある。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">ls</span> -l /etc/letsencrypt/archive/【ドメイン名】
+total <span class="token number">32</span>
+-rw-r--r--  <span class="token number">1</span> root  wheel  <span class="token number">1980</span>  <span class="token number">2</span> <span class="token number">14</span> <span class="token number">10</span>:56 cert1.pem
+-rw-r--r--  <span class="token number">1</span> root  wheel  <span class="token number">1647</span>  <span class="token number">2</span> <span class="token number">14</span> <span class="token number">10</span>:56 chain1.pem
+-rw-r--r--  <span class="token number">1</span> root  wheel  <span class="token number">3627</span>  <span class="token number">2</span> <span class="token number">14</span> <span class="token number">10</span>:56 fullchain1.pem
+-rw-------  <span class="token number">1</span> root  wheel  <span class="token number">1708</span>  <span class="token number">2</span> <span class="token number">14</span> <span class="token number">10</span>:56 privkey1.pem
+</code></pre>
+<ul>
+  <li><code>cert1.pem</code> : サーバ証明書</li>
+  <li><code>chain1.pem</code> : 中間 CA 証明書</li>
+  <li><code>fullchain1.pem</code> : <code>cert1.pem</code> と <code>chain1.pem</code> を結合した証明書ファイル</li>
+  <li><code>privatekey1.pem</code> : 秘密鍵ファイル</li>
+</ul>
+<p>CI 環境なんかを整備して、サーバ証明書の有効期限が切れる際に自動で更新・再発行するような機会を見越して、<code>/etc/letsencrypt/live/</code> パスにあるシンボリックリンクを参照するようにすれば、サーバの実装側は証明書の更新による影響を受けなくなる、という親切心みたい。</p>
+<p>とりあえず、コレでサーバ証明書の発行は終わったので、あとは各サーバ環境に適用していけば良いだけ、ということになる。今回はサーバへの適用手順などは説明しない。</p>
+<ul>
+  <li>参考：<a href="https://rakuin.com/blog/lets-encrypt/">Let's EncryptでサイトをHTTPS（SSL）化する方法 - 樂印</a></li>
+</ul>
+<h2 id="ファイルの中身・役割を理解する"><a class="header-link" href="#ファイルの中身・役割を理解する"><span class="header-link-mark"></span></a>ファイルの中身・役割を理解する</h2>
+<p>僕はサーバ証明書とか HTTPS 対応とか初めてだったので、これらのファイルが何なのかを調べて、サーバ証明書に関する理解を深めてみたい。</p>
+<p>理解するには以下の記事が役に立った。</p>
+<ul>
+  <li>参考：<a href="https://qiita.com/kunichiko/items/12cbccaadcbf41c72735">RSA鍵、証明書のファイルフォーマットについて - Qiita</a>
+    <ul>
+      <li><code>.pem</code> という拡張子はエンコーディングを表す。PEM (Privacy Enhanced Mail) の場合、中身はテキストファイルとして開ける形式。他に <code>.der</code> というバイナリデータ形式も見られる。
+        <ul>
+          <li>
+            <blockquote>
+              <p>ファイルの先頭に <code>-- BEGIN...</code> という行があるのをみたら「PEMだな」と思えば良いです。</p>
+            </blockquote>
+          </li>
+        </ul>
+      </li>
+      <li><code>.csr</code> は証明書要求ファイル。<code>.crt</code> や <code>.cer</code> は Certificate、つまり証明書ファイル。<code>.key</code> は鍵ファイル。これらの拡張子はファイルの中身を示すために便宜的に付けられているだけ。中身は PEM だったり DER だったりする。</li>
+    </ul>
+  </li>
+</ul>
+<p>Let's Encrypt に発行してもらったファイルは全て PEM ファイルなので、テキストエディタで開ける。中身は Base64 エンコーディングされているものの、秘密情報なので公開しないように。ココでは PEM ファイルの特徴である、1行目と最終行のみ掲載する。</p>
+<h3 id="certpem--サーバ証明書"><a class="header-link" href="#certpem--サーバ証明書"><span class="header-link-mark"></span></a><code>cert.pem</code> … サーバ証明書</h3>
+<p><em>サーバ証明書</em>は、そのドメインの所有者を Let's Encrypt が証明してくれていることを表している。</p>
+<pre><code>-----BEGIN CERTIFICATE-----
+MIIxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+xxxxx... みたいな内容が数十行続く…
+-----END CERTIFICATE-----
+</code></pre>
+<h3 id="chainpem--中間-ca-証明書"><a class="header-link" href="#chainpem--中間-ca-証明書"><span class="header-link-mark"></span></a><code>chain.pem</code> … 中間 CA 証明書</h3>
+<p>中間 CA 証明書の中身は、「サーバ証明書」とよく似ている。<code>-----BEGIN CERTIFICATE-----</code> と <code>-----END CERTIFICATE-----</code> で囲まれた Base64 エンコード文字列のファイルだ。</p>
+<p>中間 CA 証明書の役割を理解するには、「認証局」「ルート認証局」の概念を理解する必要がある。</p>
+<ul>
+  <li>サーバ証明書の有効性を確認するには、どこのどいつがそのサーバ証明書を発行したのか (認証したのか) も信用情報として重要になる。サーバ証明書を発行できる<em>「認証局」</em>の正当性をチェックしたいワケだ。</li>
+  <li>大抵の OS やブラウザには、世界的に信頼できる認証局の証明書がプリインストールされている。コレがよくいう<em>「ルート認証局」「ルート証明書」</em>というモノだ。</li>
+  <li>Let's Encrypt という認証局はルート認証局としては認められていない、いわゆる<strong>「中間認証局」</strong>というモノだ。Let's Encrypt の母体は IdenTrust という企業なのだが、この IdenTrust はルート認証局として幅広いデバイスにプリインストールされている、信頼のおける認証局だ。</li>
+</ul>
+<p>このような状況で、ブラウザが「サーバ証明書」の発行元を調べると、「Let's Encrypt」という認証局に行き着くワケだが、この認証局の証明書をブラウザが持っていないために、信頼できる認証局とは見なせないのだ。個人で作った「オレオレ証明書 (自己署名証明書)」も同じ原理で、「そのサーバ証明書の発行元が信用出来ないよ」と怒られてしまい、ブラウザ上では「信頼できない証明書です」みたいなメッセージが出てくることになる。</p>
+<p>でも、実際は「Let's Encrypt」という認証局は、「IdenTrust」というルート認証局に認められている、信頼のおける認証局なワケだ。ブラウザからすると、<em>「Let's Encrypt 認証局の証明書」</em>が分かると、その発行元が IdenTrust だと分かり、「あぁルート認証局が認めているんですね、じゃあ大丈夫でしょう」とみなせるのだ。</p>
+<p>ということで、それを示すのが、この「中間 CA 証明書」というワケである。CA は Certificate Authority の略。</p>
+<p>例えば、予めこの中間 CA 証明書をブラウザにインストールしておけば、それが「ルート証明書」になるワケで、HTTPS アクセスした時に警告が出なくなる。勿論、うかつにルート証明書をインストールしまくっていては、信用ならない機関が発行した証明書にも気が付かない事態になって大変危険なので、適切に扱う必要がある。</p>
+<ul>
+  <li>参考：<a href="http://e-words.jp/w/%E4%B8%AD%E9%96%93CA.html">中間CA（中間認証局）とは - IT用語辞典 e-Words</a></li>
+  <li>参考：<a href="https://qiita.com/kawaz/items/f90810b9ea823b6556a8">認証局を立ててぼろもうけしたいんですが＞無理な理由を理解しよう - Qiita</a> … 「ルート認証局」の信頼性に関する分かりやすい説明</li>
+</ul>
+<h3 id="fullchainpem--certpem-と-chainpem-を結合した証明書ファイル"><a class="header-link" href="#fullchainpem--certpem-と-chainpem-を結合した証明書ファイル"><span class="header-link-mark"></span></a><code>fullchain.pem</code> : <code>cert.pem</code> と <code>chain.pem</code> を結合した証明書ファイル</h3>
+<ul>
+  <li>「サーバ証明書」から辿れるのは、その発行元である「Let's Encrypt」という認証局までで、この認証局はルート認証局としてブラウザや OS に知られていないため、信頼性を確認できない。</li>
+  <li>しかし、Let's Encrypt は IdenTrust というルート認証局が母体の中間認証局で、信頼できるはずなのだが、ブラウザが機械的にそれを判断できない。</li>
+  <li>Let's Encrypt から IdenTrust というルート認証局に辿り着ければ、その信頼性を理解してもらえるであろう。</li>
+</ul>
+<p>それを実現するために、<em>「サーバ証明書」に「中間 CA 証明書」を同梱させる</em>、という手法がある。極めて簡単で、サーバ証明書と中間 CA 証明書の各ファイルを <code>cat</code> コマンドで結合するだけで良い。</p>
+<pre><code>-----BEGIN CERTIFICATE-----
+MIIxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+xxxxx... コレがサーバ証明書。
+-----END CERTIFICATE-----
+-----BEGIN CERTIFICATE-----
+MIIyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy
+yyyyy... コレが中間 CA 証明書。
+-----END CERTIFICATE-----
+</code></pre>
+<p>こんな感じ。コレを「サーバ証明書です」とブラウザに渡してやれば、ブラウザは「前半のサーバ証明書の発行元は Let's Encrypt だな、そして後半の Let's Encrypt 証明書はルート認証局の IdenTrust が発行元だな、じゃあ安全！」と判断できる、というワケだ。</p>
+<p>このような証明書は、結合されているので<em>「チェーン証明書」</em>と呼ばれたりする。</p>
+<h3 id="privatekeypem--秘密鍵ファイル"><a class="header-link" href="#privatekeypem--秘密鍵ファイル"><span class="header-link-mark"></span></a><code>privatekey.pem</code> : 秘密鍵ファイル</h3>
+<p>サーバ証明書と中間 CA 証明書で、そのサーバの信頼性は確認できるようになった。クライアントは信頼できる HTTPS サーバであると確認が取れるようになった。</p>
+<p>SSL・TLS 通信というモノは通信内容を暗号化している。初めにサーバから「公開鍵」を提供し、クライアント側でその公開鍵を使ってリクエストを暗号化してもらう。サーバは暗号化されたリクエスト情報を受け取ったら、「秘密鍵」を使って復号する。こういう仕組みによって、通信内容の盗聴を防いだり、改竄を困難にしたりしているワケだ。</p>
+<ul>
+  <li>実際はこの他に「共通鍵」というモノも登場するが、話を簡略化した
+    <ul>
+      <li>参考：<a href="https://cspssl.jp/guide/mechanism.php">SSLの仕組み | 基礎から学ぶSSL入門ガイド | CSP SSL</a></li>
+      <li>参考：<a href="https://jp.globalsign.com/ssl-pki-info/ssl_practices/ssl_encryption.html">SSL暗号化通信の仕組み｜GMOグローバルサイン【公式】</a></li>
+    </ul>
+  </li>
+</ul>
+<p>ココで生成されたのは、サーバ側に格納しておく「秘密鍵」のファイルだ。中身はこんな感じ。</p>
+<pre><code>-----BEGIN PRIVATE KEY-----
+MIIxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+xxxxx... みたいな内容が数十行続く…
+-----END PRIVATE KEY-----
+</code></pre>
+<p>「公開鍵」は「秘密鍵」から生成できるが、公開鍵からは秘密鍵を復元できない。クライアントに返す公開鍵は、この秘密鍵から生成している関係となる。手元でも <code>openssl</code> コマンドで公開鍵を生成したりできるので、試してみると良いだろう。</p>
+<p>なお、この秘密鍵には<em>パスフレーズ</em>が付けられておらず、秘密鍵自体が暗号化されていない。パスフレーズを設定して秘密鍵を暗号化した場合は、以下のような内容になっている。</p>
+<pre><code>-----BEGIN RSA PRIVATE KEY-----
+Proc-Type: 4,ENCRYPTED
+DEK-Info: DES-EDE3-CBC,314C7F2F0684201A
+
+onYxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+xxxxx... みたいな内容が数十行続く…
+-----END PRIVATE KEY-----
+</code></pre>
+<p>2行目に <code>ENCRYPTED</code> と記載があったりする。</p>
+<p>パスフレーズを設定した秘密鍵の生成や、パスフレーズ設定済の秘密鍵からパスフレーズを解除したりする際も <code>openssl</code> コマンドで行える。</p>
+<h2 id="中身と形式が分かるようにファイル名を変えるとしたら"><a class="header-link" href="#中身と形式が分かるようにファイル名を変えるとしたら"><span class="header-link-mark"></span></a>中身と形式が分かるようにファイル名を変えるとしたら</h2>
+<p>前述の参考文献の情報に基づき、中身と形式が分かるようにファイル名を変えるとしたら、僕ならこうする。</p>
+<ul>
+  <li><code>cert.pem</code> → <code>server.crt.pem</code> … サーバ証明書</li>
+  <li><code>chain.pem</code> → <code>ca.crt.pem</code> … 中間 CA 証明書</li>
+  <li><code>fullchain.pem</code> → <code>server-chain.crt.pem</code> … チェーン証明書</li>
+  <li><code>privkey.pem</code> → <code>server.key.pem</code> … 秘密鍵
+    <ul>
+      <li>秘密鍵にパスフレーズが付けられていて暗号化している場合は <code>server-encrypted.key.pem</code> とする</li>
+      <li>公開鍵ファイルを明示的に用意するとしたら <code>server-public.key.pem</code> とするかな？そんな機会ないけど</li>
+    </ul>
+  </li>
+</ul>
+<p>いずれも、最終的な拡張子は <code>.pem</code> に統一されていて、関連付け設定がしやすいかなと思う。それでいて、拡張子の手前のピリオド区切りを見れば、<code>crt</code> (証明書) なのか <code>key</code> (鍵) なのかの区別が付く、という感じ。</p>
+<h2 id="以上"><a class="header-link" href="#以上"><span class="header-link-mark"></span></a>以上</h2>
+<p>ミドルウェアの種類によってインストール方法は異なるが、基本的には「チェーン証明書」と「秘密鍵」をサーバにセットすれば、Let's Encrypt 証明書を利用した HTTPS サーバが構築できるだろう。</p>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2019-03-11</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2019-03-11</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

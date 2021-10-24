@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>Node.js スクリプトを CGI として動かしてみる - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2020/09/11-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2020/index.html">2020年</a></li>
+            <li><a href="/blog/2020/09/index.html">09月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2020-09-11</time></div>
+        <h1 id="page-title">Node.js スクリプトを CGI として動かしてみる</h1>
+
+<p>CGI という仕組みは、Perl・Ruby・PHP などの言語に限らず、<strong>標準入力と標準出力</strong>を扱える言語なら何でもいいらしい。ということは、<em>Node.js をランタイムにした CGI も可能</em>だと思われる。</p>
+<p>と、ふと思い立って実際にやってみた。</p>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#%E5%89%8D%E4%BE%8B%E3%81%8C%E3%81%82%E3%82%8B%EF%BC%9Acgi-node">前例がある：CGI-Node</a></li>
+  <li><a href="#%E5%89%8D%E6%8F%90%E6%9D%A1%E4%BB%B6">前提条件</a></li>
+  <li><a href="#%E6%9C%80%E4%BD%8E%E9%99%90-cgi-%E3%81%A8%E3%81%97%E3%81%A6%E5%8B%95%E3%81%8B%E3%81%9B%E3%82%8B%E3%82%B3%E3%83%BC%E3%83%89">最低限 CGI として動かせるコード</a></li>
+  <li><a href="#nodejs-%E3%82%92-cgi-%E3%81%A8%E3%81%97%E3%81%A6%E4%BD%BF%E3%81%86%E3%81%9F%E3%82%81%E3%81%AE%E3%82%A2%E3%83%AC%E3%82%B3%E3%83%AC">Node.js を CGI として使うためのアレコレ</a></li>
+  <li><a href="#%E3%83%9C%E3%82%A4%E3%83%A9%E3%83%BC%E3%83%97%E3%83%AC%E3%83%BC%E3%83%88%E3%82%92%E4%BD%9C%E3%81%A3%E3%81%9F">ボイラープレートを作った</a></li>
+  <li><a href="#%E4%BB%A5%E4%B8%8A">以上</a></li>
+</ul>
+<h2 id="前例がある：cgi-node"><a class="header-link" href="#前例がある：cgi-node"><span class="header-link-mark"></span></a>前例がある：CGI-Node</h2>
+<p>同じようなことを考えていた人がいた。</p>
+<ul>
+  <li>参考：<a href="https://blog.netandfield.com/shar/2017/03/nodejs-javascript-cgi.html">https://blog.netandfield.com/shar/2017/03/nodejs-javascript-cgi.html</a></li>
+</ul>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">cat</span> cgi-bin/node_test.cgi
+<span class="token comment">#!/usr/bin/node</span>
+
+console.log<span class="token punctuation">(</span><span class="token string">'Content-type: text/plain'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+console.log<span class="token punctuation">(</span><span class="token string">''</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+console.log<span class="token punctuation">(</span><span class="token string">'Hello World'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+$ <span class="token function">chmod</span> <span class="token number">755</span> cgi-bin/node_test.cgi
+</code></pre>
+<p>シンプルなコードが掲載されていたが、コレでやれるみたいだ。</p>
+<ul>
+  <li>参考：<a href="https://blog.sarabande.jp/post/163937909683">Node.js: CGI を通して利用する - Sarabande.jp</a></li>
+</ul>
+<p>1行目の Shebang は <code>node</code> (Windows なら <code>node.exe</code>) へのフルパスを渡してやる必要があり、<code>/usr/bin/node</code> や <em><code>/usr/bin/env node</code></em> なんかだとうまく行かないことがあるみたい。Nodebrew なんかを使っている場合はそもそも <code>~/.nodebrew/</code> 配下にあったりするので、この辺は実行環境に合わせてフルパスを書いてやる必要がありそうだ。</p>
+<p>Node.js の組み込みパッケージである <code>fs</code> なんかは使えそうだが、それ以外の npm パッケージを <code>require()</code> するのはできないんじゃないかな。試してないけど。</p>
+<p>CGI として動かせる一式が組まれた、<strong>CGI-Node</strong> というスクリプトも存在した。</p>
+<ul>
+  <li><a href="http://www.cgi-node.org/">CGI-Node</a></li>
+  <li><a href="https://github.com/DEDAjs/cgi-node">GitHub - DEDAjs/cgi-node: CGI Node.js complete module to replace PHP on shared hosting such as GoDaddy</a></li>
+</ul>
+<p>リクエストヘッダとかを処理してくれるのは分かったが、<code>.htaccess</code> にて <code>cgi-node.js</code> を挟んで処理するよう設定する必要があるらしい。若干面倒臭い。</p>
+<p>Node.js ならサーバを立てて動かせばいいじゃん、とも思うだろうが、Apache や nginx から、<code>localhost:3000</code> とかで動いてるサーバにリクエストをフォワードしてやるのも面倒臭い気がする。既存の CGI サーバで、CGI スクリプトとして動かしたい時に、開発言語として Node.js を選びたい、という時のための検証である。ｗ</p>
+<h2 id="前提条件"><a class="header-link" href="#前提条件"><span class="header-link-mark"></span></a>前提条件</h2>
+<p>今回の前提として、Apache サーバで CGI が動かせるようにしてあって、拡張子は <code>.cgi</code> を対象としている。お好みで <code>.jss</code> とかを CGI として動かせるようにしておくと良いかと (<code>.js</code> を対象にしてしまうと通常の JS ファイルと混在して辛い)。</p>
+<p>Node.js は Nodebrew でインストールし、<code>$ type node</code> コマンドで確認できたフルパスを Shebang に書くこととする。</p>
+<h2 id="最低限-cgi-として動かせるコード"><a class="header-link" href="#最低限-cgi-として動かせるコード"><span class="header-link-mark"></span></a>最低限 CGI として動かせるコード</h2>
+<p>Node-CGI は大仰なので、一切の依存を持たず、完全なシングルファイルで CGI として動作するスクリプトを組んでみる。<strong>最低限以下を書けば、CGI として動かせる。</strong></p>
+<ul>
+  <li><code>example-node-cgi.js.cgi</code>
+    <ul>
+      <li>拡張子は CGI として動かせるモノなら何でも良い</li>
+      <li>実行権限を付与しておく</li>
+    </ul>
+  </li>
+</ul>
+<pre class="language-javascript"><code class="language-javascript">#<span class="token operator">!</span><span class="token operator">/</span>usr<span class="token operator">/</span>bin<span class="token operator">/</span>node
+<span class="token comment">// ↑実行パスは適宜調整する</span>
+
+<span class="token punctuation">(</span><span class="token keyword">async</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token keyword">let</span> postBody <span class="token operator">=</span> <span class="token string">''</span><span class="token punctuation">;</span>  <span class="token comment">// POST 時にリクエストボディを取得する</span>
+  <span class="token keyword control-flow">if</span><span class="token punctuation">(</span>process<span class="token punctuation">.</span><span class="token property-access">env</span><span class="token punctuation">.</span><span class="token constant">REQUEST_METHOD</span> <span class="token operator">===</span> <span class="token string">'POST'</span><span class="token punctuation">)</span> <span class="token keyword control-flow">for</span> <span class="token keyword control-flow">await</span><span class="token punctuation">(</span><span class="token keyword">const</span> chunk <span class="token keyword">of</span> process<span class="token punctuation">.</span><span class="token property-access">stdin</span><span class="token punctuation">)</span> postBody <span class="token operator">+=</span> chunk<span class="token punctuation">;</span>
+  
+  <span class="token comment">// HTTP ヘッダを出力する</span>
+  <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'Content-Type: text/html; charset=UTF-8\n\n'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  
+  <span class="token comment">// 以下、任意の処理</span>
+  <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'&#x3C;h1>Hello Node.js CGI&#x3C;/h1>'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p><code>async</code>・<code>await</code> を使っている他、<code>for await of</code> を使っているので Node.js v12 以降が対象。それ以前の古いバージョンで動かすには、次のようなコードにすれば動かせる。</p>
+<pre class="language-javascript"><code class="language-javascript">#<span class="token operator">!</span><span class="token operator">/</span>usr<span class="token operator">/</span>bin<span class="token operator">/</span>node
+
+<span class="token keyword">new</span> <span class="token class-name">Promise</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token parameter">resolve</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token comment">// POST 時にリクエストボディを取得する</span>
+  <span class="token keyword control-flow">if</span><span class="token punctuation">(</span>process<span class="token punctuation">.</span><span class="token property-access">env</span><span class="token punctuation">.</span><span class="token constant">REQUEST_METHOD</span> <span class="token operator">!==</span> <span class="token string">'POST'</span><span class="token punctuation">)</span> <span class="token keyword control-flow">return</span> <span class="token function">resolve</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  
+  <span class="token keyword">let</span> postBody <span class="token operator">=</span> <span class="token string">''</span><span class="token punctuation">;</span>
+  process<span class="token punctuation">.</span><span class="token property-access">stdin</span><span class="token punctuation">.</span><span class="token method function property-access">on</span><span class="token punctuation">(</span><span class="token string">'data'</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token parameter">chunk</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span> postBody <span class="token operator">+=</span> chunk<span class="token punctuation">;</span> <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  process<span class="token punctuation">.</span><span class="token property-access">stdin</span><span class="token punctuation">.</span><span class="token method function property-access">on</span><span class="token punctuation">(</span><span class="token string">'end'</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span> <span class="token function">resolve</span><span class="token punctuation">(</span>postBody<span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">then</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token parameter">postBody</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token comment">// HTTP ヘッダを出力する</span>
+  <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'Content-Type: text/html; charset=UTF-8\n\n'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  
+  <span class="token comment">// 以下、任意の処理</span>
+  <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'&#x3C;h1>Hello Node.js CGI&#x3C;/h1>'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>POST 時のリクエストボディのみ、<code>process.stdin</code> から取得するため、このような処理を入れている。GET でしか処理しないのであれば、これらの前処理すら省いていきなり「HTTP ヘッダの出力」から実装しても良い。</p>
+<ul>
+  <li>参考：<a href="https://qiita.com/naokikimura/items/ffcac9ee68c7ca6f2f13">Node.js 12+なら標準入力が超簡単に読める - Qiita</a></li>
+  <li>参考：<a href="https://www.gesource.jp/weblog/?p=8289">node.jsで標準入力を使ったよくある処理のまとめ – 山本隆の開発日誌</a></li>
+</ul>
+<h2 id="nodejs-を-cgi-として使うためのアレコレ"><a class="header-link" href="#nodejs-を-cgi-として使うためのアレコレ"><span class="header-link-mark"></span></a>Node.js を CGI として使うためのアレコレ</h2>
+<p>POST 時のリクエストボディのみ、取得方法が特殊なので上のとおり実装しておいたが、それ以外の情報はどのように受け取れば良いか。</p>
+<p>GET 時のクエリ文字列や、サーバの情報、リクエスト情報などは、全て <strong><code>process.env</code> を見る</strong>ことで確認できる。代表的なモノは以下のとおり。</p>
+<table>
+  <thead>
+    <tr>
+      <th>環境変数名</th>
+      <th>内容</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>HTTP_HOST</code></td>
+      <td>サーバの Host Name or Public IP</td>
+    </tr>
+    <tr>
+      <td><code>SERVER_NAME</code></td>
+      <td>〃</td>
+    </tr>
+    <tr>
+      <td><code>SERVER_ADDR</code></td>
+      <td>サーバの Private IP</td>
+    </tr>
+    <tr>
+      <td><code>SERVER_PORT</code></td>
+      <td>サーバのポート (<code>80</code> とか <code>443</code> とか)</td>
+    </tr>
+    <tr>
+      <td><code>DOCUMENT_ROOT</code></td>
+      <td>Apache サーバ等のドキュメントルート</td>
+    </tr>
+    <tr>
+      <td><code>CONTEXT_DOCUMENT_ROOT</code></td>
+      <td>〃</td>
+    </tr>
+    <tr>
+      <td><code>REMOTE_ADDR</code></td>
+      <td>リクエスト元の Public IP</td>
+    </tr>
+    <tr>
+      <td><code>HTTP_USER_AGENT</code></td>
+      <td>リクエスト元の User Agent</td>
+    </tr>
+    <tr>
+      <td><code>HTTPS</code></td>
+      <td>HTTPS 接続時は <code>on</code> が設定される</td>
+    </tr>
+    <tr>
+      <td><code>REQUEST_SCHEME</code></td>
+      <td>プロトコル (<code>http</code> や <code>https</code>)</td>
+    </tr>
+    <tr>
+      <td><code>REQUEST_METHOD</code></td>
+      <td>メソッド (<code>GET</code> や <code>POST</code>)</td>
+    </tr>
+    <tr>
+      <td><code>SCRIPT_FILENAME</code></td>
+      <td>CGI ファイルのフルパス</td>
+    </tr>
+    <tr>
+      <td><code>SCRIPT_NAME</code></td>
+      <td>CGI ファイルへのルート相対パス (<code>/</code> 始まり)</td>
+    </tr>
+    <tr>
+      <td><code>REQUEST_URI</code></td>
+      <td>リクエストパス (<code>/</code> 始まり、クエリ文字列を含む)</td>
+    </tr>
+    <tr>
+      <td><code>QUERY_STRING</code></td>
+      <td>クエリ文字列 (<code>?</code> は含まない)</td>
+    </tr>
+  </tbody>
+</table>
+<p>レスポンスは <code>process.stdout.write()</code> か <code>console.log()</code> で書けば良い。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'&#x3C;pre>'</span><span class="token punctuation">,</span> process<span class="token punctuation">.</span><span class="token property-access">env</span><span class="token punctuation">,</span> <span class="token string">'&#x3C;/pre>'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>などとコーディングすれば、リクエスト時の環境変数一覧が出力できる (セキュリティ的に注意が必要だが)。</p>
+<p>その他、エラー発生時の処理やプロセス終了時の処理を <code>process.on</code> で定義しておくと安全であろう。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token comment">// エラー発生時に行う処理</span>
+process<span class="token punctuation">.</span><span class="token method function property-access">on</span><span class="token punctuation">(</span><span class="token string">'uncaughtException'</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token parameter">error</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token comment">// HTTP ヘッダを出力してあるかどうか確認できるようフラグ変数を管理しておくと良いだろう</span>
+  <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'Error :'</span><span class="token punctuation">,</span> error<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// 終了時の処理を予め定義する</span>
+process<span class="token punctuation">.</span><span class="token method function property-access">on</span><span class="token punctuation">(</span><span class="token string">'exit'</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token comment">// 全ての処理が終わった後に以下が実行される。ちゃんとレスポンスに乗る</span>
+  <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'Exit'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<h2 id="ボイラープレートを作った"><a class="header-link" href="#ボイラープレートを作った"><span class="header-link-mark"></span></a>ボイラープレートを作った</h2>
+<p>こうしたノウハウをまとめた、ボイラープレートプロジェクトを作った。以下の GitHub にある <code>index.js</code> をベースとして利用してもらえればと思う。</p>
+<ul>
+  <li><a href="https://github.com/Neos21/boilerplate-nodejs-cgi">Neos21/boilerplate-nodejs-cgi</a></li>
+</ul>
+<h2 id="以上"><a class="header-link" href="#以上"><span class="header-link-mark"></span></a>以上</h2>
+<p>ちゃんと Node.js でも CGI として動かせた。外部 npm パッケージが使えなさそうだが、単一ファイルとして動かせるようにビルドしてやればイケるかも？</p>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2020-09-11</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2020-09-11</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

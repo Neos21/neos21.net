@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>overflow でスクロールバーを表示させると padding-right・padding-bottom が効かなくなる事象と対策 - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2018/02/26-02.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2018/index.html">2018年</a></li>
+            <li><a href="/blog/2018/02/index.html">02月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2018-02-26</time></div>
+        <h1 id="page-title">overflow でスクロールバーを表示させると padding-right・padding-bottom が効かなくなる事象と対策</h1>
+
+<p><code>overflow: auto</code> や <code>overflow: scroll</code> でスクロールバーを表示させると、<code>padding-right</code> や <code>padding-bottom</code> の指定が効かなくなり、ボックスの右端や下端にテキストがくっついて見える不具合があった。</p>
+<p>手元の環境で試したところ、Chrome はこのような動きにはならず、Firefox や IE で発生するようだった。</p>
+<p>当該事象の検証・兼・修正版の確認ができる CodePen を作成したので、以下で確認してほしい。</p>
+<ul>
+  <li><a href="https://codepen.io/Neos21/pen/EQLNzz/">overflow vs padding-right / padding-bottom</a></li>
+</ul>
+<p>不具合が起こるコードは、以下のような感じ。</p>
+<pre class="language-css"><code class="language-css"><span class="token comment">/* 
+ * HTML 側は以下のような構成。
+ *   &#x3C;pre class="normal">長いテキスト…&#x3C;/pre>
+ */</span>
+<span class="token selector"><span class="token class">.normal</span></span> <span class="token punctuation">{</span>
+  <span class="token property">width</span><span class="token punctuation">:</span> <span class="token number">100</span><span class="token unit">%</span><span class="token punctuation">;</span>
+  <span class="token property">height</span><span class="token punctuation">:</span> <span class="token number">5</span><span class="token unit">rem</span><span class="token punctuation">;</span>
+  <span class="token property">overflow</span><span class="token punctuation">:</span> scroll<span class="token punctuation">;</span>  <span class="token comment">/* 幅・高さを適当に指定し、スクロールするようにしておく */</span>
+  <span class="token property">border</span><span class="token punctuation">:</span> <span class="token number">1</span><span class="token unit">px</span> solid <span class="token hexcode color">#ccc</span><span class="token punctuation">;</span>
+  <span class="token property">padding</span><span class="token punctuation">:</span> <span class="token number">1</span><span class="token unit">rem</span><span class="token punctuation">;</span>  <span class="token comment">/* 四隅に余白を付けたいが… */</span>
+  <span class="token property">background</span><span class="token punctuation">:</span> <span class="token hexcode color">#f0f0f0</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>直感的にこういう作りにすると思うのだが、これだと <code>padding-right</code> や <code>padding-bottom</code> が <code>0</code> 扱いになってしまう。</p>
+<p>そこで、スクロールさせたい要素にラッパー要素を作り、ラッパー要素の <code>::after</code> 疑似要素で <code>padding-bottom</code> を、内部のスクロールさせたい要素の <code>::after</code> 疑似要素で <code>padding-right</code> を実現するようにしてみる。</p>
+<p>HTML は以下のようになる。</p>
+<pre class="language-html"><code class="language-html"><span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>div</span> <span class="token attr-name">class</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>fixed<span class="token punctuation">"</span></span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>pre</span><span class="token punctuation">></span></span>長いテキスト…<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>pre</span><span class="token punctuation">></span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>div</span><span class="token punctuation">></span></span>
+</code></pre>
+<p>CSS は次のようにする。</p>
+<pre class="language-css"><code class="language-css"><span class="token comment">/* 修正版 : 基本デザインはラッパー側で行う */</span>
+<span class="token selector">div<span class="token class">.fixed</span></span> <span class="token punctuation">{</span>
+  <span class="token property">width</span><span class="token punctuation">:</span> <span class="token number">100</span><span class="token unit">%</span><span class="token punctuation">;</span>
+  <span class="token property">height</span><span class="token punctuation">:</span> <span class="token number">5</span><span class="token unit">rem</span><span class="token punctuation">;</span>
+  <span class="token property">overflow</span><span class="token punctuation">:</span> scroll<span class="token punctuation">;</span>
+  <span class="token property">border</span><span class="token punctuation">:</span> <span class="token number">1</span><span class="token unit">px</span> solid <span class="token hexcode color">#ccc</span><span class="token punctuation">;</span>
+  <span class="token property">padding</span><span class="token punctuation">:</span> <span class="token number">1</span><span class="token unit">rem</span> <span class="token number">0</span> <span class="token number">0</span> <span class="token number">1</span><span class="token unit">rem</span><span class="token punctuation">;</span>  <span class="token comment">/* 余計なバッティングを避けるため、右と下は余白を付けないでおく */</span>
+  <span class="token property">background</span><span class="token punctuation">:</span> <span class="token hexcode color">#f0f0f0</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+
+<span class="token comment">/* padding-bottom 代わりの要素を作る */</span>
+<span class="token selector">div<span class="token class">.fixed</span><span class="token pseudo-element">::after</span></span> <span class="token punctuation">{</span>
+  <span class="token property">content</span><span class="token punctuation">:</span> <span class="token string">""</span><span class="token punctuation">;</span>
+  <span class="token property">display</span><span class="token punctuation">:</span> block<span class="token punctuation">;</span>
+  <span class="token property">width</span><span class="token punctuation">:</span> <span class="token number">1</span><span class="token unit">px</span><span class="token punctuation">;</span>
+  <span class="token property">height</span><span class="token punctuation">:</span> <span class="token number">1</span><span class="token unit">rem</span><span class="token punctuation">;</span>  <span class="token comment">/* padding-bottom にしたい値 */</span>
+<span class="token punctuation">}</span>
+
+<span class="token comment">/* 中の pre 要素は inline-block にしておき、末尾に自身の ::after 疑似要素が配置できるようにしておく */</span>
+<span class="token selector">div<span class="token class">.fixed</span> <span class="token combinator">></span> pre</span> <span class="token punctuation">{</span>
+  <span class="token property">display</span><span class="token punctuation">:</span> inline-block<span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+
+<span class="token comment">/* padding-right 代わりの要素を作る */</span>
+<span class="token selector">div<span class="token class">.fixed</span> <span class="token combinator">></span> pre<span class="token pseudo-element">::after</span></span> <span class="token punctuation">{</span>
+  <span class="token property">content</span><span class="token punctuation">:</span> <span class="token string">""</span><span class="token punctuation">;</span>
+  <span class="token property">display</span><span class="token punctuation">:</span> inline-block<span class="token punctuation">;</span>
+  <span class="token property">width</span><span class="token punctuation">:</span> <span class="token number">1</span><span class="token unit">rem</span><span class="token punctuation">;</span>  <span class="token comment">/* padding-right にしたい値 */</span>
+  <span class="token property">height</span><span class="token punctuation">:</span> <span class="token number">1</span><span class="token unit">px</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>イメージ的には、2つの <code>::after</code> 疑似要素が突っ張り棒になって、スクロール領域の右と下に余白を作り出してる、という感じ。</p>
+<p>デモとして掲載した CodePen では、「疑似要素表示切替」ボタンを押すと <code>::after</code> 疑似要素に背景色を付けられるので、疑似要素がどのように作用しているのか確認できるだろう。</p>
+<p>たかだかスクロールさせたいだけの要素にラッパー要素が必要になるのは、いささか冗長な気はするが、どうしてもスクロールする領域の右端と下端に余白を作りたい場合は、こういった手段も使えるだろう。</p>
+<ul>
+  <li>参考：<a href="https://spyweb.media/2018/01/18/css-overflow-auto-scroll-ignore-padding-right-bottom/">CSSでoverflow:autoしたときにpadding-rightまたはpadding-bottomが効かない | SPYWEB</a></li>
+</ul>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2018-02-26</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2018-02-26</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

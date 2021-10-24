@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>Kubernetes の nginx Ingress でパスを書き換えて転送したい - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2020/07/29-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2020/index.html">2020年</a></li>
+            <li><a href="/blog/2020/07/index.html">07月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2020-07-29</time></div>
+        <h1 id="page-title">Kubernetes の nginx Ingress でパスを書き換えて転送したい</h1>
+
+<p>Kubernetes の Ingress が受け取ったパスの一部を加工して、後ろにいる Service (Pod) へ転送したくなった。どういうことかというと、</p>
+<ul>
+  <li><code>http://example.com/my-app-1/index.html</code></li>
+</ul>
+<p>といった URL で Ingress がリクエストを受け取った時、後ろに用意した <code>my-app-1</code> Service に対しては</p>
+<ul>
+  <li><code>http://my-app-1:3000/index.html</code>
+    <ul>
+      <li>(<code>my-app-1</code> 部分はリクエストが到達した Pod にとっては <code>localhost</code> となる)</li>
+    </ul>
+  </li>
+</ul>
+<p>といったように、<em>間の <code>/my-app-1/</code> 部分を除去</em>してやりたいのだ。</p>
+<p>しかし、通常 Ingress の <code>path</code> 指定をそのまま書いてしまうと、Pod に対しても</p>
+<ul>
+  <li><code>http://my-app-1:3000/my-app-1/index.html</code></li>
+</ul>
+<p>というように、<code>/my-app-1/</code> 部分が付いたままリクエストが転送されてしまい、正しいパスにならずに 404 エラーになってしまったりする。</p>
+<p>そこで今回は、<strong><code>rewrite-target</code></strong> 機能と <em><code>use-regex</code></em> 機能を使って、この<strong>パス置換 (パス・リライト)</strong> をやってやろうと思う。</p>
+<h2 id="いきなりコード"><a class="header-link" href="#いきなりコード"><span class="header-link-mark"></span></a>いきなりコード</h2>
+<p>いきなりだが、こんな感じでコードを書けば良い。</p>
+<pre class="language-yaml"><code class="language-yaml"><span class="token key atrule">apiVersion</span><span class="token punctuation">:</span> networking.k8s.io/v1beta1
+<span class="token key atrule">kind</span><span class="token punctuation">:</span> Ingress
+<span class="token key atrule">metadata</span><span class="token punctuation">:</span>
+  <span class="token key atrule">name</span><span class="token punctuation">:</span> my<span class="token punctuation">-</span>ingress
+  <span class="token key atrule">labels</span><span class="token punctuation">:</span>
+    <span class="token key atrule">name</span><span class="token punctuation">:</span> my<span class="token punctuation">-</span>ingress
+  <span class="token key atrule">annotations</span><span class="token punctuation">:</span>
+    <span class="token comment"># 正規表現を使う</span>
+    <span class="token key atrule">nginx.ingress.kubernetes.io/use-regex</span><span class="token punctuation">:</span> <span class="token string">"true"</span>
+    <span class="token comment"># 「/」直後から、正規表現のキャプチャしたグループでパスを指定する</span>
+    <span class="token key atrule">nginx.ingress.kubernetes.io/rewrite-target</span><span class="token punctuation">:</span> /$1$2
+<span class="token key atrule">spec</span><span class="token punctuation">:</span>
+  <span class="token key atrule">tls</span><span class="token punctuation">:</span>
+    <span class="token punctuation">-</span> <span class="token key atrule">hosts</span><span class="token punctuation">:</span>
+      <span class="token punctuation">-</span> example.com
+  <span class="token key atrule">rules</span><span class="token punctuation">:</span>
+    <span class="token punctuation">-</span> <span class="token key atrule">host</span><span class="token punctuation">:</span> example.com
+      <span class="token key atrule">http</span><span class="token punctuation">:</span>
+        <span class="token key atrule">paths</span><span class="token punctuation">:</span>
+          <span class="token comment"># 前述のような `/my-app-1/index.html` などのリクエストを処理する</span>
+          <span class="token punctuation">-</span> <span class="token key atrule">path</span><span class="token punctuation">:</span> /my<span class="token punctuation">-</span>app<span class="token punctuation">-</span>1/(.<span class="token important">*)</span>
+            <span class="token key atrule">backend</span><span class="token punctuation">:</span>
+              <span class="token key atrule">serviceName</span><span class="token punctuation">:</span> my<span class="token punctuation">-</span>app<span class="token punctuation">-</span>1<span class="token punctuation">-</span>service
+              <span class="token key atrule">servicePort</span><span class="token punctuation">:</span> <span class="token number">3000</span>
+          
+          <span class="token comment"># 別の Service 向けの転送処理 : コチラはパスを書き換えず `http://my-app-2:8000/my-app-2/index.html` とそのまま転送する</span>
+          <span class="token punctuation">-</span> <span class="token key atrule">path</span><span class="token punctuation">:</span> /(my<span class="token punctuation">-</span>app<span class="token punctuation">-</span>2)(\/.<span class="token important">*)</span>
+            <span class="token key atrule">backend</span><span class="token punctuation">:</span>
+              <span class="token key atrule">serviceName</span><span class="token punctuation">:</span> my<span class="token punctuation">-</span>app<span class="token punctuation">-</span>2<span class="token punctuation">-</span>service
+              <span class="token key atrule">servicePort</span><span class="token punctuation">:</span> <span class="token number">8000</span>
+          
+          <span class="token comment"># 最後にフォールバック的にルートパスへのリダイレクト</span>
+          <span class="token punctuation">-</span> <span class="token key atrule">path</span><span class="token punctuation">:</span> /
+            <span class="token key atrule">backend</span><span class="token punctuation">:</span>
+              <span class="token key atrule">serviceName</span><span class="token punctuation">:</span> root<span class="token punctuation">-</span>app
+              <span class="token key atrule">servicePort</span><span class="token punctuation">:</span> <span class="token number">8080</span>
+          <span class="token punctuation">-</span> <span class="token key atrule">path</span><span class="token punctuation">:</span> /(.<span class="token important">*)</span>
+            <span class="token key atrule">backend</span><span class="token punctuation">:</span>
+              <span class="token key atrule">serviceName</span><span class="token punctuation">:</span> root<span class="token punctuation">-</span>app
+              <span class="token key atrule">servicePort</span><span class="token punctuation">:</span> <span class="token number">8080</span>
+</code></pre>
+<p>重要なのは <code>annotations</code> に書いた2つの機能と、<code>paths.path</code> の中の正規表現キャプチャだ。</p>
+<p>アノテーションで <code>use-regex</code> と <code>rewrite-target</code> を指定していて、<code>rewrite-target</code> 部分で、<code>/</code> 以降の文字列をどのように変換するかというルールを書いている。正規表現のキャプチャした文字列を <code>$1</code>・<code>$2</code> と指定して、それを渡すようにしている。</p>
+<p><code>my-app-1</code> の <code>path</code> 指定を見ると、<em><code>/my-app-1/(.*)</code></em> と書いている。この場合、キャプチャしているのは <code>$1</code> のみで、<code>$2</code> に相当する文字列はないので空文字になる。つまり <code>my-app-1-service</code> に転送されるパスは <code>/$1</code> の文字列になり、間に書かれていた <code>/my-app-1/</code> が除去できるワケだ。</p>
+<p>一方、<code>my-app-2</code> の <code>path</code> 指定は、こうしたパスの除去を行わない例。<code>path: /(my-app-2)(\/.*)</code> と書いていて、<code>$1</code> が <code>my-app-2</code>、<code>$2</code> が <code>/.*</code> となっているので、それをそのままくっつけて <code>my-app-2-service</code> に転送されるというワケ。</p>
+<p>今回は <code>$1</code>・<code>$2</code> を指定したが、ココはお好みで。以下のように <code>$2</code>・<code>$3</code> で処理するような例もある。</p>
+<ul>
+  <li>参考：<a href="https://github.com/kubernetes/ingress-nginx/issues/3122#issuecomment-576698063">Specifying rewrite-target for each path in config · Issue #3122 · kubernetes/ingress-nginx · GitHub</a></li>
+</ul>
+<pre class="language-yaml"><code class="language-yaml"><span class="token key atrule">metadata</span><span class="token punctuation">:</span>
+  <span class="token key atrule">annotations</span><span class="token punctuation">:</span>
+    <span class="token key atrule">kubernetes.io/ingress.class</span><span class="token punctuation">:</span> nginx
+    <span class="token key atrule">nginx.ingress.kubernetes.io/rewrite-target</span><span class="token punctuation">:</span> /$2$3
+<span class="token key atrule">spec</span><span class="token punctuation">:</span>
+  <span class="token key atrule">rules</span><span class="token punctuation">:</span>
+    <span class="token punctuation">-</span> <span class="token key atrule">path</span><span class="token punctuation">:</span> /()(path1)(.<span class="token important">*)</span>
+      <span class="token key atrule">backend</span><span class="token punctuation">:</span>
+        <span class="token key atrule">serviceName</span><span class="token punctuation">:</span> webapp1
+    <span class="token punctuation">-</span> <span class="token key atrule">path</span><span class="token punctuation">:</span> /(path2)(.<span class="token important">*)</span>
+      <span class="token key atrule">backend</span><span class="token punctuation">:</span>
+        <span class="token key atrule">serviceName</span><span class="token punctuation">:</span> webapp2
+</code></pre>
+<p>正規表現を扱わないといけなくなってトリッキーだが、とりあえずこんな感じで対応できそう。</p>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2020-07-29</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2020-07-29</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

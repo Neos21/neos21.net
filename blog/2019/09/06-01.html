@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>Google Apps Script を使って Slack から Twitter 投稿を行うスラッシュコマンドを作る - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2019/09/06-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2019/index.html">2019年</a></li>
+            <li><a href="/blog/2019/09/index.html">09月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2019-09-06</time></div>
+        <h1 id="page-title">Google Apps Script を使って Slack から Twitter 投稿を行うスラッシュコマンドを作る</h1>
+
+<p>Slack のスラッシュコマンドを作ってみる第2弾。今回は、Slack から Twitter 投稿が行えるスラッシュコマンドを作ってみよう。</p>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#%E5%89%8D%E6%8F%90%E6%9D%A1%E4%BB%B6">前提条件</a></li>
+  <li><a href="#gas-%E3%83%97%E3%83%AD%E3%82%B8%E3%82%A7%E3%82%AF%E3%83%88%E3%81%AB%E3%83%A9%E3%82%A4%E3%83%96%E3%83%A9%E3%83%AA%E3%82%92%E8%BF%BD%E5%8A%A0%E3%81%99%E3%82%8B">GAS プロジェクトにライブラリを追加する</a></li>
+  <li><a href="#gas-%E3%81%AE%E3%82%B9%E3%82%AF%E3%83%AA%E3%83%97%E3%83%88%E3%82%92%E5%AE%9F%E8%A3%85%E3%81%99%E3%82%8B">GAS のスクリプトを実装する</a></li>
+  <li><a href="#gas-%E3%83%97%E3%83%AD%E3%82%B8%E3%82%A7%E3%82%AF%E3%83%88%E3%82%92%E5%85%AC%E9%96%8B%E3%81%99%E3%82%8B">GAS プロジェクトを公開する</a></li>
+  <li><a href="#twitter-api-%E3%81%AE%E3%82%B3%E3%83%BC%E3%83%AB%E3%83%90%E3%83%83%E3%82%AF%E8%A8%AD%E5%AE%9A%E3%82%92%E8%A1%8C%E3%81%86">Twitter API のコールバック設定を行う</a></li>
+  <li><a href="#twitter-%E4%BA%8B%E5%89%8D%E8%AA%8D%E8%A8%BC%E3%82%92%E8%A1%8C%E3%81%86">Twitter 事前認証を行う</a></li>
+  <li><a href="#%E3%82%B9%E3%83%A9%E3%83%83%E3%82%B7%E3%83%A5%E3%82%B3%E3%83%9E%E3%83%B3%E3%83%89%E3%82%92%E7%94%A8%E6%84%8F%E3%81%99%E3%82%8B">スラッシュコマンドを用意する</a></li>
+  <li><a href="#%E5%AE%8C%E6%88%90">完成</a></li>
+</ul>
+<h2 id="前提条件"><a class="header-link" href="#前提条件"><span class="header-link-mark"></span></a>前提条件</h2>
+<ul>
+  <li>GAS プロジェクトの作り方を理解していること</li>
+  <li>スラッシュコマンドのひととおりの作り方を理解していること
+    <ul>
+      <li>上2つは前回の記事を参照</li>
+    </ul>
+  </li>
+  <li>Twitter Developer Platform に登録し、Consumer API Key・Consumer API Secret Key の2つを発行してあること
+    <ul>
+      <li>以前書いた以下の記事を参照</li>
+      <li><a href="/blog/2019/02/09-01.html">Twitter Developer Platform に登録して Twitter API を使ってみた</a></li>
+    </ul>
+  </li>
+</ul>
+<h2 id="gas-プロジェクトにライブラリを追加する"><a class="header-link" href="#gas-プロジェクトにライブラリを追加する"><span class="header-link-mark"></span></a>GAS プロジェクトにライブラリを追加する</h2>
+<p>まずは GAS プロジェクトを作る。</p>
+<p>今回は、GAS から Twitter 投稿を行うためにライブラリを追加する。以下で紹介されている <strong>TwitterWebService</strong> というライブラリだ。</p>
+<ul>
+  <li><a href="https://qiita.com/akkey2475/items/ad190a507b4a7b7dc17c">Google Apps Script (GAS) でTwitterへ投稿するだけの機能を実装してみる - Qiita</a></li>
+  <li><a href="https://gist.github.com/M-Igashi/750ab08718687d11bff6322b8d6f5d90">TwitterWebService.gs · GitHub</a></li>
+</ul>
+<p>このライブラリの<em>プロジェクトキー</em>は以下。</p>
+<ul>
+  <li><code>1rgo8rXsxi1DxI_5Xgo_t3irTw1Y5cxl2mGSkbozKsSXf2E_KBBPC3xTF</code></li>
+</ul>
+<p>GAS のプロジェクトエディタを開いたら、メニューより「リソース」→「ライブラリ」と選択する。</p>
+<p>
+  <img src="06-01-01.png" alt="ライブラリを選ぶ">
+</p>
+<p>「図書館」(= ライブラリ…ｗ) ダイアログが開いたら、「ライブラリを追加」欄に上のプロジェクトキーを入力し追加する。</p>
+<p>
+  <img src="06-01-02.png" alt="ライブラリを追加">
+</p>
+<p>↑この画像では、TwitterWebService ライブラリ以外に、SlackApp ライブラリ (プロジェクトキー <code>M3W5Ut3Q39AaIwLquryEPMwV62A3znfOO</code>) をインストールしているが、SlackApp の方は使っていない。TwitterWebService ライブラリのバージョン「2」が選択できていれば OK だ。</p>
+<p>ライブラリとは何かというと、簡単に言えば Node.js の <code>require</code> みたいなモノで、他所で実装された <code>TwitterWebService</code> というグローバル変数が参照できるようになっている状態だ。</p>
+<h2 id="gas-のスクリプトを実装する"><a class="header-link" href="#gas-のスクリプトを実装する"><span class="header-link-mark"></span></a>GAS のスクリプトを実装する</h2>
+<p>TwitterWebService ライブラリをインストールしたので、次のように実装する。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token doc-comment comment">/** Slack Verification Token */</span>
+<span class="token keyword">var</span> slackVerificationToken <span class="token operator">=</span> <span class="token string">'【Slack Verification Token を設定する】'</span><span class="token punctuation">;</span>
+
+<span class="token doc-comment comment">/** Twitter Consumer Key */</span>
+<span class="token keyword">var</span> twitterConsumerKey <span class="token operator">=</span> <span class="token string">'【Twitter Consumer Key を設定する】'</span><span class="token punctuation">;</span>
+<span class="token doc-comment comment">/** Twitter Consumer Secret */</span>
+<span class="token keyword">var</span> twitterConsumerSecret <span class="token operator">=</span> <span class="token string">'【Twitter Consumer Secret を設定する】'</span><span class="token punctuation">;</span>
+
+<span class="token doc-comment comment">/** Twitter ライブラリ */</span>
+<span class="token keyword">var</span> <span class="token maybe-class-name">Twitter</span> <span class="token operator">=</span> <span class="token maybe-class-name">TwitterWebService</span><span class="token punctuation">.</span><span class="token method function property-access">getInstance</span><span class="token punctuation">(</span>twitterConsumerKey<span class="token punctuation">,</span> twitterConsumerSecret<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token doc-comment comment">/** Slack からの Slash Command を受け取る */</span>
+<span class="token keyword">function</span> <span class="token function">doPost</span><span class="token punctuation">(</span><span class="token parameter">event</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token comment">// Slack トークンチェック</span>
+  <span class="token keyword">const</span> verificationToken <span class="token operator">=</span> event<span class="token punctuation">.</span><span class="token property-access">parameter</span><span class="token punctuation">.</span><span class="token property-access">token</span><span class="token punctuation">;</span>
+  <span class="token keyword control-flow">if</span><span class="token punctuation">(</span>verificationToken <span class="token operator">!==</span> slackVerificationToken<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token keyword control-flow">throw</span> <span class="token keyword">new</span> <span class="token class-name">Error</span><span class="token punctuation">(</span><span class="token string">'Invalid Token'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  
+  <span class="token comment">// Slash Command のメッセージ部分を取得する</span>
+  <span class="token keyword">const</span> text <span class="token operator">=</span> event<span class="token punctuation">.</span><span class="token property-access">parameter</span><span class="token punctuation">.</span><span class="token property-access">text</span><span class="token punctuation">;</span>
+  <span class="token comment">// Twitter に投稿する</span>
+  <span class="token function">postTweet</span><span class="token punctuation">(</span>text<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token comment">// Slack へ応答メッセージを返す</span>
+  <span class="token keyword">const</span> response <span class="token operator">=</span> <span class="token punctuation">{</span>
+    text<span class="token operator">:</span> <span class="token string">'「 '</span> <span class="token operator">+</span> text <span class="token operator">+</span> <span class="token string">' 」 と Twitter 投稿しました。'</span>
+  <span class="token punctuation">}</span><span class="token punctuation">;</span>
+  <span class="token keyword control-flow">return</span> <span class="token maybe-class-name">ContentService</span>
+    <span class="token punctuation">.</span><span class="token method function property-access">createTextOutput</span><span class="token punctuation">(</span><span class="token known-class-name class-name">JSON</span><span class="token punctuation">.</span><span class="token method function property-access">stringify</span><span class="token punctuation">(</span>response<span class="token punctuation">)</span><span class="token punctuation">)</span>
+    <span class="token punctuation">.</span><span class="token method function property-access">setMimeType</span><span class="token punctuation">(</span><span class="token maybe-class-name">ContentService</span><span class="token punctuation">.</span><span class="token property-access"><span class="token maybe-class-name">MimeType</span></span><span class="token punctuation">.</span><span class="token known-class-name class-name">JSON</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+
+<span class="token doc-comment comment">/** Twitter に投稿する */</span>
+<span class="token keyword">function</span> <span class="token function">postTweet</span><span class="token punctuation">(</span><span class="token parameter">text</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token keyword">const</span> twitter <span class="token operator">=</span> <span class="token maybe-class-name">Twitter</span><span class="token punctuation">.</span><span class="token method function property-access">getService</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">const</span> endPointUrl <span class="token operator">=</span> <span class="token string">'https://api.twitter.com/1.1/statuses/update.json'</span><span class="token punctuation">;</span>
+  <span class="token keyword">const</span> response <span class="token operator">=</span> twitter<span class="token punctuation">.</span><span class="token method function property-access">fetch</span><span class="token punctuation">(</span>endPointUrl<span class="token punctuation">,</span> <span class="token punctuation">{</span>
+    method<span class="token operator">:</span> <span class="token string">'post'</span><span class="token punctuation">,</span>
+    payload<span class="token operator">:</span> <span class="token punctuation">{</span>
+      status<span class="token operator">:</span> text
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+
+<span class="token doc-comment comment">/** Twitter 事前認証 */</span>
+<span class="token keyword">function</span> <span class="token function">authorize</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token maybe-class-name">Twitter</span><span class="token punctuation">.</span><span class="token method function property-access">authorize</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+
+<span class="token doc-comment comment">/** Twitter 認証後のコールバック */</span>
+<span class="token keyword">function</span> <span class="token function">authCallback</span><span class="token punctuation">(</span><span class="token parameter">request</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token keyword control-flow">return</span> <span class="token maybe-class-name">Twitter</span><span class="token punctuation">.</span><span class="token method function property-access">authCallback</span><span class="token punctuation">(</span>request<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+
+<span class="token doc-comment comment">/** Twitter 認証解除 */</span>
+<span class="token keyword">function</span> <span class="token function">reset</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token maybe-class-name">Twitter</span><span class="token punctuation">.</span><span class="token method function property-access">reset</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>コード修正が必要なのは先頭に書いた3つの変数のみ。</p>
+<ul>
+  <li><code>slackVerificationToken</code> : 自作の Slack App の「Basic Information」ページを開き、「App Credentials」欄の最下部「Verification Token」欄に表示されているトークン文字列をコピペする
+    <ul>
+      <li>スラッシュコマンドを新規作成する場合は、後でトークン文字列を設定し、新しいバージョンで「ウェブアプリケーションとして導入」(更新) すれば良い</li>
+    </ul>
+  </li>
+  <li><code>twitterConsumerKey</code>・<code>twitterConsumerSecret</code> : それぞれ Twitter API で払い出した Consumer Key と Consumer Secret Key をコピペする</li>
+</ul>
+<h2 id="gas-プロジェクトを公開する"><a class="header-link" href="#gas-プロジェクトを公開する"><span class="header-link-mark"></span></a>GAS プロジェクトを公開する</h2>
+<p>実装ができたら、メニューバーより「公開」→「ウェブアプリケーションとして導入」を選ぶ。</p>
+<p>表示されたダイアログにて次のように設定する。</p>
+<ul>
+  <li>「プロジェクトバージョン」プルダウン : <strong>「New」</strong>を選ぶ</li>
+  <li>「次のユーザーとしてアプリケーションを実行」 : 「自分」を選ぶ</li>
+  <li>「アプリケーションにアクセスできるユーザー」 : <em>「全員 (匿名ユーザーを含む)」</em>を選ぶ</li>
+</ul>
+<p>コレでウェブアプリケーションの URL が発行されるので、コレをメモしておく。</p>
+<h2 id="twitter-api-のコールバック設定を行う"><a class="header-link" href="#twitter-api-のコールバック設定を行う"><span class="header-link-mark"></span></a>Twitter API のコールバック設定を行う</h2>
+<p>このあと、自作 Twitter アプリの連携・認証設定を行う必要がある。手順としては以下のようになる。</p>
+<ol>
+  <li>GAS プロジェクトに実装した <code>authorize()</code> メソッドを実行する</li>
+  <li>Twitter の認証画面に移動し、認証する</li>
+  <li><em>予め自作 Twitter アプリに設定しておいたコールバック URL</em> に遷移する</li>
+  <li>GAS プロジェクトに実装した <code>authCallback()</code> メソッドが実行され、認証が完了する</li>
+</ol>
+<p>この中の手順 3. で必要になる、「コールバック URL」の設定を先に行っておく。</p>
+<p>先程発行した GAS のウェブアプリケーション URL は、次のようになっているはずだ。</p>
+<ul>
+  <li><code>https://script.google.com/macros/s/【ランダムな文字列】/exec</code></li>
+</ul>
+<p>この URL を元に、コールバック URL を以下のように作成する</p>
+<ul>
+  <li><code>https://script.google.com/macros/d/【ランダムな文字列】/usercallback</code></li>
+</ul>
+<p>違うのは <code>/s/</code> → <code>/d/</code> と、<code>/exec</code> → <code>/usercallback</code> 部分。</p>
+<p>このコールバック URL が用意できたら、Twitter の App 設定を開き、<em>「Callback URLs」</em>欄にコピペする。</p>
+<p>
+  <img src="06-01-03.png" alt="コールバック URL をコピーする">
+</p>
+<h2 id="twitter-事前認証を行う"><a class="header-link" href="#twitter-事前認証を行う"><span class="header-link-mark"></span></a>Twitter 事前認証を行う</h2>
+<p>コールバック URL の設定ができたので、いよいよ Twitter の事前認証を行う。</p>
+<p>GAS プロジェクトのメニューバーにある「関数を選択」プルダウンより、「<code>authorize</code>」関数を選択し、実行ボタンを押下する。</p>
+<p>
+  <img src="06-01-04.png" alt="関数を指定して実行する">
+</p>
+<p>実行後、画面上は何の変化もないと思うので、<em>「表示」メニュー → 「ログ」</em>と選択する。すると、ログの中に以下のような URL が出力されているかと思う。</p>
+<ul>
+  <li><code>https://api.twitter.com/oauth/authorize?oauth_token=XXXXXXXXXXXXXXXXXXXXXXXXXXX</code></li>
+</ul>
+<p><strong>この URL をコピペしてブラウザで遷移</strong>すると、Twitter の認証画面が表示されるので、ログインして認証する。</p>
+<p>認証に成功すると、「Success」とだけ書かれた画面が表示されるであろう。コレが <code>authCallback()</code> 関数の処理によるモノだ。</p>
+<p>コレで Twitter 認証完了だ。少々面倒臭いが、最初に1度だけ行えば良いので、もう気にしなくて良い。</p>
+<ul>
+  <li>参考：<a href="https://qiita.com/kazooou/items/8049e3ceba6f9b85585f">Google Apps ScriptからTwitterのAPIを叩けなくなったら - Qiita</a></li>
+  <li>参考：<a href="https://cyuraharuto.com/gas-twitter-api-oauth-1/#toc3">https://cyuraharuto.com/gas-twitter-api-oauth-1/#toc3</a></li>
+</ul>
+<h2 id="スラッシュコマンドを用意する"><a class="header-link" href="#スラッシュコマンドを用意する"><span class="header-link-mark"></span></a>スラッシュコマンドを用意する</h2>
+<p>スラッシュコマンドの作り方は前回の記事で紹介したとおり。作成した GAS のウェブアプリケーション URL を指定してスラッシュコマンドを作る。コマンド名は <code>/tw</code> とでもしておくと打ちやすいだろう。</p>
+<p>既存のスラッシュコマンドを流用して、設定変更で実装する場合は、事前に Verification Token が分かっていると思うが、新規で Slack App を作る場合は、Slack App を作成し、Verification Token を取得した後に、GAS コードを修正して、新しいバージョンで「ウェブアプリケーションとして導入」を再実行 (更新) してやることで、Verification Token を反映できるだろう。</p>
+<p>Verification Token は何かというと、リクエスト元が自作の Slack App からであることを確認するためのモノ。GAS の <code>doPost()</code> 自体は、URL さえ分かればいくらでも踏めてしまうので、URL が流出した時におかしなリクエストを投げられて、余計な処理をされないようにするために仕込んでおく。</p>
+<h2 id="完成"><a class="header-link" href="#完成"><span class="header-link-mark"></span></a>完成</h2>
+<ol>
+  <li>Twitter App 作成</li>
+  <li>GAS 作成 (実装・Consumer Key 設定)</li>
+  <li>GAS 公開 (URL 取得)</li>
+  <li>Twitter App の Callback に GAS URL を指定</li>
+  <li>Twitter App 事前認証 (GAS <code>authorize</code> 実行 → URL 遷移 → Twitter 認証 → <code>authCallback</code> 呼び出し)</li>
+  <li>Slack App・Slash Command 作成 (Verification Token 取得)</li>
+  <li>GAS 更新 (Verification Token 設定)</li>
+  <li>GAS 再公開 (バージョン更新)</li>
+</ol>
+<p>…という以上の手順で、Slack から Twitter 投稿を行うスラッシュコマンドが作成できた。初期設定は色々と手間がかかったが、一度作ってしまえば以降いつでも <code>/tw 【ツイートしたい内容】</code> などとコマンドを送信するだけで、Slack から Twitter に投稿できるようになった。</p>
+<p>GAS も Slack App も、無料で使えるし、様々な可能性を秘めている。Twitter に限らず色々なウェブサービスとの連携処理を考えてみると面白いだろう。</p>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2019-09-06</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2019-09-06</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

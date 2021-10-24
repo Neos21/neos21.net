@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>Kubernetes クラスタ内に一時的な Pod をデプロイして kubectl コマンドを実行したい - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2021/04/12-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2021/index.html">2021年</a></li>
+            <li><a href="/blog/2021/04/index.html">04月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2021-04-12</time></div>
+        <h1 id="page-title">Kubernetes クラスタ内に一時的な Pod をデプロイして kubectl コマンドを実行したい</h1>
+
+<p>Kubernetes クラスタ内に一時的な Pod をデプロイして、その Pod から <code>kubectl</code> コマンドを実行し、Kubernetes クラスタを操作したいと思った。</p><div class="ad-rakuten">
+  <div class="ad-rakuten-image">
+    <a href="https://hb.afl.rakuten.co.jp/hgc/g00q0722.waxyc9ff.g00q0722.waxyd017/?pc=https%3A%2F%2Fitem.rakuten.co.jp%2Fbook%2F16580202%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Fbook%2Fi%2F20234443%2F">
+      <img src="https://thumbnail.image.rakuten.co.jp/@0_mall/book/cabinet/2745/9784839972745.jpg?_ex=128x128">
+    </a>
+  </div>
+  <div class="ad-rakuten-info">
+    <div class="ad-rakuten-title">
+      <a href="https://hb.afl.rakuten.co.jp/hgc/g00q0722.waxyc9ff.g00q0722.waxyd017/?pc=https%3A%2F%2Fitem.rakuten.co.jp%2Fbook%2F16580202%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Fbook%2Fi%2F20234443%2F">仕組みと使い方がわかる Docker＆Kubernetesのきほんのきほん [ 小笠原種高 ]</a>
+    </div>
+    <div class="ad-rakuten-shop">
+      <a href="https://hb.afl.rakuten.co.jp/hgc/g00q0722.waxyc9ff.g00q0722.waxyd017/?pc=https%3A%2F%2Fwww.rakuten.co.jp%2Fbook%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Fbook%2F">楽天ブックス</a>
+    </div>
+    <div class="ad-rakuten-price">価格 : 2992円</div>
+  </div>
+</div>
+<p>一時的な Pod を作るだけなら、<code>$ kubectl run</code> に <code>--rm</code> オプションと <code>--restart=Never</code> を使えば良い。その場で Docker イメージをダウンロードし、コンテナ・Pod として展開、シェルに接続できる。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># 一時的な Pod を作る</span>
+$ kubectl run temp-node --image<span class="token operator">=</span>node:15 --namespace<span class="token operator">=</span>default --rm -it --restart<span class="token operator">=</span>Never --command -- <span class="token function">bash</span>
+
+<span class="token comment"># 生成された Pod 内で kubectl コマンドをインストールする</span>
+<span class="token variable">$$</span> <span class="token function">curl</span> -sL <span class="token string">"https://storage.googleapis.com/kubernetes-release/release/<span class="token variable"><span class="token variable">$(</span><span class="token function">curl</span> -s https://storage.googleapis.com/kubernetes-release/release/stable.txt<span class="token variable">)</span></span>/bin/linux/amd64/kubectl"</span> -o /usr/local/bin/kubectl <span class="token operator">&#x26;&#x26;</span> <span class="token function">chmod</span> +x /usr/local/bin/kubectl
+</code></pre>
+<p>色々調べると、<code>kubectl</code> コマンドを使わずとも、次のようにトークンを利用すれば、Pod 一覧を取得したりできるらしいのだが、権限が足りずできなかった。コレはデフォルトの挙動として真っ当なモノらしい。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># 権限付与が要る</span>
+<span class="token variable">$$</span> <span class="token function">curl</span> -ik -H <span class="token string">"Authorization: Bearer <span class="token variable"><span class="token variable">$(</span><span class="token function">cat</span> /var/run/secrets/kubernetes.io/serviceaccount/token<span class="token variable">)</span></span>"</span> https://kubernetes.default.svc.cluster.local/api/v1/namespaces/default/pods
+</code></pre>
+<p>当然、ホストマシンから KubeConfig ファイルをコピーしたりすれば、動かすことはできるが、なんかダサい。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># Pod 内でディレクトリだけ作っておく</span>
+<span class="token variable">$$</span> <span class="token function">mkdir</span> -p /root/.kube/
+
+<span class="token comment"># ホストマシン側から Pod に対して KubeConfig ファイルを転送する</span>
+$ kubectl <span class="token function">cp</span> ~/.kube/my-config temp-node:/root/.kube/config
+</code></pre>
+<p>というワケで、こんなことをしなくてもいいように、<em>ServiceAccount</em> と <strong>ClusterRoleBinding</strong> という、権限管理用のリソースを作ってやる。</p>
+<ul>
+  <li><code>service-account-kubectl-in-cluster.yaml</code></li>
+</ul>
+<pre class="language-yaml"><code class="language-yaml"><span class="token comment"># Service Account を作る</span>
+<span class="token key atrule">apiVersion</span><span class="token punctuation">:</span> v1
+<span class="token key atrule">kind</span><span class="token punctuation">:</span> ServiceAccount
+<span class="token key atrule">metadata</span><span class="token punctuation">:</span>
+  <span class="token key atrule">name</span><span class="token punctuation">:</span> kubectl<span class="token punctuation">-</span>in<span class="token punctuation">-</span>cluster
+  <span class="token key atrule">namespace</span><span class="token punctuation">:</span> default
+</code></pre>
+<ul>
+  <li><code>cluster-role-binding-kubectl-in-cluster.yaml</code></li>
+</ul>
+<pre class="language-yaml"><code class="language-yaml"><span class="token comment"># 作成した Service Account に cluster-admin 権限をバインディングする</span>
+<span class="token key atrule">apiVersion</span><span class="token punctuation">:</span> rbac.authorization.k8s.io/v1
+<span class="token key atrule">kind</span><span class="token punctuation">:</span> ClusterRoleBinding
+<span class="token key atrule">metadata</span><span class="token punctuation">:</span>
+  <span class="token key atrule">name</span><span class="token punctuation">:</span> kubectl<span class="token punctuation">-</span>in<span class="token punctuation">-</span>cluster<span class="token punctuation">-</span>binding
+<span class="token key atrule">roleRef</span><span class="token punctuation">:</span>
+  <span class="token key atrule">apiGroup</span><span class="token punctuation">:</span> rbac.authorization.k8s.io
+  <span class="token key atrule">kind</span><span class="token punctuation">:</span> ClusterRole
+  <span class="token key atrule">name</span><span class="token punctuation">:</span> cluster<span class="token punctuation">-</span>admin
+<span class="token key atrule">subjects</span><span class="token punctuation">:</span>
+  <span class="token punctuation">-</span> <span class="token key atrule">kind</span><span class="token punctuation">:</span> ServiceAccount
+    <span class="token key atrule">name</span><span class="token punctuation">:</span> kubectl<span class="token punctuation">-</span>in<span class="token punctuation">-</span>cluster
+    <span class="token key atrule">namespace</span><span class="token punctuation">:</span> default
+</code></pre>
+<p>このような YAML ファイルを作って、Kubernetes クラスタに投入する。</p>
+<pre class="language-bash"><code class="language-bash">$ kubectl apply -f cluster-role-binding-kubectl-in-cluster.yaml
+$ kubectl apply -f service-account-kubectl-in-cluster.yaml
+
+<span class="token comment"># デプロイできたか確認する</span>
+$ kubectl get serviceaccount --namespace default
+$ kubectl clusterrolebinding
+</code></pre>
+<p>一時的な Pod を作る際、投入した Service Account を使うよう、<code>--serviceaccount</code> オプションを指定する。</p>
+<pre class="language-bash"><code class="language-bash">$ kubectl run temp-node --image<span class="token operator">=</span>node:15 --namespace<span class="token operator">=</span>default --serviceaccount<span class="token operator">=</span>kubectl-in-cluster --rm -it --restart<span class="token operator">=</span>Never --command -- <span class="token function">bash</span>
+
+<span class="token comment"># kubectl コマンドはとりあえず入れるとして…</span>
+<span class="token variable">$$</span> <span class="token function">curl</span> -sL <span class="token string">"https://storage.googleapis.com/kubernetes-release/release/<span class="token variable"><span class="token variable">$(</span><span class="token function">curl</span> -s https://storage.googleapis.com/kubernetes-release/release/stable.txt<span class="token variable">)</span></span>/bin/linux/amd64/kubectl"</span> -o /usr/local/bin/kubectl <span class="token operator">&#x26;&#x26;</span> <span class="token function">chmod</span> +x /usr/local/bin/kubectl
+
+<span class="token comment"># 次のようなコマンドが動くようになった</span>
+<span class="token variable">$$</span> kubectl get pod
+</code></pre>
+<p>できたできた。</p>
+<p>ちなみに、コマンドで実現していた一時 Pod の生成を YAML ファイルに起こすと、こんな感じ。</p>
+<pre class="language-yaml"><code class="language-yaml"><span class="token key atrule">apiVersion</span><span class="token punctuation">:</span> v1
+<span class="token key atrule">kind</span><span class="token punctuation">:</span> Pod
+<span class="token key atrule">metadata</span><span class="token punctuation">:</span>
+  <span class="token key atrule">labels</span><span class="token punctuation">:</span>
+    <span class="token key atrule">app</span><span class="token punctuation">:</span> kubectl
+  <span class="token key atrule">name</span><span class="token punctuation">:</span> temp<span class="token punctuation">-</span>node
+  <span class="token key atrule">namespace</span><span class="token punctuation">:</span> default
+<span class="token key atrule">spec</span><span class="token punctuation">:</span>
+  <span class="token key atrule">serviceAccountName</span><span class="token punctuation">:</span> kubectl<span class="token punctuation">-</span>in<span class="token punctuation">-</span>cluster
+  <span class="token key atrule">restartPolicy</span><span class="token punctuation">:</span> Never
+  <span class="token key atrule">containers</span><span class="token punctuation">:</span>
+    <span class="token punctuation">-</span> <span class="token key atrule">name</span><span class="token punctuation">:</span> temp<span class="token punctuation">-</span>node
+      <span class="token key atrule">image</span><span class="token punctuation">:</span> node<span class="token punctuation">:</span><span class="token number">15</span>
+      <span class="token key atrule">lifecycle</span><span class="token punctuation">:</span>
+        <span class="token key atrule">postStart</span><span class="token punctuation">:</span>
+          <span class="token key atrule">exec</span><span class="token punctuation">:</span>
+            <span class="token comment"># ココで kubectl を用意しておく</span>
+            <span class="token key atrule">command</span><span class="token punctuation">:</span> <span class="token punctuation">[</span><span class="token string">'sh'</span><span class="token punctuation">,</span> <span class="token string">'-c'</span><span class="token punctuation">,</span> <span class="token string">'curl -sL "https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl" -o /usr/local/bin/kubectl &#x26;&#x26; chmod +x /usr/local/bin/kubectl'</span><span class="token punctuation">]</span>
+      <span class="token comment"># ['bash'] でもとりあえず死なない。tty: true や stdin: true を付けても kubectl apply -f 直後にシェルにアタッチはされないみたい</span>
+      <span class="token key atrule">command</span><span class="token punctuation">:</span> <span class="token punctuation">[</span><span class="token string">'tail'</span><span class="token punctuation">,</span> <span class="token string">'-f'</span><span class="token punctuation">,</span> <span class="token string">'/dev/null'</span><span class="token punctuation">]</span>
+</code></pre>
+<p>コレを <code>$ kubectl apply -f</code> で投入して、<code>$ kubectl attach 【Pod 名】</code> でアタッチすれば良さそう。</p><div class="ad-amazon">
+  <div class="ad-amazon-image">
+    <a href="https://www.amazon.co.jp/dp/B08T961HKP?tag=neos21-22&amp;linkCode=osi&amp;th=1&amp;psc=1">
+      <img src="https://m.media-amazon.com/images/I/51vhRrY-JEL._SL160_.jpg" width="124" height="160">
+    </a>
+  </div>
+  <div class="ad-amazon-info">
+    <div class="ad-amazon-title">
+      <a href="https://www.amazon.co.jp/dp/B08T961HKP?tag=neos21-22&amp;linkCode=osi&amp;th=1&amp;psc=1">仕組みと使い方がわかる Docker＆Kubernetesのきほんのきほん (Compass Booksシリーズ)</a>
+    </div>
+  </div>
+</div>
+<ul>
+  <li><a href="https://qiita.com/sotoiwa/items/aff12291957d85069a76">Kubernetesクラスター内のPodからkubectlを実行する - Qiita</a></li>
+  <li><a href="https://stackoverflow.com/questions/42642170/how-to-run-kubectl-commands-inside-a-container">docker - How to run kubectl commands inside a container? - Stack Overflow</a></li>
+  <li><a href="https://qiita.com/toshihirock/items/9f039d20beed9752440f">ServiceAccount を作成して Pod から kubectl を使って Pod の情報を取得する - Qiita</a></li>
+  <li><a href="https://qiita.com/toshihirock/items/d72b3fd1359ec0867fb7">ServiceAccount を作成し、Pod から <code>kubectl get pods</code> をやってみた時のメモ - Qiita</a></li>
+  <li><a href="https://qiita.com/petitviolet/items/41aa9abe106a29ba4667">KubernetesにおけるPodの初期化処理 - Qiita</a></li>
+  <li><a href="https://qiita.com/yuta_vamdemic/items/04d51ab46a6ee8f103dc">kubernetesでPod起動時にコマンドを実行する - Qiita</a></li>
+</ul>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2021-04-12</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2021-04-12</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

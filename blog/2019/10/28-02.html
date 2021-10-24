@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>Oracle Object Storage REST API に PUT する時はリクエストヘッダを一部省略できた - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2019/10/28-02.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2019/index.html">2019年</a></li>
+            <li><a href="/blog/2019/10/index.html">10月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2019-10-28</time></div>
+        <h1 id="page-title">Oracle Object Storage REST API に PUT する時はリクエストヘッダを一部省略できた</h1>
+
+<p>以前、<strong>Oracle Object Storage</strong> の REST API を操作する Node.js スクリプトについて、公式のサンプルコードを日本語圏向けに修正した。</p>
+<ul>
+  <li><a href="/blog/2019/03/27-01.html">Oracle Object Storage API を操作する Node.js スクリプトを日本語圏向けに微修正</a></li>
+</ul>
+<p>日本語を含むテキストファイルの末尾が欠落する問題は、上の記事のとおり <code>Content-Length</code> の指定を修正することで対処でき、しばらくは無事に使っていた。</p>
+<p>しかし最近、<strong>サイズが大きいファイルを PUT 送信</strong>する時に、どうも<em>送信前の処理に時間がかかっている</em>ことを見つけた。今回はコレを解決する。</p>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#object-storage-rest-api-%E3%81%AE%E3%81%8A%E3%81%95%E3%82%89%E3%81%84">Object Storage REST API のおさらい</a></li>
+  <li><a href="#%E5%87%A6%E7%90%86%E3%81%AB%E6%99%82%E9%96%93%E3%81%8C%E3%81%8B%E3%81%8B%E3%81%A3%E3%81%A6%E3%81%84%E3%82%8B%E5%A0%B4%E6%89%80">処理に時間がかかっている場所</a></li>
+  <li><a href="#cpu-%E3%83%90%E3%82%A6%E3%83%B3%E3%83%89%E3%81%AA%E5%87%A6%E7%90%86%E3%82%92%E5%88%A5%E3%83%97%E3%83%AD%E3%82%BB%E3%82%B9%E3%81%AB%E5%88%86%E3%81%91%E3%82%8B%EF%BC%9F">CPU バウンドな処理を別プロセスに分ける…？</a></li>
+  <li><a href="#%E3%81%9D%E3%82%82%E3%81%9D%E3%82%82%E3%81%9D%E3%81%AE%E3%83%AA%E3%82%AF%E3%82%A8%E3%82%B9%E3%83%88%E3%83%98%E3%83%83%E3%83%80%E3%81%8C%E8%A6%81%E3%82%89%E3%81%AA%E3%81%8B%E3%81%A3%E3%81%9F">そもそもそのリクエストヘッダが要らなかった</a></li>
+  <li><a href="#%E4%BB%A5%E4%B8%8A">以上</a></li>
+</ul>
+<h2 id="object-storage-rest-api-のおさらい"><a class="header-link" href="#object-storage-rest-api-のおさらい"><span class="header-link-mark"></span></a>Object Storage REST API のおさらい</h2>
+<p>Oracle Object Storage の REST API リファレンスは以下にある。</p>
+<ul>
+  <li><a href="https://docs.cloud.oracle.com/iaas/api/#/en/objectstorage/20160918/">Oracle Cloud Infrastructure API Documentation</a></li>
+</ul>
+<p>この中でよく使うと思われるのは、Object (≒ ファイル) のダウンロードやアップロードだろう。</p>
+<ul>
+  <li>ListObjects : <a href="https://docs.cloud.oracle.com/iaas/api/#/en/objectstorage/20160918/Object/ListObjects">Oracle Cloud Infrastructure API Documentation</a></li>
+  <li>GetObject : <a href="https://docs.cloud.oracle.com/iaas/api/#/en/objectstorage/20160918/Object/GetObject">Oracle Cloud Infrastructure API Documentation</a></li>
+  <li>PutObject : <a href="https://docs.cloud.oracle.com/iaas/api/#/en/objectstorage/20160918/Object/PutObject">Oracle Cloud Infrastructure API Documentation</a></li>
+</ul>
+<p>今回、処理に時間がかかっていると分かったのは、この <strong>PutObject</strong> をコールしようとした時だった。</p>
+<p>さて、Node.js 向けの公式サンプルコードは以下にある。<code>Version 1.0.1</code> と打たれているコードだ。</p>
+<ul>
+  <li><a href="https://docs.cloud.oracle.com/iaas/Content/API/Concepts/signingrequests.htm#NodeJS">Request Signatures</a></li>
+</ul>
+<p>この中の</p>
+<pre class="language-javascript"><code class="language-javascript">request<span class="token punctuation">.</span><span class="token method function property-access">setHeader</span><span class="token punctuation">(</span><span class="token string">"Content-Length"</span><span class="token punctuation">,</span> options<span class="token punctuation">.</span><span class="token property-access">body</span><span class="token punctuation">.</span><span class="token property-access">length</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>部分を</p>
+<pre class="language-javascript"><code class="language-javascript">request<span class="token punctuation">.</span><span class="token method function property-access">setHeader</span><span class="token punctuation">(</span><span class="token string">'Content-Length'</span><span class="token punctuation">,</span> <span class="token maybe-class-name">Buffer</span><span class="token punctuation">.</span><span class="token method function property-access">byteLength</span><span class="token punctuation">(</span>options<span class="token punctuation">.</span><span class="token property-access">body</span><span class="token punctuation">,</span> <span class="token string">'utf8'</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>このように直すことで、日本語を含むファイルの末尾欠落を回避したのが、前回の記事だった。</p>
+<h2 id="処理に時間がかかっている場所"><a class="header-link" href="#処理に時間がかかっている場所"><span class="header-link-mark"></span></a>処理に時間がかかっている場所</h2>
+<p>さて、PutObject を叩く時に処理に時間がかかっている場所はどこなのか。</p>
+<p>コードの各行に <code>console.log()</code> を仕込むという、昔ながらの「プリント・デバッグ」で調べたところ、以下の1行が実行されるのに、2・3秒かかっていることが分かった。</p>
+<pre class="language-javascript"><code class="language-javascript">shaObj<span class="token punctuation">.</span><span class="token method function property-access">update</span><span class="token punctuation">(</span>options<span class="token punctuation">.</span><span class="token property-access">body</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>コレが何なのか示すために、もう少し周辺のコードを抜粋する。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword">var</span> methodsThatRequireExtraHeaders <span class="token operator">=</span> <span class="token punctuation">[</span><span class="token string">"POST"</span><span class="token punctuation">,</span> <span class="token string">"PUT"</span><span class="token punctuation">]</span><span class="token punctuation">;</span>
+<span class="token keyword control-flow">if</span><span class="token punctuation">(</span>methodsThatRequireExtraHeaders<span class="token punctuation">.</span><span class="token method function property-access">indexOf</span><span class="token punctuation">(</span>request<span class="token punctuation">.</span><span class="token property-access">method</span><span class="token punctuation">.</span><span class="token method function property-access">toUpperCase</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token operator">!==</span> <span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  options<span class="token punctuation">.</span><span class="token property-access">body</span> <span class="token operator">=</span> options<span class="token punctuation">.</span><span class="token property-access">body</span> <span class="token operator">||</span> <span class="token string">""</span><span class="token punctuation">;</span>
+  
+  <span class="token keyword">var</span> shaObj <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">jsSHA</span><span class="token punctuation">(</span><span class="token string">"SHA-256"</span><span class="token punctuation">,</span> <span class="token string">"TEXT"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  shaObj<span class="token punctuation">.</span><span class="token method function property-access">update</span><span class="token punctuation">(</span>options<span class="token punctuation">.</span><span class="token property-access">body</span><span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment">// ← この行の処理に時間がかかってる</span>
+  
+  request<span class="token punctuation">.</span><span class="token method function property-access">setHeader</span><span class="token punctuation">(</span><span class="token string">"Content-Length"</span><span class="token punctuation">,</span> options<span class="token punctuation">.</span><span class="token property-access">body</span><span class="token punctuation">.</span><span class="token property-access">length</span><span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment">// ← Buffer.byteLength(options.body, 'utf8') に変更すべき箇所</span>
+  request<span class="token punctuation">.</span><span class="token method function property-access">setHeader</span><span class="token punctuation">(</span><span class="token string">"x-content-sha256"</span><span class="token punctuation">,</span> shaObj<span class="token punctuation">.</span><span class="token method function property-access">getHash</span><span class="token punctuation">(</span><span class="token string">'B64'</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  
+  headersToSign <span class="token operator">=</span> headersToSign<span class="token punctuation">.</span><span class="token method function property-access">concat</span><span class="token punctuation">(</span><span class="token punctuation">[</span>
+    <span class="token string">"content-type"</span><span class="token punctuation">,</span>
+    <span class="token string">"content-length"</span><span class="token punctuation">,</span>
+    <span class="token string">"x-content-sha256"</span>
+  <span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>このコードは、Oracle Cloud の REST API の内、POST と PUT リクエストを叩く時に必要となるリクエストヘッダを設定している。<code>Content-Type</code> の他、前回の記事で修正した <code>Content-Length</code> と、リクエスト情報のハッシュ値を <strong><code>X-Content-SHA256</code></strong> というヘッダ名で付与している。</p>
+<p>問題となっている <code>shaObj.update()</code> メソッドは、<code>jssha</code> という npm パッケージが提供するモノだ。直前の行で、<code>jssha</code> のインスタンスを生成していることが分かるだろう。後の行で <code>shaObj.getHash('B64')</code> とハッシュ値を取得するための準備として <code>jssha.update()</code> を叩くのだが、コレに時間がかかっていた。</p>
+<p>ハッシュ値を作るには、一旦コンテンツの全量を読み込んで処理する必要がある。10MB とか 20MB とか、サイズの大きいファイルを送ろうとすると、それだけのテキストを <code>jssha</code> に渡して処理させることになる。この処理は同期的に行われ、CPU を使うために、シングルスレッドで動作する Node.js においては<strong>ブロッキング</strong>が発生する。ちなみに、CPU にコストのかかる処理のことは「<em>CPU バウンド</em>な処理」などと表現したりもする。</p>
+<p>シングルスレッドであるために、CPU バウンドな処理でブロッキングが発生する現象は、大規模な JSON データを <code>JSON.parse()</code> したり <code>JSON.stringify()</code> したりする時にも発生する。今回はまさにコレと同じ原因だったのだ。</p>
+<h2 id="cpu-バウンドな処理を別プロセスに分ける？"><a class="header-link" href="#cpu-バウンドな処理を別プロセスに分ける？"><span class="header-link-mark"></span></a>CPU バウンドな処理を別プロセスに分ける…？</h2>
+<p>さて、原因の箇所が分かったので、なんとかしたい。</p>
+<p>Object Storage への PUT 送信以外にも、並列処理したいことがいくつかある。それなのに <code>jssha.update()</code> の実行に CPU を使われてしまうと、他の処理が非同期であっても、その間は処理がせき止められてしまう。</p>
+<p>コレは Node.js がシングルプロセス、シングルスレッドで動作するためにブロッキングが発生する、と話した。それでは、この重たい処理だけ、<strong>別プロセスで</strong>実行させたら、スレッドを分割できるのではないか。</p>
+<p>コレは確かに有効な策だった。PUT 送信をコールする部分から <strong><code>child_process.fork()</code></strong> で別プロセスに切り出して処理させたところ、別プロセスで <code>jssha.update()</code> に時間がかかっている最中でも、親プロセス側の並列処理はキレイに動いてくれた。ブロッキングは回避できたのである。</p>
+<p>どのファイルを PUT 送信するか、というパラメータは <code>ChildProcess.send()</code> で送れるし、送信完了の通知が欲しければ、親プロセスで <code>ChildProcess.on('message')</code> イベントを予約しておき、子プロセスから <code>process.send()</code> を送信すれば受け取れる。</p>
+<p>ということで、ブロッキングを回避するのはコレでも良かった。</p>
+<h2 id="そもそもそのリクエストヘッダが要らなかった"><a class="header-link" href="#そもそもそのリクエストヘッダが要らなかった"><span class="header-link-mark"></span></a>そもそもそのリクエストヘッダが要らなかった</h2>
+<p>改めて Oracle Cloud の REST API に関するリファレンスを見ていると、驚愕の事実が発覚した。</p>
+<ul>
+  <li><a href="https://docs.cloud.oracle.com/iaas/Content/API/Concepts/signingrequests.htm#five">Request Signatures</a></li>
+  <li><a href="https://docs.oracle.com/cd/E97706_01/Content/API/Concepts/signingrequests.htm#five">シグネチャのリクエスト</a> (日本語・機械翻訳)</li>
+</ul>
+<blockquote>
+  <h3 id="必須ヘッダー"><a class="header-link" href="#必須ヘッダー"><span class="header-link-mark"></span></a>必須ヘッダー</h3>
+  <p>GET および DELETE リクエスト (リクエスト本文にコンテンツがない場合) の場合、署名文字列には少なくとも次のヘッダーが含まれている必要があります:</p>
+  <ul>
+    <li><code>(request-target)</code> (draft-cavage-http-signatures-08 で説明されているように)</li>
+    <li><code>host</code></li>
+    <li><code>date</code> または <code>x-date</code> (両方が含まれている場合、Oracle は <code>x-date</code> を使用します)</li>
+  </ul>
+</blockquote>
+<p>ココまでは良い。GET の時は <code>jssha</code> を使った <code>if</code> 文のブロックに入らないが、上の3つのリクエストヘッダはその手前で設定されている。</p>
+<blockquote>
+  <p>PUT リクエストと POST リクエスト (リクエスト本文にコンテンツがある場合) の場合、署名文字列には少なくとも次のヘッダーが含まれている必要があります:</p>
+  <ul>
+    <li><code>(request-target)</code></li>
+    <li><code>host</code></li>
+    <li><code>date</code> または <code>x-date</code> (両方が含まれている場合、Oracle は <code>x-date</code> を使用します)</li>
+    <li><code>x-content-sha256</code> <strong>(オブジェクト・ストレージ PUT リクエストを除く、次のセクションを参照)</strong></li>
+    <li><code>content-type</code></li>
+    <li><code>content-length</code></li>
+    <li>警告
+      <ul>
+        <li>PUT および POST リクエストの場合、クライアントは <code>x-content-sha256</code> をコンピュートし、本文が空の文字列であってもリクエストおよび署名文字列にそれを組み込む必要があります。<br>また、本文が空であっても、リクエストと署名の文字列には常に <code>content-length</code> が必要です。<br>一部の HTTP クライアントは、本文が空の場合は <code>content-length</code> を送信しないため、クライアントが明示的に送信するようにする必要があります。<br><code>date</code> と <code>x-date</code> の両方が含まれている場合、Oracle は <code>x-date</code> を使用します。<code>x-date</code> は、リクエストの署名部分の再利用 (リプレイ攻撃) から保護するために使用されます。</li>
+      </ul>
+    </li>
+    <li><strong>1つの例外は、オブジェクトに対するオブジェクト・ストレージ PUT リクエストです (次のセクションを参照)。</strong></li>
+  </ul>
+</blockquote>
+<p>途中までそのとおり〜これらのヘッダが要るよね〜と思って読んでいたのだが、<code>x-content-sha256</code> のところに<em>「オブジェクト・ストレージ PUT リクエストを除く」</em>と書いてあったのだ。</p>
+<p>どういうことかと思い、続きを読んでみる。</p>
+<blockquote>
+  <h3 id="オブジェクト・ストレージ-put-の特別な手順"><a class="header-link" href="#オブジェクト・ストレージ-put-の特別な手順"><span class="header-link-mark"></span></a>オブジェクト・ストレージ PUT の特別な手順</h3>
+  <p><em>オブジェクト・ストレージ PutObject と UploadPart PUT リクエストの場合</em>、署名文字列には少なくとも次のヘッダーが含まれている必要があります:</p>
+  <ul>
+    <li><code>(request-target)</code></li>
+    <li><code>host</code></li>
+    <li><code>date</code> または <code>x-date</code> (両方が含まれている場合、Oracle は <code>x-date</code> を使用します)</li>
+  </ul>
+  <p>リクエストにも PUT リクエスト (通常は上記のリストを参照) に必要な他のヘッダーも含まれている場合は、これらのヘッダーも署名文字列に含める必要があります。</p>
+</blockquote>
+<p>通常 Oracle Cloud の REST API の内、POST や PUT リクエストを叩く時は、<code>x-content-sha256</code> や <code>content-length</code> の指定が必須だが、<strong>Object Storage への PUT 送信のみはコレが不要</strong>だということが分かった。</p>
+<p>公式のサンプルコードは、Object Storage に限らず他の Oracle Cloud REST API にも汎用的に対応するため、POST と PUT のリクエスト時は必ずこれらのヘッダを付けるように実装されていた。しかし、Object Storage PUT の場合だけは、この計算コストを省略できるワケだ。</p>
+<p>自分はこのコードを Object Storage API にしか使っていなかったので、<code>jssha</code> を使う箇所をガッツリ削除することで、CPU バウンドな処理を削って処理を高速化できた。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token comment">// 削除したコードをコメントアウトで表現</span>
+
+<span class="token keyword">var</span> methodsThatRequireExtraHeaders <span class="token operator">=</span> <span class="token punctuation">[</span><span class="token string">"POST"</span><span class="token punctuation">,</span> <span class="token string">"PUT"</span><span class="token punctuation">]</span><span class="token punctuation">;</span>
+<span class="token keyword control-flow">if</span><span class="token punctuation">(</span>methodsThatRequireExtraHeaders<span class="token punctuation">.</span><span class="token method function property-access">indexOf</span><span class="token punctuation">(</span>request<span class="token punctuation">.</span><span class="token property-access">method</span><span class="token punctuation">.</span><span class="token method function property-access">toUpperCase</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token operator">!==</span> <span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  options<span class="token punctuation">.</span><span class="token property-access">body</span> <span class="token operator">=</span> options<span class="token punctuation">.</span><span class="token property-access">body</span> <span class="token operator">||</span> <span class="token string">""</span><span class="token punctuation">;</span>
+  
+  <span class="token comment">// var shaObj = new jsSHA("SHA-256", "TEXT");</span>
+  <span class="token comment">// shaObj.update(options.body);</span>
+  
+  <span class="token comment">// request.setHeader("Content-Length", options.body.length);</span>
+  <span class="token comment">// request.setHeader("x-content-sha256", shaObj.getHash('B64'));</span>
+  
+  headersToSign <span class="token operator">=</span> headersToSign<span class="token punctuation">.</span><span class="token method function property-access">concat</span><span class="token punctuation">(</span><span class="token punctuation">[</span>
+    <span class="token string">"content-type"</span><span class="token punctuation">,</span>
+    <span class="token comment">// "content-length",</span>
+    <span class="token comment">// "x-content-sha256"</span>
+  <span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p><code>headersToSign</code> に追加するヘッダ名もちゃんと削っておく。それ以外の細部も色々と最適化できそうではあるが、今回の問題点と効果を明らかにするため、本当に不要なところを削るだけに留めた。</p>
+<p><code>x-content-sha256</code> のために使っていた <code>jssha</code> は使用箇所がなくなったので、依存する npm パッケージからも削れた。</p>
+<p><code>Content-Length</code> に関しては、<code>Buffer.byteLength()</code> で計算した値を指定せずに送信して、文字列の欠落は発生しないのか？と心配になったが、<strong><code>Content-Length</code> ヘッダが未指定でもテキストファイルの欠落は発生しないようだった。</strong>一安心。ちなみにこの <code>Buffer.byteLength()</code> も、若干の計算コストが掛かっていたところだったので、コレも削れるとさらに処理速度が速まる。</p>
+<p>あまりないとは思うが、Object Storage 以外の REST API もコールする場合は、上述のようにコードを削るだけではダメだ。今度はそれらの API をコールする際に <code>x-content-sha256</code> ヘッダが不足してしまいエラーになるからだ。そのため、何らかの方法でコールする API を見極めて、PutObject の時だけヘッダ付与を回避してやらないといけないだろう。公式のコードでいくと、<code>function sign()</code> に Boolean 型の第3引数を追加してハンドリングするのがてっとり早いだろうか。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token comment">// 第3引数に isPutObject を追加</span>
+<span class="token keyword">function</span> <span class="token function">sign</span><span class="token punctuation">(</span><span class="token parameter">request<span class="token punctuation">,</span> options<span class="token punctuation">,</span> isPutObject</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token keyword">var</span> apiKeyId <span class="token operator">=</span> options<span class="token punctuation">.</span><span class="token property-access">tenancyId</span> <span class="token operator">+</span> <span class="token string">"/"</span> <span class="token operator">+</span> options<span class="token punctuation">.</span><span class="token property-access">userId</span> <span class="token operator">+</span> <span class="token string">"/"</span> <span class="token operator">+</span> options<span class="token punctuation">.</span><span class="token property-access">keyFingerprint</span><span class="token punctuation">;</span>
+  <span class="token keyword">var</span> headersToSign <span class="token operator">=</span> <span class="token punctuation">[</span>
+    <span class="token string">"host"</span><span class="token punctuation">,</span>
+    <span class="token string">"date"</span><span class="token punctuation">,</span>
+    <span class="token string">"(request-target)"</span>
+  <span class="token punctuation">]</span><span class="token punctuation">;</span>
+  
+  <span class="token keyword">var</span> methodsThatRequireExtraHeaders <span class="token operator">=</span> <span class="token punctuation">[</span><span class="token string">"POST"</span><span class="token punctuation">,</span> <span class="token string">"PUT"</span><span class="token punctuation">]</span><span class="token punctuation">;</span>
+  <span class="token keyword control-flow">if</span><span class="token punctuation">(</span>methodsThatRequireExtraHeaders<span class="token punctuation">.</span><span class="token method function property-access">indexOf</span><span class="token punctuation">(</span>request<span class="token punctuation">.</span><span class="token property-access">method</span><span class="token punctuation">.</span><span class="token method function property-access">toUpperCase</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token operator">!==</span> <span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    options<span class="token punctuation">.</span><span class="token property-access">body</span> <span class="token operator">=</span> options<span class="token punctuation">.</span><span class="token property-access">body</span> <span class="token operator">||</span> <span class="token string">""</span><span class="token punctuation">;</span>
+    headersToSign <span class="token operator">=</span> headersToSign<span class="token punctuation">.</span><span class="token method function property-access">concat</span><span class="token punctuation">(</span><span class="token punctuation">[</span>
+      <span class="token string">"content-type"</span>
+    <span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    
+    <span class="token comment">// PutObject 以外のコールの場合は以下のヘッダも付与する (= PutObject の場合は以下のヘッダを付けない)</span>
+    <span class="token keyword control-flow">if</span><span class="token punctuation">(</span><span class="token operator">!</span>isPutObject<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token keyword">var</span> shaObj <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">jsSHA</span><span class="token punctuation">(</span><span class="token string">"SHA-256"</span><span class="token punctuation">,</span> <span class="token string">"TEXT"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      shaObj<span class="token punctuation">.</span><span class="token method function property-access">update</span><span class="token punctuation">(</span>options<span class="token punctuation">.</span><span class="token property-access">body</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      request<span class="token punctuation">.</span><span class="token method function property-access">setHeader</span><span class="token punctuation">(</span><span class="token string">"Content-Length"</span><span class="token punctuation">,</span> options<span class="token punctuation">.</span><span class="token property-access">body</span><span class="token punctuation">.</span><span class="token property-access">length</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      request<span class="token punctuation">.</span><span class="token method function property-access">setHeader</span><span class="token punctuation">(</span><span class="token string">"x-content-sha256"</span><span class="token punctuation">,</span> shaObj<span class="token punctuation">.</span><span class="token method function property-access">getHash</span><span class="token punctuation">(</span><span class="token string">'B64'</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      headersToSign <span class="token operator">=</span> headersToSign<span class="token punctuation">.</span><span class="token method function property-access">concat</span><span class="token punctuation">(</span><span class="token punctuation">[</span>
+        <span class="token string">"content-length"</span><span class="token punctuation">,</span>
+        <span class="token string">"x-content-sha256"</span>
+      <span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span>
+  
+  httpSignature<span class="token punctuation">.</span><span class="token method function property-access">sign</span><span class="token punctuation">(</span>request<span class="token punctuation">,</span> <span class="token punctuation">{</span>
+    key<span class="token operator">:</span> options<span class="token punctuation">.</span><span class="token property-access">privateKey</span><span class="token punctuation">,</span>
+    keyId<span class="token operator">:</span> apiKeyId<span class="token punctuation">,</span>
+    headers<span class="token operator">:</span> headersToSign
+  <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  
+  <span class="token keyword">var</span> newAuthHeaderValue <span class="token operator">=</span> request<span class="token punctuation">.</span><span class="token method function property-access">getHeader</span><span class="token punctuation">(</span><span class="token string">"Authorization"</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">replace</span><span class="token punctuation">(</span><span class="token string">"Signature "</span><span class="token punctuation">,</span> <span class="token string">"Signature version=\"1\","</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  request<span class="token punctuation">.</span><span class="token method function property-access">setHeader</span><span class="token punctuation">(</span><span class="token string">"Authorization"</span><span class="token punctuation">,</span> newAuthHeaderValue<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>…こんな感じでハンドリングすれば良さそう。</p>
+<h2 id="以上"><a class="header-link" href="#以上"><span class="header-link-mark"></span></a>以上</h2>
+<p>公式のサンプルコードそのままでもとりあえずは動いたが、ドキュメントをよく見ると無駄があることが分かった。パフォーマンスを向上するには、無駄は極力省く必要がある。</p>
+<p>今回はボトルネックになっている箇所が <code>x-content-sha256</code> リクエストヘッダの生成処理部分だと分かり、ドキュメントで仕様を確認すると、このリクエストヘッダが不要だと分かった。そこで <code>x-content-sha256</code> と <code>content-length</code> を削り、パフォーマンスを向上できた。</p>
+<p>安易にサンプルコードをパクったつもりはなかったが、それが本当に必要な処理なのかどうかは、ホントに1行ずつ検証していかないといけないな、と思った。</p>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2019-10-28</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2019-10-28</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

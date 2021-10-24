@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>Oracle Java Cloud Service (JCS) を PSM CLI で操作してみる - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2019/11/22-02.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2019/index.html">2019年</a></li>
+            <li><a href="/blog/2019/11/index.html">11月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2019-11-22</time></div>
+        <h1 id="page-title">Oracle Java Cloud Service (JCS) を PSM CLI で操作してみる</h1>
+
+<p><strong>Oracle Java Cloud Service (JCS)</strong> という PaaS を使ってみた。サーバの台数を指定するだけで、クラスタリングされた WebLogic Server が立ち上がり、あとはアプリをデプロイするだけというサービスだ。</p>
+<p>Oracle Cloud の「PaaS」は、Oracle Cloud Infrastructure という IaaS 環境に、PaaS が自動的に作ったリソースを間借りして配備する形になる。JCS インスタンスは「ManagedCompartmentForPaaS」というコンパートメント内に自動配備される。</p>
+<ul>
+  <li>参考：<a href="https://docs.oracle.com/cd/E97706_01/Content/General/Reference/PaaSprereqs.htm">Oracle Cloud InfrastructureのOracle Platform Servicesの前提条件</a></li>
+</ul>
+<p>PaaS といいながらほとんど IaaS で、SSH 接続はできるし、OCI 管理画面から Load Balancer や Security List などのネットワーク構成を設定できたりするし、通常は「WLS をプリインストールした VM を払い出してくれるだけのサービス」としか思えない。一応、スケールアウト (台数増)・スケールイン (台数減) をボタン一つで簡単にできるといったメリットもあるが、WLS クラスタを保つためなのか、謎に管理用の Oracle DB を作る必要があったりして、課金がエグい。</p>
+<p>そんな残念ポイントの多い、愛されキャラの JCS だが、コイツも、以前紹介した <strong>PSM CLI</strong> で操作できる。</p>
+<ul>
+  <li><a href="/blog/2019/03/23-01.html">Oracle Application Container Cloud をコマンドラインで操作できる PSM CLI と、さらにもうちょっとだけ便利にするシェルスクリプト</a></li>
+</ul>
+<p>以前紹介した時は、<em>Oracle Application Container Cloud (ACC)</em> という別の PaaS (コチラは Heroku とかに近いかな) を操作するために PSM CLI を使ったが、<em>PSM</em> は <em>PaaS Service Manager</em> の略なので、このコマンドラインツールでその他の Oracle PaaS も操作できるというワケだ。</p>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#psm-cli-%E3%81%AE%E3%83%80%E3%82%A6%E3%83%B3%E3%83%AD%E3%83%BC%E3%83%89%E6%96%B9%E6%B3%95">PSM CLI のダウンロード方法</a></li>
+  <li><a href="#psm-cli-%E3%81%AE%E5%88%9D%E6%9C%9F%E8%A8%AD%E5%AE%9A">PSM CLI の初期設定</a>
+    <ul>
+      <li><a href="#1-idcs-identity-cloud-service-%E3%81%AE-url-%E3%81%8B%E3%82%89%E5%8F%96%E5%BE%97%E3%81%99%E3%82%8B">1. IDCS (Identity Cloud Service) の URL から取得する</a></li>
+      <li><a href="#2-jcs-%E3%82%A4%E3%83%B3%E3%82%B9%E3%82%BF%E3%83%B3%E3%82%B9%E8%A9%B3%E7%B4%B0%E7%94%BB%E9%9D%A2%E3%81%AE%E3%80%8Cinstance-details%E3%80%8D%E3%81%8B%E3%82%89%E5%8F%96%E5%BE%97%E3%81%99%E3%82%8B">2. JCS インスタンス詳細画面の「Instance Details」から取得する</a></li>
+      <li><a href="#json-%E3%83%95%E3%82%A1%E3%82%A4%E3%83%AB%E3%82%92%E8%AA%AD%E3%81%BF%E8%BE%BC%E3%81%BE%E3%81%9B%E3%81%A6-psm-setup-%E3%82%92%E4%B8%80%E7%99%BA%E3%81%A7%E7%B5%82%E3%82%8F%E3%82%89%E3%81%9B%E3%82%8B">JSON ファイルを読み込ませて <code>psm setup</code> を一発で終わらせる</a></li>
+    </ul>
+  </li>
+  <li><a href="#psm-cli-%E3%81%A7%E3%81%A7%E3%81%8D%E3%82%8B-jcs-%E3%81%AE%E4%B8%BB%E3%81%AA%E6%93%8D%E4%BD%9C">PSM CLI でできる JCS の主な操作</a>
+    <ul>
+      <li><a href="#%E3%82%A4%E3%83%B3%E3%82%B9%E3%82%BF%E3%83%B3%E3%82%B9%E4%B8%80%E8%A6%A7%E3%82%92%E5%8F%96%E5%BE%97%E3%81%99%E3%82%8B">インスタンス一覧を取得する</a></li>
+      <li><a href="#%E3%82%A4%E3%83%B3%E3%82%B9%E3%82%BF%E3%83%B3%E3%82%B9%E3%82%92%E8%B5%B7%E5%8B%95%E3%81%99%E3%82%8B">インスタンスを起動する</a></li>
+      <li><a href="#%E3%82%A4%E3%83%B3%E3%82%B9%E3%82%BF%E3%83%B3%E3%82%B9%E3%82%92%E5%81%9C%E6%AD%A2%E3%81%99%E3%82%8B">インスタンスを停止する</a></li>
+    </ul>
+  </li>
+  <li><a href="#%E4%BB%A5%E4%B8%8A">以上</a></li>
+</ul>
+<h2 id="psm-cli-のダウンロード方法"><a class="header-link" href="#psm-cli-のダウンロード方法"><span class="header-link-mark"></span></a>PSM CLI のダウンロード方法</h2>
+<p>以前の記事でも紹介したが、PSM CLI のダウンロード方法が若干分かりにくいので、改めて今回はスクリーンショット込みで紹介する。</p>
+<p>まずは Oracle Cloud My Services より「Java」サービスを選び、Java Cloud Service の管理コンソール画面に遷移する。</p>
+<p>そしたら右上のユーザアイコンを押下し、「ヘルプ」から<em>「Download Center」</em>を選択する。</p>
+<p>
+  <img src="22-02-01.png" alt="ココがまず分かりづらい">
+</p>
+<p>この「ダウンロード・センター」さえ出せれば後は流れでイケるのだが、ココが分かりにくい。</p>
+<p>Download Center のダイアログが以下のように開いたら、ダウンロードアイコンを押せば、PSM CLI の Zip ファイルがダウンロードできる。</p>
+<p>
+  <img src="22-02-02.png" alt="DL する">
+</p>
+<p>あとはダウンロードした <code>psmcli.zip</code> を、<code>pip3</code> でインストールすれば良い。</p>
+<p>
+  <img src="22-02-03.png" alt="pip でインストールする">
+</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">sudo</span> pip3 <span class="token function">install</span> -U psmcli.zip
+</code></pre>
+<p><code>$ psm --version</code> でバージョンが確認できたらインストールは完了。本稿執筆時点では v1.1.28 だった。</p>
+<h2 id="psm-cli-の初期設定"><a class="header-link" href="#psm-cli-の初期設定"><span class="header-link-mark"></span></a>PSM CLI の初期設定</h2>
+<p>次に、CLI が操作する対象の環境を指定しないといけない。コマンドは <code>$ psm setup</code> で開始できるのだが、この中で特に迷うのは <strong>「<code>idcs-</code> から始まるアイデンティティ・ドメイン文字列」とやらをどうやって知ったら良いか</strong>、という点だろう。</p>
+<pre class="language-bash"><code class="language-bash">$ psm setup
+Username:  <span class="token comment"># 【ユーザ名】</span>
+Password:  <span class="token comment"># 【パスワード】</span>
+Retype Password:  <span class="token comment"># 【パスワード 再入力】</span>
+Identity domain:  <span class="token comment"># 【「idcs-」から始まるアイデンティティ・ドメイン文字列】</span>
+Region <span class="token punctuation">[</span>us<span class="token punctuation">]</span>:  <span class="token comment"># リージョン。US ならこのまま Enter、日本リージョンにしたければ「aucom」と入力する</span>
+Output <span class="token function">format</span> <span class="token punctuation">[</span>short<span class="token punctuation">]</span>:  <span class="token comment"># 結果の出力形式。空白のまま Enter で良い、JSON 形式にしたければ「json」と入力する</span>
+Use OAuth? <span class="token punctuation">[</span>n<span class="token punctuation">]</span>:  <span class="token comment"># 空白のまま Enter</span>
+----------------------------------------------------
+<span class="token string">'psm setup'</span> was successful. Available services are:
+</code></pre>
+<p>いくつか方法があるので、簡単な方法を2つほど紹介しておく。</p>
+<h3 id="1-idcs-identity-cloud-service-の-url-から取得する"><a class="header-link" href="#1-idcs-identity-cloud-service-の-url-から取得する"><span class="header-link-mark"></span></a>1. IDCS (Identity Cloud Service) の URL から取得する</h3>
+<p>「Oracle Cloud アカウントのサインイン」画面や、IDCS 管理画面などにアクセスした時の、URL 文字列から取得できる。JCS 管理コンソール画面に到達するまでの間に通り過ぎている画面の URL から確認できるであろう、ということだ。</p>
+<p>
+  <img src="22-02-04.png" alt="IDCS は URL から分かる">
+</p>
+<p><code>https://idcs-00000000000000.identity.oraclecloud.com/</code> というような URL になっていると思うので、この文字列から <em><code>idcs-00000000000000</code></em> 部分を抜き取れば良い。</p>
+<h3 id="2-jcs-インスタンス詳細画面の「instance-details」から取得する"><a class="header-link" href="#2-jcs-インスタンス詳細画面の「instance-details」から取得する"><span class="header-link-mark"></span></a>2. JCS インスタンス詳細画面の「Instance Details」から取得する</h3>
+<p>JCS のアプリケーションインスタンスを作ったあと、詳細画面に移動し、右上にある<em>「縦に並んだ3点リーダ <code>…</code> みたいなアイコン」</em>、コレが「Instance Details」アイコンなのだが、コレを押下する。</p>
+<p>すると「Instance Details」というダイアログが表示され、その中に「アイデンティティ・ドメイン：」という項目があるので、ココから <code>idcs-</code> で始まる文字列を取得できる。</p>
+<p>
+  <img src="22-02-05.png" alt="ココでも分かる">
+</p>
+<p>コレを <code>$ psm setup</code> 時に指定すれば良い。</p>
+<h3 id="json-ファイルを読み込ませて-psm-setup-を一発で終わらせる"><a class="header-link" href="#json-ファイルを読み込ませて-psm-setup-を一発で終わらせる"><span class="header-link-mark"></span></a>JSON ファイルを読み込ませて <code>psm setup</code> を一発で終わらせる</h3>
+<p>ちなみに、対話形式になる <code>$ psm setup</code> が面倒であれば、以下のような JSON ファイルを用意しておいて、それを流し込むことで初期設定を終えることもできる。</p>
+<ul>
+  <li><code>psm-setup-payload.json</code> (ファイル名は適当に)</li>
+</ul>
+<pre class="language-json"><code class="language-json"><span class="token punctuation">{</span>
+  <span class="token property">"username"</span>      <span class="token operator">:</span> <span class="token string">"【ユーザ名】"</span><span class="token punctuation">,</span>
+  <span class="token property">"password"</span>      <span class="token operator">:</span> <span class="token string">"【パスワード】"</span><span class="token punctuation">,</span>
+  <span class="token property">"identityDomain"</span><span class="token operator">:</span> <span class="token string">"【「idcs-」から始まるアイデンティティ・ドメイン文字列】"</span><span class="token punctuation">,</span>
+  <span class="token property">"region"</span>        <span class="token operator">:</span> <span class="token string">"【リージョン。「us」とか「aucom」とか】"</span><span class="token punctuation">,</span>
+  <span class="token property">"outputFormat"</span>  <span class="token operator">:</span> <span class="token string">"【結果の出力形式。「short」とか「json」とか】"</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>以下のように <code>-c</code> オプションを使い、ファイル名を指定して実行すれば良い。</p>
+<pre class="language-bash"><code class="language-bash">$ psm setup -c psm-setup-payload.json
+</code></pre>
+<p>CI/CD パイプラインの中で自動化したりする時にやりやすいかも。</p>
+<h2 id="psm-cli-でできる-jcs-の主な操作"><a class="header-link" href="#psm-cli-でできる-jcs-の主な操作"><span class="header-link-mark"></span></a>PSM CLI でできる JCS の主な操作</h2>
+<p>PSM CLI を使えば、JCS の色々な操作ができるが、中でもよく使いそうなモノを挙げておく。</p>
+<h3 id="インスタンス一覧を取得する"><a class="header-link" href="#インスタンス一覧を取得する"><span class="header-link-mark"></span></a>インスタンス一覧を取得する</h3>
+<pre class="language-bash"><code class="language-bash">$ psm jcs services
+</code></pre>
+<p>コレで作成してあるインスタンスの一覧が取得できる。出力形式を JSON にし、<code>jq</code> でパースすると、インスタンス名と状態だけを引っ張ってきたりしやすい。</p>
+<pre class="language-bash"><code class="language-bash">$ psm jcs services --output<span class="token operator">=</span><span class="token string">'json'</span> <span class="token operator">|</span> jq -r <span class="token string">'.services | to_entries | map(.key + " : " + .value.state)[]'</span>
+</code></pre>
+<p>こんな感じ。</p>
+<h3 id="インスタンスを起動する"><a class="header-link" href="#インスタンスを起動する"><span class="header-link-mark"></span></a>インスタンスを起動する</h3>
+<p>JCS インスタンスを起動するためのコマンド。実行するためには「ペイロード・JSON ファイル」が必要になる。この JSON ファイル次第で、クラスタ構成のサーバ群のうち、一部だけを起動・停止したりできるらしい。ただ、基本的には何台構成になっていようと、「全部起動する」「全部停止する」だろうから、お決まりの内容で良い。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># ペイロード・JSON ファイルを生成しておく</span>
+$ <span class="token builtin class-name">echo</span> <span class="token string">'{ "allServiceHosts": true }'</span> <span class="token operator">></span> ./payload.json
+
+<span class="token comment"># インスタンスを起動する</span>
+$ psm jcs start --service-name<span class="token operator">=</span><span class="token string">'【インスタンス名】'</span> --config-payload<span class="token operator">=</span><span class="token string">'./payload.json'</span> --output-format<span class="token operator">=</span><span class="token string">'json'</span> --wait-until-complete<span class="token operator">=</span><span class="token string">'true'</span>
+</code></pre>
+<p><code>--wait-until-complete</code> を <code>true</code> にしておけば、インスタンスの起動が完了するまでプロンプトが返って来なくなる。インスタンスの起動を待って次の処理をしたい、といったスクリプトを書く時には良いかも。起動命令だけ出しておけば良いのであれば <code>false</code> を指定する。</p>
+<h3 id="インスタンスを停止する"><a class="header-link" href="#インスタンスを停止する"><span class="header-link-mark"></span></a>インスタンスを停止する</h3>
+<p>起動と停止はほとんど同じ。ペイロード・JSON ファイルも同じ内容が使い回せる。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># ペイロード・JSON ファイルを生成しておく</span>
+$ <span class="token builtin class-name">echo</span> <span class="token string">'{ "allServiceHosts": true }'</span> <span class="token operator">></span> ./payload.json
+
+<span class="token comment"># インスタンスを起動する</span>
+$ psm jcs stop --service-name<span class="token operator">=</span><span class="token string">'【インスタンス名】'</span> --config-payload<span class="token operator">=</span><span class="token string">'./payload.json'</span> --output-format<span class="token operator">=</span><span class="token string">'json'</span> --wait-until-complete<span class="token operator">=</span><span class="token string">'true'</span>
+</code></pre>
+<h2 id="以上"><a class="header-link" href="#以上"><span class="header-link-mark"></span></a>以上</h2>
+<p>とりあえずこんなところか。</p>
+<p>コマンドラインで色々操作できるのは大変便利だ。</p>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2019-11-22</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2019-11-22</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

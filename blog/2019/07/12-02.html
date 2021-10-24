@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>OCI CLI のプロファイルからテナンシの OCID を得る Bash スクリプト - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2019/07/12-02.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2019/index.html">2019年</a></li>
+            <li><a href="/blog/2019/07/index.html">07月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2019-07-12</time></div>
+        <h1 id="page-title">OCI CLI のプロファイルからテナンシの OCID を得る Bash スクリプト</h1>
+
+<p><em>OCI (Oracle Cloud Infrastructure)</em> の各種操作・閲覧が行える <strong>OCI CLI</strong>。</p>
+<p>OCI CLI を使う際は、接続先の環境などを記したプロファイルを用意する。<code>$ oci setup config</code> コマンドでプロファイルを作成すると、デフォルトでは <code>~/.oci/config</code> というパスにファイルが生成される。</p>
+<p>今回は、このプロファイルからテナンシの OCID (OCI 上の全てのリソースに割り振られる ID) を抽出してみる。テナンシの OCID が分かれば、コレを基に OCI 上の色々な情報を抽出できるようになるだろう。</p>
+<p>参考にしたのは以下のスクリプト。</p>
+<ul>
+  <li>参考：<a href="https://github.com/cpauliat/my-oci-scripts">GitHub - cpauliat/my-oci-scripts: Scripts I wrote for OCI (Oracle Cloud Infrastructure)</a></li>
+</ul>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># -- Check if the PROFILE exists</span>
+<span class="token function">grep</span> <span class="token string">"\[<span class="token variable">$PROFILE</span>\]"</span> <span class="token variable">$OCI_CONFIG_FILE</span> <span class="token operator">></span> /dev/null <span class="token operator"><span class="token file-descriptor important">2</span>></span><span class="token file-descriptor important">&#x26;1</span>
+<span class="token keyword">if</span> <span class="token punctuation">[</span> <span class="token variable">$?</span> -ne <span class="token number">0</span> <span class="token punctuation">]</span><span class="token punctuation">;</span> <span class="token keyword">then</span> <span class="token builtin class-name">echo</span> <span class="token string">"ERROR: PROFILE <span class="token variable">$PROFILE</span> does not exist in file <span class="token variable">$OCI_CONFIG_FILE</span> !"</span><span class="token punctuation">;</span> <span class="token builtin class-name">exit</span> <span class="token number">2</span><span class="token punctuation">;</span> <span class="token keyword">fi</span>
+
+<span class="token comment"># -- get tenancy OCID from OCI PROFILE</span>
+<span class="token assign-left variable">TENANCYOCID</span><span class="token operator">=</span><span class="token variable"><span class="token variable">`</span><span class="token function">egrep</span> <span class="token string">"^\[|ocid1.tenancy"</span> $OCI_CONFIG_FILE<span class="token operator">|</span><span class="token function">sed</span> -n -e <span class="token string">"/\[<span class="token variable">$PROFILE</span>\]/,/tenancy/p"</span><span class="token operator">|</span><span class="token function">tail</span> -1<span class="token operator">|</span> <span class="token function">awk</span> -F<span class="token string">'='</span> <span class="token string">'{ print <span class="token variable">$2</span> }'</span> <span class="token operator">|</span> <span class="token function">sed</span> <span class="token string">'s/ //g'</span><span class="token variable">`</span></span>
+</code></pre>
+<p>整理すると以下のとおり。<code>~/.oci/config</code> ファイルから <code>DEV</code> というプロファイルのテナンシ OCID を拾うサンプルだ。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token function">grep</span> -E <span class="token string">'^\[|ocid1.tenancy'</span> <span class="token string">"<span class="token variable">${<span class="token environment constant">HOME</span>}</span>/.oci/config"</span> <span class="token operator">|</span> <span class="token function">sed</span> -n <span class="token string">'/\[DEV\]/,/tenancy/p'</span> <span class="token operator">|</span> <span class="token function">tail</span> -1 <span class="token operator">|</span> <span class="token function">awk</span> -F<span class="token string">'='</span> <span class="token string">'{ print <span class="token variable">$2</span> }'</span> <span class="token operator">|</span> <span class="token function">sed</span> <span class="token string">'s/ //g'</span>
+</code></pre>
+<p>ファイルの所在とプロファイル名を変数に切り出した場合は以下のとおり。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token assign-left variable">OCI_CONFIG_FILE</span><span class="token operator">=</span><span class="token string">"<span class="token variable">${<span class="token environment constant">HOME</span>}</span>/.oci/config"</span>
+<span class="token assign-left variable">OCI_PROFILE</span><span class="token operator">=</span><span class="token string">'DEV'</span>
+<span class="token function">grep</span> -E <span class="token string">'^\[|ocid1.tenancy'</span> <span class="token string">"<span class="token variable">${OCI_CONFIG_FILE}</span>"</span> <span class="token operator">|</span> <span class="token function">sed</span> -n <span class="token string">"/\[<span class="token variable">${OCI_PROFILE}</span>\]/,/tenancy/p"</span> <span class="token operator">|</span> <span class="token function">tail</span> -1 <span class="token operator">|</span> <span class="token function">awk</span> -F<span class="token string">'='</span> <span class="token string">'{ print <span class="token variable">$2</span> }'</span> <span class="token operator">|</span> <span class="token function">sed</span> <span class="token string">'s/ //g'</span>
+</code></pre>
+<p>いくつかのコマンドがパイプで連結されているが、各コマンドでやっていることは以下のとおり。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># egrep = grep -E。行頭が `[` で始まるか、`ocid1.tenancy` を含む行を抽出する</span>
+<span class="token function">grep</span> -E <span class="token string">'^\[|ocid1.tenancy'</span> config
+
+<span class="token comment"># sed -n : 置換できた行だけを出力する。-e は付けても付けなくても変わらない</span>
+<span class="token function">sed</span> -n <span class="token string">'/\[DEV\]/,/tenancy/p'</span>
+
+<span class="token comment"># Profile 名とテナンシ ID の2行が抽出できるので、下1行 = テナンシ ID だけ抽出する</span>
+<span class="token function">tail</span> -1
+
+<span class="token comment"># 区切り文字を `=` に設定し、2列目を取得する。先頭の `tenancy=` が削れて OCID だけになる</span>
+<span class="token function">awk</span> -F<span class="token string">'='</span> <span class="token string">'{ print <span class="token variable">$2</span> }'</span>
+
+<span class="token comment"># 余計なスペースがあった時のために念のため削っておく</span>
+<span class="token function">sed</span> <span class="token string">'s/ //g'</span>
+</code></pre>
+<p><code>sed</code> と <code>awk</code> の使い方がとても参考になった。</p>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2019-07-12</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2019-07-12</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

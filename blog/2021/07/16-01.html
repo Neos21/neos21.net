@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>Cloudflare Workers による FaaS・Cloudflare Workers KV による Key-Value Store を試してみた - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2021/07/16-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2021/index.html">2021年</a></li>
+            <li><a href="/blog/2021/07/index.html">07月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2021-07-16</time></div>
+        <h1 id="page-title">Cloudflare Workers による FaaS・Cloudflare Workers KV による Key-Value Store を試してみた</h1>
+
+<p>CDN プロバイダとして知られる <em>Cloudflare</em> だが、最近以下のようなサービスを展開している。</p>
+<ul>
+  <li>Cloudflare Workers : FaaS・Functions</li>
+  <li>Cloudflare Workers KV : Key-Value Store・NoSQL</li>
+  <li>Cloudflare Pages : Static Website Hosting</li>
+  <li>Cloudflare Web Analytics : Web Analytics</li>
+</ul>
+<p>いずれも無料枠があり、クレジットカード入力もなく無料で利用し始められるのが特徴。</p>
+<p>今回はこの中の上2つ、FaaS と NoSQL サービスである、<em>Cloudflare Workers</em> および <strong>Cloudflare Workers KV</strong> を試してみる。</p>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#cloudflare-%E3%81%B8%E3%81%AE%E3%82%A2%E3%82%AB%E3%82%A6%E3%83%B3%E3%83%88%E7%99%BB%E9%8C%B2">Cloudflare へのアカウント登録</a></li>
+  <li><a href="#%E4%BB%95%E6%A7%98%E3%81%A8%E5%88%B6%E7%B4%84">仕様と制約</a></li>
+  <li><a href="#cli-%E3%83%84%E3%83%BC%E3%83%AB%E3%80%8Cwrangler%E3%80%8D%E3%82%92%E3%82%A4%E3%83%B3%E3%82%B9%E3%83%88%E3%83%BC%E3%83%AB%E3%81%99%E3%82%8B">CLI ツール「Wrangler」をインストールする</a></li>
+  <li><a href="#wrangler-%E3%81%A7%E3%83%AD%E3%82%B0%E3%82%A4%E3%83%B3%E3%81%99%E3%82%8B">Wrangler でログインする</a></li>
+  <li><a href="#workers-%E3%83%97%E3%83%AD%E3%82%B8%E3%82%A7%E3%82%AF%E3%83%88%E3%82%92%E4%BD%9C%E6%88%90%E3%81%99%E3%82%8B">Workers プロジェクトを作成する</a></li>
+  <li><a href="#%E3%83%AD%E3%83%BC%E3%82%AB%E3%83%AB%E5%AE%9F%E8%A1%8C%E3%81%97%E3%81%A6%E3%81%BF%E3%82%8B">ローカル実行してみる</a></li>
+  <li><a href="#cloudflare-workers-%E3%81%AB%E5%85%AC%E9%96%8B%E3%81%99%E3%82%8B">Cloudflare Workers に公開する</a></li>
+  <li><a href="#kv-%E3%82%92%E4%BD%9C%E6%88%90%E3%81%99%E3%82%8B">KV を作成する</a></li>
+  <li><a href="#wrangler-cli-%E3%81%A7-kv-%E3%81%AE%E5%8F%82%E7%85%A7%E3%83%BB%E6%93%8D%E4%BD%9C">Wrangler CLI で KV の参照・操作</a></li>
+  <li><a href="#%E9%96%8B%E7%99%BA%E7%92%B0%E5%A2%83%E7%94%A8%E3%81%AE-kv-%E3%82%92%E4%BD%9C%E3%82%8B">開発環境用の KV を作る</a></li>
+  <li><a href="#%E9%96%8B%E7%99%BA%E7%92%B0%E5%A2%83%E7%94%A8%E3%81%AE-kv-%E3%81%AB-wrangler-cli-%E3%81%A7%E3%82%A2%E3%82%AF%E3%82%BB%E3%82%B9%E3%81%99%E3%82%8B">開発環境用の KV に Wrangler CLI でアクセスする</a></li>
+  <li><a href="#workers-%E3%82%B9%E3%82%AF%E3%83%AA%E3%83%97%E3%83%88%E3%81%8B%E3%82%89-kv-%E3%82%92%E5%8F%82%E7%85%A7%E3%81%99%E3%82%8B">Workers スクリプトから KV を参照する</a></li>
+  <li><a href="#%E3%83%AD%E3%83%BC%E3%82%AB%E3%83%AB%E9%96%8B%E7%99%BA%E7%92%B0%E5%A2%83%E3%81%A7%E5%8B%95%E4%BD%9C%E7%A2%BA%E8%AA%8D-%E3%83%97%E3%83%AC%E3%83%93%E3%83%A5%E3%83%BC%E7%94%A8-kv-%E3%81%A8%E6%8E%A5%E7%B6%9A">ローカル開発環境で動作確認 (プレビュー用 KV と接続)</a></li>
+  <li><a href="#%E5%85%AC%E9%96%8B%E3%81%97%E3%81%A6%E5%AE%9F%E9%9A%9B%E3%81%AB%E5%8B%95%E4%BD%9C%E7%A2%BA%E8%AA%8D-%E6%9C%AC%E7%95%AA%E7%94%A8-kv-%E3%81%A8%E6%8E%A5%E7%B6%9A">公開して実際に動作確認 (本番用 KV と接続)</a></li>
+  <li><a href="#%E4%BB%A5%E4%B8%8A">以上</a></li>
+  <li><a href="#%E5%8F%82%E8%80%83%E6%96%87%E7%8C%AE">参考文献</a></li>
+</ul>
+<h2 id="cloudflare-へのアカウント登録"><a class="header-link" href="#cloudflare-へのアカウント登録"><span class="header-link-mark"></span></a>Cloudflare へのアカウント登録</h2>
+<p>予め、Cloudflare のアカウントを登録しておこう。</p>
+<ul>
+  <li><a href="https://www.cloudflare.com/">Cloudflare - The Web Performance &#x26; Security Company | Cloudflare</a></li>
+</ul>
+<p>普通に Sign Up するだけ。クレジットカード入力が必要なくて安心。</p>
+<h2 id="仕様と制約"><a class="header-link" href="#仕様と制約"><span class="header-link-mark"></span></a>仕様と制約</h2>
+<p>Workers・Workers KV ともに、無料枠ではいくつかの制限事項がある。前述のとおりクレカ入力していないので、いきなり課金が発生することはないが、大規模なアプリを無料枠で動かそうとするのは無理があるので、よくよく注意してほしい。</p>
+<p>初めに Workers の制限を確認する。</p>
+<ul>
+  <li><a href="https://workers.cloudflare.com/">Cloudflare Workers®</a></li>
+  <li><a href="https://developers.cloudflare.com/workers/platform/limits">Limits · Cloudflare Workers docs</a>
+    <ul>
+      <li>配置できる Workers スクリプトは30個まで</li>
+      <li>1日10万リクエストまで</li>
+      <li>1リクエストあたり 10ms 以内に処理すること (同期処理にかかる時間らしい・有料版でも 50ms が上限)</li>
+      <li>Workers のメモリは 128MB (コレは有料版でも同じ)</li>
+    </ul>
+  </li>
+</ul>
+<p>→ AWS Lambda などと比べるとメモリが少なく、実行時間の制約も厳しめ。ゴリゴリとバックエンド処理をやらせる用途には向かず、プロキシ的な利用がギリギリだろう。以下のサンプルコード集も参考に。</p>
+<ul>
+  <li><a href="https://developers.cloudflare.com/workers/examples">Examples · Cloudflare Workers docs</a></li>
+</ul>
+<p>次に Workers KV の制限。</p>
+<ul>
+  <li><a href="https://www.cloudflare.com/products/workers-kv/">Cloudflare Workers KV | Serverless Computing | Cloudflare</a></li>
+  <li><a href="https://developers.cloudflare.com/workers/platform/limits#kv">KV - Limits · Cloudflare Workers docs</a>
+    <ul>
+      <li>容量 1GB まで</li>
+      <li>1日あたり10万回の読み取り、1,000回の書き込みが上限</li>
+      <li>1つの Value に登録できるのは 25MB まで</li>
+    </ul>
+  </li>
+</ul>
+<p>読み書きの回数に上限があるので、リクエスト数の多いアプリのバックエンドとして使おうとすると、すぐレート制限に引っ掛かってしまうだろう。</p>
+<h2 id="cli-ツール「wrangler」をインストールする"><a class="header-link" href="#cli-ツール「wrangler」をインストールする"><span class="header-link-mark"></span></a>CLI ツール「Wrangler」をインストールする</h2>
+<p>Workers プロジェクトはブラウザのダッシュボード上からでも作成できるが、ローカル開発環境が用意できたりして便利なので、Cloudflare が提供する公式 CLI ツールの <strong>Wrangler</strong> を使っていく。</p>
+<ul>
+  <li><a href="https://developers.cloudflare.com/workers/cli-wrangler/install-update">Install / Update · Cloudflare Workers docs</a></li>
+</ul>
+<p>npm でグローバルインストールすれば良いが、裏は Rust 製なので Cargo でもインストールできるみたい。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">npm</span> i -g @cloudflare/wrangler
+
+$ wrangler --version
+wrangler <span class="token number">1.17</span>.0
+</code></pre>
+<h2 id="wrangler-でログインする"><a class="header-link" href="#wrangler-でログインする"><span class="header-link-mark"></span></a>Wrangler でログインする</h2>
+<p>続いて、<code>wrangler login</code> コマンドを使ってログインする。</p>
+<ul>
+  <li><a href="https://developers.cloudflare.com/workers/cli-wrangler/authentication">Authentication · Cloudflare Workers docs</a>
+    <ul>
+      <li>WSL でセットアップする場合は、「Ubuntu」のウィンドウで実施すること。VSCode 統合ターミナルからだとブラウザが開かずコンソールが進まなかった</li>
+    </ul>
+  </li>
+</ul>
+<pre class="language-bash"><code class="language-bash">$ wrangler login
+Allow Wrangler to <span class="token function">open</span> a page <span class="token keyword">in</span> your browser? <span class="token punctuation">[</span>y/n<span class="token punctuation">]</span>
+y
+💁  Opened a <span class="token function">link</span> <span class="token keyword">in</span> your default browser: https://dash.cloudflare.com/wrangler?【……】
+⠒   Waiting <span class="token keyword">for</span> API token<span class="token punctuation">..</span>.
+
+<span class="token comment"># ブラウザが開くので許可を進めていく</span>
+
+💁  Validating credentials<span class="token punctuation">..</span>.
+✨  Successfully configured. You can <span class="token function">find</span> your configuration <span class="token function">file</span> at: /home/neo/.wrangler/config/default.toml
+
+<span class="token comment"># ログイン成功・トークンが書かれたファイルが出来ているので確認する</span>
+$ <span class="token function">cat</span> ~/.wrangler/config/default.toml
+api_token <span class="token operator">=</span> <span class="token string">"【API トークン】"</span>
+
+<span class="token comment"># ログインユーザを確認する</span>
+$ wrangler <span class="token function">whoami</span>
+
+  ╭──────────────────────────────────────────────────────────────────────────────────────────────────╮
+  │                                                                                                  │
+  │      👋  You are logged <span class="token keyword">in</span> with an API Token, associated with the email <span class="token string">'neos21@gmail.com'</span><span class="token operator">!</span>      │
+  │                                                                                                  │
+  ╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
+
++----------------------------+----------------------------------+
+<span class="token operator">|</span> Account Name               <span class="token operator">|</span> Account ID                       <span class="token operator">|</span>
++----------------------------+----------------------------------+
+<span class="token operator">|</span> Neos21@gmail.com's Account <span class="token operator">|</span> 【アカウント ID】                <span class="token operator">|</span>
++----------------------------+----------------------------------+
+</code></pre>
+<p>こんな感じ。</p>
+<p>試しに KV を作ってみるかと思ったけど、KV は Workers プロジェクトを作ってからでないと作成できなかった。<strong>KV は紐付けた Workers からのみ呼び出しができる</strong>ようだ。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># KV から先には作れない</span>
+$ wrangler kv:namespace create practice
+Error: wrangler.toml not found
+</code></pre>
+<h2 id="workers-プロジェクトを作成する"><a class="header-link" href="#workers-プロジェクトを作成する"><span class="header-link-mark"></span></a>Workers プロジェクトを作成する</h2>
+<p>というワケで、先に <code>wrangler generate</code> コマンドを使って Workers プロジェクトを作る。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># Workers プロジェクトを作る。この時点では Publish はされておらずダッシュボードには何も出ない</span>
+$ wrangler generate practice
+ Creating project called <span class="token variable"><span class="token variable">`</span>practice<span class="token variable">`</span></span><span class="token punctuation">..</span>.
+ Done<span class="token operator">!</span> New project created /home/neo/practice
+🕵️  You can <span class="token function">find</span> your zone_id <span class="token keyword">in</span> the right sidebar of a zone<span class="token string">'s overview tab at https://dash.cloudflare.com
+🕵️  You can copy your account_id below
++----------------------------+----------------------------------+
+| Account Name               | Account ID                       |
++----------------------------+----------------------------------+
+| Neos21@gmail.com'</span>s Account <span class="token operator">|</span> 【アカウント ID】                <span class="token operator">|</span>
++----------------------------+----------------------------------+
+🕵️  You will need to update the following fields <span class="token keyword">in</span> the created wrangler.toml <span class="token function">file</span> before continuing:
+- account_id
+</code></pre>
+<p>コマンドで指定した名前どおり、<code>practice/</code> というディレクトリができ、その下に各種ボイラープレートファイルが生成されている。</p>
+<p>プロジェクトに関連する情報は、<em><code>wrangler.toml</code></em> という設定ファイルに書いていく。アカウント ID やゾーン ID など、クレデンシャルっぽい雰囲気の項目もあるのだが、これらは <code>wrangler.toml</code> にベタ書きして GitHub 公開しても大丈夫。</p>
+<ul>
+  <li>参考：<a href="https://github.com/cloudflare/wrangler/issues/630">whoami should display <code>account_id</code> · Issue #630 · cloudflare/wrangler</a></li>
+  <li>参考：<a href="https://github.com/cloudflare/wrangler-action/issues/17">wrangler.toml Secrets · Issue #17 · cloudflare/wrangler-action</a></li>
+</ul>
+<p>コンソールに表示されていたアカウント ID を、生成された <code>wrangler.toml</code> に記載する。他のファイルは適当に調整した。</p>
+<ul>
+  <li><code>wrangler.toml</code></li>
+</ul>
+<pre class="language-toml"><code class="language-toml"><span class="token key property">name</span> <span class="token punctuation">=</span> <span class="token string">"practice"</span>
+<span class="token key property">type</span> <span class="token punctuation">=</span> <span class="token string">"javascript"</span>
+
+<span class="token key property">account_id</span> <span class="token punctuation">=</span> <span class="token string">"07100c21a5c21a0afb93ab435ba46712"</span>
+<span class="token key property">workers_dev</span> <span class="token punctuation">=</span> <span class="token boolean">true</span>
+<span class="token key property">route</span> <span class="token punctuation">=</span> <span class="token string">""</span>
+<span class="token key property">zone_id</span> <span class="token punctuation">=</span> <span class="token string">""</span>
+</code></pre>
+<ul>
+  <li><code>index.js</code></li>
+</ul>
+<pre class="language-javascript"><code class="language-javascript"><span class="token doc-comment comment">/**
+ * Main
+ */</span>
+<span class="token function">addEventListener</span><span class="token punctuation">(</span><span class="token string">'fetch'</span><span class="token punctuation">,</span> <span class="token parameter">event</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  event<span class="token punctuation">.</span><span class="token method function property-access">respondWith</span><span class="token punctuation">(</span><span class="token function">handleRequest</span><span class="token punctuation">(</span>event<span class="token punctuation">.</span><span class="token property-access">request</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token doc-comment comment">/**
+ * Response With Hello World Text
+ * 
+ * <span class="token keyword">@param</span> <span class="token class-name"><span class="token punctuation">{</span>Request<span class="token punctuation">}</span></span> <span class="token parameter">_request</span> Request
+ */</span>
+<span class="token keyword">async</span> <span class="token keyword">function</span> <span class="token function">handleRequest</span><span class="token punctuation">(</span><span class="token parameter">_request</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token keyword control-flow">return</span> <span class="token keyword">new</span> <span class="token class-name">Response</span><span class="token punctuation">(</span><span class="token string">'Hello World'</span><span class="token punctuation">,</span> <span class="token punctuation">{</span>
+    headers<span class="token operator">:</span> <span class="token punctuation">{</span> <span class="token string">'content-type'</span><span class="token operator">:</span> <span class="token string">'text/plain'</span> <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<h2 id="ローカル実行してみる"><a class="header-link" href="#ローカル実行してみる"><span class="header-link-mark"></span></a>ローカル実行してみる</h2>
+<p>ファイルが用意できたら、<code>wrangler dev</code> コマンドでローカルに Workers を立ち上げてみる。</p>
+<pre class="language-bash"><code class="language-bash">$ wrangler dev
+💁  watching <span class="token string">"./"</span>
+👂  Listening on http://127.0.0.1:8787
+<span class="token punctuation">[</span><span class="token number">2021</span>-07-08 09:38:39<span class="token punctuation">]</span> GET practice.neos21.workers.dev/ HTTP/1.1 <span class="token number">200</span> OK
+<span class="token punctuation">[</span><span class="token number">2021</span>-07-08 09:38:40<span class="token punctuation">]</span> GET practice.neos21.workers.dev/favicon.ico HTTP/1.1 <span class="token number">200</span> OK
+</code></pre>
+<p><code>http://127.0.0.1:8787/</code> にアクセスすると、<code>Hello World</code> とレスポンスがあった。<code>index.js</code> の内容に沿ってリクエストが処理され、レスポンスされていることが確認できた。</p>
+<h2 id="cloudflare-workers-に公開する"><a class="header-link" href="#cloudflare-workers-に公開する"><span class="header-link-mark"></span></a>Cloudflare Workers に公開する</h2>
+<p>動作確認ができたら、<code>wrangler publish</code> コマンドで実際に公開してみる。</p>
+<pre class="language-bash"><code class="language-bash">$ wrangler publish
+✨  Basic JavaScript project found. Skipping unnecessary build<span class="token operator">!</span>
+✨  Successfully published your script to
+ https://practice.neos21.workers.dev
+</code></pre>
+<p>コレで公開できた。<a href="https://practice.neos21.workers.dev/">https://practice.neos21.workers.dev/</a> にアクセスすると <code>Hello World</code> とレスポンスがあった。</p>
+<p>ブラウザで見られるダッシュボードにも、プロジェクトが表示されるようになった。初回表示までは2・3分待つ必要あり。</p>
+<ul>
+  <li>参考：<a href="https://rest-term.com/archives/3603/">Cloudflare Workersでサーバレス開発 – Rest Term</a></li>
+</ul>
+<h2 id="kv-を作成する"><a class="header-link" href="#kv-を作成する"><span class="header-link-mark"></span></a>KV を作成する</h2>
+<p>続いて KV を作成していく。</p>
+<pre class="language-bash"><code class="language-bash">$ wrangler kv:namespace create kv
+🌀  Creating namespace with title <span class="token string">"practice-kv"</span>
+✨  Success<span class="token operator">!</span>
+Add the following to your configuration file:
+kv_namespaces <span class="token operator">=</span> <span class="token punctuation">[</span> 
+         <span class="token punctuation">{</span> binding <span class="token operator">=</span> <span class="token string">"kv"</span>, <span class="token function">id</span> <span class="token operator">=</span> <span class="token string">"32d76002a7784decb07151acf413098b"</span> <span class="token punctuation">}</span>
+<span class="token punctuation">]</span>
+</code></pre>
+<p>「名前空間の名前」としては、プロジェクト名と指定した名前空間をハイフンで結合した、<code>practice-kv</code> というモノになる。</p>
+<p>後述するが <code>index.js</code> 内で参照する名前空間としては、この内の <code>kv</code> 部分だけ記述すれば良い。<code>index.js</code> で変数名として使用するためか、名前空間にはハイフンが使えず、アンダースコアでしか区切れない。</p>
+<p>ひとまず、何やらコンソールに「コレを追記しろ」と出力されているので、この内容を <code>wrangler.toml</code> に追記しておく。</p>
+<pre class="language-toml"><code class="language-toml"><span class="token comment"># Worker 名 : `https://【この Worker 名】.【アカウント名】.workers.dev/` で公開できる</span>
+<span class="token key property">name</span> <span class="token punctuation">=</span> <span class="token string">"practice"</span>
+<span class="token comment"># `$ worker build` コマンドでのビルド方法を指定する・`javascript` にすると Webpack が使われる</span>
+<span class="token key property">type</span> <span class="token punctuation">=</span> <span class="token string">"javascript"</span>
+<span class="token comment"># `webpack.config.js` を自前で用意した場合は `webpack_config` プロパティで指定する</span>
+
+<span class="token comment"># アカウント ID</span>
+<span class="token key property">account_id</span> <span class="token punctuation">=</span> <span class="token string">"07100c21a5c21a0afb93ab435ba46712"</span>
+<span class="token comment"># `workers.dev` にデプロイする場合は `true` にする</span>
+<span class="token key property">workers_dev</span> <span class="token punctuation">=</span> <span class="token boolean">true</span>
+<span class="token comment"># `workers.dev` ではなく独自ドメインで公開する際に指定する・`workers.dev` で公開する場合は空文字で良い</span>
+<span class="token key property">route</span> <span class="token punctuation">=</span> <span class="token string">""</span>
+<span class="token comment"># `workers.dev` で公開する場合は空文字で良い</span>
+<span class="token key property">zone_id</span> <span class="token punctuation">=</span> <span class="token string">""</span>
+
+<span class="token comment"># KV : ↓ コレを追記した</span>
+<span class="token key property">kv_namespaces</span> <span class="token punctuation">=</span> <span class="token punctuation">[</span>
+  <span class="token punctuation">{</span> <span class="token key property">binding</span> <span class="token punctuation">=</span> <span class="token string">"kv"</span><span class="token punctuation">,</span> <span class="token key property">id</span> <span class="token punctuation">=</span> <span class="token string">"32d76002a7784decb07151acf413098b"</span> <span class="token punctuation">}</span>
+<span class="token punctuation">]</span>
+</code></pre>
+<ul>
+  <li>参考：<a href="https://developers.cloudflare.com/workers/cli-wrangler/configuration">Configuration · Cloudflare Workers docs</a></li>
+  <li>参考：<a href="https://developers.cloudflare.com/workers/cli-wrangler/webpack">Webpack · Cloudflare Workers docs</a></li>
+</ul>
+<h2 id="wrangler-cli-で-kv-の参照・操作"><a class="header-link" href="#wrangler-cli-で-kv-の参照・操作"><span class="header-link-mark"></span></a>Wrangler CLI で KV の参照・操作</h2>
+<p>Workers KV は原則、紐付けた Workers からしかアクセスできないのだが、ログイン済の Wrangler CLI であれば、<code>wrangler.toml</code> の内容を参照しながら、KV にアクセスできる。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># 名前空間名を指定してキーをリスト表示する</span>
+$ wrangler kv:key list --binding <span class="token string">'kv'</span>
+<span class="token punctuation">[</span><span class="token punctuation">]</span>
+
+<span class="token comment"># JSON 配列っぽい値を `test` というキー名で登録する</span>
+$ wrangler kv:key put <span class="token string">'test'</span> <span class="token string">'[ { "id": 1, "text": "Hello World" } ]'</span> --binding <span class="token string">'kv'</span>
+✨  Success
+
+<span class="token comment"># 登録したキー名が見えた</span>
+$ wrangler kv:key list --binding <span class="token string">'kv'</span>
+<span class="token punctuation">[</span><span class="token punctuation">{</span><span class="token string">"name"</span><span class="token builtin class-name">:</span><span class="token string">"test"</span><span class="token punctuation">}</span><span class="token punctuation">]</span>
+
+<span class="token comment"># 登録したデータが見えた</span>
+$ wrangler kv:key get <span class="token string">'test'</span> --binding <span class="token string">'kv'</span>
+<span class="token punctuation">[</span> <span class="token punctuation">{</span> <span class="token string">"id"</span><span class="token builtin class-name">:</span> <span class="token number">1</span>, <span class="token string">"text"</span><span class="token builtin class-name">:</span> <span class="token string">"Hello World"</span> <span class="token punctuation">}</span> <span class="token punctuation">]</span>
+
+<span class="token comment"># この内容はダッシュボード上でも確認できる (= 実際にアップされている)</span>
+</code></pre>
+<ul>
+  <li>参考：<a href="https://numb86-tech.hatenablog.com/entry/2021/06/22/233701">Cloudflare Workers KV の初歩 - 30歳からのプログラミング</a></li>
+</ul>
+<h2 id="開発環境用の-kv-を作る"><a class="header-link" href="#開発環境用の-kv-を作る"><span class="header-link-mark"></span></a>開発環境用の KV を作る</h2>
+<p>このままでも、<code>wrangler publish</code> したスクリプトから当該 KV へのアクセスはできるのだが、<code>wrangler dev</code> で立てたローカル開発環境からはこの KV が参照できない。</p>
+<p>そこで、<code>--preview</code> オプションを使用し、開発環境用の KV を別途作成する。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># 開発環境 (`wrangler dev`) 用にプレビュー KV を作る</span>
+$ wrangler kv:namespace create <span class="token string">'kv'</span> --preview
+🌀  Creating namespace with title <span class="token string">"practice-kv_preview"</span>
+✨  Success<span class="token operator">!</span>
+Add the following to your configuration <span class="token function">file</span> <span class="token keyword">in</span> your kv_namespaces array:
+<span class="token punctuation">{</span> binding <span class="token operator">=</span> <span class="token string">"kv"</span>, preview_id <span class="token operator">=</span> <span class="token string">"9f23b9bb89db4af7a2eca3230e50780f"</span>, <span class="token function">id</span> <span class="token operator">=</span> <span class="token string">"32d76002a7784decb07151acf413098b"</span> <span class="token punctuation">}</span>
+</code></pre>
+<p>ダッシュボードを確認すると、<em>`practice-kv</em>preview`_ という名前空間の名前で KV が生成されている。名前が違うだけで、KV の動作としては変わりないようだ。</p>
+<p>コンソール出力されている内容を参考にして、<code>wrangler.toml</code> の <code>kv_namespaces</code> 部分を次のように修正する。</p>
+<pre class="language-toml"><code class="language-toml"><span class="token key property">kv_namespaces</span> <span class="token punctuation">=</span> <span class="token punctuation">[</span>
+  <span class="token punctuation">{</span> <span class="token key property">binding</span> <span class="token punctuation">=</span> <span class="token string">"kv"</span><span class="token punctuation">,</span> <span class="token key property">id</span> <span class="token punctuation">=</span> <span class="token string">"32d76002a7784decb07151acf413098b"</span><span class="token punctuation">,</span> <span class="token key property">preview_id</span> <span class="token punctuation">=</span> <span class="token string">"9f23b9bb89db4af7a2eca3230e50780f"</span> <span class="token punctuation">}</span>
+<span class="token punctuation">]</span>
+</code></pre>
+<p>最初に作成した KV の記述をそのままに、<code>preview_id</code> プロパティを追加し、<code>practice-kv_preview</code> の ID を記載している。</p>
+<h2 id="開発環境用の-kv-に-wrangler-cli-でアクセスする"><a class="header-link" href="#開発環境用の-kv-に-wrangler-cli-でアクセスする"><span class="header-link-mark"></span></a>開発環境用の KV に Wrangler CLI でアクセスする</h2>
+<p>Wrangler CLI でプレビュー環境にアクセスするには、次のように <code>--preview</code> を付けながら操作すれば、先程試したコマンドと変わらずに KV が操作できる。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># 名前空間名を指定してキーをリスト表示する (`--preview` オプションだけ追記していることに注意)</span>
+$ wrangler kv:key list --binding <span class="token string">'kv'</span> --preview
+<span class="token punctuation">[</span><span class="token punctuation">]</span>
+<span class="token comment"># `practice-kv` の方には先程データを投入したが、`practice-kv_preview` にはまだ何もデータが入っていないので、キー一覧も空になっている</span>
+
+<span class="token comment"># JSON 配列っぽい値を `test` というキー名で登録する</span>
+$ wrangler kv:key put <span class="token string">'test'</span> <span class="token string">'[ { "id": 1, "text": "Hello World Preview" } ]'</span> --binding <span class="token string">'kv'</span> --preview
+✨  Success
+
+<span class="token comment"># キーが追加されている</span>
+$ wrangler kv:key list --binding <span class="token string">'kv'</span>
+<span class="token punctuation">[</span><span class="token punctuation">{</span><span class="token string">"name"</span><span class="token builtin class-name">:</span><span class="token string">"test"</span><span class="token punctuation">}</span><span class="token punctuation">]</span>
+
+<span class="token comment"># 登録されたデータが確認できるが、`practice-kv` とは異なる値であることが分かる</span>
+$ wrangler kv:key get <span class="token string">'test'</span> --binding <span class="token string">'kv'</span>
+<span class="token punctuation">[</span> <span class="token punctuation">{</span> <span class="token string">"id"</span><span class="token builtin class-name">:</span> <span class="token number">1</span>, <span class="token string">"text"</span><span class="token builtin class-name">:</span> <span class="token string">"Hello World Preview"</span> <span class="token punctuation">}</span> <span class="token punctuation">]</span>
+<span class="token comment"># この内容はダッシュボード上でも確認できる (= 実際にアップされている)</span>
+</code></pre>
+<h2 id="workers-スクリプトから-kv-を参照する"><a class="header-link" href="#workers-スクリプトから-kv-を参照する"><span class="header-link-mark"></span></a>Workers スクリプトから KV を参照する</h2>
+<p>Wrangler CLI から KV の参照・操作ができたので、いよいよ Workers スクリプトを修正し、Workers から KV を参照・操作できるようにしていく。</p>
+<ul>
+  <li><code>index.js</code></li>
+</ul>
+<pre class="language-javascript"><code class="language-javascript"><span class="token doc-comment comment">/**
+ * Main
+ */</span>
+<span class="token function">addEventListener</span><span class="token punctuation">(</span><span class="token string">'fetch'</span><span class="token punctuation">,</span> <span class="token parameter">event</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  event<span class="token punctuation">.</span><span class="token method function property-access">respondWith</span><span class="token punctuation">(</span><span class="token function">handleRequest</span><span class="token punctuation">(</span>event<span class="token punctuation">.</span><span class="token property-access">request</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token doc-comment comment">/**
+ * Response With KV Value
+ * 
+ * <span class="token keyword">@param</span> <span class="token class-name"><span class="token punctuation">{</span>Request<span class="token punctuation">}</span></span> <span class="token parameter">_request</span> Request
+ */</span>
+<span class="token keyword">async</span> <span class="token keyword">function</span> <span class="token function">handleRequest</span><span class="token punctuation">(</span><span class="token parameter">_request</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token keyword">const</span> content <span class="token operator">=</span> <span class="token keyword control-flow">await</span> kv<span class="token punctuation">.</span><span class="token method function property-access">get</span><span class="token punctuation">(</span><span class="token string">"test"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment">// 変数 `kv` は Cloudflare Workers によって KV の名前空間名 `kv` がそのまま変数名に使われて自動的に定義されている</span>
+  <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">Console Log : $</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>content<span class="token interpolation-punctuation punctuation">}</span></span><span class="token template-punctuation string">`</span></span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword control-flow">return</span> <span class="token keyword">new</span> <span class="token class-name">Response</span><span class="token punctuation">(</span>content<span class="token punctuation">,</span> <span class="token punctuation">{</span>
+    headers<span class="token operator">:</span> <span class="token punctuation">{</span> <span class="token string">'content-type'</span><span class="token operator">:</span> <span class="token string">'application/json'</span> <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>今回はまずはデータの取得だけ。いきなり <code>kv.get()</code> とかいうメソッドを叩いているが、ココで出てくる <code>kv</code> というのは、<code>wrangler.toml</code> で <code>binding = "kv"</code> と指定している、名前空間名である。コレがいきなりグローバル変数として定義された状態になっているので、そいつの <code>get()</code> や <code>put()</code> メソッドを呼んで、当該 KV を操作していくことになる。</p>
+<h2 id="ローカル開発環境で動作確認-プレビュー用-kv-と接続"><a class="header-link" href="#ローカル開発環境で動作確認-プレビュー用-kv-と接続"><span class="header-link-mark"></span></a>ローカル開発環境で動作確認 (プレビュー用 KV と接続)</h2>
+<p><code>index.js</code> の内容を確認するため、<code>wrangler dev</code> コマンドでローカル開発環境を起動する。<code>wrangler.toml</code> ファイルの <code>preview_id</code> 指定により、プレビュー用 KV に接続していることが分かる。</p>
+<pre class="language-bash"><code class="language-bash">$ wrangler dev
+💁  watching <span class="token string">"./"</span>
+👂  Listening on http://127.0.0.1:8787
+
+<span class="token comment"># ブラウザで &#x3C;http://127.0.0.1:8787> にアクセスしてみる</span>
+Console Log <span class="token builtin class-name">:</span> $<span class="token punctuation">[</span> <span class="token punctuation">{</span> <span class="token string">"id"</span><span class="token builtin class-name">:</span> <span class="token number">1</span>, <span class="token string">"text"</span><span class="token builtin class-name">:</span> <span class="token string">"Hello World Preview"</span> <span class="token punctuation">}</span> <span class="token punctuation">]</span>
+<span class="token punctuation">[</span><span class="token number">2021</span>-07-08 <span class="token number">12</span>:00:46<span class="token punctuation">]</span> GET practice.neos21.workers.dev/ HTTP/1.1 <span class="token number">200</span> OK
+</code></pre>
+<h2 id="公開して実際に動作確認-本番用-kv-と接続"><a class="header-link" href="#公開して実際に動作確認-本番用-kv-と接続"><span class="header-link-mark"></span></a>公開して実際に動作確認 (本番用 KV と接続)</h2>
+<p>続いて <code>wrangler publish</code> で公開する。</p>
+<pre class="language-bash"><code class="language-bash">$ wrangler publish
+✨  Basic JavaScript project found. Skipping unnecessary build<span class="token operator">!</span>
+✨  Successfully published your script to
+ https://practice.neos21.workers.dev
+</code></pre>
+<p><a href="https://practice.neos21.workers.dev/">https://practice.neos21.workers.dev/</a> にアクセスすると、先程までは <code>Hello World</code> とボイラープレートファイルの内容を答えていたが、今度は <code>[ { "id": 1, "text": "Hello World" } ]</code> とレスポンスがあった。</p>
+<p>ココで注目したいのは、Publish すると、<code>kv_preview</code> ではなく <code>kv</code> からデータから読み取られている点だ。</p>
+<ul>
+  <li>参考：<a href="https://rest-term.com/archives/3619/">Cloudflare Workersでサーバレス開発 part3 Workers KVを無料で使う – Rest Term</a></li>
+</ul>
+<h2 id="以上"><a class="header-link" href="#以上"><span class="header-link-mark"></span></a>以上</h2>
+<p>Cloudflare Workers および Cloudflare Workers KV の初歩はココまで。今回作成した Workers のコードをコミットした GitHub リポジトリと、実際に本番公開している Workers の URL は次のとおり。最新のコードの内容は、次回の記事で紹介するウェブアプリ向けのモノになっているので、過去のコミットログを遡って確認してみてほしい。</p>
+<ul>
+  <li><a href="https://github.com/Neos21/practice-cloudflare-workers">Neos21/practice-cloudflare-workers: Practice Cloudflare Workers</a></li>
+  <li><a href="https://practice.neos21.workers.dev/">https://practice.neos21.workers.dev/</a></li>
+</ul>
+<p>次回は <em>Cloudflare Pages でデプロイしたフロントエンドから、この Cloudflare Workers を呼び出して KV を利用するアプリ</em>を作ってみる。</p>
+<ul>
+  <li>次の記事：<a href="/blog/2021/07/17-01.html">Cloudflare Pages と Cloudflare Workers KV を組み合わせてウェブアプリを作ってみた</a></li>
+</ul><div class="ad-amazon">
+  <div class="ad-amazon-image">
+    <a href="https://www.amazon.co.jp/dp/B08VJ3YZK1?tag=neos21-22&amp;linkCode=osi&amp;th=1&amp;psc=1">
+      <img src="https://m.media-amazon.com/images/I/51+BECAAh-L._SL160_.jpg" width="112" height="160">
+    </a>
+  </div>
+  <div class="ad-amazon-info">
+    <div class="ad-amazon-title">
+      <a href="https://www.amazon.co.jp/dp/B08VJ3YZK1?tag=neos21-22&amp;linkCode=osi&amp;th=1&amp;psc=1">Web配信の技術―HTTPキャッシュ・リバースプロキシ・CDNを活用する</a>
+    </div>
+  </div>
+</div>
+<div class="ad-rakuten">
+  <div class="ad-rakuten-image">
+    <a href="https://hb.afl.rakuten.co.jp/hgc/g00q0722.waxyc9ff.g00q0722.waxyd017/?pc=https%3A%2F%2Fitem.rakuten.co.jp%2Fbook%2F16595756%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Fbook%2Fi%2F20246424%2F">
+      <img src="https://thumbnail.image.rakuten.co.jp/@0_mall/book/cabinet/9256/9784297119256.jpg?_ex=128x128">
+    </a>
+  </div>
+  <div class="ad-rakuten-info">
+    <div class="ad-rakuten-title">
+      <a href="https://hb.afl.rakuten.co.jp/hgc/g00q0722.waxyc9ff.g00q0722.waxyd017/?pc=https%3A%2F%2Fitem.rakuten.co.jp%2Fbook%2F16595756%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Fbook%2Fi%2F20246424%2F">Web配信の技術ーHTTPキャッシュ・リバースプロキシ・CDNを活用する [ 田中 祥平 ]</a>
+    </div>
+    <div class="ad-rakuten-shop">
+      <a href="https://hb.afl.rakuten.co.jp/hgc/g00q0722.waxyc9ff.g00q0722.waxyd017/?pc=https%3A%2F%2Fwww.rakuten.co.jp%2Fbook%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Fbook%2F">楽天ブックス</a>
+    </div>
+    <div class="ad-rakuten-price">価格 : 3586円</div>
+  </div>
+</div>
+<h2 id="参考文献"><a class="header-link" href="#参考文献"><span class="header-link-mark"></span></a>参考文献</h2>
+<p>その他参考にしたページは以下。</p>
+<ul>
+  <li><a href="https://github.com/cloudflare/kv-asset-handler">cloudflare/kv-asset-handler: Routes requests to KV assets</a>
+    <ul>
+      <li>JS 内で KV の操作を簡単にする公式の npm パッケージ</li>
+    </ul>
+  </li>
+  <li><a href="https://blog.cloudflare.com/building-a-to-do-list-with-workers-and-kv/">Building a To-Do List with Workers and KV</a></li>
+  <li><a href="https://github.com/signalnerve/cloudflare-workers-todos">signalnerve/cloudflare-workers-todos: A simple todo list application built with Cloudflare Workers and KV</a>
+    <ul>
+      <li>Workers で簡単な ToDo アプリを作っている例</li>
+      <li>GET リクエスト時は HTML をレスポンスし、PUT リクエスト時は KV のデータを更新するコードが紹介されている</li>
+    </ul>
+  </li>
+  <li><a href="https://zenn.dev/homura/articles/365c6c9a6ca2f98bb2ca">Cloudflare Workersのチュートリアルをやってみた</a></li>
+</ul>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2021-07-16</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2021-07-16</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

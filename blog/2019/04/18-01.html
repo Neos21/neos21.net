@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>Node.js の Cluster モジュールを使って Express サーバを並列化する - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2019/04/18-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2019/index.html">2019年</a></li>
+            <li><a href="/blog/2019/04/index.html">04月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2019-04-18</time></div>
+        <h1 id="page-title">Node.js の Cluster モジュールを使って Express サーバを並列化する</h1>
+
+<p>Node.js はシングルプロセスで処理するため、マルチコアを活かして並列処理するにはひと手間準備が必要になる。</p>
+<p>今回は、Node.js 組み込みの <strong><code>cluster</code></strong> モジュールを使って Express サーバを並列化してみる。</p>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#%E5%85%83%E3%81%A8%E3%81%AA%E3%82%8B-express-%E3%82%B5%E3%83%BC%E3%83%90">元となる Express サーバ</a></li>
+  <li><a href="#cluster-%E3%83%A2%E3%82%B8%E3%83%A5%E3%83%BC%E3%83%AB%E3%82%92%E7%B5%84%E3%81%BF%E8%BE%BC%E3%82%80"><code>cluster</code> モジュールを組み込む</a></li>
+  <li><a href="#%E5%8B%95%E4%BD%9C%E3%82%92%E8%A6%8B%E3%81%A6%E3%81%BF%E3%82%8B">動作を見てみる</a></li>
+  <li><a href="#%E4%BB%A5%E4%B8%8A">以上</a></li>
+</ul>
+<h2 id="元となる-express-サーバ"><a class="header-link" href="#元となる-express-サーバ"><span class="header-link-mark"></span></a>元となる Express サーバ</h2>
+<p>今回元にする Express サーバの実装は以下のとおり。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token comment">/*! index.js */</span>
+<span class="token keyword">const</span> express <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'express'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token function">express</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+  <span class="token punctuation">.</span><span class="token method function property-access">get</span><span class="token punctuation">(</span><span class="token string">'/'</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token parameter">req<span class="token punctuation">,</span> res</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+    <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">Request</span><span class="token template-punctuation string">`</span></span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    res<span class="token punctuation">.</span><span class="token method function property-access">send</span><span class="token punctuation">(</span><span class="token string">'Hello World'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span>
+  <span class="token punctuation">.</span><span class="token method function property-access">listen</span><span class="token punctuation">(</span><span class="token number">8080</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+    <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">Server Started</span><span class="token template-punctuation string">`</span></span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p><code>http://localhost:8080/</code> にアクセスすると「Hello World」と答えるだけのサーバだ。</p>
+<h2 id="cluster-モジュールを組み込む"><a class="header-link" href="#cluster-モジュールを組み込む"><span class="header-link-mark"></span></a><code>cluster</code> モジュールを組み込む</h2>
+<p>このようなサーバプロセスを CPU のコア数分だけ Fork して上手く管理してもらうために、Node.js 組み込みの <code>cluster</code> モジュールを組み込んでみる。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token comment">/*! index.js */</span>
+<span class="token keyword">const</span> cluster <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'cluster'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">const</span> os <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'os'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">const</span> express <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'express'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// CPU のコア (スレッド) 数を調べる</span>
+<span class="token keyword">const</span> numCPUs <span class="token operator">=</span> os<span class="token punctuation">.</span><span class="token method function property-access">cpus</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token property-access">length</span><span class="token punctuation">;</span>
+
+<span class="token keyword control-flow">if</span><span class="token punctuation">(</span>cluster<span class="token punctuation">.</span><span class="token property-access">isMaster</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'Master'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  
+  <span class="token comment">// Worker を生成する</span>
+  <span class="token keyword control-flow">for</span><span class="token punctuation">(</span><span class="token keyword">let</span> i <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span> i <span class="token operator">&#x3C;</span> numCPUs<span class="token punctuation">;</span> i<span class="token operator">++</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">Master : Cluster Fork </span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>i<span class="token interpolation-punctuation punctuation">}</span></span><span class="token template-punctuation string">`</span></span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    cluster<span class="token punctuation">.</span><span class="token method function property-access">fork</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  
+  <span class="token comment">// Worker がクラッシュしたら再生成する</span>
+  cluster<span class="token punctuation">.</span><span class="token method function property-access">on</span><span class="token punctuation">(</span><span class="token string">'exit'</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token parameter">worker<span class="token punctuation">,</span> code<span class="token punctuation">,</span> signal</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+    <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">warn</span><span class="token punctuation">(</span><span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">[</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>worker<span class="token punctuation">.</span><span class="token property-access">id</span><span class="token interpolation-punctuation punctuation">}</span></span><span class="token string">] Worker died : [PID </span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>worker<span class="token punctuation">.</span><span class="token property-access">process</span><span class="token punctuation">.</span><span class="token property-access">pid</span><span class="token interpolation-punctuation punctuation">}</span></span><span class="token string">] [Signal </span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>signal<span class="token interpolation-punctuation punctuation">}</span></span><span class="token string">] [Code </span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>code<span class="token interpolation-punctuation punctuation">}</span></span><span class="token string">]</span><span class="token template-punctuation string">`</span></span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    cluster<span class="token punctuation">.</span><span class="token method function property-access">fork</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+<span class="token keyword control-flow">else</span> <span class="token punctuation">{</span>
+  <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">[</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>cluster<span class="token punctuation">.</span><span class="token property-access">worker</span><span class="token punctuation">.</span><span class="token property-access">id</span><span class="token interpolation-punctuation punctuation">}</span></span><span class="token string">] [PID </span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>cluster<span class="token punctuation">.</span><span class="token property-access">worker</span><span class="token punctuation">.</span><span class="token property-access">process</span><span class="token punctuation">.</span><span class="token property-access">pid</span><span class="token interpolation-punctuation punctuation">}</span></span><span class="token string">] Worker</span><span class="token template-punctuation string">`</span></span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token comment">// Express サーバの実装は元のまま変更なし (コンソール出力の内容だけ加工)</span>
+  
+  <span class="token function">express</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+    <span class="token punctuation">.</span><span class="token method function property-access">get</span><span class="token punctuation">(</span><span class="token string">'/'</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token parameter">req<span class="token punctuation">,</span> res</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+      <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">[</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>cluster<span class="token punctuation">.</span><span class="token property-access">worker</span><span class="token punctuation">.</span><span class="token property-access">id</span><span class="token interpolation-punctuation punctuation">}</span></span><span class="token string">] [PID </span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>cluster<span class="token punctuation">.</span><span class="token property-access">worker</span><span class="token punctuation">.</span><span class="token property-access">process</span><span class="token punctuation">.</span><span class="token property-access">pid</span><span class="token interpolation-punctuation punctuation">}</span></span><span class="token string">] Request</span><span class="token template-punctuation string">`</span></span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      res<span class="token punctuation">.</span><span class="token method function property-access">send</span><span class="token punctuation">(</span><span class="token string">'Hello World'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span><span class="token punctuation">)</span>
+    <span class="token punctuation">.</span><span class="token method function property-access">listen</span><span class="token punctuation">(</span><span class="token number">8080</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+      <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">[</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>cluster<span class="token punctuation">.</span><span class="token property-access">worker</span><span class="token punctuation">.</span><span class="token property-access">id</span><span class="token interpolation-punctuation punctuation">}</span></span><span class="token string">] [PID </span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>cluster<span class="token punctuation">.</span><span class="token property-access">worker</span><span class="token punctuation">.</span><span class="token property-access">process</span><span class="token punctuation">.</span><span class="token property-access">pid</span><span class="token interpolation-punctuation punctuation">}</span></span><span class="token string">] Server Started</span><span class="token template-punctuation string">`</span></span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p><code>cluster.isMaster</code> で条件分岐し、マスターコードはプロセスの Fork のみ行い、ワーカコードはこれまでどおり Express サーバの起動のみを行っている。分かりやすくするためコンソール出力の内容だけ加工したものの、Express サーバの実装は何も変更していない。</p>
+<h2 id="動作を見てみる"><a class="header-link" href="#動作を見てみる"><span class="header-link-mark"></span></a>動作を見てみる</h2>
+<p>このように実装した <code>index.js</code> を起動して、どのように動くか見てみよう。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">npm</span> start
+
+<span class="token operator">></span> express-cluster-practice@ start /Users/Neo/express-cluster-practice
+<span class="token operator">></span> node index.js
+
+Master
+Master <span class="token builtin class-name">:</span> Cluster Fork <span class="token number">0</span>
+Master <span class="token builtin class-name">:</span> Cluster Fork <span class="token number">1</span>
+Master <span class="token builtin class-name">:</span> Cluster Fork <span class="token number">2</span>
+Master <span class="token builtin class-name">:</span> Cluster Fork <span class="token number">3</span>
+Master <span class="token builtin class-name">:</span> Cluster Fork <span class="token number">4</span>
+Master <span class="token builtin class-name">:</span> Cluster Fork <span class="token number">5</span>
+Master <span class="token builtin class-name">:</span> Cluster Fork <span class="token number">6</span>
+Master <span class="token builtin class-name">:</span> Cluster Fork <span class="token number">7</span>
+<span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span> <span class="token punctuation">[</span>PID <span class="token number">58925</span><span class="token punctuation">]</span> Worker
+<span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span> <span class="token punctuation">[</span>PID <span class="token number">58925</span><span class="token punctuation">]</span> Server Started
+<span class="token punctuation">[</span><span class="token number">2</span><span class="token punctuation">]</span> <span class="token punctuation">[</span>PID <span class="token number">58926</span><span class="token punctuation">]</span> Worker
+<span class="token punctuation">[</span><span class="token number">3</span><span class="token punctuation">]</span> <span class="token punctuation">[</span>PID <span class="token number">58927</span><span class="token punctuation">]</span> Worker
+<span class="token punctuation">[</span><span class="token number">4</span><span class="token punctuation">]</span> <span class="token punctuation">[</span>PID <span class="token number">58928</span><span class="token punctuation">]</span> Worker
+<span class="token punctuation">[</span><span class="token number">2</span><span class="token punctuation">]</span> <span class="token punctuation">[</span>PID <span class="token number">58926</span><span class="token punctuation">]</span> Server Started
+<span class="token punctuation">[</span><span class="token number">4</span><span class="token punctuation">]</span> <span class="token punctuation">[</span>PID <span class="token number">58928</span><span class="token punctuation">]</span> Server Started
+<span class="token punctuation">[</span><span class="token number">5</span><span class="token punctuation">]</span> <span class="token punctuation">[</span>PID <span class="token number">58929</span><span class="token punctuation">]</span> Worker
+<span class="token punctuation">[</span><span class="token number">3</span><span class="token punctuation">]</span> <span class="token punctuation">[</span>PID <span class="token number">58927</span><span class="token punctuation">]</span> Server Started
+<span class="token punctuation">[</span><span class="token number">8</span><span class="token punctuation">]</span> <span class="token punctuation">[</span>PID <span class="token number">58932</span><span class="token punctuation">]</span> Worker
+<span class="token punctuation">[</span><span class="token number">6</span><span class="token punctuation">]</span> <span class="token punctuation">[</span>PID <span class="token number">58930</span><span class="token punctuation">]</span> Worker
+<span class="token punctuation">[</span><span class="token number">7</span><span class="token punctuation">]</span> <span class="token punctuation">[</span>PID <span class="token number">58931</span><span class="token punctuation">]</span> Worker
+<span class="token punctuation">[</span><span class="token number">5</span><span class="token punctuation">]</span> <span class="token punctuation">[</span>PID <span class="token number">58929</span><span class="token punctuation">]</span> Server Started
+<span class="token punctuation">[</span><span class="token number">8</span><span class="token punctuation">]</span> <span class="token punctuation">[</span>PID <span class="token number">58932</span><span class="token punctuation">]</span> Server Started
+<span class="token punctuation">[</span><span class="token number">6</span><span class="token punctuation">]</span> <span class="token punctuation">[</span>PID <span class="token number">58930</span><span class="token punctuation">]</span> Server Started
+<span class="token punctuation">[</span><span class="token number">7</span><span class="token punctuation">]</span> <span class="token punctuation">[</span>PID <span class="token number">58931</span><span class="token punctuation">]</span> Server Started
+</code></pre>
+<p>起動直後はこんな感じ。Master コードからプロセスを8つ Fork している。今回検証に使用した MacBookPro の CPU は Intel Core i7-7820HQ というモデルで、このモデルは4コア8スレッドだった。だから8つのプロセスが Fork できたのだろう。</p>
+<pre class="language-bash"><code class="language-bash">$ node -e <span class="token string">"console.log( require('os').cpus() )"</span>
+<span class="token punctuation">[</span> <span class="token punctuation">{</span> model: <span class="token string">'Intel(R) Core(TM) i7-7820HQ CPU @ 2.90GHz'</span>,
+    speed: <span class="token number">2900</span>,
+    times: <span class="token punctuation">{</span> user: <span class="token number">22561050</span>, nice: <span class="token number">0</span>, sys: <span class="token number">10492570</span>, idle: <span class="token number">187783350</span>, irq: <span class="token number">0</span> <span class="token punctuation">}</span> <span class="token punctuation">}</span>,
+  <span class="token punctuation">{</span> model: <span class="token string">'Intel(R) Core(TM) i7-7820HQ CPU @ 2.90GHz'</span>,
+    speed: <span class="token number">2900</span>,
+    times: <span class="token punctuation">{</span> user: <span class="token number">1412060</span>, nice: <span class="token number">0</span>, sys: <span class="token number">894360</span>, idle: <span class="token number">218515020</span>, irq: <span class="token number">0</span> <span class="token punctuation">}</span> <span class="token punctuation">}</span>,
+  <span class="token punctuation">{</span> model: <span class="token string">'Intel(R) Core(TM) i7-7820HQ CPU @ 2.90GHz'</span>,
+    speed: <span class="token number">2900</span>,
+    times: <span class="token punctuation">{</span> user: <span class="token number">19931150</span>, nice: <span class="token number">0</span>, sys: <span class="token number">5917620</span>, idle: <span class="token number">194972820</span>, irq: <span class="token number">0</span> <span class="token punctuation">}</span> <span class="token punctuation">}</span>,
+  <span class="token punctuation">{</span> model: <span class="token string">'Intel(R) Core(TM) i7-7820HQ CPU @ 2.90GHz'</span>,
+    speed: <span class="token number">2900</span>,
+    times: <span class="token punctuation">{</span> user: <span class="token number">1255140</span>, nice: <span class="token number">0</span>, sys: <span class="token number">730460</span>, idle: <span class="token number">218835770</span>, irq: <span class="token number">0</span> <span class="token punctuation">}</span> <span class="token punctuation">}</span>,
+  <span class="token punctuation">{</span> model: <span class="token string">'Intel(R) Core(TM) i7-7820HQ CPU @ 2.90GHz'</span>,
+    speed: <span class="token number">2900</span>,
+    times: <span class="token punctuation">{</span> user: <span class="token number">20051370</span>, nice: <span class="token number">0</span>, sys: <span class="token number">5997140</span>, idle: <span class="token number">194773040</span>, irq: <span class="token number">0</span> <span class="token punctuation">}</span> <span class="token punctuation">}</span>,
+  <span class="token punctuation">{</span> model: <span class="token string">'Intel(R) Core(TM) i7-7820HQ CPU @ 2.90GHz'</span>,
+    speed: <span class="token number">2900</span>,
+    times: <span class="token punctuation">{</span> user: <span class="token number">1252750</span>, nice: <span class="token number">0</span>, sys: <span class="token number">733980</span>, idle: <span class="token number">218834600</span>, irq: <span class="token number">0</span> <span class="token punctuation">}</span> <span class="token punctuation">}</span>,
+  <span class="token punctuation">{</span> model: <span class="token string">'Intel(R) Core(TM) i7-7820HQ CPU @ 2.90GHz'</span>,
+    speed: <span class="token number">2900</span>,
+    times: <span class="token punctuation">{</span> user: <span class="token number">19638190</span>, nice: <span class="token number">0</span>, sys: <span class="token number">5853950</span>, idle: <span class="token number">195329350</span>, irq: <span class="token number">0</span> <span class="token punctuation">}</span> <span class="token punctuation">}</span>,
+  <span class="token punctuation">{</span> model: <span class="token string">'Intel(R) Core(TM) i7-7820HQ CPU @ 2.90GHz'</span>,
+    speed: <span class="token number">2900</span>,
+    times: <span class="token punctuation">{</span> user: <span class="token number">1249330</span>, nice: <span class="token number">0</span>, sys: <span class="token number">727480</span>, idle: <span class="token number">218844460</span>, irq: <span class="token number">0</span> <span class="token punctuation">}</span> <span class="token punctuation">}</span> <span class="token punctuation">]</span>
+</code></pre>
+<ul>
+  <li>参考：<a href="https://ark.intel.com/content/www/jp/ja/ark/products/97496/intel-core-i7-7820hq-processor-8m-cache-up-to-3-90-ghz.html?ui=BIG">インテル® Core™ i7-7820HQ プロセッサー (8M キャッシュ、最大 3.90 GHz) 製品仕様</a></li>
+</ul>
+<p><code>cluster.worker.id</code> ないしは <code>worker.id</code> は、プロセスの生成順に 1 からの連番が振られるだけで特に意味なし。プロセス ID (PID) は <code>(cluster.)worker.process.pid</code> で確認できる。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">ps</span>
+  PID TTY           TIME CMD
+<span class="token number">57532</span> ttys000    <span class="token number">0</span>:00.06 -bash
+<span class="token number">53123</span> ttys002    <span class="token number">0</span>:00.09 /bin/bash -l
+<span class="token number">57329</span> ttys003    <span class="token number">0</span>:00.05 /bin/bash -l
+<span class="token number">58923</span> ttys003    <span class="token number">0</span>:00.24 <span class="token function">npm</span>  
+<span class="token number">58924</span> ttys003    <span class="token number">0</span>:00.15 node index.js
+<span class="token number">58925</span> ttys003    <span class="token number">0</span>:00.21 /Users/Neo/.nodebrew/node/v8.15.0/bin/node /Users/Neo/express-cluster-practice/index.js
+<span class="token number">58926</span> ttys003    <span class="token number">0</span>:00.21 /Users/Neo/.nodebrew/node/v8.15.0/bin/node /Users/Neo/express-cluster-practice/index.js
+<span class="token number">58927</span> ttys003    <span class="token number">0</span>:00.21 /Users/Neo/.nodebrew/node/v8.15.0/bin/node /Users/Neo/express-cluster-practice/index.js
+<span class="token number">58928</span> ttys003    <span class="token number">0</span>:00.21 /Users/Neo/.nodebrew/node/v8.15.0/bin/node /Users/Neo/express-cluster-practice/index.js
+<span class="token number">58929</span> ttys003    <span class="token number">0</span>:00.21 /Users/Neo/.nodebrew/node/v8.15.0/bin/node /Users/Neo/express-cluster-practice/index.js
+<span class="token number">58930</span> ttys003    <span class="token number">0</span>:00.21 /Users/Neo/.nodebrew/node/v8.15.0/bin/node /Users/Neo/express-cluster-practice/index.js
+<span class="token number">58931</span> ttys003    <span class="token number">0</span>:00.21 /Users/Neo/.nodebrew/node/v8.15.0/bin/node /Users/Neo/express-cluster-practice/index.js
+<span class="token number">58932</span> ttys003    <span class="token number">0</span>:00.21 /Users/Neo/.nodebrew/node/v8.15.0/bin/node /Users/Neo/express-cluster-practice/index.js
+<span class="token number">57819</span> ttys004    <span class="token number">0</span>:00.10 /bin/bash -l
+</code></pre>
+<p><code>ps</code> コマンドからも同じ PID が確認できる。</p>
+<p>この状態で、<code>curl</code> コマンドを3回ほど叩いてみる。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">curl</span> http://localhost:8080/
+</code></pre>
+<p>するとコンソールログには以下のように出力される。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span> <span class="token punctuation">[</span>PID <span class="token number">58925</span><span class="token punctuation">]</span> Request
+<span class="token punctuation">[</span><span class="token number">2</span><span class="token punctuation">]</span> <span class="token punctuation">[</span>PID <span class="token number">58926</span><span class="token punctuation">]</span> Request
+<span class="token punctuation">[</span><span class="token number">4</span><span class="token punctuation">]</span> <span class="token punctuation">[</span>PID <span class="token number">58928</span><span class="token punctuation">]</span> Request
+</code></pre>
+<p>リクエストごとに別々のプロセスで反応していることが分かる。リスンするポートはどのプロセスも <code>8080</code> 固定だが、<code>cluster</code> モジュールがロードバランサの機能も持っているので、気にせず Fork させられる。</p>
+<p>次に、Fork されたプロセスを一つ <code>kill</code> してみる。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">kill</span> <span class="token number">58925</span>
+</code></pre>
+<p>するとコンソールログには次のように出力される。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span> Worker died <span class="token builtin class-name">:</span> <span class="token punctuation">[</span>PID <span class="token number">58925</span><span class="token punctuation">]</span> <span class="token punctuation">[</span>Signal SIGTERM<span class="token punctuation">]</span> <span class="token punctuation">[</span>Code null<span class="token punctuation">]</span>
+<span class="token punctuation">[</span><span class="token number">9</span><span class="token punctuation">]</span> <span class="token punctuation">[</span>PID <span class="token number">59171</span><span class="token punctuation">]</span> Worker
+<span class="token punctuation">[</span><span class="token number">9</span><span class="token punctuation">]</span> <span class="token punctuation">[</span>PID <span class="token number">59171</span><span class="token punctuation">]</span> Server Started
+</code></pre>
+<p><code>cluster.on('exit')</code> 部分の実装により、PID <code>58925</code> のプロセスが死んだことを検知し、新たなワーカプロセスを Fork できている。何か問題が起こってワーカプロセスがクラッシュした時も、コレで上手く対応できる。</p>
+<h2 id="以上"><a class="header-link" href="#以上"><span class="header-link-mark"></span></a>以上</h2>
+<p>サクッと並列処理が実現できてよきよき。</p>
+<ul>
+  <li>参考：<a href="https://postd.cc/setting-up-a-node-js-cluster/">Node.jsのClusterをセットアップして、処理を並列化・高速化する | POSTD</a></li>
+  <li>参考：<a href="http://kaworu.jpn.org/javascript/node.js_cluster%E3%81%A7HTTP%E3%82%B5%E3%83%BC%E3%83%90%E3%82%92%E3%83%9E%E3%83%AB%E3%83%81%E3%83%97%E3%83%AD%E3%82%BB%E3%82%B9%E5%8C%96%E3%81%99%E3%82%8B">node.js clusterでHTTPサーバをマルチプロセス化する - Node.js/JavaScript入門</a></li>
+  <li>参考：<a href="https://code.i-harness.com/ja/docs/node/cluster">https://code.i-harness.com/ja/docs/node/cluster</a></li>
+  <li>参考：<a href="https://qiita.com/mkeisuke/items/76229aec7c4d513a1d2f">【Node.js+Express】Clusterモジュールでマルチスレッド化 - Qiita</a></li>
+  <li>参考：<a href="https://qiita.com/0x50/items/19ffa12e0cdb942af6d9">Express.jsで作ったアプリをクラスタ化する - Qiita</a> … express-cluster というラッパーモジュールもある</li>
+  <li>参考：<a href="https://qiita.com/shuntaro_tamura/items/4016868bda604baeac3c">【ps・kill】実行中のプロセス表示と強制終了 - Qiita</a></li>
+</ul>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2019-04-18</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2019-04-18</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

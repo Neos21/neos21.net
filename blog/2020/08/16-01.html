@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>GitHub Package Registry に npm パッケージを Publish してみた - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2020/08/16-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2020/index.html">2020年</a></li>
+            <li><a href="/blog/2020/08/index.html">08月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2020-08-16</time></div>
+        <h1 id="page-title">GitHub Package Registry に npm パッケージを Publish してみた</h1>
+
+<p>普段 npm パッケージを利用する際は、<code>registry.npmjs.org</code> という npm 公式のレジストリからダウンロードしている。</p>
+<ul>
+  <li>参考：<a href="https://docs.npmjs.com/using-npm/registry.html">npm-registry | npm Documentation</a></li>
+</ul>
+<p>npm レジストリは npm 公式以外にも存在し、GitHub にも <strong>GPR : GitHub Package Registry</strong> というレジストリが用意されている。</p>
+<p>npm 自体が GitHub に吸収されたので (<a href="https://github.blog/2020-04-15-npm-has-joined-github/">参考</a>)、GPR を使う意義がどのくらいあるかは分からないが、とりあえず試してみた。</p>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#github-actions-%E3%81%A7-gpr-%E3%81%AB-npm-publish-%E3%81%99%E3%82%8B">GitHub Actions で GPR に npm Publish する</a></li>
+  <li><a href="#gpr-%E3%81%AB-publish-%E3%81%97%E3%81%9F%E3%83%91%E3%83%83%E3%82%B1%E3%83%BC%E3%82%B8%E3%82%92%E4%BD%BF%E3%81%86%E3%81%AB%E3%81%AF">GPR に Publish したパッケージを使うには</a></li>
+  <li><a href="#%E3%82%AA%E3%83%9E%E3%82%B1%EF%BC%9Agpr-%E3%81%AE%E3%83%90%E3%83%BC%E3%82%B8%E3%83%A7%E3%83%B3%E3%83%90%E3%83%83%E3%82%B8%E3%82%92%E4%BD%9C%E3%82%8B">オマケ：GPR のバージョンバッジを作る</a></li>
+  <li><a href="#%E4%BB%A5%E4%B8%8A">以上</a></li>
+</ul>
+<h2 id="github-actions-で-gpr-に-npm-publish-する"><a class="header-link" href="#github-actions-で-gpr-に-npm-publish-する"><span class="header-link-mark"></span></a>GitHub Actions で GPR に npm Publish する</h2>
+<p>GPR への <code>npm publish</code> は <code>npm</code> コマンドでもできるが、レジストリの切り替えなどが面倒臭いので、<em>GitHub Actions</em> から行うことにする。</p>
+<p>前提となるプロジェクトでは、<code>@neos21/hoge</code> というように Owner 名を含んだスコープパッケージ名を <code>package.json</code> に定義しているものとする。<strong><code>publishConfig</code> オプションの指定は不要。</strong></p>
+<p><code>master</code> ブランチへの Push 時に起動し、<code>can-npm-publish</code> というパッケージで <code>npm publish</code> できそうかチェックした上で公開する、という Workflow を書いた。</p>
+<pre class="language-yaml"><code class="language-yaml"><span class="token key atrule">name</span><span class="token punctuation">:</span> Publish To GPR
+<span class="token key atrule">on</span><span class="token punctuation">:</span>
+  <span class="token key atrule">push</span><span class="token punctuation">:</span>
+    <span class="token key atrule">branches</span><span class="token punctuation">:</span>
+      <span class="token punctuation">-</span> master
+  <span class="token comment"># ↓ 手動で再実行できるように書いておく</span>
+  <span class="token key atrule">workflow_dispatch</span><span class="token punctuation">:</span>
+<span class="token key atrule">jobs</span><span class="token punctuation">:</span>
+  <span class="token key atrule">publish-to-gpr</span><span class="token punctuation">:</span>
+    <span class="token key atrule">runs-on</span><span class="token punctuation">:</span> ubuntu<span class="token punctuation">-</span>latest
+    <span class="token key atrule">steps</span><span class="token punctuation">:</span>
+      <span class="token punctuation">-</span> <span class="token key atrule">name</span><span class="token punctuation">:</span> Checkout
+        <span class="token key atrule">uses</span><span class="token punctuation">:</span> actions/checkout@v1
+      <span class="token punctuation">-</span> <span class="token key atrule">name</span><span class="token punctuation">:</span> Use Node.js And Setup .npmrc
+        <span class="token key atrule">uses</span><span class="token punctuation">:</span> actions/setup<span class="token punctuation">-</span>node@v1
+        <span class="token key atrule">with</span><span class="token punctuation">:</span>
+          <span class="token key atrule">node-version</span><span class="token punctuation">:</span> <span class="token string">'12.x'</span>
+          <span class="token comment"># ↓ GPR に接続するにはココで以下のレジストリ URL を指定する</span>
+          <span class="token key atrule">registry-url</span><span class="token punctuation">:</span> <span class="token string">'https://npm.pkg.github.com'</span>
+          <span class="token comment"># ↓ ユーザ名および package.json で指定したスコープに合わせる</span>
+          <span class="token key atrule">scope</span>       <span class="token punctuation">:</span> <span class="token string">'@neos21'</span>
+          <span class="token key atrule">always-auth</span> <span class="token punctuation">:</span> <span class="token boolean important">true</span>
+        <span class="token key atrule">env</span> <span class="token punctuation">:</span>
+          <span class="token key atrule">NODE_AUTH_TOKEN</span><span class="token punctuation">:</span> $<span class="token punctuation">{</span><span class="token punctuation">{</span> secrets.GITHUB_TOKEN <span class="token punctuation">}</span><span class="token punctuation">}</span>
+      <span class="token punctuation">-</span> <span class="token key atrule">name</span><span class="token punctuation">:</span> Can Publish
+        <span class="token key atrule">run</span> <span class="token punctuation">:</span> npx can<span class="token punctuation">-</span>npm<span class="token punctuation">-</span>publish <span class="token punctuation">-</span><span class="token punctuation">-</span>verbose
+        <span class="token key atrule">env</span> <span class="token punctuation">:</span>
+          <span class="token key atrule">NODE_AUTH_TOKEN</span><span class="token punctuation">:</span> $<span class="token punctuation">{</span><span class="token punctuation">{</span> secrets.GITHUB_TOKEN <span class="token punctuation">}</span><span class="token punctuation">}</span>
+      <span class="token punctuation">-</span> <span class="token key atrule">name</span><span class="token punctuation">:</span> Install
+        <span class="token key atrule">run</span> <span class="token punctuation">:</span> npm install
+        <span class="token key atrule">env</span> <span class="token punctuation">:</span>
+          <span class="token key atrule">NODE_AUTH_TOKEN</span><span class="token punctuation">:</span> $<span class="token punctuation">{</span><span class="token punctuation">{</span> secrets.GITHUB_TOKEN <span class="token punctuation">}</span><span class="token punctuation">}</span>
+      <span class="token punctuation">-</span> <span class="token key atrule">name</span><span class="token punctuation">:</span> Build
+        <span class="token key atrule">run</span> <span class="token punctuation">:</span> npm run build <span class="token punctuation">-</span><span class="token punctuation">-</span>if<span class="token punctuation">-</span>present
+        <span class="token key atrule">env</span> <span class="token punctuation">:</span>
+          <span class="token key atrule">NODE_AUTH_TOKEN</span><span class="token punctuation">:</span> $<span class="token punctuation">{</span><span class="token punctuation">{</span> secrets.GITHUB_TOKEN <span class="token punctuation">}</span><span class="token punctuation">}</span>
+      <span class="token punctuation">-</span> <span class="token key atrule">name</span><span class="token punctuation">:</span> Publish
+        <span class="token key atrule">run</span> <span class="token punctuation">:</span> npm publish <span class="token punctuation">-</span><span class="token punctuation">-</span>access=public
+        <span class="token key atrule">env</span> <span class="token punctuation">:</span>
+          <span class="token key atrule">NODE_AUTH_TOKEN</span><span class="token punctuation">:</span> $<span class="token punctuation">{</span><span class="token punctuation">{</span> secrets.GITHUB_TOKEN <span class="token punctuation">}</span><span class="token punctuation">}</span>
+</code></pre>
+<ul>
+  <li><code>workflow_dispatch</code> イベントは最近追加されたモノ。GitHub 画面上から Workflow を手動で実行できるようになる</li>
+  <li><em><code>actions/setup-node</code> にて <code>registry-url</code> と <code>scope</code> を指定する</em>のがミソ。コレで GPR を経由して <code>npm install</code> したり <code>npm publish</code> したりできる
+    <ul>
+      <li>GPR と接続するための認証トークンは、環境変数 <em><code>NODE_AUTH_TOKEN</code></em> で渡すのが決まり</li>
+      <li><code>NODE_AUTH_TOKEN</code> に渡すトークンは、<strong>GitHub が自動で用意してくれる <code>GITHUB_TOKEN</code> シークレット</strong>を渡せば良い。GitHub が自動的に用意してくれるので、自分で「Secrets」を用意する必要はない</li>
+      <li>GPR にない npm パッケージは、npmjs.org にプロキシされるので、<code>npm install</code> なんかも普通に動く。とりあえず <code>npm</code> コマンドを叩く全ての Step で <code>NODE_AUTH_TOKEN</code> を指定している</li>
+    </ul>
+  </li>
+  <li><code>can-npm-publish</code> は <code>npx</code> で実行する。<code>package.json</code> のバージョン番号を見て、既に当該バージョンが公開されていたら、このコマンドがエラーで終了する。コレにより、以降の Step が動かないように制御してある</li>
+  <li><code>npm install</code> は依存パッケージがなければ何の影響もないので、どんなパッケージにもこのまま流用できるだろう</li>
+  <li><code>npm run build</code> には <code>--if-present</code> オプションを付けている。ビルドが必要なく、<code>package.json</code> で <code>build</code> スクリプトを用意していないパッケージでも、エラーにならず続行できる。どんなパッケージにもこのまま流用できるだろう</li>
+  <li><code>npm publish</code> に <code>--access=public</code> オプションを付けているが、付けなくても Publish はできた。念のため付けてある感じ</li>
+</ul>
+<p>とまぁこんな感じ。</p>
+<p>GitHub Actions のことも GitHub Package Registry のことも、イマイチ分かりやすいコードが見当たらず、試行錯誤の結果、コレで Publish できた。</p>
+<h2 id="gpr-に-publish-したパッケージを使うには"><a class="header-link" href="#gpr-に-publish-したパッケージを使うには"><span class="header-link-mark"></span></a>GPR に Publish したパッケージを使うには</h2>
+<p>こうして GPR に公開した npm パッケージを、今度は使用する側に回る。</p>
+<p>まず <code>~/.npmrc</code> に次の1行を追記する。</p>
+<pre><code>registry=https://npm.pkg.github.com/【Owner 名】
+</code></pre>
+<p>Owner 名は、先程 <code>npm publish</code> したパッケージの Owner 名を指定する。例えば僕のパッケージなら</p>
+<pre><code>registry=https://npm.pkg.github.com/neos21
+</code></pre>
+<p>とする。</p>
+<p>続いて <code>npm login</code> する。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">npm</span> login --registry<span class="token operator">=</span>https://npm.pkg.github.com
+</code></pre>
+<p>ユーザ名、パスワード、メールアドレスを聞かれるので、GitHub のユーザ名、パスワード、メールアドレスを入力する。ログイン時に二段階認証を使っている場合は、パスワードは API Token を使うこと。<code>git push</code> 時の認証と同じ考え。</p>
+<p>ログインできると、<code>~/.npmrc</code> に次の1行が追記される。コレを直接書いてしまっても同じ効果になる。</p>
+<pre><code>//npm.pkg.github.com/:_authToken=【トークン文字列】
+</code></pre>
+<p>よって、<code>~/.npmrc</code> に以下の2行があれば、GPR からパッケージを取得できるようになる。</p>
+<pre><code>registry=https://npm.pkg.github.com/【Owner 名】
+//npm.pkg.github.com/:_authToken=【トークン文字列】
+</code></pre>
+<p>あとは指定した Owner 名の配下のパッケージを <code>npm install</code> してみたりすれば良い。<code>--verbose</code> を付ければキチンと GPR からダウンロードしていることが分かる。</p>
+<h2 id="オマケ：gpr-のバージョンバッジを作る"><a class="header-link" href="#オマケ：gpr-のバージョンバッジを作る"><span class="header-link-mark"></span></a>オマケ：GPR のバージョンバッジを作る</h2>
+<p>Sheilds.io というバッジを作成できるサービスも、GPR に対応しているので、GPR のバージョンバッジが作れるようになった。次のような Markdown を書けば良い。</p>
+<pre class="language-markdown"><code class="language-markdown"><span class="token url">![<span class="token content">GPR Version</span>](https://img.shields.io/github/package-json/v/neos21/npm-neos21?label=gpr)</span>
+</code></pre>
+<ul>
+  <li><code>/v/【ユーザ名】/【リポジトリ名】</code> と指定する</li>
+  <li><code>?label=gpr</code> 部分は、ラベル名を任意で指定できる</li>
+</ul>
+<p>GPR パッケージは一度公開すると次のような URL を生成する。</p>
+<ul>
+  <li><code>https://github.com/Neos21/npm-neos21/packages/</code>
+    <ul>
+      <li>当該リポジトリ配下で <code>npm publish</code> されたパッケージ一覧ページ</li>
+      <li>モノレポに対応するためか、このような一覧ページが存在する</li>
+    </ul>
+  </li>
+  <li><code>https://github.com/Neos21/npm-neos21/packages/323375</code>
+    <ul>
+      <li>パッケージ一つのページ</li>
+      <li>一度でも <code>npm publish</code> すると末尾の番号部分が自動採番される</li>
+      <li>バージョンアップしても URL は変わらない</li>
+    </ul>
+  </li>
+</ul>
+<p>コレをリンクに組み込んでも良いだろう。</p>
+<pre class="language-markdown"><code class="language-markdown"><span class="token url">[<span class="token content">![NPM Version</span>](https://img.shields.io/npm/v/@neos21/neos21.svg)</span>](https://www.npmjs.com/package/@neos21/neos21)
+
+<span class="token url">[<span class="token content">![GPR Version</span>](https://img.shields.io/github/package-json/v/neos21/npm-neos21?label=gpr)</span>](https://github.com/Neos21/npm-neos21/packages/323375)
+</code></pre>
+<p>こんな風に Markdown を書けば、npm と GPR のバージョンバッジを両方並べられる。</p>
+<h2 id="以上"><a class="header-link" href="#以上"><span class="header-link-mark"></span></a>以上</h2>
+<p>GitHub Package Registry への npm Publish を GitHub Actions で自動化し、それを利用する方法も押さえた。</p>
+<p>一般的なパッケージの利用ではあまり GPR を使うことは少ないかもしれないが、社内向けのプライベートレジストリとして使うような機会はあり得るので、知っておくと良いかと。</p>
+<ul>
+  <li>参考：<a href="https://docs.github.com/en/actions/language-and-framework-guides/publishing-nodejs-packages#publishing-packages-to-npm-and-github-packages">Publishing Node.js packages - GitHub Docs</a></li>
+  <li>参考：<a href="https://docs.github.com/ja/packages/using-github-packages-with-your-projects-ecosystem/configuring-npm-for-use-with-github-packages">GitHub Packagesで利用するためにnpmを設定する - GitHub Docs</a></li>
+  <li>参考：<a href="https://qiita.com/nall/items/5e94f37288c3e796a85e">GitHub Package Registry を npm で使う - Qiita</a></li>
+  <li>参考：<a href="https://dev.classmethod.jp/articles/github-actions-npm-automatic-release/">GitHub Actionsでnpmに自動でリリースするworkflowを作ってみた | Developers.IO</a></li>
+  <li>参考：<a href="https://github.com/github/learning-lab-components/issues/55">Add version badge to README · Issue #55 · github/learning-lab-components · GitHub</a></li>
+</ul>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2020-08-16</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2020-08-16</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>外部から Docker コンテナに環境変数を注入する方法 - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2019/03/18-02.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2019/index.html">2019年</a></li>
+            <li><a href="/blog/2019/03/index.html">03月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2019-03-18</time></div>
+        <h1 id="page-title">外部から Docker コンテナに環境変数を注入する方法</h1>
+
+<p>Docker コンテナ内で使用する環境変数を、Docker コンテナ起動時に注入する方法。</p>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#dockerfile-%E3%81%AE-env-%E5%91%BD%E4%BB%A4%E3%81%A0%E3%81%A8%E5%88%87%E3%82%8A%E6%9B%BF%E3%81%88%E3%81%8C%E9%9B%A3%E3%81%97%E3%81%84"><code>Dockerfile</code> の <code>ENV</code> 命令だと切り替えが難しい</a></li>
+  <li><a href="#-e---env-%E3%82%AA%E3%83%97%E3%82%B7%E3%83%A7%E3%83%B3"><code>-e</code> (<code>--env</code>) オプション</a></li>
+  <li><a href="#--env-file-%E3%82%AA%E3%83%97%E3%82%B7%E3%83%A7%E3%83%B3%E3%81%A7%E4%B8%80%E6%8B%AC%E8%A8%AD%E5%AE%9A"><code>--env-file</code> オプションで一括設定</a></li>
+</ul>
+<h2 id="dockerfile-の-env-命令だと切り替えが難しい"><a class="header-link" href="#dockerfile-の-env-命令だと切り替えが難しい"><span class="header-link-mark"></span></a><code>Dockerfile</code> の <code>ENV</code> 命令だと切り替えが難しい</h2>
+<p>Docker コンテナ内で使用する環境変数をどう定義するか、というと、まず思いつくのは <code>Dockerfile</code> の <code>ENV</code> 命令だ。</p>
+<pre class="language-dockerfile"><code class="language-dockerfile"><span class="token keyword">FROM</span> centos
+
+<span class="token comment"># 環境変数を設定する</span>
+<span class="token keyword">ENV</span> MY_ENV Hello
+
+<span class="token comment"># Docker ビルド中に環境変数を参照する</span>
+<span class="token keyword">RUN</span> <span class="token keyword">env</span>
+
+<span class="token comment"># Docker コンテナ起動時に環境変数を出力させてみる</span>
+<span class="token keyword">CMD</span> <span class="token punctuation">[</span><span class="token string">"env"</span><span class="token punctuation">]</span>
+</code></pre>
+<p>確かにコレでも環境変数を定義できるが、異なる環境変数を設定したくなった時は Docker イメージのビルドからやり直す必要がある。<em>環境変数しか違いがないのに Docker イメージをまるっと作り直すのは、思わぬ差分を含めてしまうリスクがあるので避けたい。</em></p>
+<ul>
+  <li>参考：<a href="https://techblog.recochoku.jp/1979">Dockerfileの"ENV"と"ARG"と"環境変数"について | レコチョクのエンジニアブログ</a></li>
+</ul>
+<h2 id="-e---env-オプション"><a class="header-link" href="#-e---env-オプション"><span class="header-link-mark"></span></a><code>-e</code> (<code>--env</code>) オプション</h2>
+<p>そこで登場するのが <em><code>-e</code> (<code>--env</code>) オプション</em>。<code>docker run</code> のタイミングでオプション引数として渡せるのだ。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># -e オプションで環境変数を設定しながらコンテナを起動</span>
+$ docker run -e <span class="token assign-left variable">MY_ENV</span><span class="token operator">=</span>Hello -it my-container <span class="token function">bash</span>
+
+<span class="token comment"># コンテナ内で環境変数が確認できる</span>
+<span class="token variable">$$</span> <span class="token builtin class-name">echo</span> <span class="token variable">$MY_ENV</span>
+</code></pre>
+<ul>
+  <li>参考：<a href="https://qiita.com/yuki2006/items/6cea8c352e38f047b52a">dockerのコンテナ実行時にLANGなどの環境変数を設定する方法 - Qiita</a></li>
+  <li>参考：<a href="https://blog.amedama.jp/entry/2018/01/30/230221">Docker コンテナの動作に必要な設定を起動時に渡す - CUBE SUGAR CONTAINER</a></li>
+</ul>
+<h2 id="--env-file-オプションで一括設定"><a class="header-link" href="#--env-file-オプションで一括設定"><span class="header-link-mark"></span></a><code>--env-file</code> オプションで一括設定</h2>
+<p>さらに便利な <strong><code>--env-file</code> オプション</strong>というモノもある。コチラは以下のような、いわゆる「Dot Env (<code>.env</code>)」ファイルの形式で用意した環境変数を一括で設定してくれるのだ。</p>
+<ul>
+  <li><code>my-docker-env.txt</code></li>
+</ul>
+<pre class="language-bash"><code class="language-bash"><span class="token assign-left variable">MY_ENV</span><span class="token operator">=</span>Hello
+<span class="token assign-left variable">MY_ANOTHER_ENV</span><span class="token operator">=</span>GoodBye
+</code></pre>
+<p>コレを以下のように読み込ませて使う。</p>
+<pre class="language-bash"><code class="language-bash">$ docker run --env-file<span class="token operator">=</span>./my-docker-env.txt -it my-container <span class="token function">bash</span>
+</code></pre>
+<p>コレを使えば、</p>
+<ul>
+  <li>ローカル開発中は npm パッケージの <code>dotenv</code> みたいなヤツを使って環境変数を設定して動作確認し、</li>
+  <li>Docker ビルド後はコンテナ起動時に <code>--env-file</code> オプションで読み込ませて動作させる</li>
+</ul>
+<p>みたいに切り替えられるだろう。</p>
+<ul>
+  <li>参考：<a href="https://www.kabegiwablog.com/entry/2018/07/25/100000">docker run -e --env-file で環境変数を設定してコンテナを起動する - かべぎわブログ</a></li>
+</ul>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2019-03-18</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2019-03-18</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

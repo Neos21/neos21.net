@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>JavaScript だけでブラウザ上からスマホの向きや動きを知る … 1 DeviceOrientation 編 - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2017/10/20-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2017/index.html">2017年</a></li>
+            <li><a href="/blog/2017/10/index.html">10月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2017-10-20</time></div>
+        <h1 id="page-title">JavaScript だけでブラウザ上からスマホの向きや動きを知る … 1 DeviceOrientation 編</h1>
+
+<p><strong>DeviceOrientationEvent</strong> と <strong>DeviceMotionEvent</strong> というイベント API を利用すると、JavaScript のコードだけで端末の画面の向きやモーションを知ることができる。</p>
+<p>端末の画面の傾きや、端末がどれだけ素早く動いたかとか、そんなことを知ってどうするのかというと、主にゲームやインタラクティブな UI の構築に使えたりする。</p>
+<ul>
+  <li>端末を横に傾けている度合いに応じて画面の要素が動く Web デザインとか<br>(iPhone の壁紙の視差効果みたいなことができる)</li>
+  <li>モーションイベントから端末のシェイク動作を検知してデータ更新処理を呼び出すとか<br>(iPhone だと「振って入力文字列の修正」ができたりするが、こういう操作に応用する)</li>
+  <li>端末を勢い良く振るとゲーム内のキャラクターがジャンプする<br>(今の人はゲームボーイカラーの「コロコロカービィ」ってご存知ですか…？あれもカセットに埋め込まれたジャイロセンサーによって、ゲームボーイを振るとカービィが動いたりジャンプしたりするゲームでした…)</li>
+</ul>
+<p>今回は、<em>デバイスが現在どのような向きであるかを示す DeviceOrientationEvent</em> を取り上げて、どのように情報を取得するか紹介する。</p>
+<p>以下の GitHub Pages にサンプルを作ったので、コチラを見ながら読んでみてほしい。</p>
+<ul>
+  <li><a href="https://neos21.github.io/poc-ios-safari-web/js-api-access-1.html">iOS Safari Web Test</a></li>
+</ul>
+<h2 id="対象ブラウザがイベントを取得できるかの検知"><a class="header-link" href="#対象ブラウザがイベントを取得できるかの検知"><span class="header-link-mark"></span></a>対象ブラウザがイベントを取得できるかの検知</h2>
+<p>対象のブラウザが DeviceOrientation (方位センサー) イベントを使えるかどうかは、以下の方法で確認できる。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword control-flow">if</span><span class="token punctuation">(</span><span class="token maybe-class-name">DeviceOrientationEvent</span> <span class="token keyword">in</span> <span class="token dom variable">window</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token comment">// 方位センサーが使える</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>イベント登録は <code>window.addEventListener()</code> で行うのだが、これに対応するイベントオブジェクトが <code>window</code> 配下に存在するのだ。他にも <code>window.ondeviceorientation</code> という <code>window.onload</code> 的なプロパティもいるので、これの存在確認でも良いかもしれない。</p>
+<h2 id="deviceorientationevent-の取得方法"><a class="header-link" href="#deviceorientationevent-の取得方法"><span class="header-link-mark"></span></a>DeviceOrientationEvent の取得方法</h2>
+<p>以下のように <code>window</code> のイベントとして、デバイスの方向や傾きを調べることができる。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token dom variable">window</span><span class="token punctuation">.</span><span class="token method function property-access">addEventListener</span><span class="token punctuation">(</span><span class="token string">'deviceorientation'</span><span class="token punctuation">,</span> <span class="token keyword">function</span><span class="token punctuation">(</span><span class="token parameter">event</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'方角       : '</span> <span class="token operator">+</span> event<span class="token punctuation">.</span><span class="token property-access">alpha</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'上下の傾き : '</span> <span class="token operator">+</span> event<span class="token punctuation">.</span><span class="token property-access">beta</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'左右の傾き : '</span> <span class="token operator">+</span> event<span class="token punctuation">.</span><span class="token property-access">gamma</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  
+  <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'コンパスの向き : '</span> <span class="token operator">+</span> event<span class="token punctuation">.</span><span class="token property-access">webkitCompassHeading</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'コンパスの精度 : '</span> <span class="token operator">+</span> event<span class="token punctuation">.</span><span class="token property-access">webkitCompassAccuracy</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<ul>
+  <li><code>alpha</code> : デバイスを縦に持った時の頭側がどちらの方角を向いているか。机の上にデバイスを置いてやると分かりやすい。0度が北。机にデバイスを置いたままデバイスを左に回転させていくと、90度で西、180度で南、270度で東となる。</li>
+  <li><code>beta</code> : デバイスの上下の傾きを調べる。デバイスを机の上に水平に置くと0度。通常デバイスを握って垂直にした方向が90度。これとは逆にデバイスを逆さにする方向で垂直にすると-90度。</li>
+  <li><code>gamma</code> : デバイスの左右の傾きを調べる。水平にした0度を基準に、左に回転させていくと-90度、右に回転させていくと90度。</li>
+</ul>
+<p>端末を垂直にしたり、逆さまにしたりすると、値が180度入れ替わったりするので扱いには注意が必要。</p>
+<ul>
+  <li>参考：<a href="http://www.antytle.com/js/device-orientation-event">デバイスの傾き、方角、加速度を取得できる「Device Orientation Event」-AnTytle Gaming Media</a> … 傾きの方向の図解あり。</li>
+</ul>
+<p>iPhone の場合はさらに <code>webkitCompassHeading</code> と <code>webkitCompassAccuracy</code> という情報もある。<code>webkitCompassHeading</code> は iOS 5 以降から追加されたもので、iPhone のデシタルコンパスの情報が参照できる。<code>alpha</code> と同様の情報が扱いやすい形で取得できる。<code>webkitCompassAccuracy</code> はコンパスの精度を示していて、その数値分、前後に誤差があるということ。</p>
+<ul>
+  <li>参考：<a href="http://kazuph.hateblo.jp/entry/20120429/1335693938">webkitCompassHeadingでSafariからでも電子コンパスの情報を取得可能。ただしiOS 5.0 以上から。 - 僕のYak Shavingは終わらない</a> … webkitCompassHeading についてサンプルコード。</li>
+  <li>参考：<a href="http://qiita.com/umi_kappa/items/38499c03792b2aac49ad">一部端末で方角がwebkitCompassHeadingで取得できなくなっている？ので実装した iOS,Android - Qiita</a></li>
+</ul>
+<hr>
+<p>これで、端末が現在どのような向きを向いているかが分かるので、コンパスを作ったり、AR 的なことをやるのに使えるかと思う。</p>
+<p>なお、<em>このイベントは絶えず物凄い速度で呼び出される</em>ので、<code>console.log()</code> を仕込んでうっかり開発者ツールを開いたりすると、物凄い量のコンソールログにヤラれるので注意。イベントに応じて何か処理を行うにしても、一定の閾値を設けて実行するなど工夫したい。</p>
+<h2 id="参考文献"><a class="header-link" href="#参考文献"><span class="header-link-mark"></span></a>参考文献</h2>
+<ul>
+  <li><a href="https://developers.google.com/web/fundamentals/native-hardware/device-orientation/?hl=ja">端末画面の向きと端末のモーション  |  Web  |  Google Developers</a> … 図説もあり分かりやすい。</li>
+</ul>
+<p>DeviceMotion・DeviceOrientation 両方のサンプルコードが載っているサイトたち。</p>
+<ul>
+  <li><a href="http://1010real.hateblo.jp/entry/2014/04/21/213118">javascriptでデバイスの向きと加速度を取得 - とある角度から</a></li>
+  <li><a href="http://www.yoheim.net/blog.php?q=20130201">JS iPhoneに搭載されているセンターの値を、JavaScriptから取得する - YoheiM .NET</a></li>
+  <li><a href="https://matome.naver.jp/odai/2140737862157033401">Webアプリ入門（HTML5+JavaScript) 6章センサー - NAVER まとめ</a></li>
+</ul>
+<p>続編は以下。</p>
+<ul>
+  <li><a href="/blog/2017/10/21-02.html">JavaScript だけでブラウザ上からスマホの向きや動きを知る … 2 DeviceMotion 編</a></li>
+</ul>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2017-10-20</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2017-10-20</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

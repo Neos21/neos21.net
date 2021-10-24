@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>Ansible を Docker コンテナに対して適用するためのお試し環境を作った - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2020/01/09-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2020/index.html">2020年</a></li>
+            <li><a href="/blog/2020/01/index.html">01月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2020-01-09</time></div>
+        <h1 id="page-title">Ansible を Docker コンテナに対して適用するためのお試し環境を作った</h1>
+
+<p>RedHat が開発する構成管理ツールである <strong>Ansible</strong>。サーバに対して行いたい設定を Playbook と呼ばれる YAML ファイルに起こして実行できる、いわゆる IaC : Infrastructure as Code を実現できるツールだ。1台のマスター・サーバから複数のスレーブ・サーバに対して同様のセットアップ処理を行わせたりできて、とても便利だ。</p>
+<p>しかし、そんな Ansible のスクリプトを構築していく際、試しにスクリプトを適用できるサーバをホイホイと用意するのは難しい。自前で別の PC マシンを用意するにしても、Ansible に構築させた環境を一旦削除してやり直したい時もあるだろうし、クラウドでインスタンスを払い出すにしても、お金がかかって仕方ない。</p>
+<p>そこで今回は、<em>Ansible スクリプトを「試し打ち」する対象に Docker コンテナを使う</em>ことにした。手元のホストマシンに必要なのは Docker の実行環境のみ。Ansible をすぐに動かし始められるサンプルプロジェクトを作ったので、紹介していく。</p>
+<h2 id="サンプルプロジェクトの紹介"><a class="header-link" href="#サンプルプロジェクトの紹介"><span class="header-link-mark"></span></a>サンプルプロジェクトの紹介</h2>
+<p>以降で紹介していくサンプルプロジェクトは以下。</p>
+<ul>
+  <li><a href="https://github.com/Neos21/practice-ansible-docker">Neos21/practice-ansible-docker</a></li>
+</ul>
+<p>とりあえず動かしてみたい人は、<code>README.md</code> のとおりにコマンドを叩いてみれば良い。</p>
+<h2 id="詳細説明"><a class="header-link" href="#詳細説明"><span class="header-link-mark"></span></a>詳細説明</h2>
+<h3 id="構成"><a class="header-link" href="#構成"><span class="header-link-mark"></span></a>構成</h3>
+<p>このサンプルプロジェクトでは、以下の3つのコンテナを用意している。</p>
+<ol>
+  <li><code>ansible-server</code> : Ansible の実行環境 (<code>ansible-playbook</code> コマンドがインストールされている)</li>
+  <li><code>target-1</code> : 処理を行わせたいサーバのテイで用意した CentOS コンテナ</li>
+  <li><code>target-2</code> : 処理を行わせたいサーバのテイで用意した Debian コンテナ</li>
+</ol>
+<p>これら3つのコンテナを、<code>docker-compose</code> コマンドで一気に起動できるようにしてある。</p>
+<pre class="language-bash"><code class="language-bash">$ docker-compose up -d
+</code></pre>
+<p>コンテナ3つとも <code>docker exec</code> で <code>bash</code> のセッションに接続できるが、メインで使用するのは <code>ansible-server</code> だけだ。<strong><code>ansible-server</code> にて <code>ansible-playbook</code> コマンドを実行して、<code>target-1</code> サーバと <code>target-2</code> サーバに同じ設定を行わせる</strong>、という関係である。</p>
+<h3 id="ansible-実行環境と設定ファイル"><a class="header-link" href="#ansible-実行環境と設定ファイル"><span class="header-link-mark"></span></a>Ansible 実行環境と設定ファイル</h3>
+<p>というワケで <code>ansible-server</code> コンテナに接続する。</p>
+<pre class="language-bash"><code class="language-bash">$ docker <span class="token builtin class-name">exec</span> -it ansible-server /bin/bash
+</code></pre>
+<p><code>ansible-server</code> コンテナは、このサンプルプロジェクトのルートディレクトリを <code>/var/data</code> ディレクトリにマウントしている。Ansible の処理内容を書く Playbook ファイルや、接続先を示す Inventry (Hosts) ファイルは <code>./ansible/</code> ディレクトリに格納してある。</p>
+<p>接続先を示す Inventry (Hosts) ファイルは、たった3行。見てもらうと分かるが、ホスト名と、それをグルーピングする名前を指定しているだけ。</p>
+<ul>
+  <li><code>./ansible/inventry-hosts.ini</code></li>
+</ul>
+<pre class="language-properties"><code class="language-properties">[target]
+target-1
+target-2
+</code></pre>
+<p>そして Playbook ファイルの方は、<code>echo</code> とリダイレクトを使って、<code>/tmp/</code> 配下にファイルを生成するだけ、というシンプルなサンプルコードを載せている。この中の <code>hosts:</code> プロパティで、上のインベントリファイルでいう <code>[target]</code> グループを指定している。</p>
+<ul>
+  <li><code>./ansible/playbook.yaml</code></li>
+</ul>
+<pre class="language-yaml"><code class="language-yaml"><span class="token punctuation">-</span> <span class="token key atrule">hosts</span><span class="token punctuation">:</span> target
+  <span class="token key atrule">tasks</span><span class="token punctuation">:</span>
+  <span class="token punctuation">-</span> <span class="token key atrule">name</span><span class="token punctuation">:</span> Make test file
+    <span class="token key atrule">shell</span><span class="token punctuation">:</span> <span class="token punctuation">|</span><span class="token scalar string">
+      echo 'Test' > /tmp/ansible-docker-test.txt</span>
+</code></pre>
+<p><code>ansible-playbook</code> コマンドで使用するのは以上の2つのファイルのみだ。</p>
+<h3 id="ansible-実行環境から操作対象ホストへの-ssh-接続"><a class="header-link" href="#ansible-実行環境から操作対象ホストへの-ssh-接続"><span class="header-link-mark"></span></a>Ansible 実行環境から操作対象ホストへの SSH 接続</h3>
+<p><code>ansible-server</code> から、<code>target-1</code> と <code>target-2</code> へは、SSH 接続できる必要がある。実際に <code>ansible-server</code> コンテナ内で、<code>ssh</code> コマンドを叩いて確かめてみよう。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># Ansible コンテナから Target 1 コンテナに SSH できるか確認する</span>
+<span class="token variable">$$</span> <span class="token function">ssh</span> target-1
+<span class="token comment"># 初回のみ `yes` と回答する</span>
+<span class="token comment"># `root@target-1's password:` にパスワードを入力する</span>
+</code></pre>
+<p>パスワードは <code>./docker/target-1/Dockerfile</code> にて設定していて、<code>mypassword</code> である。SSH 接続時に公開鍵認証方式ではなく、パスワード認証方式を利用しているサーバ、というテイにしている。この辺りは、このサンプルプロジェクトを簡素化するためにこのようにしたもので、鍵認証でも Ansible は使える。</p>
+<p>パスワードを入力して SSH 接続すると、<code>ansible-server</code> コンテナ内で、<code>target-1</code> コンテナの中に入れたことになる。<code>$ cat /etc/os-release</code> などを叩いてみて、CentOS 環境であることを確認して欲しい。</p>
+<p>同様に、<code>target-2</code> へも接続できる。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># Ansible コンテナから Target 2 コンテナに SSH できるか確認する</span>
+<span class="token variable">$$</span> <span class="token function">ssh</span> target-2
+<span class="token comment"># 初回のみ `yes` と回答する</span>
+<span class="token comment"># `root@target-2's password:` にパスワードを入力する</span>
+</code></pre>
+<p>パスワードは <code>./docker/target-2/Dockerfile</code> で設定しているとおり、<code>mypassword</code> (<code>target-1</code> のパスワードと同じ)。コチラは Debian サーバだ。</p>
+<h3 id="ansible-を実行してみる"><a class="header-link" href="#ansible-を実行してみる"><span class="header-link-mark"></span></a>Ansible を実行してみる</h3>
+<p>操作対象のサーバと接続できることが確認できたら、実際に Ansible を実行してみよう。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># Ansible を実行する</span>
+<span class="token variable">$$</span> ansible-playbook -i ./ansible/inventry-hosts.ini ./ansible/playbook.yaml --ask-pass
+<span class="token comment"># SSH パスワードを入力する</span>
+</code></pre>
+<p><code>-i</code> オプションでインベントリファイル (接続先) を指定する。メインで Playbook ファイルを指定すれば、そのとおりに処理が行われていくというワケだ。ココで、今回用意した2台のサーバコンテナは、パスワードで SSH 接続するので、<code>--ask-pass</code> オプションを付けて、SSH 接続時のパスワードを入力するようにしている。ココでは <code>target-1</code> と <code>target-2</code> で同じ値にしていた <code>mypassword</code> を入力する。</p>
+<p>すると、各コンテナの <code>/tmp/</code> 配下に <code>ansible-docker-test.txt</code> というファイルが生成されるはずだ。</p>
+<p>以上で Ansible を実行するところまでは試せたと思うので、あとは <code>./ansible/playbook.yaml</code> を実装していって、それぞれのコンテナに設定が加えていけるか、試していってほしい。</p>
+<h3 id="コンテナを停止する"><a class="header-link" href="#コンテナを停止する"><span class="header-link-mark"></span></a>コンテナを停止する</h3>
+<p>立ち上げたコンテナを停止・破棄するには、次のコマンドを実行する。</p>
+<pre class="language-bash"><code class="language-bash">$ docker-compose <span class="token function">rm</span> --stop --force
+</code></pre>
+<p>やっていることは <code>$ docker rm -f 【Container ID】</code> を3台分繰り返したのと同じだ。</p>
+<h2 id="dockerfile-の準備が地味に大変だった"><a class="header-link" href="#dockerfile-の準備が地味に大変だった"><span class="header-link-mark"></span></a>Dockerfile の準備が地味に大変だった…</h2>
+<p>ココからは、このお試しキットを作るまでのお話。</p>
+<h3 id="ansible-実行環境コンテナを作る"><a class="header-link" href="#ansible-実行環境コンテナを作る"><span class="header-link-mark"></span></a>Ansible 実行環境コンテナを作る</h3>
+<p>まず <code>ansible</code> コマンドや <code>ansible-playbook</code> コマンドが使える環境を作りたく、Ansible の公式イメージを探したのだが、Ansible 公式では Docker イメージのメンテを止めているようだった。</p>
+<ul>
+  <li>参考：<a href="https://hub.docker.com/r/ansible/ansible">Docker Hub</a>
+    <ul>
+      <li>↑ コレは Ansible のテスト用イメージらしく <code>ansible</code> コマンドは同梱されていない</li>
+    </ul>
+  </li>
+  <li>参考：<a href="https://hub.docker.com/r/ansible/centos7-ansible">Docker Hub</a>
+    <ul>
+      <li>↑ メンテが止まっているイメージ</li>
+    </ul>
+  </li>
+</ul>
+<p>メンテが止まっている Dockerfile は以下。</p>
+<ul>
+  <li>参考：<a href="https://github.com/ansible/ansible-docker-base/blob/69b40cdcec441ebcc73dfa5da9f5ae47a0539675/stable-centos7/Dockerfile">ansible-docker-base/Dockerfile at 69b40cdcec441ebcc73dfa5da9f5ae47a0539675 · ansible/ansible-docker-base · GitHub</a></li>
+</ul>
+<p>CentOS 7 イメージに Ansible をインストールしているだけなので、自前でやることにする。Python 関連のライブラリも指定されているが、単純に <code>yum install ansible</code> だけで大丈夫そうだ。</p>
+<ul>
+  <li>参考：<a href="https://docs.docker.com/engine/examples/running_ssh_service/">Dockerize an SSH service | Docker Documentation</a></li>
+</ul>
+<p>また、操作対象ホストに <code>ssh</code> コマンドで接続確認できるようにしておきたいので、<code>yum install git</code> で Git とともに <code>ssh</code> コマンドを入れておく。</p>
+<p>以上のような Docker イメージで、とりあえず <code>ansible</code>・<code>ansible-playbook</code>・<code>ssh</code> コマンドが動作する状態になった。</p>
+<h3 id="パスワードで-ssh-ログインできる-centos-環境を作る"><a class="header-link" href="#パスワードで-ssh-ログインできる-centos-環境を作る"><span class="header-link-mark"></span></a>パスワードで SSH ログインできる CentOS 環境を作る</h3>
+<p>続いて、SSH 接続して Ansible を実行する、対象のサーバ <code>target-1</code> を作る。ベースイメージは <code>ansible-server</code> と同じ CentOS 7 系。</p>
+<p>SSH 接続される環境を用意するには、<code>yum install openssh-server</code> を実施しておく。その上で、Docker イメージはデフォルトでは <code>root</code> ユーザしかいないので、<code>root</code> ユーザで SSH ログインできるように色々設定した。</p>
+<ul>
+  <li><code>/usr/sbin/sshd -D</code> 実行時に <code>Could not load host key:</code> と怒られるので、<code>ssh-keygen</code> で鍵ペアを3つ作っておいた</li>
+  <li><code>/etc/ssh/sshd_config</code> にて <code>PermitEmptyPasswords yes</code> と設定する</li>
+  <li><code>chpasswd</code> を使って <code>root</code> ユーザのパスワードを <code>mypassword</code> に設定する
+    <ul>
+      <li><code>Dockerfile</code> 中の <code>echo 'root:mypassword' | chpasswd</code> という部分。パスワード文字列を変更したい場合はココを変える</li>
+    </ul>
+  </li>
+</ul>
+<p>さらに SSH 接続用に22番ポートを開放 (<code>EXPOSE</code>) し、<code>sshd</code> を起動しておく。</p>
+<h3 id="パスワードで-ssh-ログインできる-debian-環境を作る"><a class="header-link" href="#パスワードで-ssh-ログインできる-debian-環境を作る"><span class="header-link-mark"></span></a>パスワードで SSH ログインできる Debian 環境を作る</h3>
+<p>同様に、<code>root</code> ユーザで SSH ログインできる、Debian OS 環境を作っていく。やることは CentOS と大差ないかなーと思っていたのだが、まぁまぁ詰まった。</p>
+<p>ネット上の文献が、以前のバージョンの Debian 向けの設定だったので、Buster (v10) に合わせた設定に変更する必要があった。</p>
+<ul>
+  <li><code>/etc/ssh/sshd_config</code> にて <code>PermitRootLogin yes</code> と設定する</li>
+  <li><code>/etc/pam.d/sshd</code> の <code>session required pam_loginuid.so</code> となっている行を <code>required</code> から <code>optional</code> に変更する</li>
+  <li>その他必要そうな設定を適当に… (← 効果がよく分かってない)</li>
+</ul>
+<p>とゆー感じ。</p>
+<ul>
+  <li>参考：<a href="https://docs.docker.com/engine/examples/running_ssh_service/">Dockerize an SSH service | Docker Documentation</a>
+    <ul>
+      <li>公式のガイドだが、Ubuntu v16 向けの記述になっていて Debian v10 Buster ではこのとおりではダメだった</li>
+    </ul>
+  </li>
+  <li>参考：<a href="https://blog.n-z.jp/blog/2018-07-27-sshd-in-docker.html">X11クライアント用のsshd専用コンテナをdockerで動かした - @znz blog</a>
+    <ul>
+      <li>この記事が一番参考になった (Ubuntu v18 向け)</li>
+    </ul>
+  </li>
+  <li>参考：<a href="https://stackoverflow.com/questions/36292317/why-set-visible-now-in-etc-profile">bash - Why set VISIBLE=NOW in /etc/profile? - Stack Overflow</a>
+    <ul>
+      <li><code>export VISIBLE=now</code> とかって何の意味？という記事</li>
+    </ul>
+  </li>
+</ul>
+<p>CentOS と違い、<code>yum</code> ではなく <code>apt-get</code> を使う点と、Ansible を実行するには Python がインストールされていないといけなかったので、<code>apt-get install python</code> も実施しておいた (CentOS には <code>python</code> コマンドが既に入っていた)。</p>
+<p>なんやらかんやら設定して、とりあえず CentOS と同じように、<code>root</code> ユーザのパスワードを入力する方式で SSH 接続できるようになった。</p>
+<h3 id="docker-compose-設定ファイルを書く"><a class="header-link" href="#docker-compose-設定ファイルを書く"><span class="header-link-mark"></span></a>Docker Compose 設定ファイルを書く</h3>
+<p>これら3つのコンテナを立ち上げるため、<code>docker-compose.yaml</code> ファイルを書いた。</p>
+<p><code>tty: true</code> とすると、コンテナを起動しっぱなしで置いておけるようなので設定した。便利ねぇ〜。</p>
+<h2 id="以上"><a class="header-link" href="#以上"><span class="header-link-mark"></span></a>以上</h2>
+<p>とりあえず Ansible の素振り・お試し環境を Docker コンテナで作ることはできたので、よきよき。</p>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2020-01-09</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2020-01-09</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

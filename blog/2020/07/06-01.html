@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>Vue-CLI-Plugin-Express を使って Vue + Express スタックを実現する - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2020/07/06-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2020/index.html">2020年</a></li>
+            <li><a href="/blog/2020/07/index.html">07月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2020-07-06</time></div>
+        <h1 id="page-title">Vue-CLI-Plugin-Express を使って Vue + Express スタックを実現する</h1>
+
+<p>Vue.js でアプリを作りつつ、同時にバックエンド API も作りたいな、と思うと、Nuxt.js を使って実装しちゃう方法がすぐ思いつくかもしれない。</p>
+<ul>
+  <li><a href="https://qiita.com/kawaMk4/items/298f95f751540b96d39b">Nuxt.js でバックもフロントもこれ一本 - Qiita</a></li>
+</ul>
+<p>しかし、</p>
+<ul>
+  <li>Vue CLI を使いたい</li>
+  <li>API 側はそこまで大仰じゃなくて良い</li>
+</ul>
+<p>という時に、Nuxt.js だと縛りが強くなってしまって若干使いづらい。</p>
+<p>そこで見つけたのが、<strong>Vue-CLI-Plugin-Express</strong> という Vue CLI 用のプラグイン。既存の Vue CLI ベースのプロジェクトに、Express サーバを統合してくれるというモノだ。早速使ってみよう。</p>
+<ul>
+  <li><a href="https://www.npmjs.com/package/vue-cli-plugin-express">vue-cli-plugin-express - npm</a></li>
+</ul>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#vue-cli-%E3%81%A7%E3%83%97%E3%83%AD%E3%82%B8%E3%82%A7%E3%82%AF%E3%83%88%E3%82%92%E4%BD%9C%E3%82%8B">Vue CLI でプロジェクトを作る</a></li>
+  <li><a href="#vue-cli-plugin-express-%E3%82%92%E3%82%A4%E3%83%B3%E3%82%B9%E3%83%88%E3%83%BC%E3%83%AB%E3%81%99%E3%82%8B">Vue-CLI-Plugin-Express をインストールする</a></li>
+  <li><a href="#%E8%A9%A6%E3%81%97%E3%81%AB%E3%83%A9%E3%82%A4%E3%83%96%E3%83%AA%E3%83%AD%E3%83%BC%E3%83%89%E9%96%8B%E7%99%BA%E3%81%97%E3%81%A6%E3%81%BF%E3%82%8B">試しにライブリロード開発してみる</a></li>
+  <li><a href="#%E6%9C%AC%E7%95%AA%E3%83%93%E3%83%AB%E3%83%89%E3%81%AE%E6%B5%81%E3%82%8C">本番ビルドの流れ</a></li>
+  <li><a href="#express-%E3%82%B5%E3%83%BC%E3%83%90%E3%82%92-typescript-%E3%81%A7%E5%AE%9F%E8%A3%85%E3%81%97%E3%81%9F%E3%81%84">Express サーバを TypeScript で実装したい</a></li>
+  <li><a href="#%E4%BB%A5%E4%B8%8A">以上</a></li>
+</ul>
+<h2 id="vue-cli-でプロジェクトを作る"><a class="header-link" href="#vue-cli-でプロジェクトを作る"><span class="header-link-mark"></span></a>Vue CLI でプロジェクトを作る</h2>
+<p>まずは Vue CLI を使ってプロジェクトを作る。<code>@vue/cli</code> のバージョンは v4.4.4 を使用。</p>
+<pre class="language-bash"><code class="language-bash">$ vue create practice-vue-express
+</code></pre>
+<p>TypeScript ベースで実装するため、「Manually Select Features」を選択し、Babel・TypeScript・CSS Pre-processors を有効にする。「Linter / Formatter」や「UnitTesting」、「Router」「Vuex」などはお好みで。</p>
+<p>雛形ができたら、</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token builtin class-name">cd</span> practice-vue-express/
+$ <span class="token function">npm</span> run serve
+</code></pre>
+<p>で <code>http://localhost:8008/</code> に簡易サーバが立ち上がることを確認しよう。</p>
+<h2 id="vue-cli-plugin-express-をインストールする"><a class="header-link" href="#vue-cli-plugin-express-をインストールする"><span class="header-link-mark"></span></a>Vue-CLI-Plugin-Express をインストールする</h2>
+<p>雛形プロジェクトの動作確認ができたら、プラグインをインストールする。</p>
+<pre class="language-bash"><code class="language-bash">$ vue <span class="token function">add</span> express
+
+<span class="token comment"># 以下2つの質問に答える</span>
+? Should serve vue app? Yes
+? Where will be located your server? ./srv
+
+🚀  Invoking generator <span class="token keyword">for</span> vue-cli-plugin-express<span class="token punctuation">..</span>.
+✔  Successfully invoked generator <span class="token keyword">for</span> plugin: vue-cli-plugin-express
+</code></pre>
+<p>インストールコマンドを叩くと2つの質問が問われる。「Should serve vue app?」は Yes と答え、「Where will be located your server?」はデフォルトの <code>./srv</code> のまま答える。</p>
+<p>このようにすると、</p>
+<ul>
+  <li><code>package.json</code> に <code>express</code> と <code>express:run</code> という npm-scripts が追記される</li>
+  <li><code>vue.config.js</code> に上2つの質問の内容が書き込まれる</li>
+  <li><code>./srv/index.js</code> が生成される</li>
+</ul>
+<p>といった変化が出る。</p>
+<h2 id="試しにライブリロード開発してみる"><a class="header-link" href="#試しにライブリロード開発してみる"><span class="header-link-mark"></span></a>試しにライブリロード開発してみる</h2>
+<p><code>./srv/index.js</code> を見ると、<code>export default</code> に囲まれているものの、何やら Express でお馴染みの <code>app</code> 変数が用意されているようだ。コメントアウトでサンプルコードも書かれているので、試しに次のようにアンコメントしてみよう。</p>
+<ul>
+  <li><code>srv/index.js</code></li>
+</ul>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword module">import</span> <span class="token imports">express</span> <span class="token keyword module">from</span> <span class="token string">'express'</span><span class="token punctuation">;</span>
+<span class="token comment">// import socketIO from "socket.io";</span>
+
+<span class="token keyword module">export</span> <span class="token keyword module">default</span> <span class="token punctuation">(</span><span class="token parameter">app<span class="token punctuation">,</span> http</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token comment">// ↓ ココからアンコメント</span>
+  app<span class="token punctuation">.</span><span class="token method function property-access">use</span><span class="token punctuation">(</span>express<span class="token punctuation">.</span><span class="token method function property-access">json</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  
+  app<span class="token punctuation">.</span><span class="token method function property-access">get</span><span class="token punctuation">(</span><span class="token string">'/foo'</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token parameter">req<span class="token punctuation">,</span> res</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+    res<span class="token punctuation">.</span><span class="token method function property-access">json</span><span class="token punctuation">(</span><span class="token punctuation">{</span>msg<span class="token operator">:</span> <span class="token string">'foo'</span><span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token comment">// ↑ ココまでアンコメント</span>
+  
+  <span class="token comment">//</span>
+  <span class="token comment">// app.post('/bar', (req, res) => {</span>
+  <span class="token comment">//   res.json(req.body);</span>
+  <span class="token comment">// });</span>
+  <span class="token comment">// </span>
+  <span class="token comment">// optional support for socket.io</span>
+  <span class="token comment">// </span>
+  <span class="token comment">// let io = socketIO(http);</span>
+  <span class="token comment">// io.on("connection", client => {</span>
+  <span class="token comment">//   client.on("message", function(data) {</span>
+  <span class="token comment">//     // do something</span>
+  <span class="token comment">//   });</span>
+  <span class="token comment">//   client.emit("message", "Welcome");</span>
+  <span class="token comment">// });</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>このようにしたら、</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">npm</span> run express
+</code></pre>
+<p>を叩いてみる。すると <code>http://localhost:3000/</code> に簡易サーバが起動する。先程 <code>/foo</code> というパスのルーティングをアンコメントで実装したので、</p>
+<ul>
+  <li><code>http://localhost:3000/foo</code></li>
+</ul>
+<p>にアクセスすると、<code>{"msg":"foo"}</code> というレスポンスが得られる。<code>./srv/index.js</code> の実装のとおりだ。</p>
+<p>さて、ココで、<code>$ npm run express</code> を実行したターミナルウィンドウはそのままに、別タブで</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">npm</span> run serve
+</code></pre>
+<p>を実行してみよう。コチラは元々の Vue CLI が提供する、フロントエンド環境の簡易サーバが立ち上がる。ポート番号は先程の <em>3000</em> 番ではなく <strong>8080</strong> 版で立ち上がっていることに留意。</p>
+<ul>
+  <li><code>http://localhost:8080/</code></li>
+</ul>
+<p>にアクセスすれば Vue アプリの画面が開くのはそのとおりだが、ココで</p>
+<ul>
+  <li><em><code>http://localhost:8080/foo</code></em></li>
+</ul>
+<p>にアクセスしてみよう。すると、フロントエンド側の 8080 ポートであるにも関わらず、バックエンド側の <code>/foo</code> の情報がレスポンスされる。8080 ポートの簡易サーバがプロキシの役割を果たして、バックエンド側の簡易サーバにアクセスしているのだ。</p>
+<p>つまり、Vue アプリ内では、オリジンを指定せず <code>/foo</code> への Ajax 通信処理を実装すれば、2つの簡易サーバを立ち上げてそれぞれでライブリロード開発ができるワケである。</p>
+<p>プラグインの説明では、コレを「Fallback」と表現している。</p>
+<h2 id="本番ビルドの流れ"><a class="header-link" href="#本番ビルドの流れ"><span class="header-link-mark"></span></a>本番ビルドの流れ</h2>
+<p>プラグインが簡単にバックエンドを用意してくれて、Vue アプリと同一サーバで動いているかのようなフォールバック機能も提供してくれることは分かった。</p>
+<p>では、本番ビルドはどのように行うかというと、まず</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">npm</span> run build
+</code></pre>
+<p>でフロントエンド側のコードを <code>./dist/</code> にビルドして配置しておく。</p>
+<p>そしたら</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">npm</span> run express:run
+</code></pre>
+<p>で Production 用の Express サーバを起動する。コチラのコマンドはライブリロードは行わない他、<code>./dist/</code> 配下の資材を参照するので、<code>8080</code> ポートで何が動いていようと無視される。使用するポートは <code>$ npm run express</code> の時と同じ 3000 番ポートなので、</p>
+<ul>
+  <li><code>http://localhost:3000/</code></li>
+</ul>
+<p>にアクセスすれば Vue アプリが見えるし、</p>
+<ul>
+  <li><code>http://localhost:3000/foo</code></li>
+</ul>
+<p>にアクセスすれば Express で定義したルーティングに基づき JSON が返されるという具合だ。</p>
+<h2 id="express-サーバを-typescript-で実装したい"><a class="header-link" href="#express-サーバを-typescript-で実装したい"><span class="header-link-mark"></span></a>Express サーバを TypeScript で実装したい</h2>
+<p>さて、コレでひとまずプラグインの動作は確認できたが、Express サーバのコードは <code>./srv/index.js</code> ということで、JavaScript 形式になっている。コレを TypeScript で実装したい場合はどうしたらいいかというと、単純に拡張子を <em><code>.ts</code></em> に変えるだけで良い。</p>
+<ul>
+  <li><code>./srv/index.ts</code> (拡張子を変更)</li>
+</ul>
+<p>試しにコード中に TypeScript 記法を混ぜ込んで、動作を確認しよう。</p>
+<pre class="language-typescript"><code class="language-typescript">app<span class="token punctuation">.</span><span class="token keyword">get</span><span class="token punctuation">(</span><span class="token string">'/foo'</span><span class="token punctuation">,</span> <span class="token punctuation">(</span>req<span class="token punctuation">,</span> res<span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token keyword">const</span> fooMessage<span class="token operator">:</span> <span class="token builtin">string</span> <span class="token operator">=</span> <span class="token string">'foo'</span><span class="token punctuation">;</span>
+  res<span class="token punctuation">.</span><span class="token method function property-access">json</span><span class="token punctuation">(</span><span class="token punctuation">{</span> msg<span class="token operator">:</span> fooMessage <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>こんな感じ。</p>
+<p>VSCode 上での補完などを効かせるには、<code>tsconfig.json</code> を開き、<code>include:</code> の配列の中に</p>
+<ul>
+  <li><code>"srv/**/*.ts"</code></li>
+</ul>
+<p>を追加してやれば良いだろう。</p>
+<p>コレで実際に動かしてみると、ちゃんと TypeScript と解釈して動作していることが分かる。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># どちらも動く</span>
+$ <span class="token function">npm</span> run express
+$ <span class="token function">npm</span> run express:run
+</code></pre>
+<p>内部的には <code>ts-node</code> を使って動いているのかな？</p>
+<h2 id="以上"><a class="header-link" href="#以上"><span class="header-link-mark"></span></a>以上</h2>
+<p>ベースとなる Vue CLI アプリに、軽く Express サーバを立てて API を組み合わせたくなった時に丁度良いプラグインであろう。</p>
+<ul>
+  <li>参考：<a href="https://qiita.com/corestate55/items/81ba50cf33c78b7119fd">Vue-CLI3 ベースのアプリ開発で JSON API が使える express server を使う - Qiita</a></li>
+</ul>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2020-07-06</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2020-07-06</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

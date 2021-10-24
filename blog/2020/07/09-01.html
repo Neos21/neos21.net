@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>TypeScript で ORM。TypeORM を使って PostgreSQL とやり取りしてみた - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2020/07/09-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2020/index.html">2020年</a></li>
+            <li><a href="/blog/2020/07/index.html">07月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2020-07-09</time></div>
+        <h1 id="page-title">TypeScript で ORM。TypeORM を使って PostgreSQL とやり取りしてみた</h1>
+
+<p>Node.js 上で使える O/R マッパーというと、以前 <em>Sequelize</em> というモノを紹介した。</p>
+<ul>
+  <li><a href="/blog/2018/09/28-03.html">Sequelize を使って Express サーバから MySQL DB を操作してみる</a></li>
+  <li><a href="/blog/2018/11/17-02.html">はてなブックマークにノイズが多いのでオレオレはてなブックマーク「Neo's Hatebu」を作った</a></li>
+</ul>
+<p>コチラも MySQL や PostgreSQL など、色々な DB と接続できるマッパーだった。</p>
+<p>今回見つけた <strong>TypeORM</strong> という O/R マッパーは、Nest.js にも採用されており、TypeScript の特性をフルに生かして実装できてとても便利なので、いくつか機能を紹介してみる。</p>
+<ul>
+  <li><a href="https://typeorm.io/">TypeORM - Amazing ORM for TypeScript and JavaScript (ES7, ES6, ES5). Supports MySQL, PostgreSQL, MariaDB, SQLite, MS SQL Server, Oracle, WebSQL databases. Works in NodeJS, Browser, Ionic, Cordova and Electron platforms.</a></li>
+</ul>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#docker-compose-%E3%81%A7-postgresql-%E7%92%B0%E5%A2%83%E3%82%92%E7%94%A8%E6%84%8F%E3%81%99%E3%82%8B">Docker-Compose で PostgreSQL 環境を用意する</a></li>
+  <li><a href="#typeorm-%E3%83%97%E3%83%AD%E3%82%B8%E3%82%A7%E3%82%AF%E3%83%88%E3%82%92%E4%BD%9C%E3%82%8B">TypeORM プロジェクトを作る</a></li>
+  <li><a href="#%E6%8E%A5%E7%B6%9A%E6%83%85%E5%A0%B1%E3%83%95%E3%82%A1%E3%82%A4%E3%83%AB%E3%82%92%E4%BD%9C%E6%88%90%E3%81%99%E3%82%8B">接続情報ファイルを作成する</a></li>
+  <li><a href="#%E3%82%A8%E3%83%B3%E3%83%86%E3%82%A3%E3%83%86%E3%82%A3%E3%82%92%E4%BD%9C%E6%88%90%E3%81%99%E3%82%8B">エンティティを作成する</a></li>
+  <li><a href="#db-%E6%8E%A5%E7%B6%9A%E3%83%BB%E6%93%8D%E4%BD%9C%E3%82%92%E8%A1%8C%E3%81%86%E3%82%A8%E3%83%B3%E3%83%88%E3%83%AA%E3%83%9D%E3%82%A4%E3%83%B3%E3%83%88%E3%82%92%E4%BD%9C%E6%88%90%E3%81%99%E3%82%8B">DB 接続・操作を行うエントリポイントを作成する</a></li>
+  <li><a href="#%E5%AE%9F%E8%A1%8C%E3%81%97%E3%81%A6%E3%81%BF%E3%82%8B">実行してみる</a></li>
+  <li><a href="#%E4%BB%8A%E5%9B%9E%E3%81%AF%E3%82%B3%E3%82%B3%E3%81%BE%E3%81%A7">今回はココまで</a></li>
+</ul>
+<h2 id="docker-compose-で-postgresql-環境を用意する"><a class="header-link" href="#docker-compose-で-postgresql-環境を用意する"><span class="header-link-mark"></span></a>Docker-Compose で PostgreSQL 環境を用意する</h2>
+<p>まずはとりあえず TypeORM を使ってみるため、Docker-Compose を使って PostgreSQL DB を立ち上げてみる。</p>
+<ul>
+  <li><code>Dockerfile</code></li>
+</ul>
+<pre class="language-dockerfile"><code class="language-dockerfile"><span class="token keyword">FROM</span> postgres<span class="token punctuation">:</span>11<span class="token punctuation">-</span>alpine
+<span class="token keyword">ENV</span> LANG ja_JP.utf8
+</code></pre>
+<ul>
+  <li><code>docker-compose.yaml</code></li>
+</ul>
+<pre class="language-yaml"><code class="language-yaml"><span class="token key atrule">version</span><span class="token punctuation">:</span> <span class="token string">'3'</span>
+<span class="token key atrule">services</span><span class="token punctuation">:</span>
+  <span class="token key atrule">db</span><span class="token punctuation">:</span>
+    <span class="token key atrule">build</span><span class="token punctuation">:</span> .
+    <span class="token key atrule">ports</span><span class="token punctuation">:</span>
+      <span class="token punctuation">-</span> 5432<span class="token punctuation">:</span><span class="token number">5432</span>
+    <span class="token key atrule">environment</span><span class="token punctuation">:</span>
+      <span class="token key atrule">POSTGRES_USER</span><span class="token punctuation">:</span> admin
+      <span class="token key atrule">POSTGRES_PASSWORD</span><span class="token punctuation">:</span> admin
+</code></pre>
+<p>これら2つのファイルを用意して</p>
+<pre class="language-bash"><code class="language-bash">$ docker-compose up -d
+</code></pre>
+<p>でコンテナを起動し、</p>
+<pre class="language-bash"><code class="language-bash">$ docker-compose <span class="token builtin class-name">exec</span> db psql -U admin
+</code></pre>
+<p>このように叩くと、PostgreSQL の内部に入れる。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token assign-left variable">admin</span><span class="token operator">=</span><span class="token comment"># \l</span>
+                             List of databases
+   Name    <span class="token operator">|</span> Owner <span class="token operator">|</span> Encoding <span class="token operator">|</span>  Collate   <span class="token operator">|</span>   Ctype    <span class="token operator">|</span> Access privileges 
+-----------+-------+----------+------------+------------+-------------------
+ admin     <span class="token operator">|</span> admin <span class="token operator">|</span> UTF8     <span class="token operator">|</span> ja_JP.utf8 <span class="token operator">|</span> ja_JP.utf8 <span class="token operator">|</span> 
+ postgres  <span class="token operator">|</span> admin <span class="token operator">|</span> UTF8     <span class="token operator">|</span> ja_JP.utf8 <span class="token operator">|</span> ja_JP.utf8 <span class="token operator">|</span> 
+ template0 <span class="token operator">|</span> admin <span class="token operator">|</span> UTF8     <span class="token operator">|</span> ja_JP.utf8 <span class="token operator">|</span> ja_JP.utf8 <span class="token operator">|</span> <span class="token operator">=</span>c/admin         +
+           <span class="token operator">|</span>       <span class="token operator">|</span>          <span class="token operator">|</span>            <span class="token operator">|</span>            <span class="token operator">|</span> <span class="token assign-left variable">admin</span><span class="token operator">=</span>CTc/admin
+ template1 <span class="token operator">|</span> admin <span class="token operator">|</span> UTF8     <span class="token operator">|</span> ja_JP.utf8 <span class="token operator">|</span> ja_JP.utf8 <span class="token operator">|</span> <span class="token operator">=</span>c/admin         +
+           <span class="token operator">|</span>       <span class="token operator">|</span>          <span class="token operator">|</span>            <span class="token operator">|</span>            <span class="token operator">|</span> <span class="token assign-left variable">admin</span><span class="token operator">=</span>CTc/admin
+</code></pre>
+<p>こんな感じで、DB 一覧を確認できるはずだ。</p>
+<p><code>ports</code> 指定によりホスト側に <code>5432</code> ポートで公開してあるので、ホスト側に <code>psql</code> コマンドがあれば</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token assign-left variable">PGPASSWORD</span><span class="token operator">=</span>admin psql -h localhost -p <span class="token number">5432</span> -U admin
+</code></pre>
+<p>こんな感じでも DB 接続できる。</p>
+<h2 id="typeorm-プロジェクトを作る"><a class="header-link" href="#typeorm-プロジェクトを作る"><span class="header-link-mark"></span></a>TypeORM プロジェクトを作る</h2>
+<p>次に、TypeORM を叩くためのプロジェクトを作る。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">npm</span> init -y
+
+$ <span class="token function">npm</span> <span class="token function">install</span> --save-dev typescript ts-node
+
+<span class="token comment"># TypeORM と、PostgreSQL 接続用の pg パッケージをインストールする</span>
+$ <span class="token function">npm</span> <span class="token function">install</span> --save typeorm pg
+
+<span class="token comment"># tsconfig.json を生成する</span>
+$ npx tsc --init
+</code></pre>
+<p><code>tsconfig.json</code> を開き、<code>compilerOptions</code> 配下に <code>experimentalDecorators</code> と <code>lib</code> プロパティを追加する。</p>
+<pre class="language-json"><code class="language-json"><span class="token punctuation">{</span>
+  <span class="token property">"compilerOptions"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+    <span class="token comment">// ↓ コレを追加</span>
+    <span class="token property">"experimentalDecorators"</span><span class="token operator">:</span> <span class="token boolean">true</span><span class="token punctuation">,</span>
+    <span class="token property">"lib"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
+      <span class="token string">"esnext"</span><span class="token punctuation">,</span>
+      <span class="token string">"dom"</span>
+    <span class="token punctuation">]</span><span class="token punctuation">,</span>
+    
+    <span class="token comment">// あとはそのまま…</span>
+    <span class="token property">"module"</span><span class="token operator">:</span> <span class="token string">"commonjs"</span>
+    <span class="token comment">// ……</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<h2 id="接続情報ファイルを作成する"><a class="header-link" href="#接続情報ファイルを作成する"><span class="header-link-mark"></span></a>接続情報ファイルを作成する</h2>
+<p>プロジェクト雛形ができたら、DB との接続情報を <code>.ts</code> ファイルに記述する。</p>
+<ul>
+  <li><code>db-config.ts</code></li>
+</ul>
+<pre class="language-typescript"><code class="language-typescript"><span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">PostgresConnectionOptions</span> <span class="token punctuation">}</span></span> <span class="token keyword">from</span> <span class="token string">'typeorm/driver/postgres/PostgresConnectionOptions'</span><span class="token punctuation">;</span>
+<span class="token keyword">const</span> dbConfig<span class="token operator">:</span> <span class="token maybe-class-name">PostgresConnectionOptions</span> <span class="token operator">=</span> <span class="token punctuation">{</span>
+  <span class="token keyword">type</span><span class="token operator">:</span> <span class="token string">'postgres'</span><span class="token punctuation">,</span>
+  host<span class="token operator">:</span> <span class="token string">'localhost'</span><span class="token punctuation">,</span>
+  port<span class="token operator">:</span> <span class="token number">5432</span><span class="token punctuation">,</span>
+  username<span class="token operator">:</span> <span class="token string">'admin'</span><span class="token punctuation">,</span>
+  password<span class="token operator">:</span> <span class="token string">'admin'</span><span class="token punctuation">,</span>
+  database<span class="token operator">:</span> <span class="token string">'admin'</span><span class="token punctuation">,</span>
+  synchronize<span class="token operator">:</span> <span class="token boolean">true</span><span class="token punctuation">,</span>
+  logging<span class="token operator">:</span> <span class="token boolean">false</span><span class="token punctuation">,</span>
+  entities<span class="token operator">:</span> <span class="token punctuation">[</span><span class="token string">'entities/*.ts'</span><span class="token punctuation">]</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+<span class="token keyword">export</span> <span class="token keyword">default</span> dbConfig<span class="token punctuation">;</span>
+</code></pre>
+<p>実際のアプリでは <code>'localhost'</code> や <code>'admin'</code> などとベタ書きはせず、<code>process.env</code> (環境変数) で注入してやることになるだろう。</p>
+<h2 id="エンティティを作成する"><a class="header-link" href="#エンティティを作成する"><span class="header-link-mark"></span></a>エンティティを作成する</h2>
+<p>続いて、テーブル定義とレコードを表現する <em>Entity</em> クラスを作成する。</p>
+<p>ココが TypeORM の真骨頂。デコレータを使ってテーブルの型や特徴を決められると同時に、フィールドの型定義にも適用されるのだ。</p>
+<p>なにはともあれ、次のようにファイルを作ってみよう。</p>
+<ul>
+  <li><code>entities/customer.ts</code></li>
+</ul>
+<pre class="language-typescript"><code class="language-typescript"><span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">Column</span><span class="token punctuation">,</span> <span class="token maybe-class-name">Entity</span><span class="token punctuation">,</span> <span class="token maybe-class-name">PrimaryColumn</span><span class="token punctuation">,</span> <span class="token maybe-class-name">PrimaryGeneratedColumn</span> <span class="token punctuation">}</span></span> <span class="token keyword">from</span> <span class="token string">'typeorm'</span><span class="token punctuation">;</span>
+
+@<span class="token function"><span class="token maybe-class-name">Entity</span></span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+<span class="token keyword">export</span> <span class="token keyword">default</span> <span class="token keyword">class</span> <span class="token class-name"><span class="token maybe-class-name">Customer</span></span> <span class="token punctuation">{</span>
+  @<span class="token function"><span class="token maybe-class-name">PrimaryGeneratedColumn</span></span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+  <span class="token keyword">public</span> id<span class="token operator">!</span><span class="token operator">:</span> <span class="token builtin">number</span><span class="token punctuation">;</span>
+  
+  @<span class="token function"><span class="token maybe-class-name">PrimaryColumn</span></span><span class="token punctuation">(</span><span class="token punctuation">{</span> <span class="token keyword">type</span><span class="token operator">:</span> <span class="token string">'varchar'</span><span class="token punctuation">,</span> length<span class="token operator">:</span> <span class="token number">10</span> <span class="token punctuation">}</span><span class="token punctuation">)</span>
+  <span class="token keyword">public</span> name<span class="token operator">:</span> <span class="token builtin">string</span><span class="token punctuation">;</span>
+  
+  @<span class="token function"><span class="token maybe-class-name">Column</span></span><span class="token punctuation">(</span><span class="token punctuation">{</span> <span class="token keyword">type</span><span class="token operator">:</span> <span class="token string">'int'</span> <span class="token punctuation">}</span><span class="token punctuation">)</span>
+  <span class="token keyword">public</span> age<span class="token operator">:</span> <span class="token builtin">number</span> <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span>
+  
+  <span class="token keyword">constructor</span><span class="token punctuation">(</span>name<span class="token operator">:</span> <span class="token builtin">string</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">name</span> <span class="token operator">=</span> name<span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>なんとなく、何をどう指定しているのかは推測が付くだろう。</p>
+<h2 id="db-接続・操作を行うエントリポイントを作成する"><a class="header-link" href="#db-接続・操作を行うエントリポイントを作成する"><span class="header-link-mark"></span></a>DB 接続・操作を行うエントリポイントを作成する</h2>
+<p>最後に、DB 接続と操作を行うエントリポイントを作ってみる。</p>
+<ul>
+  <li><code>exec.ts</code></li>
+</ul>
+<pre class="language-typescript"><code class="language-typescript"><span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> createConnection<span class="token punctuation">,</span> getRepository <span class="token punctuation">}</span></span> <span class="token keyword">from</span> <span class="token string">'typeorm'</span><span class="token punctuation">;</span>
+
+<span class="token keyword">import</span> <span class="token imports">dbConfig</span> <span class="token keyword">from</span> <span class="token string">'./db-config'</span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token imports"><span class="token maybe-class-name">Customer</span></span> <span class="token keyword">from</span> <span class="token string">'./entities/customer'</span><span class="token punctuation">;</span>
+
+<span class="token function">createConnection</span><span class="token punctuation">(</span>dbConfig<span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">then</span><span class="token punctuation">(</span><span class="token keyword">async</span> <span class="token punctuation">(</span>connection<span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'Postgres Connected'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">try</span> <span class="token punctuation">{</span>
+    <span class="token keyword">const</span> customerRepository <span class="token operator">=</span> <span class="token function">getRepository</span><span class="token punctuation">(</span><span class="token maybe-class-name">Customer</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    
+    <span class="token keyword">const</span> allCustomers <span class="token operator">=</span> <span class="token keyword">await</span> customerRepository<span class="token punctuation">.</span><span class="token method function property-access">find</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'Select : '</span><span class="token punctuation">,</span> allCustomers<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  <span class="token keyword">catch</span><span class="token punctuation">(</span>error<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">error</span><span class="token punctuation">(</span><span class="token string">'Failed : '</span><span class="token punctuation">,</span> error<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  <span class="token keyword">finally</span> <span class="token punctuation">{</span>
+    <span class="token keyword">await</span> connection<span class="token punctuation">.</span><span class="token method function property-access">close</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'Connection Closed'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span>
+<span class="token punctuation">.</span><span class="token keyword">catch</span><span class="token punctuation">(</span><span class="token punctuation">(</span>error<span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">error</span><span class="token punctuation">(</span><span class="token string">'Postgres Connection Failed'</span><span class="token punctuation">,</span> error<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<h2 id="実行してみる"><a class="header-link" href="#実行してみる"><span class="header-link-mark"></span></a>実行してみる</h2>
+<p>コレでコーディングは完了。いよいよ実行してみる。</p>
+<p>まずは DB 接続して、<code>SELECT * FROM customer;</code> 相当の SQL を投げているだけ。実行してみると、次のようになるだろう。</p>
+<pre class="language-bash"><code class="language-bash">$ npx ts-node exec.ts
+
+Postgres Connected
+Select <span class="token builtin class-name">:</span>  <span class="token punctuation">[</span><span class="token punctuation">]</span>
+Connection Closed
+</code></pre>
+<p>PostgreSQL の方はテーブル作成などはしていないが、<code>db-config.ts</code> 内の <code>synchronize: true</code> 指定によって、自動的に Entity に対応するテーブルが作られている。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token assign-left variable">PGPASSWORD</span><span class="token operator">=</span>admin psql -h localhost -p <span class="token number">5432</span> -U admin
+
+<span class="token comment"># 以下のようにテーブルが作成されている</span>
+<span class="token assign-left variable">admin</span><span class="token operator">=</span><span class="token comment"># SELECT * FROM customer;</span>
+ <span class="token function">id</span> <span class="token operator">|</span> name <span class="token operator">|</span> age 
+----+------+-----
+<span class="token punctuation">(</span><span class="token number">0</span> rows<span class="token punctuation">)</span>
+</code></pre>
+<p>さらに <code>exec.ts</code> に追記して、テーブルにデータを投入してみよう。</p>
+<pre class="language-typescript"><code class="language-typescript"><span class="token keyword">const</span> customerRepository <span class="token operator">=</span> <span class="token function">getRepository</span><span class="token punctuation">(</span><span class="token maybe-class-name">Customer</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// 以下を追加</span>
+<span class="token keyword">const</span> newCustomer <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name"><span class="token maybe-class-name">Customer</span></span><span class="token punctuation">(</span><span class="token string">'Neo'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+newCustomer<span class="token punctuation">.</span><span class="token property-access">age</span> <span class="token operator">=</span> <span class="token number">30</span><span class="token punctuation">;</span>
+<span class="token keyword">const</span> savedCustomer <span class="token operator">=</span> <span class="token keyword">await</span> customerRepository<span class="token punctuation">.</span><span class="token method function property-access">save</span><span class="token punctuation">(</span>newCustomer<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'Saved : '</span><span class="token punctuation">,</span> savedCustomer<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token comment">// 追加ココまで</span>
+
+<span class="token keyword">const</span> allCustomers <span class="token operator">=</span> <span class="token keyword">await</span> customerRepository<span class="token punctuation">.</span><span class="token method function property-access">find</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>実行してみるとこんな感じ。</p>
+<pre class="language-bash"><code class="language-bash">$ npx ts-node exec.ts
+
+Postgres Connected
+Saved <span class="token builtin class-name">:</span>  Customer <span class="token punctuation">{</span> age: <span class="token number">30</span>, name: <span class="token string">'Neo'</span>, id: <span class="token number">1</span> <span class="token punctuation">}</span>
+Select <span class="token builtin class-name">:</span>  <span class="token punctuation">[</span> Customer <span class="token punctuation">{</span> age: <span class="token number">30</span>, name: <span class="token string">'Neo'</span>, id: <span class="token number">1</span> <span class="token punctuation">}</span> <span class="token punctuation">]</span>
+Connection Closed
+</code></pre>
+<p>登録したデータには ID が自動採番されていることが分かる。</p>
+<p><code>save()</code> メソッドは <em>Upsert</em> として動作するので、Insert と Update のどっちでも良い時に使える。Rails の ActiveRecord みたいなノリだ。</p>
+<p>なお、今回は <code>id</code> を自動採番させているので、このまま再実行するとどんどん同じようなデータが Insert されてしまうことに留意。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># スクリプトは変えず再実行</span>
+$ npx ts-node exec.ts 
+
+Postgres Connected
+Saved <span class="token builtin class-name">:</span>  Customer <span class="token punctuation">{</span> age: <span class="token number">30</span>, name: <span class="token string">'Neo'</span>, id: <span class="token number">2</span> <span class="token punctuation">}</span>
+Select <span class="token builtin class-name">:</span>  <span class="token punctuation">[</span>
+  Customer <span class="token punctuation">{</span> age: <span class="token number">30</span>, name: <span class="token string">'Neo'</span>, id: <span class="token number">1</span> <span class="token punctuation">}</span>,
+  Customer <span class="token punctuation">{</span> age: <span class="token number">30</span>, name: <span class="token string">'Neo'</span>, id: <span class="token number">2</span> <span class="token punctuation">}</span>
+<span class="token punctuation">]</span>
+Connection Closed
+</code></pre>
+<h2 id="今回はココまで"><a class="header-link" href="#今回はココまで"><span class="header-link-mark"></span></a>今回はココまで</h2>
+<p>TypeScript のデコレータを大活用している TypeORM。今回はその機能の一部しか紹介しきれなかったが、他にも DB マイグレーションファイルの生成やトランザクション処理など、様々なことができるのでオススメだ。</p>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2020-07-09</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2020-07-09</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>

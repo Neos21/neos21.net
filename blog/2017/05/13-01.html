@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>better-npm-run を使って OS に依存せず npm run-script に環境変数を渡す - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2017/05/13-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="site-title"><a href="/index.html">Neo's World</a></div>
+        <nav id="header-links">
+          <ul>
+            <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+            <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+            <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+            <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+          </ul>
+        </nav>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2017/index.html">2017年</a></li>
+            <li><a href="/blog/2017/05/index.html">05月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2017-05-13</time></div>
+        <h1 id="page-title">better-npm-run を使って OS に依存せず npm run-script に環境変数を渡す</h1>
+
+<p>前回の記事で、<code>$ 環境変数=値 npm run スクリプト名</code> という書きで npm-scripts を呼ぶと、呼んだスクリプト内で <code>process.env.環境変数</code> が参照できるようになる、という話をした。</p>
+<ul>
+  <li><a href="/blog/2017/05/12-01.html">npm run-script に環境変数を渡す方法</a></li>
+</ul>
+<p>しかしこの書き方は、Mac や Linux でしか上手く動かず、Windows では正しく動作しない。これはどうやら、npm run-scripts の内部処理で、Bash から呼ばれることを前提とした処理の仕方をしているせいのようで、利用者としてはどうこうできない部分みたい。</p>
+<ul>
+  <li>参考：<a href="https://github.com/formly-js/angular-formly/issues/305">npm start fails on Windows · Issue #305 · formly-js/angular-formly · GitHub</a></li>
+</ul>
+<p>そこで、OS に依存せず、環境変数を渡してスクリプトを実行できるようになる、<strong>better-npm-run</strong> という npm パッケージを使ってみようと思う。</p>
+<ul>
+  <li><a href="https://www.npmjs.com/package/better-npm-run">better-npm-run - npm</a></li>
+</ul>
+<h2 id="インストール方法"><a class="header-link" href="#インストール方法"><span class="header-link-mark"></span></a>インストール方法</h2>
+<p>インストール方法は通常の npm パッケージと同じ。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># package.json に開発時に依存するパッケージとして追記しつつインストールする</span>
+$ <span class="token function">npm</span> <span class="token function">install</span> better-npm-run --save-dev
+<span class="token comment"># 省略して書くと「npm i better-npm-run -D」</span>
+</code></pre>
+<h2 id="packagejson-の修正"><a class="header-link" href="#packagejson-の修正"><span class="header-link-mark"></span></a><code>package.json</code> の修正</h2>
+<p>次に、<code>package.json</code> を書き換え、better-npm-run を使うようにしていく。</p>
+<p>例えば元の <code>package.json</code> が以下のようになっている場合。</p>
+<pre class="language-json"><code class="language-json"><span class="token punctuation">{</span>
+  <span class="token property">"scripts"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+    <span class="token property">"build:js:dev"</span><span class="token operator">:</span> <span class="token string">"DEV_MODE=true npm run gulp build:js"</span><span class="token punctuation">,</span>
+    <span class="token property">"build:js:product"</span><span class="token operator">:</span> <span class="token string">"DEV_MODE=false npm run gulp build:js"</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>2つのスクリプトは、<code>DEV_MODE</code> という環境変数の値をそれぞれ指定して、Gulp の <code>build:js</code> というタスクを実行しようとしている。</p>
+<p>これを以下のようにする。</p>
+<pre class="language-json"><code class="language-json"><span class="token punctuation">{</span>
+  <span class="token property">"scripts"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+    <span class="token property">"build:js:dev"</span><span class="token operator">:</span> <span class="token string">"better-npm-run build:js:dev"</span><span class="token punctuation">,</span>
+    <span class="token property">"build:js:product"</span><span class="token operator">:</span> <span class="token string">"better-npm-run build:js:product"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token property">"betterScripts"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+    <span class="token property">"build:js:dev"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+      <span class="token property">"env"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+        <span class="token property">"DEV_MODE"</span><span class="token operator">:</span> <span class="token string">"true"</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token property">"command"</span><span class="token operator">:</span> <span class="token string">"npm run gulp build:js"</span>
+    <span class="token punctuation">}</span><span class="token punctuation">,</span>
+    <span class="token property">"build:js:product"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+      <span class="token property">"env"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+        <span class="token property">"DEV_MODE"</span><span class="token operator">:</span> <span class="token string">"false"</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token property">"command"</span><span class="token operator">:</span> <span class="token string">"npm run gulp build:js"</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<h2 id="解説"><a class="header-link" href="#解説"><span class="header-link-mark"></span></a>解説</h2>
+<p>さて、何やら複雑化したような気がするが、OS 依存を回避するためには致し方ないことである。ざっくり何がどう変わったのか見てみよう。</p>
+<p>まず元々の <code>package.json</code> の場合の流れを確認。</p>
+<ol>
+  <li><code>npm run build:js:dev</code> と叩いた場合。</li>
+  <li><code>package.json</code> の定義より、環境変数 <code>DEV_MODE</code> に <code>true</code> を設定した上で、<code>gulp build:js</code> を呼び出す。</li>
+</ol>
+<p>次に、修正後の流れがどうなったかというと。</p>
+<ol>
+  <li><code>npm run build:js:dev</code> と叩いた場合。</li>
+  <li><code>package.json</code> の定義より、<em>better-npm-run</em> で定義した <code>build:js:dev</code> スクリプトを実行する。</li>
+  <li><em>better-npm-run</em> のスクリプト定義は同じ <code>package.json</code> の <code>betterScripts</code> 内に定義されており、これを見ると、<code>build:js:dev</code> というタスクでは、環境変数 <code>DEV_MODE</code> に <code>true</code> を設定した上で、<code>npm run gulp build:js</code> を呼び出している。</li>
+</ol>
+<p>とまぁ、better-npm-run が挟まって、環境変数の受け渡しをうまくやってくれるようになった、というワケである。</p>
+<p>npm run-scripts の利用者が<strong>該当タスク内で使用できる環境変数とその値を覚えておかなくて良くなる</strong>し、通常の <code>"scripts"</code> 内に書かれるよりも環境変数の可読性が高まるというメリットがある。</p>
+<p>クロスプラットフォームで複雑なタスクを定義しているプロジェクトにおいては有用だと思うので、参考にしていただきたい。</p>
+
+      </main>
+      <footer id="footer">
+        <div id="date-time">
+          <dl>
+            <dt>Created</dt>
+            <dd><time>2017-05-13</time></dd>
+            <dt>Last-Modified</dt>
+            <dd><time>2017-05-13</time></dd>
+          </dl>
+        </div>
+        <nav id="footer-links">
+          <ul>
+            <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+            <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+            <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+            <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+          </ul>
+        </nav>
+        <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+      </footer>
+    </div>
+  </body>
+</html>
