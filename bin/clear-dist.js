@@ -6,6 +6,8 @@ const makeDirectory = require('../lib/make-directory');
 
 /*!
  * `dist/` ディレクトリを削除して配下に空ディレクトリを作成する
+ * 
+ * GitHub Actions 用。ローカルで実行しないように注意
  */
 
 // `dist/` ディレクトリを削除して再作成する
