@@ -71,7 +71,7 @@ path:
       - [The Principles of OOD](http://butunclebob.com/ArticleS.UncleBob.PrinciplesOfOod)
 - __単一責務の原則 : <abbr title="Single Responsibility Principle">SRP</abbr>__
   - _意味 :_ 一つのモノの責務・役割は一つにする。一つのモノに変更が入る理由は一つにする。「単一_責任_の原則」とも
-  - _例示 :_ 1つのクラスやメソッドにに複数の処理を詰め込まない
+  - _例示 :_ 1つのクラスやメソッドに複数の処理を詰め込まない
   - _出自 :_ XP の提唱者ロバート・C・マーチンが2005年に書いた「The Principles of <abbr title="Object Oriented Design">OOD</abbr>」という記事がほぼ初出
   - _参考 :_
       - [Wikipedia - Single responsibility principle](https://en.wikipedia.org/wiki/Single_responsibility_principle)
