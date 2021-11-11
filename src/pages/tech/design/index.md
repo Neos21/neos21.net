@@ -41,6 +41,8 @@ path:
 - [要件定義～システム設計ができる人材になれる記事 - Qiita](https://qiita.com/digisaku_tamori/items/741fcf0f40dd989ee4f8)
 - [多い日も安心設計 - Qiita](https://qiita.com/kawasima/items/ee863f23b4588b9792fb)
 - [工数見積もりは日数×10時間でいいんじゃないかな - Qiita](https://qiita.com/tukiyo3/items/b6ded389033611a4edc2)
-- 文字・名寄せについて考慮すべきこと … 似て非なる「ハイフン」文字をどう扱うか
-  - 入力チェック、自動統一変換をどの程度行うか
-  - 参考：[ハイフンに似ている横棒を全て統一するᅳㅡ˗𐆑–᭸‒-─−▬𐄐—━‐‑ー﹣―ｰ﹘－⁃➖⁻！ - Qiita](https://qiita.com/non-caffeine/items/77360dda05c8ce510084)
+- 似て非なる文字の扱い方、名寄せについて考慮すべきこと … 入力チェック、自動統一変換をどの程度行うか
+  - 似て非なる「ハイフン」文字をどう扱うか
+      - 参考：[ハイフンに似ている横棒を全て統一するᅳㅡ˗𐆑–᭸‒-─−▬𐄐—━‐‑ー﹣―ｰ﹘－⁃➖⁻！ - Qiita](https://qiita.com/non-caffeine/items/77360dda05c8ce510084)
+  - 似て非なる「スペース」文字の扱い方。プログラミング (実装工程) でも注意が必要
+      - 参考：[Unicode のスペースは色々あるし、半角スペースと &nbsp は同じでもない - A Memorandum](https://blog1.mammb.com/entry/2021/11/11/090000)
