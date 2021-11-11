@@ -320,6 +320,13 @@ Web API としてエラーをどのように表現するべきか。
 - [rfc7807](https://datatracker.ietf.org/doc/html/rfc7807)
 - [HTTP APIの詳細なエラー情報をレスポンスに持たせるための仕様](https://www.eisbahn.jp/yoichiro/2017/01/rfc_7807.html)
 
+
+## その他参考文献
+
 なかなか単一の正解はないので、有名なウェブサービスの実装を参考にし、多く採用されている事例に合わせるのが良いだろう。
 
 - [WebAPIでエラーをどう表現すべき？15のサービスを調査してみた - Qiita](https://qiita.com/suin/items/f7ac4de914e9f3f35884)
+
+その他プラクティス関連の文献。
+
+- [API設計スキルを次のレベルに引き上げるベストプラクティス22選 - Qiita](https://qiita.com/baby-degu/items/6f516189445d98ddbb7d)
