@@ -1,3 +1,4 @@
+const childProcess = require('child_process');
 const fs = require('fs');
 
 const constants = require('../lib/constants');
@@ -59,6 +60,7 @@ const makeDirectory = require('../lib/make-directory');
   if(!year || !month || !date) return console.log('Invalid Input Date');
   
   const template = fs.readFileSync(`${constants.src}/templates/blog-post.md`, 'utf-8');
+  let createdFilePath = '';
   for(let num = 1; num < 100; num++) {
     const padNum = `0${num}`.slice(-2);
     const distFilePath = `${constants.pages.src}/blog/${year}/${month}/${date}-${padNum}.md`;
@@ -67,6 +69,7 @@ const makeDirectory = require('../lib/make-directory');
     if(!isExist(distFilePath)) {
       const output = template.replace((/YYYY/gu), year).replace((/MM/gu), month).replace((/DD/gu), date);
       fs.writeFileSync(distFilePath, output, 'utf-8');
+      createdFilePath = distFilePath;
       console.log(`Write : [${distFilePath}]`);
       break;
     }
@@ -94,4 +97,10 @@ const makeDirectory = require('../lib/make-directory');
   }
   
   console.log('Create Blog Post : Succeeded');
+  try {
+    childProcess.execFileSync('code', ['-a', createdFilePath]);
+  }
+  catch(_error) {
+    // Nothing To Do
+  }
 })();

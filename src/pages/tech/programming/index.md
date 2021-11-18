@@ -1,7 +1,7 @@
 ---
 title        : プログラミング
 created      : 2021-01-27
-last-modified: 2021-10-11
+last-modified: 2021-11-18
 path:
   - /index.html Neo's World
   - /tech/index.html Tech
@@ -23,13 +23,17 @@ path:
 - [MacOS](./macos.html)
 - [iOS](./ios.html)
 
-## Linux 寄り
+### Linux 寄り
 
 - [Bash](./bash.html)
 - [Git](./git.html)
 - [sed](./sed.html)
 - [SSH](./ssh.html)
 - [Vim](./vim.html)
+
+### Web
+
+- [BASIC 認証](./basic-auth.html)
 
 ### フロントエンド
 
