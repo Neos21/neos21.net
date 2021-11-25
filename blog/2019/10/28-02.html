@@ -2,7 +2,8 @@
 <html lang="ja">
   <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#0990d0">
     <!-- Google Search Console -->
     <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
     <title>Oracle Object Storage REST API に PUT する時はリクエストヘッダを一部省略できた - Neo's World</title>
@@ -63,7 +64,7 @@
 <ul>
   <li><a href="#object-storage-rest-api-%E3%81%AE%E3%81%8A%E3%81%95%E3%82%89%E3%81%84">Object Storage REST API のおさらい</a></li>
   <li><a href="#%E5%87%A6%E7%90%86%E3%81%AB%E6%99%82%E9%96%93%E3%81%8C%E3%81%8B%E3%81%8B%E3%81%A3%E3%81%A6%E3%81%84%E3%82%8B%E5%A0%B4%E6%89%80">処理に時間がかかっている場所</a></li>
-  <li><a href="#cpu-%E3%83%90%E3%82%A6%E3%83%B3%E3%83%89%E3%81%AA%E5%87%A6%E7%90%86%E3%82%92%E5%88%A5%E3%83%97%E3%83%AD%E3%82%BB%E3%82%B9%E3%81%AB%E5%88%86%E3%81%91%E3%82%8B%EF%BC%9F">CPU バウンドな処理を別プロセスに分ける…？</a></li>
+  <li><a href="#cpu-%E3%83%90%E3%82%A6%E3%83%B3%E3%83%89%E3%81%AA%E5%87%A6%E7%90%86%E3%82%92%E5%88%A5%E3%83%97%E3%83%AD%E3%82%BB%E3%82%B9%E3%81%AB%E5%88%86%E3%81%91%E3%82%8B">CPU バウンドな処理を別プロセスに分ける…？</a></li>
   <li><a href="#%E3%81%9D%E3%82%82%E3%81%9D%E3%82%82%E3%81%9D%E3%81%AE%E3%83%AA%E3%82%AF%E3%82%A8%E3%82%B9%E3%83%88%E3%83%98%E3%83%83%E3%83%80%E3%81%8C%E8%A6%81%E3%82%89%E3%81%AA%E3%81%8B%E3%81%A3%E3%81%9F">そもそもそのリクエストヘッダが要らなかった</a></li>
   <li><a href="#%E4%BB%A5%E4%B8%8A">以上</a></li>
 </ul>
@@ -117,7 +118,7 @@
 <p>問題となっている <code>shaObj.update()</code> メソッドは、<code>jssha</code> という npm パッケージが提供するモノだ。直前の行で、<code>jssha</code> のインスタンスを生成していることが分かるだろう。後の行で <code>shaObj.getHash('B64')</code> とハッシュ値を取得するための準備として <code>jssha.update()</code> を叩くのだが、コレに時間がかかっていた。</p>
 <p>ハッシュ値を作るには、一旦コンテンツの全量を読み込んで処理する必要がある。10MB とか 20MB とか、サイズの大きいファイルを送ろうとすると、それだけのテキストを <code>jssha</code> に渡して処理させることになる。この処理は同期的に行われ、CPU を使うために、シングルスレッドで動作する Node.js においては<strong>ブロッキング</strong>が発生する。ちなみに、CPU にコストのかかる処理のことは「<em>CPU バウンド</em>な処理」などと表現したりもする。</p>
 <p>シングルスレッドであるために、CPU バウンドな処理でブロッキングが発生する現象は、大規模な JSON データを <code>JSON.parse()</code> したり <code>JSON.stringify()</code> したりする時にも発生する。今回はまさにコレと同じ原因だったのだ。</p>
-<h2 id="cpu-バウンドな処理を別プロセスに分ける？"><a class="header-link" href="#cpu-バウンドな処理を別プロセスに分ける？"><span class="header-link-mark"></span></a>CPU バウンドな処理を別プロセスに分ける…？</h2>
+<h2 id="cpu-バウンドな処理を別プロセスに分ける"><a class="header-link" href="#cpu-バウンドな処理を別プロセスに分ける"><span class="header-link-mark"></span></a>CPU バウンドな処理を別プロセスに分ける…？</h2>
 <p>さて、原因の箇所が分かったので、なんとかしたい。</p>
 <p>Object Storage への PUT 送信以外にも、並列処理したいことがいくつかある。それなのに <code>jssha.update()</code> の実行に CPU を使われてしまうと、他の処理が非同期であっても、その間は処理がせき止められてしまう。</p>
 <p>コレは Node.js がシングルプロセス、シングルスレッドで動作するためにブロッキングが発生する、と話した。それでは、この重たい処理だけ、<strong>別プロセスで</strong>実行させたら、スレッドを分割できるのではないか。</p>
@@ -160,7 +161,7 @@
 <p>途中までそのとおり〜これらのヘッダが要るよね〜と思って読んでいたのだが、<code>x-content-sha256</code> のところに<em>「オブジェクト・ストレージ PUT リクエストを除く」</em>と書いてあったのだ。</p>
 <p>どういうことかと思い、続きを読んでみる。</p>
 <blockquote>
-  <h3 id="オブジェクト・ストレージ-put-の特別な手順"><a class="header-link" href="#オブジェクト・ストレージ-put-の特別な手順"><span class="header-link-mark"></span></a>オブジェクト・ストレージ PUT の特別な手順</h3>
+  <h3 id="オブジェクトストレージ-put-の特別な手順"><a class="header-link" href="#オブジェクトストレージ-put-の特別な手順"><span class="header-link-mark"></span></a>オブジェクト・ストレージ PUT の特別な手順</h3>
   <p><em>オブジェクト・ストレージ PutObject と UploadPart PUT リクエストの場合</em>、署名文字列には少なくとも次のヘッダーが含まれている必要があります:</p>
   <ul>
     <li><code>(request-target)</code></li>

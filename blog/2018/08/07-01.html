@@ -2,7 +2,8 @@
 <html lang="ja">
   <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#0990d0">
     <!-- Google Search Console -->
     <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
     <title>とある社内業務システムで起こったバグの話 3 - Neo's World</title>
@@ -177,7 +178,7 @@
 <p>といった SQL を生成する。日付 (DATE) 型のカラムだが、Oracle DB の暗黙的な型変換を利用して比較していたようだ。</p>
 <p>PreparedStatement を使わず引数を直接 SQL 文字列に組み込んでいるとか、スメルを感じる部分はあるものの、これならとりあえず意図したとおりに動きそうな気がする。</p>
 <p>一旦このコードから頭を離して、「なぜログアウトさせられる人が生まれるか」を考え直そう。</p>
-<h2 id="「強制ログアウトされた」ではなく、「ログインしていない」とみなされている？"><a class="header-link" href="#「強制ログアウトされた」ではなく、「ログインしていない」とみなされている？"><span class="header-link-mark"></span></a>「強制ログアウトされた」ではなく、「ログインしていない」とみなされている？</h2>
+<h2 id="強制ログアウトされたではなくログインしていないとみなされている"><a class="header-link" href="#強制ログアウトされたではなくログインしていないとみなされている"><span class="header-link-mark"></span></a>「強制ログアウトされた」ではなく、「ログインしていない」とみなされている？</h2>
 <p>「<code>MASTER_USER_BK</code> テーブルに、そのユーザ ID がその日にログインしたレコードがない場合に、不正アクセスと見なしてログイン画面にリダイレクトする」という動きが、ログイン画面にいきなり戻される「強制ログアウト」を引き起こしていたことは分かった。</p>
 <p>しかし、なぜログインボタンを連打する人がいると、<code>MASTER_USER_BK</code> テーブルの関係ないユーザ ID のレコードまで削除されてしまうのだろうか。<code>MASTER_USER_BK</code> テーブルの <code>DELETE</code> 処理の時に何かが起こったとして、どういう状態になると、「ログインしていた人たちがログアウトさせられる」だろうか。</p>
 <p>例えば、「5.」の、前日分のデータを DELETE する「人力日次バッチ処理」において、パラメータに取る日付が何らかの理由でズレて、今日日付のレコード (≒ 今ログインしている人たち) まで削除する SQL が生まれたとしたら？</p>
@@ -188,7 +189,7 @@
 <p>ログイン処理が動作している時刻が始業時間直後、8時40分から8時50分の間かどうかを検証する際に参照しているのは、この Java プログラムが配置されている AP サーバのシステム時刻だ。つまり、何かの拍子にシステム時刻が翌日の8時45分にズレたら、なんでもない日中にログインしようとした人によって、「早朝の人力日次バッチ処理」が動作することになる。</p>
 <p>この誤動作が起こったとして、<strong><code>MASTER_USER_BK</code> テーブルのレコードが削除されると、前述の「4.」のタイミング、つまり画面遷移時に必ず走る「不正アクセスチェック」時に、<code>MASTER_USER_BK</code> テーブルからログインユーザの情報が取得できず、不正アクセスとみなされてログイン画面に戻される</strong>という動きが起こりうるのだ。</p>
 <p>しかし、システム時刻がズレることは考えにくい。事実、同じシステム時刻を参照して出力しているログファイルの方は、時分秒にズレがなく、正確に出力されていた。ということは、「人力日次バッチ」向けに呼び出された <code>MasterUserBkService#delete()</code> メソッドが誤作動したとは考えにくい。</p>
-<h2 id="全てのユーザを対象にログイン履歴を削除した？"><a class="header-link" href="#全てのユーザを対象にログイン履歴を削除した？"><span class="header-link-mark"></span></a>全てのユーザを対象にログイン履歴を削除した？</h2>
+<h2 id="全てのユーザを対象にログイン履歴を削除した"><a class="header-link" href="#全てのユーザを対象にログイン履歴を削除した"><span class="header-link-mark"></span></a>全てのユーザを対象にログイン履歴を削除した？</h2>
 <p><code>MasterUserBkService#delete()</code> の誤作動によって、ログイン中のユーザのレコードまで削除される他の方法というと、ログイン時に自身の過去のレコードを削除しようとしている箇所がおかしな動きをした可能性が考えられる。</p>
 <p>つまり、</p>
 <pre class="language-sql"><code class="language-sql"><span class="token keyword">DELETE</span> <span class="token keyword">FROM</span> MASTER_USER_BK <span class="token keyword">WHERE</span> USER_ID <span class="token operator">&#x3C;></span> <span class="token string">'999999'</span><span class="token punctuation">;</span>

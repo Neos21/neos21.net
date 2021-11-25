@@ -2,7 +2,8 @@
 <html lang="ja">
   <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#0990d0">
     <!-- Google Search Console -->
     <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
     <title>Kubernetes で Blue Green デプロイをやってみた - Neo's World</title>
@@ -57,12 +58,12 @@
 <h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
 <ul>
   <li><a href="#blue-green-deployment-%E3%81%A8%E3%81%AF">Blue Green Deployment とは</a></li>
-  <li><a href="#kubernetes-%E3%81%A7%E3%83%96%E3%83%AB%E3%83%BC%E3%83%BB%E3%82%B0%E3%83%AA%E3%83%BC%E3%83%B3%E3%83%BB%E3%83%87%E3%83%97%E3%83%AD%E3%82%A4%E3%82%92%E3%82%84%E3%81%A3%E3%81%A6%E3%81%BF%E3%82%8B">Kubernetes でブルー・グリーン・デプロイをやってみる</a>
+  <li><a href="#kubernetes-%E3%81%A7%E3%83%96%E3%83%AB%E3%83%BC%E3%82%B0%E3%83%AA%E3%83%BC%E3%83%B3%E3%83%87%E3%83%97%E3%83%AD%E3%82%A4%E3%82%92%E3%82%84%E3%81%A3%E3%81%A6%E3%81%BF%E3%82%8B">Kubernetes でブルー・グリーン・デプロイをやってみる</a>
     <ul>
       <li><a href="#1-%E5%88%9D%E5%9B%9E%E3%83%AA%E3%83%AA%E3%83%BC%E3%82%B9">1. 初回リリース</a></li>
-      <li><a href="#2-%E3%80%8Cgreen%E3%80%8D%E7%92%B0%E5%A2%83%E3%82%92%E3%83%87%E3%83%97%E3%83%AD%E3%82%A4%E3%81%99%E3%82%8B">2. 「Green」環境をデプロイする</a></li>
+      <li><a href="#2-green%E7%92%B0%E5%A2%83%E3%82%92%E3%83%87%E3%83%97%E3%83%AD%E3%82%A4%E3%81%99%E3%82%8B">2. 「Green」環境をデプロイする</a></li>
       <li><a href="#%E9%80%9A%E4%BF%A1%E5%85%88%E3%82%92-blue-%E3%81%AE-pod-%E7%BE%A4%E3%81%8B%E3%82%89-green-%E3%81%AE-pod-%E7%BE%A4%E3%81%AB%E5%A4%89%E3%81%88%E3%82%8B">通信先を Blue の Pod 群から Green の Pod 群に変える</a></li>
-      <li><a href="#%E3%82%A4%E3%83%9F%E3%83%A5%E3%83%BC%E3%82%BF%E3%83%96%E3%83%AB%E3%83%BB%E3%83%87%E3%83%97%E3%83%AD%E3%82%A4--blue-%E7%92%B0%E5%A2%83%E3%82%92%E6%8D%A8%E3%81%A6%E3%81%A6%E3%81%8A%E3%81%8F">イミュータブル・デプロイ : Blue 環境を捨てておく</a></li>
+      <li><a href="#%E3%82%A4%E3%83%9F%E3%83%A5%E3%83%BC%E3%82%BF%E3%83%96%E3%83%AB%E3%83%87%E3%83%97%E3%83%AD%E3%82%A4--blue-%E7%92%B0%E5%A2%83%E3%82%92%E6%8D%A8%E3%81%A6%E3%81%A6%E3%81%8A%E3%81%8F">イミュータブル・デプロイ : Blue 環境を捨てておく</a></li>
     </ul>
   </li>
   <li><a href="#%E4%BB%A5%E4%B8%8A">以上</a></li>
@@ -84,7 +85,7 @@
   <li>参考：<a href="https://cloudpack.media/25426">Blue-Green Deployment ってなに？ cloudpack OSAKA blog | cloudpack.media</a></li>
 </ul>
 <p>ブルー・グリーン・デプロイメントによく似た手法として、<strong>「イミュータブル・デプロイ (Immutable Deployment)」</strong>というモノがある。手順は同じなのだが、最後に<em>「古くなった環境を捨てる」</em>場合はイミュータブル・デプロイになる。ブルー・グリーン・デプロイは使っていない方の環境も残したままになっているので、何か問題があった時は古いバージョンに差し戻しやすくなる。しかし、使っていないとはいえ2環境を稼動させたままになるので、リソースを食う。</p>
-<h2 id="kubernetes-でブルー・グリーン・デプロイをやってみる"><a class="header-link" href="#kubernetes-でブルー・グリーン・デプロイをやってみる"><span class="header-link-mark"></span></a>Kubernetes でブルー・グリーン・デプロイをやってみる</h2>
+<h2 id="kubernetes-でブルーグリーンデプロイをやってみる"><a class="header-link" href="#kubernetes-でブルーグリーンデプロイをやってみる"><span class="header-link-mark"></span></a>Kubernetes でブルー・グリーン・デプロイをやってみる</h2>
 <p>ブルー・グリーン・デプロイ自体は単なる手法なので、物理サーバでも行えることだが、今回は Kubernetes クラスタでコレを実現してみる。手順およびサンプルコードは以下の記事を参考にした。</p>
 <ul>
   <li>参考：<a href="https://www.ianlewis.org/en/bluegreen-deployments-kubernetes">Blue/Green Deployments on Kubernetes - Ian Lewis</a></li>
@@ -132,7 +133,7 @@
     <span class="token key atrule">targetPort</span><span class="token punctuation">:</span> <span class="token number">80</span>
 </code></pre>
 <p>こんな感じ。<code>replicas</code> の指定のとおり、Pod としては3台稼動している状態だ。Load Balancer Service が割り振る Pod 群を特定するために指定したラベルは、<code>name</code> と <code>version</code> プロパティを振っているが、この辺のラベル名や値はお好みで。実際はリリースするバージョン番号とかを書いた方が分かりやすいかも。</p>
-<h3 id="2-「green」環境をデプロイする"><a class="header-link" href="#2-「green」環境をデプロイする"><span class="header-link-mark"></span></a>2. 「Green」環境をデプロイする</h3>
+<h3 id="2-green環境をデプロイする"><a class="header-link" href="#2-green環境をデプロイする"><span class="header-link-mark"></span></a>2. 「Green」環境をデプロイする</h3>
 <p>さて、この状態で、新しいバージョンをリリースしてみよう。</p>
 <p>既存の <code>nginx-deployment-blue</code> Deployment はそのまま保持するので、<code>deployment-blue.yaml</code> ファイルを変更して適用するのではなく、このファイルをコピーして <code>deployment-green.yaml</code> というファイルを作る。</p>
 <ul>
@@ -182,7 +183,7 @@
     <span class="token key atrule">targetPort</span><span class="token punctuation">:</span> <span class="token number">80</span>
 </code></pre>
 <p>変更したのは <code>spec.selector</code> 部分のみ。コレで <code>$ kubectl apply -f service.yaml</code> コマンドを実行すれば、即座にリクエストが Green 側で処理されるようになる。Blue 側の Pod 群は稼動はしたままだが、Load Balancer 経由ではリクエストを受け取ることはなくなった。</p>
-<h3 id="イミュータブル・デプロイ--blue-環境を捨てておく"><a class="header-link" href="#イミュータブル・デプロイ--blue-環境を捨てておく"><span class="header-link-mark"></span></a>イミュータブル・デプロイ : Blue 環境を捨てておく</h3>
+<h3 id="イミュータブルデプロイ--blue-環境を捨てておく"><a class="header-link" href="#イミュータブルデプロイ--blue-環境を捨てておく"><span class="header-link-mark"></span></a>イミュータブル・デプロイ : Blue 環境を捨てておく</h3>
 <p>あとはオマケ。ココまでだと、6台の Pod が動いたままになる。リリース直後は Blue 側にロールバックすることも考えて、環境を残しておいても良いが、しばらくしたらロールバックの備えも必要なくなるだろう。使っていないとはいえ多少リソースは食うし、システムログなんかは随時溜まっていく。時間が経つと、実際どの Pod がリクエストを処理しているのか、パッと見で分かりにくくなったりもするので、個人的には Blue 側の環境は最終的には削除したいと思う。</p>
 <p>削除する場合は簡単で、<code>$ kubectl delete deployment nginx-deployment-blue</code> と、Blue の Deployment 名を指定して Delete すれば OK。Blue の Pod 群も合わせて破棄される。呼ばれなくなった Pod 群を破棄しただけなので、利用されている Green 側の Deployment や Pod 群には影響なし。</p>
 <p>この次のリリース時は、<code>deployment-blue.yaml</code> を新バージョンに書き換えて適用していけば、Green から Blue に切り替えられる、というワケ。</p>
