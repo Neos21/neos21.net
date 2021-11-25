@@ -1,7 +1,7 @@
 # [neos21.net](https://neos21.net/) : Neo's World
 
 
-## [Enter This Website](https://neos21.net/)
+## [Enter The Website](https://neos21.net/)
 
 - __<https://neos21.net/>__
 - <https://www.neos21.net/>
@@ -96,7 +96,7 @@ HTML・Markdown ファイルの先頭には YAML 形式の Front Matter が記�
 $ echo 'dist/' >> ./.git/info/exclude
 $ rm -rf ./dist
 $ git clone -b gh-pages https://Neos21@github.com/Neos21/neos21.net.git dist
-$ npm run rebuild
+$ npm run build
 
 $ cd ./dist
 # git add・git commit・git push…
