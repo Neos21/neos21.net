@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#0990d0">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>Node.js で同期版の API を使った方が速い時がある - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2021/12/01-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="header-brand">
+          <div id="header-brand-contents">
+            <div id="site-title"><a href="/index.html">Neo's World</a></div>
+            <nav id="header-links">
+              <ul>
+                <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+                <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+                <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+                <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+              </ul>
+            </nav>
+          </div>
+        </div>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2021/index.html">2021年</a></li>
+            <li><a href="/blog/2021/12/index.html">12月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2021-12-01</time></div>
+        <h1 id="page-title">Node.js で同期版の API を使った方が速い時がある</h1>
+
+<p>このサイトのビルドスクリプトは、自作の Node.js スクリプトを使っている。テンプレートとなる1つの HTML ファイルを読み込み、プレースホルダ部分を置換して各ページを生成したりしている。</p>
+<p>当初は <code>fs.promises</code> (非同期版の <code>fs</code> モジュール) を使って、Promise や <code>async</code>・<code>await</code> を多用したスクリプトとして作っていたが、何か遅い気がして色々試したところ、<code>fs.readFileSync()</code> や <code>fs.writeFileSync()</code> といった<em>同期版の API を使った方が、動作が速い</em>ことが分かった。明らかに早くビルドが終わるので、今は同期版の API を使っているのだが、イマイチその理屈が分かっていない。</p>
+<h2 id="検証用コード"><a class="header-link" href="#検証用コード"><span class="header-link-mark"></span></a>検証用コード</h2>
+<p>僕が体感した動作速度の差を皆さんも検証できるように、簡単なスクリプトを書いてみた。<code>fs</code> か <code>fs.promises</code> モジュールを使って、3パターンの実装をしてみた。いずれも、<code>TEMPLATE.html</code> というファイルを読み込み、そのファイル中の <code>{{ serial }}</code> というプレースホルダ文字列を検知して文字列置換し書き込む、という処理だ。変数宣言や <code>for</code> ループの回し方など、API と Promise の扱いの違い以外の差異がなるべく出ないように実装している。</p>
+<ul>
+  <li><code>sync.js</code>
+    <ul>
+      <li><code>readFileSync</code> と <code>writeFileSync</code> を使っている、完全な同期型の実装</li>
+      <li>ファイル書き込みも1ファイルずつ直列で処理している</li>
+    </ul>
+  </li>
+</ul>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword">const</span> begin <span class="token operator">=</span> process<span class="token punctuation">.</span><span class="token method function property-access">hrtime</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment">// パフォーマンス計測用</span>
+
+<span class="token keyword">const</span> fs <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'fs'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">const</span> number <span class="token operator">=</span> <span class="token number">1000</span><span class="token punctuation">;</span>  <span class="token comment">// ファイルの生成個数</span>
+<span class="token keyword">const</span> directory <span class="token operator">=</span> <span class="token string">'sync'</span><span class="token punctuation">;</span>  <span class="token comment">// 書き込み先ディレクトリ</span>
+
+<span class="token keyword">const</span> template <span class="token operator">=</span> fs<span class="token punctuation">.</span><span class="token method function property-access">readFileSync</span><span class="token punctuation">(</span><span class="token string">'./TEMPLATE.html'</span><span class="token punctuation">,</span> <span class="token string">'utf-8'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment">// テンプレートファイルを読み込む</span>
+<span class="token keyword control-flow">for</span><span class="token punctuation">(</span><span class="token keyword">let</span> i <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span> i <span class="token operator">&#x3C;</span> number<span class="token punctuation">;</span> i<span class="token operator">++</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token keyword">const</span> replaced <span class="token operator">=</span> template<span class="token punctuation">.</span><span class="token method function property-access">replace</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token regex"><span class="token regex-delimiter">/</span><span class="token regex-source language-regex">\{\{ serial \}\}</span><span class="token regex-delimiter">/</span><span class="token regex-flags">gu</span></span><span class="token punctuation">)</span><span class="token punctuation">,</span> i<span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment">// プレースホルダ文字列を連番 i に置換する</span>
+  fs<span class="token punctuation">.</span><span class="token method function property-access">writeFileSync</span><span class="token punctuation">(</span><span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">./</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>directory<span class="token interpolation-punctuation punctuation">}</span></span><span class="token string">/</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>i<span class="token interpolation-punctuation punctuation">}</span></span><span class="token string">.html</span><span class="token template-punctuation string">`</span></span><span class="token punctuation">,</span> replaced<span class="token punctuation">,</span> <span class="token string">'utf-8'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+
+<span class="token keyword">const</span> end <span class="token operator">=</span> process<span class="token punctuation">.</span><span class="token method function property-access">hrtime</span><span class="token punctuation">(</span>begin<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token template-string"><span class="token template-punctuation string">`</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>end<span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span> <span class="token operator">/</span> <span class="token number">1000000</span><span class="token interpolation-punctuation punctuation">}</span></span><span class="token string"> ms</span><span class="token template-punctuation string">`</span></span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<ul>
+  <li><code>promise-all.js</code>
+    <ul>
+      <li><code>fs.promises</code> を使い、ファイル書き込み処理部分を並列実行している</li>
+      <li>並列数が多すぎると <code>too many open files</code> エラーが出てしまう。<code>graceful-fs</code> はこのエラーを検知した時に並列実行数を分割したりとかしてくれるらしい</li>
+      <li><code>Promise.all</code> は使い慣れていなくて、配列をどんな風に作ってやると良いのかイマイチセオリーが分かってない…ｗ</li>
+    </ul>
+  </li>
+</ul>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword">const</span> begin <span class="token operator">=</span> process<span class="token punctuation">.</span><span class="token method function property-access">hrtime</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token keyword">const</span> fs <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'fs'</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token property-access">promises</span><span class="token punctuation">;</span>
+<span class="token keyword">const</span> number <span class="token operator">=</span> <span class="token number">1000</span><span class="token punctuation">;</span>
+<span class="token keyword">const</span> directory <span class="token operator">=</span> <span class="token string">'promise-all'</span><span class="token punctuation">;</span>
+
+fs<span class="token punctuation">.</span><span class="token method function property-access">readFile</span><span class="token punctuation">(</span><span class="token string">'./TEMPLATE.html'</span><span class="token punctuation">,</span> <span class="token string">'utf-8'</span><span class="token punctuation">)</span>
+  <span class="token punctuation">.</span><span class="token method function property-access">then</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token parameter">template</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+    <span class="token keyword">const</span> promises <span class="token operator">=</span> <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token punctuation">;</span>
+    <span class="token keyword control-flow">for</span><span class="token punctuation">(</span><span class="token keyword">let</span> i <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span> i <span class="token operator">&#x3C;</span> number<span class="token punctuation">;</span> i<span class="token operator">++</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token comment">// 置換とファイル書き込み処理の全体を Promise でラップするためこのように書いてみた</span>
+      promises<span class="token punctuation">.</span><span class="token method function property-access">push</span><span class="token punctuation">(</span><span class="token keyword">new</span> <span class="token class-name">Promise</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token parameter">resolve</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+        <span class="token keyword">const</span> replaced <span class="token operator">=</span> template<span class="token punctuation">.</span><span class="token method function property-access">replace</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token regex"><span class="token regex-delimiter">/</span><span class="token regex-source language-regex">\{\{ serial \}\}</span><span class="token regex-delimiter">/</span><span class="token regex-flags">gu</span></span><span class="token punctuation">)</span><span class="token punctuation">,</span> i<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        fs<span class="token punctuation">.</span><span class="token method function property-access">writeFile</span><span class="token punctuation">(</span><span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">./</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>directory<span class="token interpolation-punctuation punctuation">}</span></span><span class="token string">/</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>i<span class="token interpolation-punctuation punctuation">}</span></span><span class="token string">.html</span><span class="token template-punctuation string">`</span></span><span class="token punctuation">,</span> replaced<span class="token punctuation">,</span> <span class="token string">'utf-8'</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">then</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span> <span class="token function">resolve</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+    <span class="token keyword control-flow">return</span> <span class="token known-class-name class-name">Promise</span><span class="token punctuation">.</span><span class="token method function property-access">all</span><span class="token punctuation">(</span>promises<span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment">// 並列実行</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span>
+  <span class="token punctuation">.</span><span class="token method function property-access">then</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+    <span class="token keyword">const</span> end <span class="token operator">=</span> process<span class="token punctuation">.</span><span class="token method function property-access">hrtime</span><span class="token punctuation">(</span>begin<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token template-string"><span class="token template-punctuation string">`</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>end<span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span> <span class="token operator">/</span> <span class="token number">1000000</span><span class="token interpolation-punctuation punctuation">}</span></span><span class="token string"> ms</span><span class="token template-punctuation string">`</span></span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<ul>
+  <li><code>async-await.js</code>
+    <ul>
+      <li><code>fs.promises</code> と <code>async</code>・<code>await</code> を使い、<code>sync.js</code> (同期版) とほぼ同じ構成で実装した</li>
+      <li>Promise を使っているものの、処理自体は1ファイルずつ直列実行している</li>
+    </ul>
+  </li>
+</ul>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword">const</span> begin <span class="token operator">=</span> process<span class="token punctuation">.</span><span class="token method function property-access">hrtime</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token keyword">const</span> fs <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'fs'</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token property-access">promises</span><span class="token punctuation">;</span>
+<span class="token keyword">const</span> number <span class="token operator">=</span> <span class="token number">1000</span><span class="token punctuation">;</span>
+<span class="token keyword">const</span> directory <span class="token operator">=</span> <span class="token string">'async-await'</span><span class="token punctuation">;</span>
+
+<span class="token punctuation">(</span><span class="token keyword">async</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token keyword">const</span> template <span class="token operator">=</span> <span class="token keyword control-flow">await</span> fs<span class="token punctuation">.</span><span class="token method function property-access">readFile</span><span class="token punctuation">(</span><span class="token string">'./TEMPLATE.html'</span><span class="token punctuation">,</span> <span class="token string">'utf-8'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword control-flow">for</span><span class="token punctuation">(</span><span class="token keyword">let</span> i <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span> i <span class="token operator">&#x3C;</span> number<span class="token punctuation">;</span> i<span class="token operator">++</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token keyword">const</span> replaced <span class="token operator">=</span> template<span class="token punctuation">.</span><span class="token method function property-access">replace</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token regex"><span class="token regex-delimiter">/</span><span class="token regex-source language-regex">\{\{ serial \}\}</span><span class="token regex-delimiter">/</span><span class="token regex-flags">gu</span></span><span class="token punctuation">)</span><span class="token punctuation">,</span> i<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword control-flow">await</span> fs<span class="token punctuation">.</span><span class="token method function property-access">writeFile</span><span class="token punctuation">(</span><span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">./</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>directory<span class="token interpolation-punctuation punctuation">}</span></span><span class="token string">/</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>i<span class="token interpolation-punctuation punctuation">}</span></span><span class="token string">.html</span><span class="token template-punctuation string">`</span></span><span class="token punctuation">,</span> replaced<span class="token punctuation">,</span> <span class="token string">'utf-8'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  
+  <span class="token keyword">const</span> end <span class="token operator">=</span> process<span class="token punctuation">.</span><span class="token method function property-access">hrtime</span><span class="token punctuation">(</span>begin<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token template-string"><span class="token template-punctuation string">`</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>end<span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span> <span class="token operator">/</span> <span class="token number">1000000</span><span class="token interpolation-punctuation punctuation">}</span></span><span class="token string"> ms</span><span class="token template-punctuation string">`</span></span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>…こんな感じ。検証の仕方が甘々かとは思うが、僕が体感した速度差はこうしたコードで感じられると思う。</p>
+<p>ご自身で検証される際は、次のような環境リセット用処理を書いておくと楽かも。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword">const</span> fs <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'fs'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">[</span><span class="token string">'sync'</span><span class="token punctuation">,</span> <span class="token string">'promise-all'</span><span class="token punctuation">,</span> <span class="token string">'async-await'</span><span class="token punctuation">]</span><span class="token punctuation">.</span><span class="token method function property-access">forEach</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token parameter">directory</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  fs<span class="token punctuation">.</span><span class="token method function property-access">rmdirSync</span><span class="token punctuation">(</span><span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">./</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>directory<span class="token interpolation-punctuation punctuation">}</span></span><span class="token template-punctuation string">`</span></span><span class="token punctuation">,</span> <span class="token punctuation">{</span> recursive<span class="token operator">:</span> <span class="token boolean">true</span><span class="token punctuation">,</span> force<span class="token operator">:</span> <span class="token boolean">true</span> <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  fs<span class="token punctuation">.</span><span class="token method function property-access">mkdirSync</span><span class="token punctuation">(</span><span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">./</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>directory<span class="token interpolation-punctuation punctuation">}</span></span><span class="token template-punctuation string">`</span></span><span class="token punctuation">,</span> <span class="token punctuation">{</span> recursive<span class="token operator">:</span> <span class="token boolean">true</span> <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<h2 id="測定結果と考察"><a class="header-link" href="#測定結果と考察"><span class="header-link-mark"></span></a>測定結果と考察</h2>
+<p>適当なテンプレート HTML ファイルと、ファイル出力先となる空ディレクトリを予め用意しておき、3つのスクリプトを実行してみると、こんな感じで実行速度に差が出た。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># 同期版 API で直列処理</span>
+$ node sync.js
+<span class="token number">35.9836</span> ms
+
+<span class="token comment"># Promise.all で並列処理</span>
+$ node promise-all.js
+<span class="token number">126.4012</span> ms
+
+<span class="token comment"># async・await で直列処理</span>
+$ node async-await.js
+<span class="token number">196.7749</span> ms
+</code></pre>
+<p><em>同期版 API の <code>sync.js</code> が明らかに一番速い。</em><code>Promise.all</code> で並列処理したモノはその4倍近く遅く、<code>async</code>・<code>await</code> を使ったモノは5倍程度の遅さだ。</p>
+<p><code>async</code>・<code>await</code> を使っただけで直列実行しているパターンが、同期版よりも遅くなるのは何となく分かる。直列的な処理なのに Promise でラップされているので、イベントループを回りまくってその分遅くなるのだろう。いやしかしそれでも、<code>Promise.all</code> 版よりココまで遅くなるとは…。</p>
+<p>そして、<code>Promise.all</code> による並列処理も、こんなに遅いものか、というのは意外だ。ただ、その理屈も説明はできるかもしれない。</p>
+<p>Node.js はシングルスレッドで動作する。<code>Promise.all</code> はマルチスレッドを使った<em>「並列」</em>処理ではなく、非同期処理を順不同に行っているだけの<strong>「並行」</strong>処理、と呼ぶ方が正確なのだ。つまり、シングルスレッドで複数の操作をちょっとずつ行うので、コンテキストスイッチがかかっていて遅くなるものと思われる。</p>
+<p>しかし、それにしても、ココまで遅くなりますか…？というか、同期版の処理がそんなに速いですか。1つずつ順番に処理させる方が速いんですな。</p>
+<h2 id="サーバサイドプログラムでコレをやっちゃダメだけど"><a class="header-link" href="#サーバサイドプログラムでコレをやっちゃダメだけど"><span class="header-link-mark"></span></a>サーバサイドプログラムでコレをやっちゃダメだけど</h2>
+<p>「なんだ、<code>readFileSync</code> や <code>writeFileSync</code> の方が速いなら、今度から <code>sync</code> 系の API だけ使うわ」という考え方はマズい。コレは、よくいわれる「ブロッキング I/O」「ノンブロッキング I/O」という特性の違いによるからだ。</p>
+<p>「リクエストを元にファイルを書き込む」といったウェブアプリケーションを作成する時、ファイルの書き込み処理に <code>writeFileSync</code> を使ってしまうと、一つのリクエストでファイル書き込み処理をしている間、その他のリクエスト処理がブロックされ、一切動かなくなってしまう。前述の検証コードで感じた速度差の話は置いておいて、ウェブアプリケーションにおいては、「リクエスト A に対するファイル書き込み処理中もリクエスト B の処理を受け付けられるようにしておく」というノンブロッキング処理で実装しておく必要がある。</p>
+<p>…しかし、ビルドスクリプトのように一人のユーザが実行するだけのコードなら、別にブロッキング I/O でも困ることはない。そして今回検証したように、同期関数の方がコレほど速く動くというのは意外だった。</p>
+<p>こうなると、Node.js でより高速に実行する方法はないのか、興味本位で気になってくる。以前、Cluster モジュールを使ってマルチコア起動してみたことがあったが、同期関数を CPU スレッドの数だけ分割して実行できたら、完全に並列処理になったりする？</p>
+<ul>
+  <li>過去記事：<a href="/blog/2019/04/18-01.html">Node.js の Cluster モジュールを使って Express サーバを並列化する</a></li>
+</ul>
+<p>最近、CLI ツールを開発している人達が続々と Rust に移行している様子は見えていて、本当に並列処理とか高速化とか考え始めると、Node.js を離れていくのかしら。フロントエンドと同じ JavaScript で実装できる気軽さから、長らく Node.js を使っているけど、自分の中でマンネリ化してきたこともあり、違う言語を本格的に始めてみようかなーとか思い始めている。</p>
+<ul>
+  <li>参考：<a href="https://stackoverflow.com/questions/61032948/why-is-async-performance-worse-synchronous-on-blocking-file-i-o-in-node-js">asynchronous - Why is async performance worse synchronous on blocking file I/O in Node.js? - Stack Overflow</a></li>
+</ul><div class="ad-amazon">
+  <div class="ad-amazon-image">
+    <a href="https://www.amazon.co.jp/dp/4873119596?tag=neos21-22&amp;linkCode=osi&amp;th=1&amp;psc=1">
+      <img src="https://m.media-amazon.com/images/I/51K8e3rXTQL._SL160_.jpg" width="125" height="160">
+    </a>
+  </div>
+  <div class="ad-amazon-info">
+    <div class="ad-amazon-title">
+      <a href="https://www.amazon.co.jp/dp/4873119596?tag=neos21-22&amp;linkCode=osi&amp;th=1&amp;psc=1">並行プログラミング入門 ―Rust、C、アセンブリによる実装からのアプローチ</a>
+    </div>
+  </div>
+</div>
+<div class="ad-amazon">
+  <div class="ad-amazon-image">
+    <a href="https://www.amazon.co.jp/dp/4873114357?tag=neos21-22&amp;linkCode=osi&amp;th=1&amp;psc=1">
+      <img src="https://m.media-amazon.com/images/I/51VJ1oA9g+L._SL160_.jpg" width="123" height="160">
+    </a>
+  </div>
+  <div class="ad-amazon-info">
+    <div class="ad-amazon-title">
+      <a href="https://www.amazon.co.jp/dp/4873114357?tag=neos21-22&amp;linkCode=osi&amp;th=1&amp;psc=1">並行コンピューティング技法 ―実践マルチコア/マルチスレッドプログラミング</a>
+    </div>
+  </div>
+</div>
+<div class="ad-rakuten">
+  <div class="ad-rakuten-image">
+    <a href="https://hb.afl.rakuten.co.jp/hgc/g00q0722.waxyc9ff.g00q0722.waxyd017/?pc=https%3A%2F%2Fitem.rakuten.co.jp%2Fbook%2F15960897%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Fbook%2Fi%2F19670822%2F">
+      <img src="https://thumbnail.image.rakuten.co.jp/@0_mall/book/cabinet/4678/9784877834678.jpg?_ex=128x128">
+    </a>
+  </div>
+  <div class="ad-rakuten-info">
+    <div class="ad-rakuten-title">
+      <a href="https://hb.afl.rakuten.co.jp/hgc/g00q0722.waxyc9ff.g00q0722.waxyd017/?pc=https%3A%2F%2Fitem.rakuten.co.jp%2Fbook%2F15960897%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Fbook%2Fi%2F19670822%2F">並列コンピューティングの基礎 パーソナルな環境で実践的に学ぶ [ 北山洋幸 ]</a>
+    </div>
+    <div class="ad-rakuten-shop">
+      <a href="https://hb.afl.rakuten.co.jp/hgc/g00q0722.waxyc9ff.g00q0722.waxyd017/?pc=https%3A%2F%2Fwww.rakuten.co.jp%2Fbook%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Fbook%2F">楽天ブックス</a>
+    </div>
+    <div class="ad-rakuten-price">価格 : 5500円</div>
+  </div>
+</div>
+
+      </main>
+      <footer id="footer">
+        <div id="footer-contents">
+          <div id="date-time">
+            <dl>
+              <dt>Created</dt>
+              <dd><time>2021-12-01</time></dd>
+              <dt>Last-Modified</dt>
+              <dd><time>2021-12-01</time></dd>
+            </dl>
+          </div>
+          <nav id="footer-links">
+            <ul>
+              <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+              <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+              <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+              <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+            </ul>
+          </nav>
+          <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+        </div>
+      </footer>
+    </div>
+  </body>
+</html>
