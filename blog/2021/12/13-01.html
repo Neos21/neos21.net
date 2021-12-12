@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#0990d0">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>ffmpeg で mkv 形式の動画を H.264 mp4 に変換してみた - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2021/12/13-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="header-brand">
+          <div id="header-brand-contents">
+            <div id="site-title"><a href="/index.html">Neo's World</a></div>
+            <nav id="header-links">
+              <ul>
+                <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+                <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+                <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+                <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+              </ul>
+            </nav>
+          </div>
+        </div>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2021/index.html">2021年</a></li>
+            <li><a href="/blog/2021/12/index.html">12月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2021-12-13</time></div>
+        <h1 id="page-title">ffmpeg で mkv 形式の動画を H.264 mp4 に変換してみた</h1>
+
+<p><code>.mkv</code> 形式の動画ファイルをもらったのだが、ファイルサイズが大きかったので圧縮することにした。普段自分は Adobe Premiere Pro を使っているので Premiere に取り込んで圧縮しようかと思ったのだが、<code>.mkv</code> (Matroska) は取り込めないようでエラーが出てしまった。</p>
+<p>Premiere が使えないとなると他のツールを探す必要がある。動画ファイルの数も多いことだし、ココは CLI でバッチ処理させたいな。ということで、コマンドラインから動画変換ができる <em>ffmpeg</em> に再注目して、H.264 の <code>.mp4</code> 形式に圧縮してみた。</p>
+<p>ffmpeg をガッツリ触ったことがなかったので、オプション引数を色々勉強した。作業した OS は Windows で、Chocolatey よりインストールした ffmpeg を使っている。</p>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#%E5%9F%BA%E6%9C%AC%E3%82%B3%E3%83%9E%E3%83%B3%E3%83%89">基本コマンド</a></li>
+  <li><a href="#%E6%98%A0%E5%83%8F%E3%81%AE%E5%A4%89%E6%8F%9B%E3%82%AA%E3%83%97%E3%82%B7%E3%83%A7%E3%83%B3">映像の変換オプション</a></li>
+  <li><a href="#%E9%9F%B3%E5%A3%B0%E3%81%AE%E5%A4%89%E6%8F%9B%E3%82%AA%E3%83%97%E3%82%B7%E3%83%A7%E3%83%B3">音声の変換オプション</a></li>
+  <li><a href="#%E3%83%9E%E3%83%AB%E3%83%81%E3%83%88%E3%83%A9%E3%83%83%E3%82%AF%E5%87%A6%E7%90%86">マルチトラック処理</a></li>
+  <li><a href="#%E7%B5%84%E3%81%BF%E7%AB%8B%E3%81%A6%E3%81%9F%E3%82%B3%E3%83%9E%E3%83%B3%E3%83%89%E3%81%AF%E3%81%93%E3%82%93%E3%81%AA%E6%84%9F%E3%81%98">組み立てたコマンドはこんな感じ</a></li>
+  <li><a href="#%E5%8F%82%E8%80%83">参考</a></li>
+</ul>
+<h2 id="基本コマンド"><a class="header-link" href="#基本コマンド"><span class="header-link-mark"></span></a>基本コマンド</h2>
+<pre class="language-bash"><code class="language-bash">$ ffmpeg -i 【元ファイル】 【最後に出力ファイル・拡張子でフォーマットが決まる】
+
+<span class="token comment"># 例</span>
+$ ffmpeg -i <span class="token string">'./example-input.mkv'</span> <span class="token string">'./example-output.mp4'</span>`
+</code></pre>
+<p>動画ファイルを変換するコマンドの基本形はこんな感じ。出力ファイルの拡張子によってフォーマットが決まるのが面白い。</p>
+<ul>
+  <li>出力ファイルの拡張子を <code>.mp3</code> とすれば、動画ファイルから音声だけ抽出できる</li>
+  <li><code>-i</code> オプションだけで「出力ファイルパス」を書かなければ、入力ファイルの情報をコンソール出力できる</li>
+</ul>
+<h2 id="映像の変換オプション"><a class="header-link" href="#映像の変換オプション"><span class="header-link-mark"></span></a>映像の変換オプション</h2>
+<p>映像部分の変換オプションはこんな感じ。</p>
+<ul>
+  <li><code>-vf scale=【幅】:【高さ】</code>
+    <ul>
+      <li>映像の解像度を指定する</li>
+      <li><code>-1</code> を指定するとアスペクト比に応じて自動計算してくれる</li>
+      <li>ex. <code>-vf scale=-1:480</code> → 高さ 480px にし、幅はアスペクト比を保った数値を自動算出する</li>
+      <li><code>-1</code> を指定した場合、上手く割り切れない数値 (奇数？) になるとエラーが出て変換できない。エラーメッセージがそれと分かりにくいが、ココが原因のことが多い</li>
+    </ul>
+  </li>
+  <li><code>-r 【FPS】</code>
+    <ul>
+      <li>FPS 指定。<code>30</code> など書く</li>
+    </ul>
+  </li>
+  <li><code>-b:v 0.3M</code>・<code>-b:v 300k</code>・<code>-b:v 300000</code> など = 300Kbps
+    <ul>
+      <li>ビットレート指定</li>
+    </ul>
+  </li>
+  <li><code>-c:v libx264</code> → H.264 形式でエンコードする
+    <ul>
+      <li>利用できるエンコード形式は <code>$ ffmpeg -codecs</code> で調べられる</li>
+      <li><code>-c:v</code> オプションは <code>-vcodec</code> と書いても同じ</li>
+      <li><code>h264_nvenc</code> (や <code>nvenc_h264</code>) で GPU エンコードできるようだが、自分が試した ffmpeg では上手くいかなかった。何かビルドしたりしないといけないらしい。面倒なので放置</li>
+    </ul>
+  </li>
+</ul>
+<h2 id="音声の変換オプション"><a class="header-link" href="#音声の変換オプション"><span class="header-link-mark"></span></a>音声の変換オプション</h2>
+<p>続いて音声部分。</p>
+<ul>
+  <li><code>-c:a libfaac</code> → AAC 形式
+    <ul>
+      <li><code>-c:a libmp3lame</code> で MP3 形式で変換する</li>
+    </ul>
+  </li>
+  <li><code>-b:a 【bps】</code>
+    <ul>
+      <li>音声のビットレート。映像の方 (<code>-b:v</code>) と同じく、<code>-b:a 128k</code> のように書けば 128kbps で圧縮してくれる</li>
+    </ul>
+  </li>
+  <li><code>-ar 44100</code>
+    <ul>
+      <li>音声のサンプル周波数。44100 か 48000 が主だが、32000 とかでも行ける</li>
+    </ul>
+  </li>
+</ul>
+<h2 id="マルチトラック処理"><a class="header-link" href="#マルチトラック処理"><span class="header-link-mark"></span></a>マルチトラック処理</h2>
+<p>よくよく <code>-i</code> オプションで <code>.mkv</code> 動画ファイルの中身を見てみると、多言語の音声トラックが収録されていた。MPC-HC や VLC などのプレイヤーを使えば、DVD の映画みたく、英語音声やスペイン語音声なんかを選べるアレだ。コレが収録されていたおかげでファイルサイズが大きかったらしい。</p>
+<p>今回は日本語音声しか聞かないので、<code>-i</code> オプションで<em>トラック番号</em> (<code>0:0</code> が映像で、<code>0:1</code> や <code>0:2</code> がそれぞれの音声トラック) を調べておき、<strong>映像と日本語音声トラックのみを出力</strong>するようにした。</p>
+<ul>
+  <li><code>-map 0:0 -map 0:2</code>
+    <ul>
+      <li>出力する映像トラックと音声トラックを1つずつ指定している</li>
+    </ul>
+  </li>
+</ul>
+<h2 id="組み立てたコマンドはこんな感じ"><a class="header-link" href="#組み立てたコマンドはこんな感じ"><span class="header-link-mark"></span></a>組み立てたコマンドはこんな感じ</h2>
+<p>そんなワケで、今回 <code>.mkv</code> ファイルを <code>.mp4</code> に変換する時に組み立てたコマンドは以下のとおり。</p>
+<pre class="language-bash"><code class="language-bash">$ ffmpeg -i <span class="token string">'example-input.mkv'</span>  <span class="token punctuation">\</span>
+  -vf <span class="token assign-left variable">scale</span><span class="token operator">=</span>-1:480  -c:v libx264  -b:v <span class="token number">0</span>.7M  <span class="token punctuation">\</span>
+  -b:a 112k  -ar <span class="token number">32000</span>  <span class="token punctuation">\</span>
+  -map <span class="token number">0</span>:0  -map <span class="token number">0</span>:2  <span class="token punctuation">\</span>
+  <span class="token string">'example-output.mp4'</span>
+</code></pre>
+<ul>
+  <li>映像 : H.264・VBR 1パス・0.7Mbps</li>
+  <li>音声 : AAC・32000Hz・低音質・112kbps</li>
+</ul>
+<p>だいぶ圧縮している。ファイルの内容によっては以下のような微調整を加えた。</p>
+<ul>
+  <li>アスペクト比の問題で、高さが <code>480</code> px では変換できなかったファイルは <code>486</code> px にしてみたり</li>
+  <li>音質劣化が酷く感じたら <code>-b:a</code> と <code>-ar</code> オプションを外してお任せにしてみたり</li>
+  <li>マルチトラックの動画ファイルでなければ、2つの <code>-map</code> オプションは外したり</li>
+</ul>
+<p>GPU エンコードのコーデックが使えなかったので、CPU のみでエンコードすることになり CPU 使用率が 100% に張り付いていたが、そんなに速度は気にならなかった (Core i7-7700K 使用)。コマンドを組み立てて複数ファイルをバッチ処理できたので、寝ている間に全ファイルの変換が終わった。</p>
+<p>元の動画がそんなに高画質なモノじゃなかったので、コレでも目に見える劣化はほとんどない。それでいてファイルサイズは元の3分の1から5分の1ぐらいまで圧縮できている。</p>
+<p>自分は 4K モニタを使っているが、動画の高さは 480px 程度あれば十分かなと感じている。真剣に映像美を楽しむようなコンテンツならともかく、ダラ見するバラエティ的な動画なら 720p すら要らないかと。そんなに高画質で残したい欲もないし、飽きたら消しちゃうし。</p>
+<p>ということで以上。</p><div class="ad-rakuten">
+  <div class="ad-rakuten-image">
+    <a href="https://hb.afl.rakuten.co.jp/hgc/g00rc682.waxyceda.g00rc682.waxyd8cb/?pc=https%3A%2F%2Fitem.rakuten.co.jp%2Fbookoffonline%2F0015764102%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Fbookoffonline%2Fi%2F11364802%2F">
+      <img src="https://thumbnail.image.rakuten.co.jp/@0_mall/bookoffonline/cabinet/2028/0015764102l.jpg?_ex=128x128">
+    </a>
+  </div>
+  <div class="ad-rakuten-info">
+    <div class="ad-rakuten-title">
+      <a href="https://hb.afl.rakuten.co.jp/hgc/g00rc682.waxyceda.g00rc682.waxyd8cb/?pc=https%3A%2F%2Fitem.rakuten.co.jp%2Fbookoffonline%2F0015764102%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Fbookoffonline%2Fi%2F11364802%2F">【中古】 FFmpegで作る動画共有サイト ／原一浩，寺田学，本間雅洋，足立健誌，堀内康弘，堀田直孝，月村潤，尾花衣美【著】 【中古】afb</a>
+    </div>
+    <div class="ad-rakuten-shop">
+      <a href="https://hb.afl.rakuten.co.jp/hgc/g00rc682.waxyceda.g00rc682.waxyd8cb/?pc=https%3A%2F%2Fwww.rakuten.co.jp%2Fbookoffonline%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Fbookoffonline%2F">ブックオフオンライン楽天市場店</a>
+    </div>
+    <div class="ad-rakuten-price">価格 : 200円</div>
+  </div>
+</div>
+<div class="ad-amazon">
+  <div class="ad-amazon-image">
+    <a href="https://www.amazon.co.jp/dp/B0876F9B27?tag=neos21-22&amp;linkCode=osi&amp;th=1&amp;psc=1">
+      <img src="https://m.media-amazon.com/images/I/41+oetVjizL._SL160_.jpg" width="100" height="160">
+    </a>
+  </div>
+  <div class="ad-amazon-info">
+    <div class="ad-amazon-title">
+      <a href="https://www.amazon.co.jp/dp/B0876F9B27?tag=neos21-22&amp;linkCode=osi&amp;th=1&amp;psc=1">FFmpeg Quick Reference of 100+ Scripts for Video, Audio and Streaming (English Edition)</a>
+    </div>
+  </div>
+</div>
+<h2 id="参考"><a class="header-link" href="#参考"><span class="header-link-mark"></span></a>参考</h2>
+<ul>
+  <li>参考：<a href="https://blog.katsubemakito.net/macos/ffmpeg">FFmpegで実際使うと便利だが脳みそに焼き付いてくれないオプションメモ</a></li>
+  <li>参考：<a href="https://simple.hatenablog.jp/entry/ffmpeg-Encoding">ffmpegで動画をエンコードする - なまけもの</a></li>
+  <li>参考：<a href="https://jp.videoproc.com/edit-convert/ffmpeg-bitrate.htm">FFmpegビットレート（固定CBR・可変VBR）、FFmpegビットレート指定、動画変換・圧縮方法まとめ</a></li>
+  <li>参考：<a href="https://tech.ckme.co.jp/ffmpeg_vquality.shtml">動画品質の設定：tech.ckme.co.jp</a></li>
+  <li>参考：<a href="https://www.komina.info/archives/402">マルチトラックなDVDを変換する – こみなのメモ帳</a></li>
+  <li>参考：<a href="https://pype.org/encode-using-gpu-with-ffmpeg/">FFmpegでGPUを使ってエンコード – PYPE.org</a></li>
+  <li>参考：<a href="https://moriyoshi.hatenablog.com/entry/2015/12/17/224127">FFmpegで動画編集をするガイド - moriyoshiの日記</a></li>
+</ul>
+
+      </main>
+      <footer id="footer">
+        <div id="footer-contents">
+          <div id="date-time">
+            <dl>
+              <dt>Created</dt>
+              <dd><time>2021-12-13</time></dd>
+              <dt>Last-Modified</dt>
+              <dd><time>2021-12-13</time></dd>
+            </dl>
+          </div>
+          <nav id="footer-links">
+            <ul>
+              <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+              <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+              <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+              <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+            </ul>
+          </nav>
+          <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+        </div>
+      </footer>
+    </div>
+  </body>
+</html>
