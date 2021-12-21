@@ -60,8 +60,575 @@
 
 <p>以前、Perl を改めて勉強し直した時に、1ファイルで動く簡易チャット CGI を作った。</p>
 <ul>
-  <li><a href="https://gist.github.com/Neos21/1bb01bd67c80ae913e33b1a5938b8ff0">Perl Chat · GitHub</a></li>
+  <li><code>perl-chat.cgi</code></li>
 </ul>
+<pre class="language-perl"><code class="language-perl"><span class="token comment">#!/usr/bin/perl</span>
+
+
+<span class="token comment"># ================================================================================</span>
+<span class="token comment"># Perl Chat</span>
+<span class="token comment"># </span>
+<span class="token comment"># FIXME : ログファイル追記時のファイルロック処理が未実装</span>
+<span class="token comment"># ================================================================================</span>
+
+<span class="token keyword">use</span> strict<span class="token punctuation">;</span>
+<span class="token keyword">use</span> warnings<span class="token punctuation">;</span>
+<span class="token keyword">use</span> utf8<span class="token punctuation">;</span>  <span class="token comment"># このファイルのエンコーディングを示す</span>
+<span class="token keyword">use</span> open <span class="token string">':encoding(UTF-8)'</span><span class="token punctuation">;</span>  <span class="token comment"># ファイル入出力用・open() の第2引数で示すのと同じ (:utf8 と書くとエンコードチェックしない)</span>
+<span class="token keyword">use</span> Fcntl<span class="token punctuation">;</span>  <span class="token comment"># sysopen() を使うために使用</span>
+<span class="token keyword">use</span> FindBin<span class="token punctuation">;</span>  <span class="token comment"># CGI ファイルの名前を割り出すために使用</span>
+
+binmode<span class="token punctuation">(</span>STDOUT<span class="token punctuation">,</span> <span class="token string">':encoding(UTF-8)'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment"># 標準入出力向け・「Wide character in print」回避用</span>
+
+
+<span class="token comment"># ================================================================================</span>
+<span class="token comment"># 設定事項</span>
+<span class="token comment"># ================================================================================</span>
+
+<span class="token comment"># この CGI ファイルの名前 (投稿一覧取得・投稿処理時の非同期通信先 URL として使用する)</span>
+<span class="token keyword">my</span> <span class="token variable">$thisFile</span> <span class="token operator">=</span> <span class="token string">'./perl-chat.cgi'</span><span class="token punctuation">;</span>
+
+<span class="token comment"># 投稿ログファイルの名前</span>
+<span class="token keyword">my</span> <span class="token variable">$logFileName</span> <span class="token operator">=</span> <span class="token string">'./perl-chat.log'</span><span class="token punctuation">;</span>
+
+<span class="token comment"># 保持する投稿件数</span>
+<span class="token keyword">my</span> <span class="token variable">$maxPosts</span> <span class="token operator">=</span> <span class="token number">50</span><span class="token punctuation">;</span>
+
+
+<span class="token comment"># ================================================================================</span>
+<span class="token comment"># メイン処理</span>
+<span class="token comment"># ================================================================================</span>
+
+<span class="token comment"># 設定事項が正しいかチェックする・問題があれば異常終了する</span>
+<span class="token keyword">my</span> <span class="token variable">$invalidMessage</span> <span class="token operator">=</span> checkSettings<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">if</span><span class="token punctuation">(</span><span class="token operator">!</span><span class="token variable">$invalidMessage</span> <span class="token operator">eq</span> <span class="token string">''</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token keyword">print</span><span class="token punctuation">(</span><span class="token string">"Content-type: text/html; charset=UTF-8\n\n$invalidMessage"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  exit <span class="token number">1</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+
+<span class="token comment"># リクエストを判別し処理する</span>
+<span class="token keyword">if</span><span class="token punctuation">(</span><span class="token variable">$ENV</span><span class="token punctuation">{</span><span class="token string">'REQUEST_METHOD'</span><span class="token punctuation">}</span> <span class="token operator">eq</span> <span class="token string">'POST'</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token comment"># POST : 投稿時</span>
+  postMessage<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+<span class="token keyword">else</span> <span class="token punctuation">{</span>
+  <span class="token comment"># クエリをパースする (1回のリクエスト処理中に複数回呼ばないこと)</span>
+  <span class="token keyword">my</span> <span class="token variable">%queries</span> <span class="token operator">=</span> parseQueries<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  
+  <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token variable">$queries</span><span class="token punctuation">{</span><span class="token string">'mode'</span><span class="token punctuation">}</span> <span class="token operator">&#x26;&#x26;</span> <span class="token variable">$queries</span><span class="token punctuation">{</span><span class="token string">'mode'</span><span class="token punctuation">}</span> <span class="token operator">eq</span> <span class="token string">'get-all'</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token comment"># GET : 投稿一覧取得</span>
+    getAllPosts<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  <span class="token keyword">else</span> <span class="token punctuation">{</span>
+    <span class="token comment"># 画面初期表示</span>
+    viewPage<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+
+
+<span class="token comment"># ================================================================================</span>
+<span class="token comment"># 設定項目チェック</span>
+<span class="token comment"># ================================================================================</span>
+
+<span class="token comment"># 設定項目チェック・ログファイルがない場合は新規生成を試行する</span>
+<span class="token comment"># </span>
+<span class="token comment"># @return 問題があれば文字列を返す・問題がなければ空文字を返す</span>
+<span class="token function"><span class="token keyword">sub</span> checkSettings</span> <span class="token punctuation">{</span>
+  <span class="token comment"># ファイル名が指定されていない場合、指定されたパスにファイルが存在しない場合は自分で割り出してみる</span>
+  <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token variable">$thisFile</span> <span class="token operator">eq</span> <span class="token string">''</span> <span class="token operator">||</span> <span class="token operator">!</span> <span class="token operator">-f</span> <span class="token variable">$thisFile</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token variable">$thisFile</span> <span class="token operator">=</span> <span class="token string">"./$FindBin::Script"</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token operator">!</span> <span class="token operator">-f</span> <span class="token variable">$thisFile</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token keyword">return</span> <span class="token string">'この CGI ファイル名として指定されたパスにファイルがありません'</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  
+  <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token variable">$logFileName</span> <span class="token operator">eq</span> <span class="token string">''</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token keyword">return</span> <span class="token string">'ログファイル名が未指定です'</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token variable">$maxPosts</span> <span class="token operator">&#x3C;</span> <span class="token number">1</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token keyword">return</span> <span class="token string">'最大投稿数は 1 以上を指定してください'</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  
+  <span class="token comment"># ログファイルがなければ生成を試みて、生成できなければ異常終了する</span>
+  <span class="token keyword">my</span> <span class="token variable">$logFile</span><span class="token punctuation">;</span>
+  <span class="token keyword">eval</span> <span class="token punctuation">{</span>
+    sysopen<span class="token punctuation">(</span><span class="token variable">$logFile</span><span class="token punctuation">,</span> <span class="token variable">$logFileName</span><span class="token punctuation">,</span> O_CREAT<span class="token punctuation">,</span> <span class="token number">0666</span><span class="token punctuation">)</span> <span class="token operator">or</span> <span class="token keyword">die</span><span class="token punctuation">(</span><span class="token variable">$!</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span><span class="token punctuation">;</span>
+  <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token variable">$@</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token keyword">return</span> <span class="token string">'ログファイルの生成・権限付与に失敗しました'</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  close<span class="token punctuation">(</span><span class="token variable">$logFile</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  
+  <span class="token comment"># 正常終了</span>
+  <span class="token keyword">return</span> <span class="token string">''</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+
+
+<span class="token comment"># ================================================================================</span>
+<span class="token comment"># 画面初期表示</span>
+<span class="token comment"># ================================================================================</span>
+
+<span class="token comment"># 画面を初期表示する</span>
+<span class="token function"><span class="token keyword">sub</span> viewPage</span> <span class="token punctuation">{</span>
+  printHtmlHeader<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  
+  <span class="token keyword">print</span><span class="token punctuation">(</span><span class="token operator">&#x3C;&#x3C;</span><span class="token string">'EOL'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token operator">&#x3C;</span>header id<span class="token operator">=</span><span class="token string">"header"</span><span class="token operator">></span>
+  <span class="token operator">&#x3C;</span>h1 id<span class="token operator">=</span><span class="token string">"title"</span><span class="token operator">></span>Perl Chat<span class="token filehandle symbol">&#x3C;/h1></span>
+  <span class="token operator">&#x3C;</span>div id<span class="token operator">=</span><span class="token string">"reload-container"</span><span class="token operator">></span><span class="token operator">&#x3C;</span>button type<span class="token operator">=</span><span class="token string">"button"</span> id<span class="token operator">=</span><span class="token string">"reload"</span><span class="token operator">></span>再読込<span class="token filehandle symbol">&#x3C;/button>&#x3C;/div></span>
+  <span class="token operator">&#x3C;</span>input type<span class="token operator">=</span><span class="token string">"text"</span> id<span class="token operator">=</span><span class="token string">"name"</span> name<span class="token operator">=</span><span class="token string">"name"</span> value<span class="token operator">=</span><span class="token string">""</span> placeholder<span class="token operator">=</span><span class="token string">"名前"</span> maxlength<span class="token operator">=</span><span class="token string">"10"</span><span class="token operator">></span>
+  <span class="token operator">&#x3C;</span>input type<span class="token operator">=</span><span class="token string">"text"</span> id<span class="token operator">=</span><span class="token string">"text"</span> name<span class="token operator">=</span><span class="token string">"text"</span> value<span class="token operator">=</span><span class="token string">""</span> placeholder<span class="token operator">=</span><span class="token string">"本文"</span> maxlength<span class="token operator">=</span><span class="token string">"200"</span><span class="token operator">></span>
+  <span class="token operator">&#x3C;</span>button type<span class="token operator">=</span><span class="token string">"button"</span> id<span class="token operator">=</span><span class="token string">"submit"</span><span class="token operator">></span>投稿<span class="token filehandle symbol">&#x3C;/button></span>
+<span class="token filehandle symbol">&#x3C;/header></span>
+<span class="token operator">&#x3C;</span>div id<span class="token operator">=</span><span class="token string">"posts"</span><span class="token operator">></span>
+  <span class="token operator">&#x3C;</span>div id<span class="token operator">=</span><span class="token string">"loading"</span><span class="token operator">></span>読込中…<span class="token filehandle symbol">&#x3C;/div></span>
+<span class="token filehandle symbol">&#x3C;/div></span>
+EOL
+  
+  printHtmlFooter<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+
+<span class="token comment"># HTML の body の開始タグまでを print() する</span>
+<span class="token function"><span class="token keyword">sub</span> printHtmlHeader</span> <span class="token punctuation">{</span>
+  <span class="token keyword">print</span><span class="token punctuation">(</span><span class="token operator">&#x3C;&#x3C;</span><span class="token string">'EOL'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+Content<span class="token operator">-</span>type<span class="token punctuation">:</span> text<span class="token operator">/</span>html<span class="token punctuation">;</span> charset<span class="token operator">=</span>UTF<span class="token operator">-</span><span class="token number">8</span>
+<span class="token operator">&#x3C;</span><span class="token operator">!</span>DOCTYPE html<span class="token operator">></span>
+<span class="token operator">&#x3C;</span>html lang<span class="token operator">=</span><span class="token string">"ja"</span><span class="token operator">></span>
+  <span class="token filehandle symbol">&#x3C;head></span>
+    <span class="token operator">&#x3C;</span>meta charset<span class="token operator">=</span><span class="token string">"UTF-8"</span><span class="token operator">></span>
+    <span class="token filehandle symbol">&#x3C;title>Test&#x3C;/title></span>
+    <span class="token filehandle symbol">&#x3C;style></span>
+EOL
+  printStyles<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">print</span><span class="token punctuation">(</span><span class="token operator">&#x3C;&#x3C;</span><span class="token string">'EOL'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token filehandle symbol">&#x3C;/style></span>
+    <span class="token filehandle symbol">&#x3C;script></span>
+EOL
+  printScripts<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">print</span><span class="token punctuation">(</span><span class="token operator">&#x3C;&#x3C;</span><span class="token string">'EOL'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token filehandle symbol">&#x3C;/script></span>
+  <span class="token filehandle symbol">&#x3C;/head></span>
+  <span class="token filehandle symbol">&#x3C;body></span>
+EOL
+<span class="token punctuation">}</span>
+
+<span class="token comment"># style 要素の中身を print() する</span>
+<span class="token function"><span class="token keyword">sub</span> printStyles</span> <span class="token punctuation">{</span>
+  <span class="token keyword">print</span><span class="token punctuation">(</span><span class="token operator">&#x3C;&#x3C;</span><span class="token string">'EOL'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token operator">*</span><span class="token punctuation">,</span>
+<span class="token punctuation">:</span><span class="token punctuation">:</span>before<span class="token punctuation">,</span>
+<span class="token punctuation">:</span><span class="token punctuation">:</span>after <span class="token punctuation">{</span>
+  box<span class="token operator">-</span>sizing<span class="token punctuation">:</span> border<span class="token operator">-</span>box<span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+body <span class="token punctuation">{</span>
+  margin<span class="token punctuation">:</span> 1rem<span class="token punctuation">;</span>
+  word<span class="token operator">-</span><span class="token keyword">break</span><span class="token punctuation">:</span> <span class="token keyword">break</span><span class="token operator">-</span>all<span class="token punctuation">;</span>
+  overflow<span class="token operator">-</span>y<span class="token punctuation">:</span> scroll<span class="token punctuation">;</span>
+  background<span class="token punctuation">:</span> <span class="token comment">#fff;</span>
+<span class="token punctuation">}</span>
+<span class="token comment">#header {</span>
+  position<span class="token punctuation">:</span> fixed<span class="token punctuation">;</span>
+  top<span class="token punctuation">:</span> <span class="token number">0</span><span class="token punctuation">;</span>
+  left<span class="token punctuation">:</span> <span class="token number">0</span><span class="token punctuation">;</span>
+  width<span class="token punctuation">:</span> <span class="token number">100</span><span class="token variable">%;</span>
+  height<span class="token punctuation">:</span> 120px<span class="token punctuation">;</span>
+  display<span class="token punctuation">:</span> grid<span class="token punctuation">;</span>
+  grid<span class="token operator">-</span>template<span class="token operator">-</span>areas<span class="token punctuation">:</span> <span class="token string">'title title reload'</span> <span class="token string">'name text submit'</span><span class="token punctuation">;</span>
+  grid<span class="token operator">-</span>template<span class="token operator">-</span>columns<span class="token punctuation">:</span> 10rem 1fr 5rem<span class="token punctuation">;</span>
+  grid<span class="token operator">-</span>template<span class="token operator">-</span>rows<span class="token punctuation">:</span> auto auto<span class="token punctuation">;</span>
+  grid<span class="token operator">-</span>gap<span class="token punctuation">:</span> 1rem<span class="token punctuation">;</span>
+  padding<span class="token punctuation">:</span> 1rem<span class="token punctuation">;</span>
+  background<span class="token punctuation">:</span> <span class="token comment">#fff;</span>
+<span class="token punctuation">}</span>
+<span class="token comment">#title {</span>
+  grid<span class="token operator">-</span>area<span class="token punctuation">:</span> title<span class="token punctuation">;</span>
+  margin<span class="token punctuation">:</span> <span class="token number">0</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+<span class="token comment">#reload-container {</span>
+  grid<span class="token operator">-</span>area<span class="token punctuation">:</span> reload<span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+<span class="token comment">#name {</span>
+  grid<span class="token operator">-</span>area<span class="token punctuation">:</span> name<span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+<span class="token comment">#text {</span>
+  grid<span class="token operator">-</span>area<span class="token punctuation">:</span> text<span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+<span class="token comment">#submit {</span>
+  grid<span class="token operator">-</span>area<span class="token punctuation">:</span> submit<span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+<span class="token comment">#reload,</span>
+<span class="token comment">#name,</span>
+<span class="token comment">#text,</span>
+<span class="token comment">#submit {</span>
+  width<span class="token punctuation">:</span> <span class="token number">100</span><span class="token variable">%;</span>
+  border<span class="token punctuation">:</span> 1px solid <span class="token comment">#ccc;</span>
+  border<span class="token operator">-</span>radius<span class="token punctuation">:</span> 4px<span class="token punctuation">;</span>
+  padding<span class="token punctuation">:</span> <span class="token operator">.</span>25rem <span class="token operator">.</span>5rem<span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+<span class="token comment">#posts {</span>
+  padding<span class="token operator">-</span>top<span class="token punctuation">:</span> 120px<span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+<span class="token operator">.</span>post <span class="token punctuation">{</span>
+  display<span class="token punctuation">:</span> grid<span class="token punctuation">;</span>
+  grid<span class="token operator">-</span>template<span class="token operator">-</span>columns<span class="token punctuation">:</span> 10rem 1fr auto<span class="token punctuation">;</span>
+  grid<span class="token operator">-</span>gap<span class="token punctuation">:</span> 1rem<span class="token punctuation">;</span>
+  margin<span class="token operator">-</span>bottom<span class="token punctuation">:</span> 1rem<span class="token punctuation">;</span>
+  border<span class="token operator">-</span>bottom<span class="token punctuation">:</span> 1px solid <span class="token comment">#ccc;</span>
+  padding<span class="token operator">-</span>bottom<span class="token punctuation">:</span> 1rem<span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+<span class="token operator">.</span>name <span class="token punctuation">{</span>
+  font<span class="token operator">-</span>weight<span class="token punctuation">:</span> bold<span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+<span class="token operator">.</span>date<span class="token operator">-</span>time <span class="token punctuation">{</span>
+  color<span class="token punctuation">:</span> <span class="token comment">#999;</span>
+  font<span class="token operator">-</span>size<span class="token punctuation">:</span> <span class="token operator">.</span>8rem<span class="token punctuation">;</span>
+  text<span class="token operator">-</span>align<span class="token punctuation">:</span> right<span class="token punctuation">;</span>
+  word<span class="token operator">-</span><span class="token keyword">break</span><span class="token punctuation">:</span> normal<span class="token punctuation">;</span>
+  white<span class="token operator">-</span>space<span class="token punctuation">:</span> nowrap<span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+<span class="token comment">#loading {</span>
+  color<span class="token punctuation">:</span> <span class="token comment">#999;</span>
+<span class="token punctuation">}</span>
+<span class="token comment">#not-found {</span>
+  color<span class="token punctuation">:</span> <span class="token comment">#00f;</span>
+<span class="token punctuation">}</span>
+<span class="token comment">#error {</span>
+  color<span class="token punctuation">:</span> <span class="token comment">#f00;</span>
+<span class="token punctuation">}</span>
+EOL
+<span class="token punctuation">}</span>
+
+<span class="token comment"># script 要素の中身を print() する</span>
+<span class="token function"><span class="token keyword">sub</span> printScripts</span> <span class="token punctuation">{</span>
+  <span class="token comment"># 設定項目の変数を埋め込むためダブルクォートを使用</span>
+  <span class="token keyword">print</span><span class="token punctuation">(</span><span class="token operator">&#x3C;&#x3C;</span><span class="token string">"EOL"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token operator">//</span> イベント定義
+document<span class="token operator">.</span>addEventListener<span class="token punctuation">(</span><span class="token string">'DOMContentLoaded'</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">=></span> <span class="token punctuation">{</span>
+  <span class="token operator">//</span> 初期表示時の処理
+  onInit<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  onGetAll<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  
+  <span class="token operator">//</span> 「再読込」ボタン押下時の処理
+  document<span class="token operator">.</span>getElementById<span class="token punctuation">(</span><span class="token string">'reload'</span><span class="token punctuation">)</span><span class="token operator">.</span>addEventListener<span class="token punctuation">(</span><span class="token string">'click'</span><span class="token punctuation">,</span> onGetAll<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  
+  <span class="token operator">//</span> 「投稿」ボタン押下時の処理
+  document<span class="token operator">.</span>getElementById<span class="token punctuation">(</span><span class="token string">'submit'</span><span class="token punctuation">)</span><span class="token operator">.</span>addEventListener<span class="token punctuation">(</span><span class="token string">'click'</span><span class="token punctuation">,</span> onSubmit<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token operator">/</span><span class="token operator">**</span>
+ <span class="token operator">*</span> 初期表示時の処理
+ <span class="token operator">*</span><span class="token operator">/</span>
+function onInit<span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token operator">//</span> LocalStorage から名前を取り出す
+  const name <span class="token operator">=</span> localStorage<span class="token operator">.</span>getItem<span class="token punctuation">(</span><span class="token string">'name'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">if</span><span class="token punctuation">(</span>name <span class="token operator">==</span> null <span class="token operator">||</span> name <span class="token operator">==</span><span class="token operator">=</span> <span class="token string">''</span><span class="token punctuation">)</span> <span class="token keyword">return</span><span class="token punctuation">;</span>
+  <span class="token operator">//</span> テキストボックスに設定する
+  const nameElem <span class="token operator">=</span> document<span class="token operator">.</span>getElementById<span class="token punctuation">(</span><span class="token string">'name'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token operator">!</span>nameElem<span class="token punctuation">)</span> <span class="token keyword">return</span><span class="token punctuation">;</span>
+  nameElem<span class="token operator">.</span>value <span class="token operator">=</span> name<span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+<span class="token operator">/</span><span class="token operator">**</span>
+ <span class="token operator">*</span> 初期表示時および「再読込」ボタン押下時
+ <span class="token operator">*</span><span class="token operator">/</span>
+function onGetAll<span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  const postsElem <span class="token operator">=</span> document<span class="token operator">.</span>getElementById<span class="token punctuation">(</span><span class="token string">'posts'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  postsElem<span class="token operator">.</span>innerHTML <span class="token operator">=</span> <span class="token string">'&#x3C;div id="loading">読込中…&#x3C;/div>'</span><span class="token punctuation">;</span>
+  
+  <span class="token operator">//</span> GET 通信する
+  const xhr <span class="token operator">=</span> new XMLHttpRequest<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  xhr<span class="token operator">.</span>timeout <span class="token operator">=</span> <span class="token number">5000</span><span class="token punctuation">;</span>
+  xhr<span class="token operator">.</span>onreadystatechange <span class="token operator">=</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">=></span> <span class="token punctuation">{</span>
+    <span class="token keyword">if</span><span class="token punctuation">(</span>xhr<span class="token operator">.</span>readyState <span class="token operator">!=</span><span class="token operator">=</span> <span class="token number">4</span><span class="token punctuation">)</span> <span class="token keyword">return</span><span class="token punctuation">;</span>
+    
+    let responseJson<span class="token punctuation">;</span>
+    try <span class="token punctuation">{</span>
+      responseJson <span class="token operator">=</span> JSON<span class="token operator">.</span>parse<span class="token punctuation">(</span>xhr<span class="token operator">.</span>responseText<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+    catch<span class="token punctuation">(</span>error<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      postsElem<span class="token operator">.</span>innerHTML <span class="token operator">=</span> <span class="token string">'&#x3C;div id="error">ログファイルの読み込みに失敗しました&#x3C;/div>'</span><span class="token punctuation">;</span>
+      <span class="token keyword">return</span> console<span class="token operator">.</span>error<span class="token punctuation">(</span><span class="token string">'After GET Parse Error'</span><span class="token punctuation">,</span> error<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+    
+    <span class="token keyword">if</span><span class="token punctuation">(</span>responseJson<span class="token operator">.</span>error<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      postsElem<span class="token operator">.</span>innerHTML <span class="token operator">=</span> <span class="token string">'&#x3C;div id="error">ログファイルの読み込みに失敗しました&#x3C;/div>'</span><span class="token punctuation">;</span>
+      <span class="token keyword">return</span> console<span class="token operator">.</span>error<span class="token punctuation">(</span><span class="token string">'After GET Error Response'</span><span class="token punctuation">,</span> responseJson<span class="token operator">.</span>error<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+    
+    <span class="token keyword">if</span><span class="token punctuation">(</span>responseJson<span class="token operator">.</span>posts<span class="token operator">.</span>length <span class="token operator">==</span><span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      postsElem<span class="token operator">.</span>innerHTML <span class="token operator">=</span> <span class="token string">'&#x3C;div id="not-found">投稿がありません&#x3C;/div>'</span><span class="token punctuation">;</span>
+      <span class="token keyword">return</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+    
+    <span class="token operator">//</span> HTML を組み立てて投稿一覧に代入する
+    postsElem<span class="token operator">.</span>innerHTML <span class="token operator">=</span> responseJson<span class="token operator">.</span>posts<span class="token operator">.</span>map<span class="token punctuation">(</span><span class="token punctuation">(</span>post<span class="token punctuation">)</span> <span class="token operator">=></span> <span class="token punctuation">{</span>
+      <span class="token keyword">return</span> <span class="token string">`&#x3C;div class="post">&#x3C;div class="name">\${post.name}&#x3C;/div>&#x3C;div class="text">\${post.text}&#x3C;/div>&#x3C;div class="date-time">\${post.dateTime}&#x3C;/div>&#x3C;/div>`</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token operator">.</span>join<span class="token punctuation">(</span><span class="token string">''</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span><span class="token punctuation">;</span>
+  xhr<span class="token operator">.</span>ontimeout <span class="token operator">=</span> <span class="token punctuation">(</span>error<span class="token punctuation">)</span> <span class="token operator">=></span> <span class="token punctuation">{</span>
+    console<span class="token operator">.</span>error<span class="token punctuation">(</span><span class="token string">'GET Timeout'</span><span class="token punctuation">,</span> error<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span><span class="token punctuation">;</span>
+  xhr<span class="token operator">.</span>open<span class="token punctuation">(</span><span class="token string">'GET'</span><span class="token punctuation">,</span> <span class="token string">'$thisFile?mode=get-all'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  xhr<span class="token operator">.</span>send<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+<span class="token operator">/</span><span class="token operator">**</span>
+ <span class="token operator">*</span> 「投稿」ボタン押下時の処理
+ <span class="token operator">*</span><span class="token operator">/</span>
+function onSubmit<span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  const name <span class="token operator">=</span> document<span class="token operator">.</span>getElementById<span class="token punctuation">(</span><span class="token string">'name'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  const text <span class="token operator">=</span> document<span class="token operator">.</span>getElementById<span class="token punctuation">(</span><span class="token string">'text'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  
+  <span class="token operator">//</span> 入力チェック
+  <span class="token keyword">if</span><span class="token punctuation">(</span>isInvalidTextBoxValue<span class="token punctuation">(</span>name<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token keyword">return</span> alert<span class="token punctuation">(</span><span class="token string">'名前を入力してください'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">if</span><span class="token punctuation">(</span>isInvalidTextBoxValue<span class="token punctuation">(</span>text<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token keyword">return</span> alert<span class="token punctuation">(</span><span class="token string">'本文を入力してください'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  
+  <span class="token operator">//</span> POST 送信する
+  const xhr <span class="token operator">=</span> new XMLHttpRequest<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  xhr<span class="token operator">.</span>timeout <span class="token operator">=</span> <span class="token number">5000</span><span class="token punctuation">;</span>
+  xhr<span class="token operator">.</span>onreadystatechange <span class="token operator">=</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">=></span> <span class="token punctuation">{</span>
+    <span class="token keyword">if</span><span class="token punctuation">(</span>xhr<span class="token operator">.</span>readyState <span class="token operator">!=</span><span class="token operator">=</span> <span class="token number">4</span><span class="token punctuation">)</span> <span class="token keyword">return</span><span class="token punctuation">;</span>
+    
+    <span class="token operator">//</span> 投稿されたデータを受け取る
+    let responseJson<span class="token punctuation">;</span>
+    try <span class="token punctuation">{</span>
+      responseJson <span class="token operator">=</span> JSON<span class="token operator">.</span>parse<span class="token punctuation">(</span>xhr<span class="token operator">.</span>responseText<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+    catch<span class="token punctuation">(</span>error<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      console<span class="token operator">.</span>error<span class="token punctuation">(</span><span class="token string">'After POST Parse Error'</span><span class="token punctuation">,</span> error<span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token keyword">return</span> alert<span class="token punctuation">(</span><span class="token string">'投稿データの読み込みに失敗しました'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+    
+    <span class="token keyword">if</span><span class="token punctuation">(</span>responseJson<span class="token operator">.</span>error<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      console<span class="token operator">.</span>error<span class="token punctuation">(</span><span class="token string">'After POST Error Response'</span><span class="token punctuation">,</span> responseJson<span class="token operator">.</span>error<span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token keyword">return</span> alert<span class="token punctuation">(</span><span class="token string">'投稿データの読み込みに失敗しました'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+    
+    <span class="token keyword">if</span><span class="token punctuation">(</span>document<span class="token operator">.</span>getElementById<span class="token punctuation">(</span><span class="token string">'error'</span><span class="token punctuation">)</span><span class="token punctuation">)</span> document<span class="token operator">.</span>getElementById<span class="token punctuation">(</span><span class="token string">'error'</span><span class="token punctuation">)</span><span class="token operator">.</span>remove<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">if</span><span class="token punctuation">(</span>document<span class="token operator">.</span>getElementById<span class="token punctuation">(</span><span class="token string">'not-found'</span><span class="token punctuation">)</span><span class="token punctuation">)</span> document<span class="token operator">.</span>getElementById<span class="token punctuation">(</span><span class="token string">'not-found'</span><span class="token punctuation">)</span><span class="token operator">.</span>remove<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    
+    <span class="token operator">//</span> 投稿一覧の先頭に追加する
+    const postsElem <span class="token operator">=</span> document<span class="token operator">.</span>getElementById<span class="token punctuation">(</span><span class="token string">'posts'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    const post <span class="token operator">=</span> <span class="token string">`&#x3C;div class="post">&#x3C;div class="name">\${responseJson.name}&#x3C;/div>&#x3C;div class="text">\${responseJson.text}&#x3C;/div>&#x3C;div class="date-time">\${responseJson.dateTime}&#x3C;/div>&#x3C;/div>`</span><span class="token punctuation">;</span>
+    postsElem<span class="token operator">.</span>insertAdjacentHTML<span class="token punctuation">(</span><span class="token string">'afterbegin'</span><span class="token punctuation">,</span> post<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    
+    <span class="token operator">//</span> 投稿一覧の個数が最大個数を超えた場合は多い分を削除する
+    let postsCount <span class="token operator">=</span> document<span class="token operator">.</span>querySelectorAll<span class="token punctuation">(</span><span class="token string">'.post'</span><span class="token punctuation">)</span><span class="token operator">.</span>length<span class="token punctuation">;</span>
+    <span class="token keyword">while</span><span class="token punctuation">(</span>postsCount <span class="token operator">></span> <span class="token variable">$maxPosts</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      postsElem<span class="token operator">.</span>removeChild<span class="token punctuation">(</span>postsElem<span class="token operator">.</span>lastChild<span class="token punctuation">)</span><span class="token punctuation">;</span>
+      postsCount <span class="token operator">=</span> document<span class="token operator">.</span>querySelectorAll<span class="token punctuation">(</span><span class="token string">'.post'</span><span class="token punctuation">)</span><span class="token operator">.</span>length<span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+    
+    <span class="token operator">//</span> 本文をリセットする
+    text<span class="token operator">.</span>value <span class="token operator">=</span> <span class="token string">''</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span><span class="token punctuation">;</span>
+  xhr<span class="token operator">.</span>ontimeout <span class="token operator">=</span> <span class="token punctuation">(</span>error<span class="token punctuation">)</span> <span class="token operator">=></span> <span class="token punctuation">{</span>
+    console<span class="token operator">.</span>error<span class="token punctuation">(</span><span class="token string">'POST Timeout'</span><span class="token punctuation">,</span> error<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span><span class="token punctuation">;</span>
+  xhr<span class="token operator">.</span>open<span class="token punctuation">(</span><span class="token string">'POST'</span><span class="token punctuation">,</span> <span class="token string">'$thisFile'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  xhr<span class="token operator">.</span>setRequestHeader<span class="token punctuation">(</span><span class="token string">'Content-Type'</span><span class="token punctuation">,</span> <span class="token string">'application/x-www-form-urlencoded'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  xhr<span class="token operator">.</span>send<span class="token punctuation">(</span>encodeHtmlForm<span class="token punctuation">(</span><span class="token punctuation">{</span>
+    name<span class="token punctuation">:</span> name<span class="token operator">.</span>value<span class="token operator">.</span>trim<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+    text<span class="token punctuation">:</span> text<span class="token operator">.</span>value<span class="token operator">.</span>trim<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+    dateTime<span class="token punctuation">:</span> formatDateTime<span class="token punctuation">(</span>new Date<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  
+  <span class="token operator">//</span> 名前を保存しておく
+  localStorage<span class="token operator">.</span>setItem<span class="token punctuation">(</span><span class="token string">'name'</span><span class="token punctuation">,</span> name<span class="token operator">.</span>value<span class="token operator">.</span>trim<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+<span class="token operator">/</span><span class="token operator">**</span>
+ <span class="token operator">*</span> 指定のテキストボックス要素に文字列が入力されているかどうかチェックする
+ <span class="token operator">*</span> 
+ <span class="token operator">*</span> <span class="token operator">\</span><span class="token variable">@param</span> elem 要素
+ <span class="token operator">*</span> <span class="token operator">\</span><span class="token variable">@return</span> 文字列が入力されていなければ true <span class="token punctuation">(</span>エラー<span class="token punctuation">)</span>
+ <span class="token operator">*</span><span class="token operator">/</span>
+function isInvalidTextBoxValue<span class="token punctuation">(</span>elem<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token keyword">return</span> elem <span class="token operator">==</span> null <span class="token operator">||</span> elem<span class="token operator">.</span>value <span class="token operator">==</span> null <span class="token operator">||</span> elem<span class="token operator">.</span>value<span class="token operator">.</span>trim<span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">==</span><span class="token operator">=</span> <span class="token string">''</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+<span class="token operator">/</span><span class="token operator">**</span>
+ <span class="token operator">*</span> 指定のオブジェクトを POST 送信用に URI エンコードする
+ <span class="token operator">*</span> 
+ <span class="token operator">*</span> <span class="token operator">\</span><span class="token variable">@param</span> data Form 送信したいデータを格納した連想配列
+ <span class="token operator">*</span> <span class="token operator">\</span><span class="token variable">@return</span> URI エンコードした文字列
+ <span class="token operator">*</span><span class="token operator">/</span>
+function encodeHtmlForm<span class="token punctuation">(</span>data<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token keyword">return</span> Object<span class="token operator">.</span>keys<span class="token punctuation">(</span>data<span class="token punctuation">)</span><span class="token operator">.</span>map<span class="token punctuation">(</span>key <span class="token operator">=></span> <span class="token string">`\${encodeURIComponent(key)}=\${encodeURIComponent(data[key])}`</span><span class="token punctuation">)</span><span class="token operator">.</span>join<span class="token punctuation">(</span><span class="token string">'&#x26;'</span><span class="token punctuation">)</span><span class="token operator">.</span>replace<span class="token punctuation">(</span><span class="token regex">/%20/g</span><span class="token punctuation">,</span> <span class="token string">'+'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+<span class="token operator">/</span><span class="token operator">**</span>
+ <span class="token operator">*</span> 指定の Date オブジェクトを <span class="token string">'YYYY-MM-DD HH:mm:ss'</span> 形式の文字列に変換して返す
+ <span class="token operator">*</span> 
+ <span class="token operator">*</span> <span class="token operator">\</span><span class="token variable">@param</span> date Date オブジェクト
+ <span class="token operator">*</span> <span class="token operator">\</span><span class="token variable">@return</span> <span class="token string">'YYYY-MM-DD HH:mm:ss'</span> 形式の文字列
+ <span class="token operator">*</span><span class="token operator">/</span>
+function formatDateTime<span class="token punctuation">(</span>date<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token keyword">return</span> date<span class="token operator">.</span>getFullYear<span class="token punctuation">(</span><span class="token punctuation">)</span>
+    <span class="token operator">+</span> <span class="token string">'-'</span> <span class="token operator">+</span> <span class="token string">`0\${date.getMonth() + 1}`</span><span class="token operator">.</span>slice<span class="token punctuation">(</span><span class="token operator">-</span><span class="token number">2</span><span class="token punctuation">)</span>
+    <span class="token operator">+</span> <span class="token string">'-'</span> <span class="token operator">+</span> <span class="token string">`0\${date.getDate()}`</span><span class="token operator">.</span>slice<span class="token punctuation">(</span><span class="token operator">-</span><span class="token number">2</span><span class="token punctuation">)</span>
+    <span class="token operator">+</span> <span class="token string">' '</span> <span class="token operator">+</span> <span class="token string">`0\${date.getHours()}`</span><span class="token operator">.</span>slice<span class="token punctuation">(</span><span class="token operator">-</span><span class="token number">2</span><span class="token punctuation">)</span>
+    <span class="token operator">+</span> <span class="token string">':'</span> <span class="token operator">+</span> <span class="token string">`0\${date.getMinutes()}`</span><span class="token operator">.</span>slice<span class="token punctuation">(</span><span class="token operator">-</span><span class="token number">2</span><span class="token punctuation">)</span>
+    <span class="token operator">+</span> <span class="token string">':'</span> <span class="token operator">+</span> <span class="token string">`0\${date.getSeconds()}`</span><span class="token operator">.</span>slice<span class="token punctuation">(</span><span class="token operator">-</span><span class="token number">2</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+EOL
+<span class="token punctuation">}</span>
+
+<span class="token comment"># HTML の body の終了タグ以降を print() する</span>
+<span class="token function"><span class="token keyword">sub</span> printHtmlFooter</span> <span class="token punctuation">{</span>
+  <span class="token keyword">print</span><span class="token punctuation">(</span><span class="token operator">&#x3C;&#x3C;</span><span class="token string">'EOL'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token filehandle symbol">&#x3C;/body></span>
+<span class="token filehandle symbol">&#x3C;/html></span>
+EOL
+<span class="token punctuation">}</span>
+
+
+<span class="token comment"># ================================================================================</span>
+<span class="token comment"># GET : 投稿一覧取得時</span>
+<span class="token comment"># ================================================================================</span>
+
+<span class="token comment"># 投稿一覧を取得して JSON 形式で返す</span>
+<span class="token function"><span class="token keyword">sub</span> getAllPosts</span> <span class="token punctuation">{</span>
+  <span class="token comment"># ファイルハンドル</span>
+  <span class="token keyword">my</span> <span class="token variable">$logFile</span><span class="token punctuation">;</span>
+  <span class="token comment"># 読取専用で開く</span>
+  <span class="token keyword">eval</span> <span class="token punctuation">{</span>
+    open<span class="token punctuation">(</span><span class="token variable">$logFile</span><span class="token punctuation">,</span> <span class="token string">'&#x3C;'</span><span class="token punctuation">,</span> <span class="token variable">$logFileName</span><span class="token punctuation">)</span> <span class="token operator">or</span> <span class="token keyword">die</span><span class="token punctuation">(</span><span class="token variable">$!</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span><span class="token punctuation">;</span>
+  <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token variable">$@</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    chomp<span class="token punctuation">(</span><span class="token variable">$@</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">print</span><span class="token punctuation">(</span><span class="token string">"Content-type: application/json\n\n{ \"error\": \"$@\" }"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">return</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  <span class="token keyword">my</span> <span class="token variable">@lines</span> <span class="token operator">=</span> <span class="token operator">&#x3C;</span><span class="token variable">$logFile</span><span class="token operator">></span><span class="token punctuation">;</span>
+  
+  <span class="token comment"># 配列を返す</span>
+  <span class="token keyword">my</span> <span class="token variable">$jsonStr</span> <span class="token operator">=</span> <span class="token string">'{ "posts": ['</span><span class="token punctuation">;</span>
+  <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token variable">@lines</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token keyword">foreach</span> <span class="token keyword">my</span> <span class="token variable">$line</span> <span class="token punctuation">(</span><span class="token variable">@lines</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token keyword">my</span> <span class="token punctuation">(</span><span class="token variable">$name</span><span class="token punctuation">,</span> <span class="token variable">$text</span><span class="token punctuation">,</span> <span class="token variable">$dateTime</span><span class="token punctuation">)</span> <span class="token operator">=</span> split<span class="token punctuation">(</span><span class="token regex">/\t/</span><span class="token punctuation">,</span> <span class="token variable">$line</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token comment"># 行末の改行文字を消す</span>
+      chomp<span class="token punctuation">(</span><span class="token variable">$dateTime</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token variable">$jsonStr</span> <span class="token operator">.=</span> <span class="token string">"{ \"name\": \"$name\", \"text\": \"$text\", \"dateTime\": \"$dateTime\" },"</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+    chop<span class="token punctuation">(</span><span class="token variable">$jsonStr</span><span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment"># 最後のカンマを削る</span>
+  <span class="token punctuation">}</span>
+  <span class="token variable">$jsonStr</span> <span class="token operator">.=</span> <span class="token string">']}'</span><span class="token punctuation">;</span>
+  
+  <span class="token keyword">print</span><span class="token punctuation">(</span><span class="token string">"Content-type: application/json\n\n$jsonStr"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+
+
+<span class="token comment"># ================================================================================</span>
+<span class="token comment"># POST 送信時</span>
+<span class="token comment"># ================================================================================</span>
+
+<span class="token comment"># POST 送信されてきたデータを JSON 文字列に変換してレスポンスする</span>
+<span class="token function"><span class="token keyword">sub</span> postMessage</span> <span class="token punctuation">{</span>
+  <span class="token comment"># クエリをパースする (1回のリクエスト処理中に複数回呼ばないこと)</span>
+  <span class="token keyword">my</span> <span class="token variable">%queries</span> <span class="token operator">=</span> parseQueries<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  
+  <span class="token comment"># ファイルハンドル</span>
+  <span class="token keyword">my</span> <span class="token variable">$logFile</span><span class="token punctuation">;</span>
+  
+  <span class="token comment"># 元のデータを取得するため読取専用で開く</span>
+  <span class="token keyword">eval</span> <span class="token punctuation">{</span>
+    open<span class="token punctuation">(</span><span class="token variable">$logFile</span><span class="token punctuation">,</span> <span class="token string">'&#x3C;'</span><span class="token punctuation">,</span> <span class="token variable">$logFileName</span><span class="token punctuation">)</span> <span class="token operator">or</span> <span class="token keyword">die</span><span class="token punctuation">(</span><span class="token variable">$!</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span><span class="token punctuation">;</span>
+  <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token variable">$@</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    chomp<span class="token punctuation">(</span><span class="token variable">$@</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">print</span><span class="token punctuation">(</span><span class="token string">"Content-type: application/json\n\n{ \"error\": \"$@\" }"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">return</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  <span class="token keyword">my</span> <span class="token variable">@originalLines</span> <span class="token operator">=</span> <span class="token operator">&#x3C;</span><span class="token variable">$logFile</span><span class="token operator">></span><span class="token punctuation">;</span>
+  close<span class="token punctuation">(</span><span class="token variable">$logFile</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  
+  <span class="token comment"># 書込モードで開き直す</span>
+  <span class="token keyword">eval</span> <span class="token punctuation">{</span>
+    open<span class="token punctuation">(</span><span class="token variable">$logFile</span><span class="token punctuation">,</span> <span class="token string">'>'</span><span class="token punctuation">,</span> <span class="token variable">$logFileName</span><span class="token punctuation">)</span> <span class="token operator">or</span> <span class="token keyword">die</span><span class="token punctuation">(</span><span class="token variable">$!</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span><span class="token punctuation">;</span>
+  <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token variable">$@</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    chomp<span class="token punctuation">(</span><span class="token variable">$@</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">print</span><span class="token punctuation">(</span><span class="token string">"Content-type: application/json\n\n{ \"error\": \"$@\" }"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">return</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  
+  <span class="token comment"># 1行目に追記するデータを組み立てて書き込む</span>
+  <span class="token keyword">my</span> <span class="token variable">$name</span> <span class="token operator">=</span> convertSafeText<span class="token punctuation">(</span><span class="token variable">$queries</span><span class="token punctuation">{</span><span class="token string">'name'</span><span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">my</span> <span class="token variable">$text</span> <span class="token operator">=</span> convertSafeText<span class="token punctuation">(</span><span class="token variable">$queries</span><span class="token punctuation">{</span><span class="token string">'text'</span><span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">my</span> <span class="token variable">$dateTime</span> <span class="token operator">=</span> convertSafeText<span class="token punctuation">(</span><span class="token variable">$queries</span><span class="token punctuation">{</span><span class="token string">'dateTime'</span><span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">my</span> <span class="token variable">$post</span> <span class="token operator">=</span> <span class="token string">"$name\t$text\t$dateTime\n"</span><span class="token punctuation">;</span>
+  <span class="token keyword">print</span><span class="token punctuation">(</span><span class="token variable">$logFile</span> <span class="token variable">$post</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token comment"># 最大投稿件数を超えるデータはちぎって書き込む</span>
+  splice<span class="token punctuation">(</span><span class="token variable">@originalLines</span><span class="token punctuation">,</span> <span class="token variable">$maxPosts</span> <span class="token operator">-</span> <span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">print</span><span class="token punctuation">(</span><span class="token variable">$logFile</span> <span class="token variable">@originalLines</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  close<span class="token punctuation">(</span><span class="token variable">$logFile</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  
+  <span class="token comment"># 投稿されたデータをそのまま JSON で送り返す</span>
+  responseJson<span class="token punctuation">(</span><span class="token variable">%queries</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+
+<span class="token comment"># リクエストデータを JSON に変換してレスポンスする</span>
+<span class="token comment"># </span>
+<span class="token comment"># @param %queries パースされたクエリのハッシュ</span>
+<span class="token function"><span class="token keyword">sub</span> responseJson</span> <span class="token punctuation">{</span>
+  <span class="token keyword">my</span> <span class="token punctuation">(</span><span class="token variable">%queries</span><span class="token punctuation">)</span> <span class="token operator">=</span> <span class="token variable">@_</span><span class="token punctuation">;</span>
+  
+  <span class="token keyword">my</span> <span class="token variable">$jsonStr</span> <span class="token operator">=</span> <span class="token string">'{'</span><span class="token punctuation">;</span>
+  <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token variable">%queries</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token keyword">while</span><span class="token punctuation">(</span><span class="token keyword">my</span> <span class="token punctuation">(</span><span class="token variable">$key</span><span class="token punctuation">,</span> <span class="token variable">$value</span><span class="token punctuation">)</span> <span class="token operator">=</span> each <span class="token variable">%queries</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token variable">$key</span>   <span class="token operator">=</span> convertSafeText<span class="token punctuation">(</span><span class="token variable">$key</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token variable">$value</span> <span class="token operator">=</span> convertSafeText<span class="token punctuation">(</span><span class="token variable">$value</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token variable">$jsonStr</span> <span class="token operator">.=</span> <span class="token string">"\"$key\": \"$value\","</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+    chop<span class="token punctuation">(</span><span class="token variable">$jsonStr</span><span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment"># 最後のカンマを削る</span>
+  <span class="token punctuation">}</span>
+  <span class="token variable">$jsonStr</span> <span class="token operator">.=</span> <span class="token string">'}'</span><span class="token punctuation">;</span>
+  
+  <span class="token keyword">print</span><span class="token punctuation">(</span><span class="token string">"Content-type: application/json\n\n$jsonStr"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+
+
+<span class="token comment"># ================================================================================</span>
+<span class="token comment"># ユーティリティ関数</span>
+<span class="token comment"># ================================================================================</span>
+
+<span class="token comment"># クエリ文字列を連想配列に変換する (GET・POST 対応)</span>
+<span class="token comment">#</span>
+<span class="token comment"># @return パースされたクエリのハッシュ</span>
+<span class="token function"><span class="token keyword">sub</span> parseQueries</span> <span class="token punctuation">{</span>
+  <span class="token comment"># 最終的にリクエスト情報をまとめる連想配列</span>
+  <span class="token keyword">my</span> <span class="token variable">%formData</span><span class="token punctuation">;</span>
+  
+  <span class="token comment"># QueryString を取得する</span>
+  <span class="token keyword">my</span> <span class="token variable">$queryString</span><span class="token punctuation">;</span>
+  <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token variable">$ENV</span><span class="token punctuation">{</span><span class="token string">'REQUEST_METHOD'</span><span class="token punctuation">}</span> <span class="token operator">eq</span> <span class="token string">'POST'</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    read<span class="token punctuation">(</span>STDIN<span class="token punctuation">,</span> <span class="token variable">$queryString</span><span class="token punctuation">,</span> <span class="token variable">$ENV</span><span class="token punctuation">{</span><span class="token string">'CONTENT_LENGTH'</span><span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  <span class="token keyword">else</span> <span class="token punctuation">{</span>
+    <span class="token variable">$queryString</span> <span class="token operator">=</span> <span class="token variable">$ENV</span><span class="token punctuation">{</span><span class="token string">'QUERY_STRING'</span><span class="token punctuation">}</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  
+  <span class="token comment"># 'name=value' の配列に直す</span>
+  <span class="token keyword">my</span> <span class="token variable">@queryPairs</span> <span class="token operator">=</span> split<span class="token punctuation">(</span><span class="token string">'&#x26;'</span><span class="token punctuation">,</span> <span class="token variable">$queryString</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">foreach</span> <span class="token keyword">my</span> <span class="token variable">$queryPair</span> <span class="token punctuation">(</span><span class="token variable">@queryPairs</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token keyword">my</span> <span class="token punctuation">(</span><span class="token variable">$name</span><span class="token punctuation">,</span> <span class="token variable">$value</span><span class="token punctuation">)</span> <span class="token operator">=</span> split<span class="token punctuation">(</span><span class="token string">'='</span><span class="token punctuation">,</span> <span class="token variable">$queryPair</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token comment"># パーセントエンコーディング文字列を戻す</span>
+    <span class="token variable">$value</span> <span class="token operator">=~</span> <span class="token regex">tr/+/ /</span><span class="token punctuation">;</span>
+    <span class="token variable">$value</span> <span class="token operator">=~</span> <span class="token regex">s/%([a-fA-F0-9][a-fA-F0-9])/pack('C', hex($1))/eg</span><span class="token punctuation">;</span>
+    <span class="token comment"># UTF-8 フラグを付ける (これをやらないとファイル書き込み時に文字化けする)</span>
+    utf8<span class="token punctuation">:</span><span class="token punctuation">:</span>decode<span class="token punctuation">(</span><span class="token variable">$value</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token variable">$formData</span><span class="token punctuation">{</span><span class="token variable">$name</span><span class="token punctuation">}</span> <span class="token operator">=</span> <span class="token variable">$value</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  
+  <span class="token keyword">return</span> <span class="token variable">%formData</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+
+<span class="token comment"># HTML パースされないよう記号を置換する</span>
+<span class="token comment"># </span>
+<span class="token comment"># @param $str 置換したい文字列</span>
+<span class="token comment"># @return 置換した文字列</span>
+<span class="token function"><span class="token keyword">sub</span> convertSafeText</span> <span class="token punctuation">{</span>
+  <span class="token keyword">my</span> <span class="token punctuation">(</span><span class="token variable">$str</span><span class="token punctuation">)</span> <span class="token operator">=</span> <span class="token variable">@_</span><span class="token punctuation">;</span>
+  <span class="token variable">$str</span> <span class="token operator">=~</span> <span class="token regex">s/&#x3C;/&#x26;lt;/g</span><span class="token punctuation">;</span>
+  <span class="token variable">$str</span> <span class="token operator">=~</span> <span class="token regex">s/>/&#x26;gt;/g</span><span class="token punctuation">;</span>
+  <span class="token keyword">return</span> <span class="token variable">$str</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre>
 <p>投稿をファイルに書き込むようにしているのだが、ファイル書き込み時のロック機構を実装していないお粗末仕様。面倒臭くて飽きたのでココで終わり。</p>
 
       </main>

@@ -59,6 +59,58 @@
         <h1 id="page-title">Angular4 以降でコンポーネント間をまたいだデータ連携を実現するサービスクラスを作る</h1>
 
 <p>Angular4 以降で、<code>@Input</code> や <code>@Output</code> を使わず、コンポーネント間をまたいでデータのやり取りを行うためのサービスクラスを作った。</p>
+<ul>
+  <li><code>data-service.ts</code></li>
+</ul>
+<pre class="language-typescript"><code class="language-typescript"><span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">Injectable</span> <span class="token punctuation">}</span></span> <span class="token keyword">from</span> <span class="token string">'@angular/core'</span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">Observable</span> <span class="token punctuation">}</span></span> <span class="token keyword">from</span> <span class="token string">'rxjs/Rx'</span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">Subject</span> <span class="token punctuation">}</span></span> <span class="token keyword">from</span> <span class="token string">'rxjs/Subject'</span><span class="token punctuation">;</span>
+
+<span class="token doc-comment comment">/** 連携データのインターフェース */</span>
+<span class="token keyword">interface</span> <span class="token class-name"><span class="token maybe-class-name">DataEvent</span></span> <span class="token punctuation">{</span>
+  <span class="token doc-comment comment">/** 連携データを特定するキー */</span>
+  key<span class="token operator">:</span> <span class="token builtin">any</span><span class="token punctuation">;</span>
+  <span class="token doc-comment comment">/** 連携するデータ */</span>
+  data<span class="token operator">:</span> <span class="token builtin">any</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+
+<span class="token doc-comment comment">/** コンポーネント間の情報の通知を行うサービス */</span>
+@<span class="token function"><span class="token maybe-class-name">Injectable</span></span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+<span class="token keyword">export</span> <span class="token keyword">class</span> <span class="token class-name"><span class="token maybe-class-name">DataService</span></span> <span class="token punctuation">{</span>
+  <span class="token doc-comment comment">/** Event */</span>
+  <span class="token keyword">private</span> event<span class="token operator">:</span> <span class="token maybe-class-name">Subject</span><span class="token operator">&#x3C;</span><span class="token maybe-class-name">DataEvent</span><span class="token operator">></span><span class="token punctuation">;</span>
+  
+  <span class="token doc-comment comment">/** インスタンスを生成する */</span>
+  <span class="token keyword">constructor</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">event</span> <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name"><span class="token maybe-class-name">Subject</span><span class="token operator">&#x3C;</span><span class="token maybe-class-name">DataEvent</span><span class="token operator">></span></span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  
+  <span class="token doc-comment comment">/**
+   * データを送信する
+   * 
+   * <span class="token keyword">@param</span> <span class="token parameter">key</span> 連携データを特定するキー
+   * <span class="token keyword">@param</span> <span class="token parameter">data</span> 連携するデータ
+   */</span>
+  <span class="token function">send</span><span class="token punctuation">(</span>key<span class="token operator">:</span> <span class="token builtin">any</span><span class="token punctuation">,</span> data<span class="token operator">:</span> <span class="token builtin">any</span><span class="token punctuation">)</span><span class="token operator">:</span> <span class="token keyword">void</span> <span class="token punctuation">{</span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">event</span><span class="token punctuation">.</span><span class="token method function property-access">next</span><span class="token punctuation">(</span><span class="token punctuation">{</span> key<span class="token punctuation">,</span> data <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  
+  <span class="token doc-comment comment">/**
+   * キーに該当するデータを受信する
+   * 
+   * <span class="token keyword">@param</span> <span class="token parameter">key</span> 連携データを特定するキー
+   */</span>
+  <span class="token generic-function"><span class="token function">receive</span><span class="token generic class-name"><span class="token operator">&#x3C;</span><span class="token constant">T</span><span class="token operator">></span></span></span><span class="token punctuation">(</span>key<span class="token operator">:</span> <span class="token builtin">any</span><span class="token punctuation">)</span><span class="token operator">:</span> <span class="token maybe-class-name">Observable</span><span class="token operator">&#x3C;</span><span class="token constant">T</span><span class="token operator">></span> <span class="token punctuation">{</span>
+    <span class="token keyword">return</span> <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">event</span><span class="token punctuation">.</span><span class="token method function property-access">asObservable</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+      <span class="token punctuation">.</span><span class="token method function property-access">filter</span><span class="token punctuation">(</span><span class="token punctuation">(</span>event<span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+        <span class="token keyword">return</span> event<span class="token punctuation">.</span><span class="token property-access">key</span> <span class="token operator">===</span> key<span class="token punctuation">;</span>
+      <span class="token punctuation">}</span><span class="token punctuation">)</span>
+      <span class="token punctuation">.</span><span class="token method function property-access">map</span><span class="token punctuation">(</span><span class="token punctuation">(</span>event<span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+        <span class="token keyword">return</span> event<span class="token punctuation">.</span><span class="token property-access">data</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre>
 <p>Angular におけるサービスクラスはシングルトンで動作するので、このサービスクラスをルートモジュールで provide しておき、サービスクラスでデータを保持するようにしておけば、配下のコンポーネントクラス同士でデータのやり取りができる、というワケ。</p>
 <p>データを送りたい時は、データとそれを特定するキーを指定して <code>send()</code> メソッドを叩き、データを受信したい時はキーを指定して <code>receive()</code> メソッドを呼び、<code>subscribe()</code> しておけば、データが送られた瞬間に受け取ることができる。</p>
 <ul>

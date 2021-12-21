@@ -62,20 +62,21 @@
 <p>MySQL を使っていて、絵文字を含むテキストを INSERT・UPDATE しようとしたら、以下のようなエラーが出た。</p>
 <pre><code>Incorrect string value: '\xF0\xA6\x9A\xB0\xE7\x94...' for column 'my_column' at row 1
 </code></pre>
+<p>また、他にも <code>CREATE TABLE</code> 文の <code>DEFAULT</code> 値に日本語等が入っている時に <code>Invalid default value for</code> なんていうエラーが出ることがあった。</p>
 <p>調べてみると、どうも MySQL の <em>utf8</em> エンコーディングはサロゲートペア文字に対応していないようで、絵文字などを扱うには、サロゲートペア文字に対応したエンコーディング <strong>utf8mb4</strong> に変えないといけないみたい。</p>
 <ul>
   <li>参考：<a href="http://accelboon.com/tn/?p=1379">MySQL Incorrect string value: の解決策 | テクニカルノート</a></li>
 </ul>
-<p>設定手順は以下のページどおり。</p>
-<ul>
-  <li>参考：<a href="https://qiita.com/deco/items/bfa125ae45c16811536a">MySQLの文字コードをutf8mb4に変更 - Qiita</a></li>
-</ul>
 <p>まずは DB の文字コードの確認。</p>
 <pre class="language-bash"><code class="language-bash">$ mysql -u root -p
-<span class="token comment"># パスワードを入力し MySQL コンソールに移る。</span>
+<span class="token comment"># パスワードを入力し MySQL コンソールに移る</span>
 
-mysql<span class="token operator">></span> show variables like <span class="token string">"chara%"</span><span class="token punctuation">;</span>`
+mysql<span class="token operator">></span> show variables like <span class="token string">"chara%"</span><span class="token punctuation">;</span>
 </code></pre>
+<p>その他の確認コマンドは以下の記事でまとめているので、参考にされたし。</p>
+<ul>
+  <li>過去記事：<a href="/blog/2020/04/16-02.html">MySQL の様子を調べるためのクエリ集</a></li>
+</ul>
 <p>次に MySQL とクライアントのデフォルトの文字コードを設定する。設定ファイルの在り処は以下のコマンドで確認できる。</p>
 <pre class="language-bash"><code class="language-bash">$ mysql --help <span class="token operator">|</span> <span class="token function">grep</span> my.cnf
 </code></pre>
@@ -91,24 +92,39 @@ mysql<span class="token operator">></span> show variables like <span class="toke
 <p>で、MySQL を再起動する。自分の環境だと、以下のように <code>mysqld</code> をフルパスで指定して <code>restart</code> した。</p>
 <pre class="language-bash"><code class="language-bash">$ /usr/sbin/mysqld restart
 </code></pre>
-<p>ここまでの設定では、既存のデータベース、テーブルのエンコーディング設定が変わっていないので、</p>
-<ul>
-  <li>今後新たに作るデータベースのデフォルトエンコーディングを指定し直す</li>
-  <li>今後新たに作るテーブルのデフォルトエンコーディングを指定し直す</li>
-  <li>今あるテーブルのエンコーディングを直す</li>
-</ul>
-<p>ために、以下のコマンドを叩いていく。</p>
-<pre class="language-sql"><code class="language-sql"><span class="token comment">-- 今後新たに作るデータベースのデフォルトエンコーディングを指定し直す</span>
+<p>ここまでの設定では、既存のデータベース、テーブルのエンコーディング設定が変わっていないので、それらを変更するため以下のコマンドを叩いていく。</p>
+<pre class="language-sql"><code class="language-sql"><span class="token comment">-- 既存 DB スキーマ内で、今後新たに作るテーブルのデフォルトエンコーディングを変更する</span>
 <span class="token keyword">ALTER</span> <span class="token keyword">DATABASE</span> 【DB 名】 <span class="token keyword">CHARACTER</span> <span class="token keyword">SET</span> utf8mb4 <span class="token keyword">COLLATE</span> utf8mb4_general_ci<span class="token punctuation">;</span>
+<span class="token comment">-- もしくは以下</span>
+<span class="token keyword">SET</span> character_set_database<span class="token operator">=</span>utf8mb4<span class="token punctuation">;</span>
 
-<span class="token comment">-- 今後新たに作るテーブルのデフォルトエンコーディングを指定し直す</span>
-<span class="token keyword">ALTER</span> <span class="token keyword">TABLE</span> 【テーブル名】 <span class="token keyword">default</span> <span class="token keyword">character</span> <span class="token keyword">set</span> utf8mb4<span class="token punctuation">;</span>
+<span class="token comment">-- 既存テーブルのデフォルトエンコーディングを変更する (カラムの文字コードは変わらない)</span>
+<span class="token keyword">ALTER</span> <span class="token keyword">TABLE</span> 【テーブル名】 <span class="token keyword">DEFAULT</span> <span class="token keyword">CHARACTER</span> <span class="token keyword">SET</span> utf8mb4<span class="token punctuation">;</span>
 
-<span class="token comment">-- 今あるテーブルのエンコーディングを直す</span>
+<span class="token comment">-- 既存テーブルの全カラムのエンコーディングを変更する</span>
+<span class="token keyword">ALTER</span> <span class="token keyword">TABLE</span> 【テーブル名】 <span class="token keyword">CONVERT</span> <span class="token keyword">TO</span> <span class="token keyword">CHARACTER</span> <span class="token keyword">SET</span> utf8mb4 <span class="token keyword">COLLATE</span> utf8mb4_unicode_ci<span class="token punctuation">;</span>
+<span class="token comment">-- 既存テーブルの指定カラムのエンコーディングを変更する</span>
 <span class="token keyword">ALTER</span> <span class="token keyword">TABLE</span> 【テーブル名】 <span class="token keyword">MODIFY</span> 【カラム名】 【型】 <span class="token keyword">CHARACTER</span> <span class="token keyword">SET</span> utf8mb4 <span class="token keyword">COLLATE</span> utf8mb4_general_ci<span class="token punctuation">;</span>
 <span class="token comment">-- 例 : ALTER TABLE my_table MODIFY my_column varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;</span>
+
+<span class="token comment">-- その他、サーバやクライアント設定なども全て utf8mb4 に変更する</span>
+<span class="token keyword">SET</span> character_set_database<span class="token operator">=</span>utf8mb4<span class="token punctuation">;</span>
+<span class="token keyword">SET</span> character_set_server<span class="token operator">=</span>utf8mb4<span class="token punctuation">;</span>
+<span class="token keyword">SET</span> character_set_client<span class="token operator">=</span>utf8mb4<span class="token punctuation">;</span>
+<span class="token keyword">SET</span> character_set_connection<span class="token operator">=</span>utf8mb4<span class="token punctuation">;</span>
 </code></pre>
+<p><code>utf8mb4</code> というエンコード指定は、通常の <code>utf8</code> にプラスして、絵文字など普段あまり使わない SMP と呼ばれる文字にも対応しているモノ。</p>
+<p><code>utf8mb4_general_ci</code> という指定は<em>照合順序</em>というモノの指定で、他に <code>utf8mb4_unicode_ci</code> といった指定もある。<code>_ci</code> は Case Insensitive で大文字・小文字を区別しない。<code>_unicode</code> の方は、日本語の濁点・半濁点を同値と捉えてしまうようなので、特に普段何も考えがなければ <code>_general</code> の方が良いだろう。</p>
 <p>以上。コレで既存の <code>my_table.my_column</code> にはサロゲートペア文字を含む文字列が INSERT・UPDATE できるようになったし、今後作成する DB やテーブルのデフォルトエンコーディングも utf8mb4 に変更できた。</p>
+<ul>
+  <li>参考：<a href="https://www.karakaram.com/changing-the-character-set-to-utf8mb4-after-creating-mysql-table/">MySQLのテーブル作成後に、文字コードをutf8mb4に変更する - karakaram-blog</a></li>
+  <li>参考：<a href="https://qiita.com/decoch/items/bfa125ae45c16811536a">MySQLの文字コードをutf8mb4に変更 - Qiita</a></li>
+  <li>参考：<a href="https://camcam.info/tips/3441">MySQLでテーブルとカラムの文字コードを一括で変更する – CamCam</a></li>
+  <li>参考：<a href="https://hodalog.com/modify-the-character-encode-of-mysql/">MySQLの文字コード変更 | Hodalog</a></li>
+  <li>参考：<a href="https://www.dbonline.jp/mysql/myini/index3.html">MySQL | 文字コードに関する設定を記述する</a></li>
+  <li>参考：<a href="https://kazuhira-r.hatenablog.com/entry/2021/05/08/232717">MySQL 8.0のCharset utf8mb4での日本語環境で使うCollationで文字比較をしてみる - CLOVER🍀</a></li>
+  <li>参考：<a href="https://pando.life/qwintet/article/833">MySQLの照合順序問題｜株式会社クインテット《Pando》</a></li>
+</ul>
 
       </main>
       <footer id="footer">
@@ -118,7 +134,7 @@ mysql<span class="token operator">></span> show variables like <span class="toke
               <dt>Created</dt>
               <dd><time>2018-09-12</time></dd>
               <dt>Last-Modified</dt>
-              <dd><time>2018-09-12</time></dd>
+              <dd><time>2021-12-13</time></dd>
             </dl>
           </div>
           <nav id="footer-links">

@@ -76,6 +76,168 @@
   <li><a href="/blog/2019/04/28-01.html">実例に見る、バグの原因を見つけるアイデア：catch 句の中で例外が発生している</a></li>
 </ul>
 <p>こんなことをやらかしたので、<em>「ロガーでロギングする時に発生したエラーは握り潰せたらいいんじゃね？」</em>と軽い気持ちで作ったのがこのラッパー。</p>
+<ul>
+  <li><code>logger-wrapper.js</code></li>
+</ul>
+<pre class="language-javascript"><code class="language-javascript"><span class="token doc-comment comment">/**
+ * 例外が発生しても握り潰す log4js ロガーのラッパー
+ * 
+ * 引数に関数を渡すと、それを実行して戻り値をログ追記する
+ * 関数実行時に例外が発生した場合は catch し、例外を握り潰す
+ * ロギング中の例外発生による異常終了を防ぎたい狙いで作成した
+ */</span>
+<span class="token keyword">class</span> <span class="token class-name">LoggerWrapper</span> <span class="token punctuation">{</span>
+  <span class="token doc-comment comment">/**
+   * コンストラクタ
+   * 
+   * <span class="token keyword">@param</span> <span class="token class-name"><span class="token punctuation">{</span><span class="token operator">*</span><span class="token punctuation">}</span></span> <span class="token parameter">logger</span> ロガー
+   * <span class="token keyword">@param</span> <span class="token class-name"><span class="token punctuation">{</span>boolean<span class="token punctuation">}</span></span> <span class="token parameter">isAsync</span> 引数に非同期関数を持たせられるようにするかどうか (デフォルトは false = 非同期関数に対応しない)
+   * <span class="token keyword">@param</span> <span class="token class-name"><span class="token punctuation">{</span>string<span class="token punctuation">}</span></span> <span class="token parameter">appendErrorLevel</span> ログ追記時にエラーが発生した場合にログ出力するレベル (デフォルトは 'warn' レベルで通知する)
+   */</span>
+  <span class="token function">constructor</span><span class="token punctuation">(</span><span class="token parameter">logger<span class="token punctuation">,</span> isAsync<span class="token punctuation">,</span> appendErrorLevel</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">logger</span> <span class="token operator">=</span> logger<span class="token punctuation">;</span>
+    
+    <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">isAsync</span> <span class="token operator">=</span> <span class="token known-class-name class-name">Boolean</span><span class="token punctuation">(</span>isAsync<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">appendLogFuncName</span> <span class="token operator">=</span> <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">isAsync</span> <span class="token operator">?</span> <span class="token string">'appendLogAsync'</span> <span class="token operator">:</span> <span class="token string">'appendLogSync'</span><span class="token punctuation">;</span>
+    
+    <span class="token keyword control-flow">if</span><span class="token punctuation">(</span><span class="token punctuation">[</span><span class="token string">'trace'</span><span class="token punctuation">,</span> <span class="token string">'debug'</span><span class="token punctuation">,</span> <span class="token string">'info'</span><span class="token punctuation">,</span> <span class="token string">'warn'</span><span class="token punctuation">,</span> <span class="token string">'error'</span><span class="token punctuation">,</span> <span class="token string">'fatal'</span><span class="token punctuation">]</span><span class="token punctuation">.</span><span class="token method function property-access">includes</span><span class="token punctuation">(</span><span class="token template-string"><span class="token template-punctuation string">`</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>appendErrorLevel<span class="token interpolation-punctuation punctuation">}</span></span><span class="token template-punctuation string">`</span></span><span class="token punctuation">.</span><span class="token method function property-access">toLowerCase</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">appendErrorLevel</span> <span class="token operator">=</span> <span class="token template-string"><span class="token template-punctuation string">`</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>appendErrorLevel<span class="token interpolation-punctuation punctuation">}</span></span><span class="token template-punctuation string">`</span></span><span class="token punctuation">.</span><span class="token method function property-access">toLowerCase</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+    <span class="token keyword control-flow">else</span> <span class="token punctuation">{</span>
+      <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">appendErrorLevel</span> <span class="token operator">=</span> <span class="token string">'warn'</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span>
+  
+  <span class="token doc-comment comment">/**
+   * ログ追記 : 非同期処理非対応版
+   * 
+   * <span class="token keyword">@param</span> <span class="token class-name"><span class="token punctuation">{</span>string<span class="token punctuation">}</span></span> <span class="token parameter">level</span> ログレベル
+   * <span class="token keyword">@param</span> <span class="token class-name"><span class="token punctuation">{</span>Array<span class="token punctuation">&#x3C;</span><span class="token operator">*</span><span class="token punctuation">></span><span class="token punctuation">}</span></span> <span class="token parameter">args</span> 追記する要素
+   */</span>
+  <span class="token function">appendLogSync</span><span class="token punctuation">(</span><span class="token parameter">level<span class="token punctuation">,</span> <span class="token spread operator">...</span>args</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token keyword control-flow">try</span> <span class="token punctuation">{</span>
+      <span class="token keyword">const</span> logs <span class="token operator">=</span> <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token punctuation">;</span>
+      <span class="token keyword control-flow">for</span><span class="token punctuation">(</span><span class="token keyword">let</span> i <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span> i <span class="token operator">&#x3C;</span> args<span class="token punctuation">.</span><span class="token property-access">length</span><span class="token punctuation">;</span> i<span class="token operator">++</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        <span class="token keyword">const</span> arg <span class="token operator">=</span> args<span class="token punctuation">[</span>i<span class="token punctuation">]</span><span class="token punctuation">;</span>
+        <span class="token keyword control-flow">if</span><span class="token punctuation">(</span><span class="token keyword">typeof</span> arg <span class="token operator">===</span> <span class="token string">'function'</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+          <span class="token comment">// 関数が渡された場合は実行しその結果を出力する</span>
+          <span class="token keyword">const</span> fnLogs <span class="token operator">=</span> <span class="token function">arg</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+          logs<span class="token punctuation">.</span><span class="token method function property-access">push</span><span class="token punctuation">(</span><span class="token spread operator">...</span>fnLogs<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token punctuation">}</span>
+        <span class="token keyword control-flow">else</span> <span class="token punctuation">{</span>
+          logs<span class="token punctuation">.</span><span class="token method function property-access">push</span><span class="token punctuation">(</span>arg<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token punctuation">}</span>
+      <span class="token punctuation">}</span>
+      <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">logger</span><span class="token punctuation">[</span>level<span class="token punctuation">]</span><span class="token punctuation">(</span><span class="token spread operator">...</span>logs<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+    <span class="token keyword control-flow">catch</span><span class="token punctuation">(</span>error<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">logger</span><span class="token punctuation">[</span><span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">appendErrorLevel</span><span class="token punctuation">]</span><span class="token punctuation">(</span><span class="token string">'ログ出力失敗'</span><span class="token punctuation">,</span> level<span class="token punctuation">,</span> error<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span>
+  
+  <span class="token doc-comment comment">/**
+   * ログ追記 : 非同期処理対応版
+   * 
+   * <span class="token keyword">@param</span> <span class="token class-name"><span class="token punctuation">{</span>string<span class="token punctuation">}</span></span> <span class="token parameter">level</span> ログレベル
+   * <span class="token keyword">@param</span> <span class="token class-name"><span class="token punctuation">{</span>Array<span class="token punctuation">&#x3C;</span><span class="token operator">*</span><span class="token punctuation">></span><span class="token punctuation">}</span></span> <span class="token parameter">args</span> 追記する要素
+   */</span>
+  <span class="token function">appendLogAsync</span><span class="token punctuation">(</span><span class="token parameter">level<span class="token punctuation">,</span> <span class="token spread operator">...</span>args</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token punctuation">(</span><span class="token keyword">async</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+      <span class="token keyword control-flow">try</span> <span class="token punctuation">{</span>
+        <span class="token keyword">const</span> logs <span class="token operator">=</span> <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token punctuation">;</span>
+        <span class="token keyword control-flow">for</span><span class="token punctuation">(</span><span class="token keyword">let</span> i <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span> i <span class="token operator">&#x3C;</span> args<span class="token punctuation">.</span><span class="token property-access">length</span><span class="token punctuation">;</span> i<span class="token operator">++</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+          <span class="token keyword">const</span> arg <span class="token operator">=</span> args<span class="token punctuation">[</span>i<span class="token punctuation">]</span><span class="token punctuation">;</span>
+          <span class="token keyword control-flow">if</span><span class="token punctuation">(</span><span class="token keyword">typeof</span> arg <span class="token operator">===</span> <span class="token string">'function'</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+            <span class="token comment">// 関数が渡された場合は実行しその結果を出力する</span>
+            <span class="token keyword">const</span> fnLogs <span class="token operator">=</span> <span class="token keyword control-flow">await</span> <span class="token function">arg</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment">// 非同期処理の場合は待って出力する</span>
+            logs<span class="token punctuation">.</span><span class="token method function property-access">push</span><span class="token punctuation">(</span><span class="token spread operator">...</span>fnLogs<span class="token punctuation">)</span><span class="token punctuation">;</span>
+          <span class="token punctuation">}</span>
+          <span class="token keyword control-flow">else</span> <span class="token punctuation">{</span>
+            logs<span class="token punctuation">.</span><span class="token method function property-access">push</span><span class="token punctuation">(</span>arg<span class="token punctuation">)</span><span class="token punctuation">;</span>
+          <span class="token punctuation">}</span>
+        <span class="token punctuation">}</span>
+        <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">logger</span><span class="token punctuation">[</span>level<span class="token punctuation">]</span><span class="token punctuation">(</span><span class="token spread operator">...</span>logs<span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span>
+      <span class="token keyword control-flow">catch</span><span class="token punctuation">(</span>error<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">logger</span><span class="token punctuation">[</span><span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">appendErrorLevel</span><span class="token punctuation">]</span><span class="token punctuation">(</span><span class="token string">'ログ出力失敗'</span><span class="token punctuation">,</span> level<span class="token punctuation">,</span> error<span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  
+  <span class="token comment">// ログレベルごとに関数を定義する</span>
+  <span class="token function">trace</span><span class="token punctuation">(</span><span class="token parameter"><span class="token spread operator">...</span>args</span><span class="token punctuation">)</span> <span class="token punctuation">{</span> <span class="token keyword">this</span><span class="token punctuation">[</span><span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">appendLogFuncName</span><span class="token punctuation">]</span><span class="token punctuation">(</span><span class="token string">'trace'</span><span class="token punctuation">,</span> <span class="token spread operator">...</span>args<span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token punctuation">}</span>
+  <span class="token function">debug</span><span class="token punctuation">(</span><span class="token parameter"><span class="token spread operator">...</span>args</span><span class="token punctuation">)</span> <span class="token punctuation">{</span> <span class="token keyword">this</span><span class="token punctuation">[</span><span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">appendLogFuncName</span><span class="token punctuation">]</span><span class="token punctuation">(</span><span class="token string">'debug'</span><span class="token punctuation">,</span> <span class="token spread operator">...</span>args<span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token punctuation">}</span>
+  <span class="token function">info</span> <span class="token punctuation">(</span><span class="token parameter"><span class="token spread operator">...</span>args</span><span class="token punctuation">)</span> <span class="token punctuation">{</span> <span class="token keyword">this</span><span class="token punctuation">[</span><span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">appendLogFuncName</span><span class="token punctuation">]</span><span class="token punctuation">(</span><span class="token string">'info'</span> <span class="token punctuation">,</span> <span class="token spread operator">...</span>args<span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token punctuation">}</span>
+  <span class="token function">warn</span> <span class="token punctuation">(</span><span class="token parameter"><span class="token spread operator">...</span>args</span><span class="token punctuation">)</span> <span class="token punctuation">{</span> <span class="token keyword">this</span><span class="token punctuation">[</span><span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">appendLogFuncName</span><span class="token punctuation">]</span><span class="token punctuation">(</span><span class="token string">'warn'</span> <span class="token punctuation">,</span> <span class="token spread operator">...</span>args<span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token punctuation">}</span>
+  <span class="token function">error</span><span class="token punctuation">(</span><span class="token parameter"><span class="token spread operator">...</span>args</span><span class="token punctuation">)</span> <span class="token punctuation">{</span> <span class="token keyword">this</span><span class="token punctuation">[</span><span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">appendLogFuncName</span><span class="token punctuation">]</span><span class="token punctuation">(</span><span class="token string">'error'</span><span class="token punctuation">,</span> <span class="token spread operator">...</span>args<span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token punctuation">}</span>
+  <span class="token function">fatal</span><span class="token punctuation">(</span><span class="token parameter"><span class="token spread operator">...</span>args</span><span class="token punctuation">)</span> <span class="token punctuation">{</span> <span class="token keyword">this</span><span class="token punctuation">[</span><span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">appendLogFuncName</span><span class="token punctuation">]</span><span class="token punctuation">(</span><span class="token string">'fatal'</span><span class="token punctuation">,</span> <span class="token spread operator">...</span>args<span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+
+
+
+<span class="token comment">// log4js のロガーを用意する</span>
+<span class="token comment">// ================================================================================</span>
+
+<span class="token keyword">const</span> log4js <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'log4js'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+log4js<span class="token punctuation">.</span><span class="token method function property-access">configure</span><span class="token punctuation">(</span><span class="token punctuation">{</span>
+  appenders<span class="token operator">:</span> <span class="token punctuation">{</span>
+    stdout<span class="token operator">:</span> <span class="token punctuation">{</span>
+      type<span class="token operator">:</span> <span class="token string">'stdout'</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  categories<span class="token operator">:</span> <span class="token punctuation">{</span>
+    <span class="token keyword module">default</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+      appenders<span class="token operator">:</span> <span class="token punctuation">[</span><span class="token string">'stdout'</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
+      level<span class="token operator">:</span> <span class="token string">'all'</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token keyword">const</span> myLog4JsLogger <span class="token operator">=</span> log4js<span class="token punctuation">.</span><span class="token method function property-access">getLogger</span><span class="token punctuation">(</span><span class="token string">'default'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+
+
+<span class="token comment">// 使用例 1 : 非同期処理非対応版</span>
+<span class="token comment">// ================================================================================</span>
+
+<span class="token comment">// ロガーインスタンスを準備する</span>
+<span class="token keyword">const</span> myLogger <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">LoggerWrapper</span><span class="token punctuation">(</span>myLog4JsLogger<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// 以下のように通常利用可能</span>
+myLogger<span class="token punctuation">.</span><span class="token method function property-access">trace</span><span class="token punctuation">(</span><span class="token string">'Trace Log'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+myLogger<span class="token punctuation">.</span><span class="token method function property-access">debug</span><span class="token punctuation">(</span><span class="token string">'Debug Log'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+myLogger<span class="token punctuation">.</span><span class="token method function property-access">info</span> <span class="token punctuation">(</span><span class="token string">'Info Log'</span><span class="token punctuation">,</span> <span class="token string">'hoge'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+myLogger<span class="token punctuation">.</span><span class="token method function property-access">warn</span> <span class="token punctuation">(</span><span class="token string">'Warn Log'</span><span class="token punctuation">,</span> <span class="token number">1234</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+myLogger<span class="token punctuation">.</span><span class="token method function property-access">error</span><span class="token punctuation">(</span><span class="token string">'Error Log'</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">[</span><span class="token string">'a'</span><span class="token punctuation">,</span> <span class="token number">1234</span><span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+myLogger<span class="token punctuation">.</span><span class="token method function property-access">fatal</span><span class="token punctuation">(</span><span class="token string">'Fatal Log'</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">[</span><span class="token string">'a'</span><span class="token punctuation">,</span> <span class="token number">1234</span><span class="token punctuation">]</span><span class="token punctuation">,</span> <span class="token string">'foo'</span><span class="token punctuation">,</span> <span class="token string">'bar'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// JSON.parse() 部分をそのままログ出力しようとすると例外が発生するので関数でラップして出力する</span>
+myLogger<span class="token punctuation">.</span><span class="token method function property-access">info</span><span class="token punctuation">(</span><span class="token string">'例外が発生するかもしれない要素のログ出力を試みる'</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token known-class-name class-name">JSON</span><span class="token punctuation">.</span><span class="token method function property-access">parse</span><span class="token punctuation">(</span><span class="token string">'Invalid JSON String'</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+
+
+<span class="token comment">// 使用例 2 : 非同期処理対応版</span>
+<span class="token comment">// ================================================================================</span>
+
+<span class="token comment">// 非同期処理に対応するロガーインスタンスを生成する</span>
+<span class="token keyword">const</span> myAsyncLogger <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">LoggerWrapper</span><span class="token punctuation">(</span>myLog4JsLogger<span class="token punctuation">,</span> <span class="token boolean">true</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// 循環参照例外が発生する連想配列</span>
+<span class="token keyword">const</span> dummyObj <span class="token operator">=</span> <span class="token punctuation">{</span><span class="token punctuation">}</span><span class="token punctuation">;</span>
+<span class="token keyword">const</span> dummyRefObj <span class="token operator">=</span> <span class="token punctuation">{</span><span class="token punctuation">}</span><span class="token punctuation">;</span>
+dummyObj<span class="token punctuation">.</span><span class="token property-access">dummyRefObj</span> <span class="token operator">=</span> dummyRefObj<span class="token punctuation">;</span>
+dummyRefObj<span class="token punctuation">.</span><span class="token property-access">dummyObj</span> <span class="token operator">=</span> dummyObj<span class="token punctuation">;</span>
+myAsyncLogger<span class="token punctuation">.</span><span class="token method function property-access">info</span><span class="token punctuation">(</span><span class="token string">'例外が発生する同期処理'</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token known-class-name class-name">JSON</span><span class="token punctuation">.</span><span class="token method function property-access">stringify</span><span class="token punctuation">(</span>dummyObj<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// Reject される非同期処理</span>
+<span class="token keyword">const</span> dummyPromise <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">Promise</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token parameter">_resolve<span class="token punctuation">,</span> reject</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token function">setTimeout</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+    <span class="token function">reject</span><span class="token punctuation">(</span><span class="token string">'Dummy Reject'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span> <span class="token number">1000</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+myAsyncLogger<span class="token punctuation">.</span><span class="token method function property-access">info</span><span class="token punctuation">(</span><span class="token string">'例外が発生する非同期処理'</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> dummyPromise<span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
 <p><code>log4js.getLogger()</code> で取得したロガーのインスタンスをラップする。</p>
 <p>例えば以下のコードは、<code>JSON.parse()</code> に失敗すると例外が発生してしまう。</p>
 <pre class="language-javascript"><code class="language-javascript">myLogger<span class="token punctuation">.</span><span class="token method function property-access">info</span><span class="token punctuation">(</span> <span class="token known-class-name class-name">JSON</span><span class="token punctuation">.</span><span class="token method function property-access">parse</span><span class="token punctuation">(</span>jsonStr<span class="token punctuation">)</span> <span class="token punctuation">)</span><span class="token punctuation">;</span>

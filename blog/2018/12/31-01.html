@@ -224,6 +224,80 @@ $ <span class="token function">git</span> config --global gc.auto <span class="t
 <p>効果のほどはよく分からなかったが、気休め程度に設定してみた。</p>
 <h2 id="オレオレ-__git_ps1-を作った"><a class="header-link" href="#オレオレ-__git_ps1-を作った"><span class="header-link-mark"></span></a>オレオレ <code>__git_ps1</code> を作った</h2>
 <p>色々なスクリプトを参考にして、オレオレ <code>__git_ps1</code> を作ってみた。</p>
+<ul>
+  <li><code>neos_git_ps1.sh</code></li>
+</ul>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># Neo's git_ps1()</span>
+<span class="token comment"># </span>
+<span class="token comment"># 標準の __git_ps1 が Windows 環境で遅いので簡易版を自作してみた・同名の関数を上書きして動作する</span>
+<span class="token comment"># - ブランチ名を表示する</span>
+<span class="token comment"># - $GIT_PS1_SHOWDIRTYSTATE オプションに対応 : add 前のファイルがあれば '*'・add 後 commit 前のファイルがあれば '+' を表示する</span>
+<span class="token comment"># - $GIT_PS1_SHOWUNTRACKEDFILES オプションに対応 : 新規ファイルがあれば '%" を表示する</span>
+<span class="token keyword">function</span> <span class="token function-name function">__git_ps1</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token comment"># ブランチ名 : symbolic-ref はブランチ名しか出せないが、タグなどにも対応している describe よりは若干高速。お好みで選択</span>
+  <span class="token builtin class-name">local</span> <span class="token assign-left variable">branch_name</span><span class="token operator">=</span><span class="token string">"<span class="token variable"><span class="token variable">$(</span><span class="token function">git</span> symbolic-ref --short HEAD <span class="token operator"><span class="token file-descriptor important">2</span>></span> /dev/null<span class="token variable">)</span></span>"</span>  <span class="token comment"># "$(git describe --all 2> /dev/null | sed 's/heads\///' 2> /dev/null)"</span>
+  
+  <span class="token comment"># ブランチ名がなければ Git リポジトリ配下ではないと見なす・何も出力せず中断する</span>
+  <span class="token keyword">if</span> <span class="token punctuation">[</span> -z <span class="token string">"<span class="token variable">$branch_name</span>"</span> <span class="token punctuation">]</span><span class="token punctuation">;</span> <span class="token keyword">then</span>
+    <span class="token builtin class-name">exit</span> <span class="token number">0</span>
+  <span class="token keyword">fi</span>
+  
+  <span class="token comment"># どうしても git status 以降のパフォーマンスが出ない・ブランチ名だけ出して終わらせるバージョン</span>
+  <span class="token comment"># echo " [$branch_name]"  # 省略版と一目で分かるようにブラケットを使用</span>
+  <span class="token comment"># exit 0</span>
+  <span class="token comment"># アンコメントした場合以下はデッドコード</span>
+  
+  <span class="token comment"># -z : 対象が空文字なら true (空文字でない時に true にするなら -n)</span>
+  <span class="token keyword">if</span> <span class="token punctuation">[</span> -z <span class="token string">"<span class="token variable">$GIT_PS1_SHOWDIRTYSTATE</span>"</span> <span class="token punctuation">]</span> <span class="token operator">&#x26;&#x26;</span> <span class="token punctuation">[</span> -z <span class="token string">"<span class="token variable">$GIT_PS1_SHOWUNTRACKEDFILES</span>"</span> <span class="token punctuation">]</span><span class="token punctuation">;</span> <span class="token keyword">then</span>
+    <span class="token comment"># オプションが未指定の場合はブランチ名のみ出力して終了する</span>
+    <span class="token builtin class-name">echo</span> <span class="token string">" (<span class="token variable">$branch_name</span>)"</span>
+    <span class="token builtin class-name">exit</span> <span class="token number">0</span>
+  <span class="token keyword">fi</span>
+  
+  <span class="token comment"># 何度もコマンドを実行したくないので変数に結果を控えておく・ブランチ名は必ず表示させることでチェックする</span>
+  <span class="token builtin class-name">local</span> <span class="token assign-left variable">status</span><span class="token operator">=</span><span class="token variable"><span class="token variable">$(</span><span class="token function">git</span> status --short --branch --ignore-submodules <span class="token operator"><span class="token file-descriptor important">2</span>></span> /dev/null<span class="token variable">)</span></span>
+  
+  <span class="token comment"># 正常に git status が動作していなければエラーと表明して中断する</span>
+  <span class="token keyword">if</span> <span class="token punctuation">[</span> -z <span class="token string">"<span class="token variable">$status</span>"</span> <span class="token punctuation">]</span><span class="token punctuation">;</span> <span class="token keyword">then</span>
+    <span class="token builtin class-name">echo</span> <span class="token string">' (ERROR)'</span>
+    <span class="token builtin class-name">exit</span> <span class="token number">0</span>
+  <span class="token keyword">fi</span>
+  
+  <span class="token comment"># git status --short コマンドの結果を基にプロンプト用記号を付与する</span>
+  <span class="token builtin class-name">local</span> unstaged   <span class="token comment"># add 前のファイル (行頭にスペース1つ開けて M or D)</span>
+  <span class="token builtin class-name">local</span> staged     <span class="token comment"># add 済のファイル (行頭に A or M or D)</span>
+  <span class="token builtin class-name">local</span> untracked  <span class="token comment"># 新規作成ファイル (行頭に ??)</span>
+  
+  <span class="token comment"># Unstaged・Staged</span>
+  <span class="token keyword">if</span> <span class="token punctuation">[</span> -n <span class="token string">"<span class="token variable">$GIT_PS1_SHOWDIRTYSTATE</span>"</span> <span class="token punctuation">]</span><span class="token punctuation">;</span> <span class="token keyword">then</span>
+    <span class="token comment"># Unstaged</span>
+    <span class="token keyword">if</span> <span class="token punctuation">[</span> -n <span class="token string">"<span class="token variable"><span class="token variable">$(</span><span class="token builtin class-name">echo</span> <span class="token string">"<span class="token variable">$status</span>"</span> <span class="token operator">|</span> <span class="token function">cut</span> -c <span class="token number">2</span> <span class="token operator">|</span> <span class="token function">tr</span> -dc <span class="token string">'ACDMRU'</span><span class="token variable">)</span></span>"</span> <span class="token punctuation">]</span><span class="token punctuation">;</span> <span class="token keyword">then</span>
+      <span class="token assign-left variable">unstaged</span><span class="token operator">=</span><span class="token string">'*'</span>
+    <span class="token keyword">fi</span>
+    
+    <span class="token comment"># Staged</span>
+    <span class="token keyword">if</span> <span class="token punctuation">[</span> -n <span class="token string">"<span class="token variable"><span class="token variable">$(</span><span class="token builtin class-name">echo</span> <span class="token string">"<span class="token variable">$status</span>"</span> <span class="token operator">|</span> <span class="token function">cut</span> -c <span class="token number">1</span> <span class="token operator">|</span> <span class="token function">tr</span> -dc <span class="token string">'ACDMRU'</span><span class="token variable">)</span></span>"</span> <span class="token punctuation">]</span><span class="token punctuation">;</span> <span class="token keyword">then</span>
+      <span class="token assign-left variable">staged</span><span class="token operator">=</span><span class="token string">'+'</span>
+    <span class="token keyword">fi</span>
+  <span class="token keyword">fi</span>
+  
+  <span class="token comment"># Untracked</span>
+  <span class="token keyword">if</span> <span class="token punctuation">[</span> -n <span class="token string">"<span class="token variable">$GIT_PS1_SHOWUNTRACKEDFILES</span>"</span> <span class="token punctuation">]</span> <span class="token operator">&#x26;&#x26;</span> <span class="token punctuation">[</span> -n <span class="token string">"<span class="token variable"><span class="token variable">$(</span><span class="token builtin class-name">echo</span> <span class="token string">"<span class="token variable">$status</span>"</span> <span class="token operator">|</span> <span class="token function">tr</span> -dc <span class="token string">'?'</span><span class="token variable">)</span></span>"</span> <span class="token punctuation">]</span><span class="token punctuation">;</span> <span class="token keyword">then</span>
+    <span class="token assign-left variable">untracked</span><span class="token operator">=</span><span class="token string">'%'</span>
+  <span class="token keyword">fi</span>
+  
+  <span class="token comment"># ステータス文字列を結合する</span>
+  <span class="token builtin class-name">local</span> <span class="token assign-left variable">files_status</span><span class="token operator">=</span><span class="token string">"<span class="token variable">$unstaged</span><span class="token variable">$staged</span><span class="token variable">$untracked</span>"</span>
+  
+  <span class="token comment"># いずれかの記号があれば先頭にスペースを入れておく</span>
+  <span class="token keyword">if</span> <span class="token punctuation">[</span> -n <span class="token string">"<span class="token variable">$files_status</span>"</span> <span class="token punctuation">]</span><span class="token punctuation">;</span> <span class="token keyword">then</span>
+    <span class="token assign-left variable">files_status</span><span class="token operator">=</span><span class="token string">" <span class="token variable">$files_status</span>"</span>
+  <span class="token keyword">fi</span>
+  
+  <span class="token builtin class-name">echo</span> <span class="token string">" (<span class="token variable">$branch_name</span><span class="token variable">$files_status</span>)"</span>
+  <span class="token builtin class-name">exit</span> <span class="token number">0</span>
+<span class="token punctuation">}</span>
+</code></pre>
 <p>実装時に考慮したこと。</p>
 <ul>
   <li>ブランチ名の取得は、速度を考えて <code>git symbolic-ref</code> を使用。タグなどが表示できないので、用途によっては <code>git describe</code> の方がいいかも。そちらもコメントアウトで残しておいた。</li>

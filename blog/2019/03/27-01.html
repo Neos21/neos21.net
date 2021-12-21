@@ -106,11 +106,239 @@
 <p>ココだけ直して、それ以外はサンプルコードを見れば使えます、という人は、この先は見なくても良い。</p>
 <h2 id="サンプルコードを-promise-化して使いやすくしてみた"><a class="header-link" href="#サンプルコードを-promise-化して使いやすくしてみた"><span class="header-link-mark"></span></a>サンプルコードを Promise 化して使いやすくしてみた</h2>
 <p>このサンプルコードはコールバック形式で書きづらいので、Promise として呼べるように加工してみた。</p>
-<p>詳しくは以下の Gist を参照のこと。</p>
+<p>元のサンプルコードからそうだが、<code>http-signature</code> と <code>jssha</code> というライブラリが必要なので、<code>package.json</code> を用意し事前に <code>npm install</code> しておく。</p>
+<pre class="language-sh"><code class="language-sh">$ <span class="token function">npm</span> init -y
+$ <span class="token function">npm</span> <span class="token function">install</span> -S http-signature jssha
+</code></pre>
+<p>以下にコードを置いた <code>settings.js</code> を各自の内容に変更し、<code>examples.js</code> を加工して <code>oracle-cloud-rest-api-wrapper.js</code> をコールすれば良い。</p>
 <ul>
-  <li><a href="https://gist.github.com/Neos21/c345af65f09fe0cc901dc8c48081a7ab">Oracle Cloud REST API をコールする Node.js スクリプト · GitHub</a></li>
+  <li><code>settings.js</code></li>
 </ul>
-<p>元のサンプルコードからそうだが、<code>http-signature</code> と <code>jssha</code> というライブラリが必要なので <code>npm install</code> すること。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token doc-comment comment">/** API コールに必須な登録情報 */</span>
+<span class="token keyword">const</span> settings <span class="token operator">=</span> <span class="token punctuation">{</span>
+  <span class="token doc-comment comment">/** テナンシー ID */</span>
+  tenancyId<span class="token operator">:</span> <span class="token string">'ocid1.tenancy.oc1..xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'</span><span class="token punctuation">,</span>
+  <span class="token doc-comment comment">/** API キーを登録したユーザ ID */</span>
+  authUserId<span class="token operator">:</span> <span class="token string">'ocid1.user.oc1..xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'</span><span class="token punctuation">,</span>
+  <span class="token doc-comment comment">/** API キーのフィンガープリント */</span>
+  keyFingerprint<span class="token operator">:</span> <span class="token string">'xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx'</span><span class="token punctuation">,</span>
+  <span class="token doc-comment comment">/** API 秘密鍵の内容 (ベタ書きが嫌なら fs.readFileSync() で読み込むなどしてください) */</span>
+  privateKey<span class="token operator">:</span> <span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">-----BEGIN RSA PRIVATE KEY-----
+XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+-----END RSA PRIVATE KEY-----</span><span class="token template-punctuation string">`</span></span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+
+module<span class="token punctuation">.</span><span class="token property-access">exports</span> <span class="token operator">=</span> settings<span class="token punctuation">;</span>
+</code></pre>
+<ul>
+  <li><code>examples.js</code></li>
+</ul>
+<pre class="language-javascript"><code class="language-javascript"><span class="token doc-comment comment">/** 使い方サンプル */</span>
+
+<span class="token keyword">const</span> settings <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'./settings'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">const</span> <span class="token maybe-class-name">OracleCloudRestApiWrapper</span> <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'./oracle-cloud-rest-api-wrapper'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">const</span> oracleCloudRestApiWrapper <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">OracleCloudRestApiWrapper</span><span class="token punctuation">(</span>settings<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token doc-comment comment">/** 各種定数 */</span>
+<span class="token keyword">const</span> constants <span class="token operator">=</span> <span class="token punctuation">{</span>
+  <span class="token doc-comment comment">/** REST API のエンドポイント : 自分のリージョンに合わせて設定する */</span>
+  apiEndpoint<span class="token operator">:</span> <span class="token punctuation">{</span>
+    <span class="token doc-comment comment">/** Identity : ユーザ情報 */</span>
+    identity<span class="token operator">:</span> <span class="token string">'identity.us-ashburn-1.oraclecloud.com'</span><span class="token punctuation">,</span>
+    <span class="token doc-comment comment">/** Object Storage */</span>
+    objectStorage<span class="token operator">:</span> <span class="token string">'objectstorage.us-ashburn-1.oraclecloud.com'</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token doc-comment comment">/** テナンシー名 */</span>
+  tenancyName<span class="token operator">:</span> <span class="token string">'myTenancy'</span><span class="token punctuation">,</span>
+  <span class="token doc-comment comment">/** バケット名 */</span>
+  bucketName<span class="token operator">:</span> <span class="token string">'muBucket'</span>
+<span class="token punctuation">}</span>
+
+<span class="token doc-comment comment">/**
+ * オブジェクト一覧を取得する
+ * 
+ * <span class="token keyword">@return</span> <span class="token class-name"><span class="token punctuation">{</span>Promise<span class="token punctuation">}</span></span> 'objects' がトップレベルの連想配列
+ */</span>
+<span class="token keyword">function</span> <span class="token function">listObjects</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token keyword">const</span> options <span class="token operator">=</span> <span class="token punctuation">{</span>
+    host<span class="token operator">:</span> constants<span class="token punctuation">.</span><span class="token property-access">apiEndpoint</span><span class="token punctuation">.</span><span class="token property-access">objectStorage</span><span class="token punctuation">,</span>
+    path<span class="token operator">:</span> <span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">/n/</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span><span class="token function">encodeURIComponent</span><span class="token punctuation">(</span>constants<span class="token punctuation">.</span><span class="token property-access">tenancyName</span><span class="token punctuation">)</span><span class="token interpolation-punctuation punctuation">}</span></span><span class="token string">/b/</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span><span class="token function">encodeURIComponent</span><span class="token punctuation">(</span>constants<span class="token punctuation">.</span><span class="token property-access">bucketName</span><span class="token punctuation">)</span><span class="token interpolation-punctuation punctuation">}</span></span><span class="token string">/o</span><span class="token template-punctuation string">`</span></span><span class="token punctuation">,</span>
+    method<span class="token operator">:</span> <span class="token string">'GET'</span>
+  <span class="token punctuation">}</span><span class="token punctuation">;</span>
+  <span class="token keyword control-flow">return</span> oracleCloudRestApiWrapper<span class="token punctuation">.</span><span class="token method function property-access">execRequest</span><span class="token punctuation">(</span>options<span class="token punctuation">)</span>
+    <span class="token punctuation">.</span><span class="token method function property-access">then</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token parameter">rawResults</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+      <span class="token keyword control-flow">return</span> <span class="token known-class-name class-name">JSON</span><span class="token punctuation">.</span><span class="token method function property-access">parse</span><span class="token punctuation">(</span>rawResults<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+
+<span class="token doc-comment comment">/**
+ * オブジェクトを取得する
+ * 
+ * <span class="token keyword">@param</span> <span class="token class-name"><span class="token punctuation">{</span>string<span class="token punctuation">}</span></span> <span class="token parameter">objectName</span> オブジェクト名
+ * <span class="token keyword">@return</span> <span class="token class-name"><span class="token punctuation">{</span>Promise<span class="token punctuation">}</span></span> オブジェクトの中身
+ */</span>
+<span class="token keyword">function</span> <span class="token function">getObject</span><span class="token punctuation">(</span><span class="token parameter">objectName</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token keyword">const</span> options <span class="token operator">=</span> <span class="token punctuation">{</span>
+    host<span class="token operator">:</span> constants<span class="token punctuation">.</span><span class="token property-access">apiEndpoint</span><span class="token punctuation">.</span><span class="token property-access">objectStorage</span><span class="token punctuation">,</span>
+    path<span class="token operator">:</span> <span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">/n/</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span><span class="token function">encodeURIComponent</span><span class="token punctuation">(</span>constants<span class="token punctuation">.</span><span class="token property-access">tenancyName</span><span class="token punctuation">)</span><span class="token interpolation-punctuation punctuation">}</span></span><span class="token string">/b/</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span><span class="token function">encodeURIComponent</span><span class="token punctuation">(</span>constants<span class="token punctuation">.</span><span class="token property-access">bucketName</span><span class="token punctuation">)</span><span class="token interpolation-punctuation punctuation">}</span></span><span class="token string">/o/</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span><span class="token function">encodeURIComponent</span><span class="token punctuation">(</span>objectName<span class="token punctuation">)</span><span class="token interpolation-punctuation punctuation">}</span></span><span class="token template-punctuation string">`</span></span><span class="token punctuation">,</span>
+    method<span class="token operator">:</span> <span class="token string">'GET'</span>
+  <span class="token punctuation">}</span><span class="token punctuation">;</span>
+  <span class="token keyword control-flow">return</span> oracleCloudRestApiWrapper<span class="token punctuation">.</span><span class="token method function property-access">execRequest</span><span class="token punctuation">(</span>options<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+
+<span class="token doc-comment comment">/**
+ * オブジェクトを保存する (既に存在する場合は上書き保存)
+ * 
+ * <span class="token keyword">@param</span> <span class="token class-name"><span class="token punctuation">{</span>string<span class="token punctuation">}</span></span> <span class="token parameter">objectName</span> オブジェクト名
+ * <span class="token keyword">@param</span> <span class="token class-name"><span class="token punctuation">{</span>string<span class="token punctuation">}</span></span> <span class="token parameter">body</span> オブジェクトの中身
+ * <span class="token keyword">@return</span> <span class="token class-name"><span class="token punctuation">{</span>Promise<span class="token punctuation">}</span></span> 結果
+ */</span>
+<span class="token keyword">function</span> <span class="token function">putObject</span><span class="token punctuation">(</span><span class="token parameter">objectName<span class="token punctuation">,</span> body</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token keyword">const</span> options <span class="token operator">=</span> <span class="token punctuation">{</span>
+    host<span class="token operator">:</span> constants<span class="token punctuation">.</span><span class="token property-access">apiEndpoint</span><span class="token punctuation">.</span><span class="token property-access">objectStorage</span><span class="token punctuation">,</span>
+    path<span class="token operator">:</span> <span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">/n/</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span><span class="token function">encodeURIComponent</span><span class="token punctuation">(</span>constants<span class="token punctuation">.</span><span class="token property-access">tenancyName</span><span class="token punctuation">)</span><span class="token interpolation-punctuation punctuation">}</span></span><span class="token string">/b/</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span><span class="token function">encodeURIComponent</span><span class="token punctuation">(</span>constants<span class="token punctuation">.</span><span class="token property-access">bucketName</span><span class="token punctuation">)</span><span class="token interpolation-punctuation punctuation">}</span></span><span class="token string">/o/</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span><span class="token function">encodeURIComponent</span><span class="token punctuation">(</span>objectName<span class="token punctuation">)</span><span class="token interpolation-punctuation punctuation">}</span></span><span class="token template-punctuation string">`</span></span><span class="token punctuation">,</span>
+    method<span class="token operator">:</span> <span class="token string">'PUT'</span><span class="token punctuation">,</span>
+    headers<span class="token operator">:</span> <span class="token punctuation">{</span>
+      <span class="token string">'Content-Type'</span><span class="token operator">:</span> <span class="token string">'application/json'</span>  <span class="token comment">// ファイルの中身に関わらずこの指定で良い</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span><span class="token punctuation">;</span>
+  <span class="token keyword control-flow">return</span> oracleCloudRestApiWrapper<span class="token punctuation">.</span><span class="token method function property-access">execRequest</span><span class="token punctuation">(</span>options<span class="token punctuation">,</span> body<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+
+<span class="token doc-comment comment">/**
+ * ユーザ情報を取得する
+ * 
+ * <span class="token keyword">@param</span> <span class="token class-name"><span class="token punctuation">{</span>string<span class="token punctuation">}</span></span> <span class="token parameter">userId</span> ユーザ ID
+ * <span class="token keyword">@return</span> <span class="token class-name"><span class="token punctuation">{</span>Promise<span class="token punctuation">}</span></span> ユーザ情報
+ */</span>
+<span class="token keyword">function</span> <span class="token function">getUser</span><span class="token punctuation">(</span><span class="token parameter">userId</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token keyword">const</span> options <span class="token operator">=</span> <span class="token punctuation">{</span>
+    host<span class="token operator">:</span> constants<span class="token punctuation">.</span><span class="token property-access">apiEndpoint</span><span class="token punctuation">.</span><span class="token property-access">identity</span><span class="token punctuation">,</span>
+    path<span class="token operator">:</span> <span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">/20160918/users/</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span><span class="token function">encodeURIComponent</span><span class="token punctuation">(</span>userId<span class="token punctuation">)</span><span class="token interpolation-punctuation punctuation">}</span></span><span class="token template-punctuation string">`</span></span><span class="token punctuation">,</span>
+    method<span class="token operator">:</span> <span class="token string">'GET'</span>
+  <span class="token punctuation">}</span><span class="token punctuation">;</span>
+  <span class="token keyword control-flow">return</span> oracleCloudRestApiWrapper<span class="token punctuation">.</span><span class="token method function property-access">execRequest</span><span class="token punctuation">(</span>options<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<ul>
+  <li><code>oracle-cloud-rest-api-wrapper.js</code></li>
+</ul>
+<pre class="language-javascript"><code class="language-javascript"><span class="token doc-comment comment">/** Oracle Cloud REST API をコールする処理のラッパークラス */</span>
+
+<span class="token keyword">const</span> https <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'https'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token keyword">const</span> httpSignature <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'http-signature'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">const</span> jssha <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'jssha'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token doc-comment comment">/** Oracle Cloud REST API Wrapper */</span>
+<span class="token keyword">class</span> <span class="token class-name">OracleCloudRestApiWrapper</span> <span class="token punctuation">{</span>
+  <span class="token doc-comment comment">/**
+   * コンストラクタ
+   * 
+   * <span class="token keyword">@param</span> <span class="token class-name"><span class="token punctuation">{</span><span class="token operator">*</span><span class="token punctuation">}</span></span> <span class="token parameter">settings</span> 各種登録情報
+   */</span>
+  <span class="token function">constructor</span><span class="token punctuation">(</span><span class="token parameter">settings</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">https</span> <span class="token operator">=</span> https<span class="token punctuation">;</span>
+    
+    <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">httpSignature</span> <span class="token operator">=</span> httpSignature<span class="token punctuation">;</span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">jssha</span> <span class="token operator">=</span> jssha<span class="token punctuation">;</span>
+    
+    <span class="token comment">// 登録情報を取り出す</span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">settings</span> <span class="token operator">=</span> settings<span class="token punctuation">;</span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">tenancyId</span> <span class="token operator">=</span> <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">settings</span><span class="token punctuation">.</span><span class="token property-access">tenancyId</span><span class="token punctuation">;</span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">authUserId</span> <span class="token operator">=</span> <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">settings</span><span class="token punctuation">.</span><span class="token property-access">authUserId</span><span class="token punctuation">;</span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">keyFingerprint</span> <span class="token operator">=</span> <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">settings</span><span class="token punctuation">.</span><span class="token property-access">keyFingerprint</span><span class="token punctuation">;</span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">privateKey</span> <span class="token operator">=</span> <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">settings</span><span class="token punctuation">.</span><span class="token property-access">privateKey</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  
+  <span class="token doc-comment comment">/**
+   * リクエストオブジェクトに署名認証情報を付加する
+   * 
+   * <span class="token keyword">@param</span> <span class="token class-name"><span class="token punctuation">{</span><span class="token operator">*</span><span class="token punctuation">}</span></span> <span class="token parameter">request</span> リクエストオブジェクト。直接書き換える
+   * <span class="token keyword">@param</span> <span class="token class-name"><span class="token punctuation">{</span><span class="token operator">*</span><span class="token punctuation">}</span></span> <span class="token parameter">options</span> キー情報などのオプション
+   */</span>
+  <span class="token function">sign</span><span class="token punctuation">(</span><span class="token parameter">request<span class="token punctuation">,</span> options</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token keyword">const</span> apiKeyId <span class="token operator">=</span> <span class="token template-string"><span class="token template-punctuation string">`</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>options<span class="token punctuation">.</span><span class="token property-access">tenancyId</span><span class="token interpolation-punctuation punctuation">}</span></span><span class="token string">/</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>options<span class="token punctuation">.</span><span class="token property-access">userId</span><span class="token interpolation-punctuation punctuation">}</span></span><span class="token string">/</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>options<span class="token punctuation">.</span><span class="token property-access">keyFingerprint</span><span class="token interpolation-punctuation punctuation">}</span></span><span class="token template-punctuation string">`</span></span><span class="token punctuation">;</span>
+    <span class="token keyword">const</span> headersToSign <span class="token operator">=</span> <span class="token punctuation">[</span><span class="token string">'host'</span><span class="token punctuation">,</span> <span class="token string">'date'</span><span class="token punctuation">,</span> <span class="token string">'(request-target)'</span><span class="token punctuation">]</span><span class="token punctuation">;</span>
+    <span class="token comment">// POST か PUT の場合はヘッダにハッシュを追加する</span>
+    <span class="token keyword">const</span> methodsThatRequireExtraHeaders <span class="token operator">=</span> <span class="token punctuation">[</span><span class="token string">'POST'</span><span class="token punctuation">,</span> <span class="token string">'PUT'</span><span class="token punctuation">]</span><span class="token punctuation">;</span>
+    <span class="token keyword control-flow">if</span><span class="token punctuation">(</span>methodsThatRequireExtraHeaders<span class="token punctuation">.</span><span class="token method function property-access">includes</span><span class="token punctuation">(</span>request<span class="token punctuation">.</span><span class="token property-access">method</span><span class="token punctuation">.</span><span class="token method function property-access">toUpperCase</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      options<span class="token punctuation">.</span><span class="token property-access">body</span> <span class="token operator">=</span> options<span class="token punctuation">.</span><span class="token property-access">body</span> <span class="token operator">||</span> <span class="token string">''</span><span class="token punctuation">;</span>
+      <span class="token keyword">const</span> shaObj <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">this<span class="token punctuation">.</span>jssha</span><span class="token punctuation">(</span><span class="token string">'SHA-256'</span><span class="token punctuation">,</span> <span class="token string">'TEXT'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      shaObj<span class="token punctuation">.</span><span class="token method function property-access">update</span><span class="token punctuation">(</span>options<span class="token punctuation">.</span><span class="token property-access">body</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      request<span class="token punctuation">.</span><span class="token method function property-access">setHeader</span><span class="token punctuation">(</span><span class="token string">'Content-Length'</span><span class="token punctuation">,</span> <span class="token maybe-class-name">Buffer</span><span class="token punctuation">.</span><span class="token method function property-access">byteLength</span><span class="token punctuation">(</span>options<span class="token punctuation">.</span><span class="token property-access">body</span><span class="token punctuation">,</span> <span class="token string">'utf8'</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment">// 全角文字も考慮してバイト数を計算するよう修正</span>
+      request<span class="token punctuation">.</span><span class="token method function property-access">setHeader</span><span class="token punctuation">(</span><span class="token string">'x-content-sha256'</span><span class="token punctuation">,</span> shaObj<span class="token punctuation">.</span><span class="token method function property-access">getHash</span><span class="token punctuation">(</span><span class="token string">'B64'</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment">// Object を PUT する時は不要なようだが設定しても問題なし</span>
+      headersToSign<span class="token punctuation">.</span><span class="token method function property-access">push</span><span class="token punctuation">(</span><span class="token string">'content-type'</span><span class="token punctuation">,</span> <span class="token string">'content-length'</span><span class="token punctuation">,</span> <span class="token string">'x-content-sha256'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+    <span class="token comment">// リクエストヘッダに署名情報を追加する</span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">httpSignature</span><span class="token punctuation">.</span><span class="token method function property-access">sign</span><span class="token punctuation">(</span>request<span class="token punctuation">,</span> <span class="token punctuation">{</span>
+      key<span class="token operator">:</span> options<span class="token punctuation">.</span><span class="token property-access">privateKey</span><span class="token punctuation">,</span>
+      keyId<span class="token operator">:</span> apiKeyId<span class="token punctuation">,</span>
+      headers<span class="token operator">:</span> headersToSign
+    <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token comment">// ヘッダをさらに調整する</span>
+    <span class="token keyword">const</span> newAuthHeaderValue <span class="token operator">=</span> request<span class="token punctuation">.</span><span class="token method function property-access">getHeader</span><span class="token punctuation">(</span><span class="token string">'Authorization'</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">replace</span><span class="token punctuation">(</span><span class="token string">'Signature '</span><span class="token punctuation">,</span> <span class="token string">'Signature version="1",'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    request<span class="token punctuation">.</span><span class="token method function property-access">setHeader</span><span class="token punctuation">(</span><span class="token string">'Authorization'</span><span class="token punctuation">,</span> newAuthHeaderValue<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  
+  <span class="token doc-comment comment">/**
+   * API コールする
+   * 
+   * <span class="token keyword">@param</span> <span class="token class-name"><span class="token punctuation">{</span><span class="token operator">*</span><span class="token punctuation">}</span></span> <span class="token parameter">options</span> https.request() の第1引数に渡すオプション
+   * <span class="token keyword">@param</span> <span class="token class-name"><span class="token punctuation">{</span><span class="token operator">*</span><span class="token punctuation">}</span></span> <span class="token parameter">requestBody</span> POST・PUT の場合に付与したいリクエストボディ
+   * <span class="token keyword">@return</span> <span class="token class-name"><span class="token punctuation">{</span>Promise<span class="token punctuation">}</span></span> レスポンスを Resolve する
+   */</span>
+  <span class="token function">execRequest</span><span class="token punctuation">(</span><span class="token parameter">options<span class="token punctuation">,</span> requestBody</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token keyword control-flow">return</span> <span class="token keyword">new</span> <span class="token class-name">Promise</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token parameter">resolve<span class="token punctuation">,</span> reject</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+      <span class="token comment">// リクエスト情報を生成する</span>
+      <span class="token keyword">const</span> request <span class="token operator">=</span> <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">https</span><span class="token punctuation">.</span><span class="token method function property-access">request</span><span class="token punctuation">(</span>options<span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token parameter">response</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+        <span class="token keyword">let</span> responseBody <span class="token operator">=</span> <span class="token string">''</span><span class="token punctuation">;</span>
+        response
+          <span class="token punctuation">.</span><span class="token method function property-access">on</span><span class="token punctuation">(</span><span class="token string">'data'</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token parameter">chunk</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+            responseBody <span class="token operator">+=</span> chunk<span class="token punctuation">;</span>
+          <span class="token punctuation">}</span><span class="token punctuation">)</span>
+          <span class="token punctuation">.</span><span class="token method function property-access">on</span><span class="token punctuation">(</span><span class="token string">'end'</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+            <span class="token comment">// レスポンスを Resolve する</span>
+            <span class="token function">resolve</span><span class="token punctuation">(</span>responseBody<span class="token punctuation">)</span><span class="token punctuation">;</span>
+          <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span><span class="token punctuation">)</span>
+        <span class="token punctuation">.</span><span class="token method function property-access">on</span><span class="token punctuation">(</span><span class="token string">'timeout'</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+          <span class="token comment">// タイムアウト時は通信を切断する</span>
+          request<span class="token punctuation">.</span><span class="token method function property-access">abort</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+          <span class="token function">reject</span><span class="token punctuation">(</span><span class="token string">'Request timed out'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token punctuation">}</span><span class="token punctuation">)</span>
+        <span class="token punctuation">.</span><span class="token method function property-access">on</span><span class="token punctuation">(</span><span class="token string">'error'</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token parameter">error</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+          <span class="token function">reject</span><span class="token punctuation">(</span>error<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token comment">// 通信タイムアウトを適当に設定する</span>
+      request<span class="token punctuation">.</span><span class="token method function property-access">setTimeout</span><span class="token punctuation">(</span><span class="token number">15000</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token comment">// リクエストオブジェクトに署名情報を追加する</span>
+      <span class="token keyword">const</span> requestOptions <span class="token operator">=</span> <span class="token punctuation">{</span>
+        privateKey<span class="token operator">:</span> <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">privateKey</span><span class="token punctuation">,</span>
+        keyFingerprint<span class="token operator">:</span> <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">keyFingerprint</span><span class="token punctuation">,</span>
+        tenancyId<span class="token operator">:</span> <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">tenancyId</span><span class="token punctuation">,</span>
+        userId<span class="token operator">:</span> <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">authUserId</span>
+      <span class="token punctuation">}</span><span class="token punctuation">;</span>
+      <span class="token comment">// POST・PUT の場合など、リクエストボディが指定されていれば追加する</span>
+      <span class="token keyword control-flow">if</span><span class="token punctuation">(</span>requestBody<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        requestOptions<span class="token punctuation">.</span><span class="token property-access">body</span> <span class="token operator">=</span> requestBody<span class="token punctuation">;</span>
+      <span class="token punctuation">}</span>
+      <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token method function property-access">sign</span><span class="token punctuation">(</span>request<span class="token punctuation">,</span> requestOptions<span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token comment">// PUT Object の場合は end() に送りたいファイルの内容を指定すればファイルの中に書き込まれる</span>
+      <span class="token keyword control-flow">if</span><span class="token punctuation">(</span>requestBody<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        request<span class="token punctuation">.</span><span class="token method function property-access">end</span><span class="token punctuation">(</span>requestBody<span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span>
+      <span class="token keyword control-flow">else</span> <span class="token punctuation">{</span>
+        request<span class="token punctuation">.</span><span class="token method function property-access">end</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+
+module<span class="token punctuation">.</span><span class="token property-access">exports</span> <span class="token operator">=</span> <span class="token maybe-class-name">OracleCloudRestApiWrapper</span><span class="token punctuation">;</span>
+</code></pre>
 <p><code>oracle-cloud-rest-api-wrapper.js</code> はイジらず、<code>settings.js</code> の設定情報を変更し、<code>examples.js</code> のように利用すれば OK、という流れ。</p>
 <p>主に Object Storage のコールのために作ったが、呼び方を変えれば <code>getUser()</code> のようにユーザ情報なんかも拾えたりする。どんな API があるのかは以下を参照。</p>
 <ul>

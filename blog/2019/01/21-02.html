@@ -146,10 +146,161 @@ Debug<span class="token punctuation">.</span>Print result
 <ul>
   <li>参考：<a href="https://www.rondebruin.nl/mac/mac013.htm">Loop through Files in Folder on a Mac (Dir for Mac Excel)</a></li>
 </ul>
-<p>Excel ブックに組み込み済みのモノが Zip ファイルで展開されているので、コードを読みやすいよう Gist に転載させていただいた。</p>
+<p>Excel ブックに組み込み済みのモノが Zip ファイルで展開されているので、コードを読みやすいよう以下に転載させていただいた。</p>
 <ul>
-  <li><a href="https://gist.github.com/Neos21/3d3ff72c9cde3e26c01eec428cacdd1f">Backup : https://www.rondebruin.nl/mac/mac013.htm : Loop through Files in Folder on a Mac (Dir for Mac Excel) · GitHub</a></li>
+  <li><code>module.bas</code></li>
 </ul>
+<pre class="language-vb"><code class="language-vb"><span class="token keyword">Option</span> Explicit
+
+<span class="token comment">'Important: this Dim line must be at the top of your module</span>
+<span class="token keyword">Dim</span> MyFiles <span class="token keyword">As</span> <span class="token keyword">String</span>
+
+
+<span class="token keyword">Sub</span> TestMacroForThisfileWithCellReferences<span class="token punctuation">(</span><span class="token punctuation">)</span>
+    <span class="token keyword">Dim</span> MySplit <span class="token keyword">As</span> <span class="token keyword">Variant</span>
+    <span class="token keyword">Dim</span> FileInMyFiles <span class="token keyword">As</span> <span class="token keyword">Long</span>
+    <span class="token keyword">Dim</span> Fstr <span class="token keyword">As</span> <span class="token keyword">String</span>
+    <span class="token keyword">Dim</span> LastSep <span class="token keyword">As</span> <span class="token keyword">String</span>
+
+    <span class="token comment">'Note: I use cell references in this macro to make it easy to test the code</span>
+    <span class="token comment">'Normally you will use it like this :</span>
+    <span class="token comment">'Call GetFilesOnMacWithOrWithoutSubfolders(Level:=1, ExtChoice:=0, FileFilterOption:=0, FileNameFilterStr:="SearchString")</span>
+
+    <span class="token comment">'Clear MyFiles to be sure that it not return old info if no files are found</span>
+    MyFiles <span class="token operator">=</span> <span class="token string">""</span>
+
+    <span class="token comment">'Fill the MyFiles string with the files if they match your criteria</span>
+    <span class="token keyword">Call</span> GetFilesOnMacWithOrWithoutSubfolders<span class="token punctuation">(</span>Level<span class="token punctuation">:</span><span class="token operator">=</span>Range<span class="token punctuation">(</span><span class="token string">"F9"</span><span class="token punctuation">)</span><span class="token punctuation">.</span>Value<span class="token punctuation">,</span> ExtChoice<span class="token punctuation">:</span><span class="token operator">=</span>Range<span class="token punctuation">(</span><span class="token string">"G9"</span><span class="token punctuation">)</span><span class="token punctuation">.</span>Value<span class="token punctuation">,</span> FileFilterOption<span class="token punctuation">:</span><span class="token operator">=</span>Range<span class="token punctuation">(</span><span class="token string">"H9"</span><span class="token punctuation">)</span><span class="token punctuation">.</span>Value<span class="token punctuation">,</span> FileNameFilterStr<span class="token punctuation">:</span><span class="token operator">=</span>Range<span class="token punctuation">(</span><span class="token string">"I9"</span><span class="token punctuation">)</span><span class="token punctuation">.</span>Text<span class="token punctuation">)</span>
+    <span class="token comment">'Level                     : 1= Only the files in the folder, 2 to ? levels of subfolders</span>
+    <span class="token comment">'ExtChoice             :  0=(xls|xlsx|xlsm|xlsb), 1=xls , 2=xlsx, 3=xlsm, 4=xlsb, 5=csv, 6=txt, 7=all files, 8=(xlsx|xlsm|xlsb), 9=(csv|txt)</span>
+    <span class="token comment">'FileFilterOption     :  0=No Filter, 1=Begins, 2=Ends, 3=Contains</span>
+    <span class="token comment">'FileNameFilterStr   : Search string used when FileFilterOption = 1, 2 or 3</span>
+
+
+    <span class="token comment">'This code below will list all files on the first sheet of this workbook</span>
+    <span class="token comment">'In column A :B the path/name, C the file date/time and D the size</span>
+    <span class="token comment">'You can browse to the folder you want when the code Run</span>
+
+    <span class="token comment">'In this example we list the file names but you can also use MySplit(FileInMyFiles)</span>
+    <span class="token comment">'in the loop to for example to open the files with Workbooks.Open(MySplit(FileInMyFiles))</span>
+
+    <span class="token keyword">If</span> MyFiles <span class="token operator">&#x3C;</span><span class="token operator">></span> <span class="token string">""</span> <span class="token keyword">Then</span>
+        <span class="token keyword">With</span> Application
+            <span class="token punctuation">.</span>ScreenUpdating <span class="token operator">=</span> <span class="token boolean">False</span>
+        <span class="token keyword">End</span> <span class="token keyword">With</span>
+
+        <span class="token comment">'Delete all cells in columns A:C in the first worksheet of this workbook</span>
+        Sheets<span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">.</span>Columns<span class="token punctuation">(</span><span class="token string">"A:D"</span><span class="token punctuation">)</span><span class="token punctuation">.</span>Cells<span class="token punctuation">.</span>Clear
+
+        <span class="token keyword">With</span> Sheets<span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">.</span>Range<span class="token punctuation">(</span><span class="token string">"A1:D1"</span><span class="token punctuation">)</span>
+            <span class="token punctuation">.</span>Value <span class="token operator">=</span> Array<span class="token punctuation">(</span><span class="token string">"Directory"</span><span class="token punctuation">,</span> <span class="token string">"File Name"</span><span class="token punctuation">,</span> <span class="token string">"Date/Time"</span><span class="token punctuation">,</span> <span class="token string">"Size"</span><span class="token punctuation">)</span>
+            <span class="token punctuation">.</span>Font<span class="token punctuation">.</span>Bold <span class="token operator">=</span> <span class="token boolean">True</span>
+        <span class="token keyword">End</span> <span class="token keyword">With</span>
+
+        <span class="token comment">'Split MyFiles and loop through all the files</span>
+        MySplit <span class="token operator">=</span> Split<span class="token punctuation">(</span>MyFiles<span class="token punctuation">,</span> Chr<span class="token punctuation">(</span><span class="token number">13</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+        <span class="token keyword">For</span> FileInMyFiles <span class="token operator">=</span> LBound<span class="token punctuation">(</span>MySplit<span class="token punctuation">)</span> <span class="token keyword">To</span> UBound<span class="token punctuation">(</span>MySplit<span class="token punctuation">)</span>
+            <span class="token keyword">On</span> <span class="token keyword">Error</span> <span class="token keyword">Resume</span> <span class="token keyword">Next</span>
+            Fstr <span class="token operator">=</span> MySplit<span class="token punctuation">(</span>FileInMyFiles<span class="token punctuation">)</span>
+            LastSep <span class="token operator">=</span> InStrRev<span class="token punctuation">(</span>Fstr<span class="token punctuation">,</span> Application<span class="token punctuation">.</span>PathSeparator<span class="token punctuation">,</span> <span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">)</span>
+            Sheets<span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">.</span>Cells<span class="token punctuation">(</span>FileInMyFiles <span class="token operator">+</span> <span class="token number">2</span><span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">.</span>Value <span class="token operator">=</span> Left<span class="token punctuation">(</span>Fstr<span class="token punctuation">,</span> LastSep <span class="token operator">-</span> <span class="token number">1</span><span class="token punctuation">)</span>    <span class="token comment">'Column A</span>
+            Sheets<span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">.</span>Cells<span class="token punctuation">(</span>FileInMyFiles <span class="token operator">+</span> <span class="token number">2</span><span class="token punctuation">,</span> <span class="token number">2</span><span class="token punctuation">)</span><span class="token punctuation">.</span>Value <span class="token operator">=</span> Mid<span class="token punctuation">(</span>Fstr<span class="token punctuation">,</span> LastSep <span class="token operator">+</span> <span class="token number">1</span><span class="token punctuation">,</span> Len<span class="token punctuation">(</span>Fstr<span class="token punctuation">)</span> <span class="token operator">-</span> LastSep<span class="token punctuation">)</span>    <span class="token comment">'Column B</span>
+            Sheets<span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">.</span>Cells<span class="token punctuation">(</span>FileInMyFiles <span class="token operator">+</span> <span class="token number">2</span><span class="token punctuation">,</span> <span class="token number">3</span><span class="token punctuation">)</span><span class="token punctuation">.</span>Value <span class="token operator">=</span> FileDateTime<span class="token punctuation">(</span>MySplit<span class="token punctuation">(</span>FileInMyFiles<span class="token punctuation">)</span><span class="token punctuation">)</span>    <span class="token comment">'Column C</span>
+            Sheets<span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">.</span>Cells<span class="token punctuation">(</span>FileInMyFiles <span class="token operator">+</span> <span class="token number">2</span><span class="token punctuation">,</span> <span class="token number">4</span><span class="token punctuation">)</span><span class="token punctuation">.</span>Value <span class="token operator">=</span> FileLen<span class="token punctuation">(</span>MySplit<span class="token punctuation">(</span>FileInMyFiles<span class="token punctuation">)</span><span class="token punctuation">)</span>    <span class="token comment">'Column D</span>
+            <span class="token keyword">On</span> <span class="token keyword">Error</span> <span class="token keyword">GoTo</span> <span class="token number">0</span>
+        <span class="token keyword">Next</span> FileInMyFiles
+        Sheets<span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">.</span>Columns<span class="token punctuation">(</span><span class="token string">"A:D"</span><span class="token punctuation">)</span><span class="token punctuation">.</span>AutoFit
+        <span class="token keyword">With</span> Application
+            <span class="token punctuation">.</span>ScreenUpdating <span class="token operator">=</span> <span class="token boolean">True</span>
+        <span class="token keyword">End</span> <span class="token keyword">With</span>
+    <span class="token keyword">Else</span>
+        MsgBox <span class="token string">"Sorry no files that match your criteria, A 0 files result can be due to Apple sandboxing: Try using the Browse button to re-select the folder."</span>
+        <span class="token comment">'Delete all cells in columns A:D in the first worksheet of this workbook</span>
+        Sheets<span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">.</span>Columns<span class="token punctuation">(</span><span class="token string">"A:D"</span><span class="token punctuation">)</span><span class="token punctuation">.</span>Cells<span class="token punctuation">.</span>Clear
+        <span class="token comment">'ScreenUpdating is still True but we set it to true again to refresh the screen,</span>
+        <span class="token keyword">With</span> Application
+            <span class="token punctuation">.</span>ScreenUpdating <span class="token operator">=</span> <span class="token boolean">True</span>
+        <span class="token keyword">End</span> <span class="token keyword">With</span>
+    <span class="token keyword">End</span> <span class="token keyword">If</span>
+
+<span class="token keyword">End</span> <span class="token keyword">Sub</span>
+
+
+<span class="token comment">'*******Function that do all the work that will be called by the macro*********</span>
+
+<span class="token keyword">Function</span> GetFilesOnMacWithOrWithoutSubfolders<span class="token punctuation">(</span>Level <span class="token keyword">As</span> <span class="token keyword">Long</span><span class="token punctuation">,</span> ExtChoice <span class="token keyword">As</span> <span class="token keyword">Long</span><span class="token punctuation">,</span> <span class="token operator">_</span>
+                                              FileFilterOption <span class="token keyword">As</span> <span class="token keyword">Long</span><span class="token punctuation">,</span> FileNameFilterStr <span class="token keyword">As</span> <span class="token keyword">String</span><span class="token punctuation">)</span>
+<span class="token comment">'Ron de Bruin,Version 4.0: 27 Sept 2015</span>
+<span class="token comment">'http://www.rondebruin.nl/mac.htm</span>
+<span class="token comment">'Thanks to DJ Bazzie Wazzie and Nigel Garvey(posters on MacScripter)</span>
+    <span class="token keyword">Dim</span> ScriptToRun <span class="token keyword">As</span> <span class="token keyword">String</span>
+    <span class="token keyword">Dim</span> folderPath <span class="token keyword">As</span> <span class="token keyword">String</span>
+    <span class="token keyword">Dim</span> FileNameFilter <span class="token keyword">As</span> <span class="token keyword">String</span>
+    <span class="token keyword">Dim</span> Extensions <span class="token keyword">As</span> <span class="token keyword">String</span>
+
+    <span class="token keyword">On</span> <span class="token keyword">Error</span> <span class="token keyword">Resume</span> <span class="token keyword">Next</span>
+    folderPath <span class="token operator">=</span> MacScript<span class="token punctuation">(</span><span class="token string">"choose folder as string"</span><span class="token punctuation">)</span>
+    <span class="token keyword">If</span> folderPath <span class="token operator">=</span> <span class="token string">""</span> <span class="token keyword">Then</span> <span class="token keyword">Exit</span> <span class="token keyword">Function</span>
+    <span class="token keyword">On</span> <span class="token keyword">Error</span> <span class="token keyword">GoTo</span> <span class="token number">0</span>
+
+    <span class="token keyword">Select</span> <span class="token keyword">Case</span> ExtChoice
+    <span class="token keyword">Case</span> <span class="token number">0</span><span class="token punctuation">:</span> Extensions <span class="token operator">=</span> <span class="token string">"(xls|xlsx|xlsm|xlsb)"</span>  <span class="token comment">'xls, xlsx , xlsm, xlsb</span>
+    <span class="token keyword">Case</span> <span class="token number">1</span><span class="token punctuation">:</span> Extensions <span class="token operator">=</span> <span class="token string">"xls"</span>    <span class="token comment">'Only  xls</span>
+    <span class="token keyword">Case</span> <span class="token number">2</span><span class="token punctuation">:</span> Extensions <span class="token operator">=</span> <span class="token string">"xlsx"</span>    <span class="token comment">'Only xlsx</span>
+    <span class="token keyword">Case</span> <span class="token number">3</span><span class="token punctuation">:</span> Extensions <span class="token operator">=</span> <span class="token string">"xlsm"</span>    <span class="token comment">'Only xlsm</span>
+    <span class="token keyword">Case</span> <span class="token number">4</span><span class="token punctuation">:</span> Extensions <span class="token operator">=</span> <span class="token string">"xlsb"</span>    <span class="token comment">'Only xlsb</span>
+    <span class="token keyword">Case</span> <span class="token number">5</span><span class="token punctuation">:</span> Extensions <span class="token operator">=</span> <span class="token string">"csv"</span>    <span class="token comment">'Only csv</span>
+    <span class="token keyword">Case</span> <span class="token number">6</span><span class="token punctuation">:</span> Extensions <span class="token operator">=</span> <span class="token string">"txt"</span>    <span class="token comment">'Only txt</span>
+    <span class="token keyword">Case</span> <span class="token number">7</span><span class="token punctuation">:</span> Extensions <span class="token operator">=</span> <span class="token string">".*"</span>    <span class="token comment">'All files with extension, use *.* for everything</span>
+    <span class="token keyword">Case</span> <span class="token number">8</span><span class="token punctuation">:</span> Extensions <span class="token operator">=</span> <span class="token string">"(xlsx|xlsm|xlsb)"</span>  <span class="token comment">'xlsx, xlsm , xlsb</span>
+    <span class="token keyword">Case</span> <span class="token number">9</span><span class="token punctuation">:</span> Extensions <span class="token operator">=</span> <span class="token string">"(csv|txt)"</span>   <span class="token comment">'csv and txt files</span>
+        <span class="token comment">'You can add more filter options if you want,</span>
+    <span class="token keyword">End</span> <span class="token keyword">Select</span>
+
+    <span class="token keyword">Select</span> <span class="token keyword">Case</span> FileFilterOption
+    <span class="token keyword">Case</span> <span class="token number">0</span><span class="token punctuation">:</span> FileNameFilter <span class="token operator">=</span> <span class="token string">"'.*/[^~][^/]*\\."</span> <span class="token operator">&#x26;</span> Extensions <span class="token operator">&#x26;</span> <span class="token string">"$' "</span>  <span class="token comment">'No Filter</span>
+    <span class="token keyword">Case</span> <span class="token number">1</span><span class="token punctuation">:</span> FileNameFilter <span class="token operator">=</span> <span class="token string">"'.*/"</span> <span class="token operator">&#x26;</span> FileNameFilterStr <span class="token operator">&#x26;</span> <span class="token string">"[^~][^/]*\\."</span> <span class="token operator">&#x26;</span> Extensions <span class="token operator">&#x26;</span> <span class="token string">"$' "</span>    <span class="token comment">'Begins with</span>
+    <span class="token keyword">Case</span> <span class="token number">2</span><span class="token punctuation">:</span> FileNameFilter <span class="token operator">=</span> <span class="token string">"'.*/[^~][^/]*"</span> <span class="token operator">&#x26;</span> FileNameFilterStr <span class="token operator">&#x26;</span> <span class="token string">"\\."</span> <span class="token operator">&#x26;</span> Extensions <span class="token operator">&#x26;</span> <span class="token string">"$' "</span>    <span class="token comment">' Ends With</span>
+    <span class="token keyword">Case</span> <span class="token number">3</span><span class="token punctuation">:</span> FileNameFilter <span class="token operator">=</span> <span class="token string">"'.*/([^~][^/]*"</span> <span class="token operator">&#x26;</span> FileNameFilterStr <span class="token operator">&#x26;</span> <span class="token string">"[^/]*|"</span> <span class="token operator">&#x26;</span> FileNameFilterStr <span class="token operator">&#x26;</span> <span class="token string">"[^/]*)\\."</span> <span class="token operator">&#x26;</span> Extensions <span class="token operator">&#x26;</span> <span class="token string">"$' "</span>   <span class="token comment">'Contains</span>
+    <span class="token keyword">End</span> <span class="token keyword">Select</span>
+
+    folderPath <span class="token operator">=</span> MacScript<span class="token punctuation">(</span><span class="token string">"tell text 1 thru -2 of "</span> <span class="token operator">&#x26;</span> Chr<span class="token punctuation">(</span><span class="token number">34</span><span class="token punctuation">)</span> <span class="token operator">&#x26;</span> folderPath <span class="token operator">&#x26;</span> <span class="token operator">_</span>
+                           Chr<span class="token punctuation">(</span><span class="token number">34</span><span class="token punctuation">)</span> <span class="token operator">&#x26;</span> <span class="token string">" to return quoted form of it's POSIX Path"</span><span class="token punctuation">)</span>
+    folderPath <span class="token operator">=</span> Replace<span class="token punctuation">(</span>folderPath<span class="token punctuation">,</span> <span class="token string">"'\''"</span><span class="token punctuation">,</span> <span class="token string">"'\\''"</span><span class="token punctuation">)</span>
+
+    <span class="token keyword">If</span> Val<span class="token punctuation">(</span>Application<span class="token punctuation">.</span>Version<span class="token punctuation">)</span> <span class="token operator">&#x3C;</span> <span class="token number">15</span> <span class="token keyword">Then</span>
+        ScriptToRun <span class="token operator">=</span> ScriptToRun <span class="token operator">&#x26;</span> <span class="token string">"set foundPaths to paragraphs of (do shell script """</span> <span class="token operator">&#x26;</span> <span class="token string">"find -E "</span> <span class="token operator">&#x26;</span> <span class="token operator">_</span>
+                      folderPath <span class="token operator">&#x26;</span> <span class="token string">" -iregex "</span> <span class="token operator">&#x26;</span> FileNameFilter <span class="token operator">&#x26;</span> <span class="token string">"-maxdepth "</span> <span class="token operator">&#x26;</span> <span class="token operator">_</span>
+                      Level <span class="token operator">&#x26;</span> <span class="token string">""")"</span> <span class="token operator">&#x26;</span> Chr<span class="token punctuation">(</span><span class="token number">13</span><span class="token punctuation">)</span>
+        ScriptToRun <span class="token operator">=</span> ScriptToRun <span class="token operator">&#x26;</span> <span class="token string">"repeat with thisPath in foundPaths"</span> <span class="token operator">&#x26;</span> Chr<span class="token punctuation">(</span><span class="token number">13</span><span class="token punctuation">)</span>
+        ScriptToRun <span class="token operator">=</span> ScriptToRun <span class="token operator">&#x26;</span> <span class="token string">"set thisPath's contents to (POSIX file thisPath) as text"</span> <span class="token operator">&#x26;</span> Chr<span class="token punctuation">(</span><span class="token number">13</span><span class="token punctuation">)</span>
+        ScriptToRun <span class="token operator">=</span> ScriptToRun <span class="token operator">&#x26;</span> <span class="token string">"end repeat"</span> <span class="token operator">&#x26;</span> Chr<span class="token punctuation">(</span><span class="token number">13</span><span class="token punctuation">)</span>
+        ScriptToRun <span class="token operator">=</span> ScriptToRun <span class="token operator">&#x26;</span> <span class="token string">"set astid to AppleScript's text item delimiters"</span> <span class="token operator">&#x26;</span> Chr<span class="token punctuation">(</span><span class="token number">13</span><span class="token punctuation">)</span>
+        ScriptToRun <span class="token operator">=</span> ScriptToRun <span class="token operator">&#x26;</span> <span class="token string">"set AppleScript's text item delimiters to return"</span> <span class="token operator">&#x26;</span> Chr<span class="token punctuation">(</span><span class="token number">13</span><span class="token punctuation">)</span>
+        ScriptToRun <span class="token operator">=</span> ScriptToRun <span class="token operator">&#x26;</span> <span class="token string">"set foundPaths to foundPaths as text"</span> <span class="token operator">&#x26;</span> Chr<span class="token punctuation">(</span><span class="token number">13</span><span class="token punctuation">)</span>
+        ScriptToRun <span class="token operator">=</span> ScriptToRun <span class="token operator">&#x26;</span> <span class="token string">"set AppleScript's text item delimiters to astid"</span> <span class="token operator">&#x26;</span> Chr<span class="token punctuation">(</span><span class="token number">13</span><span class="token punctuation">)</span>
+        ScriptToRun <span class="token operator">=</span> ScriptToRun <span class="token operator">&#x26;</span> <span class="token string">"foundPaths"</span>
+    <span class="token keyword">Else</span>
+        ScriptToRun <span class="token operator">=</span> ScriptToRun <span class="token operator">&#x26;</span> <span class="token string">"do shell script """</span> <span class="token operator">&#x26;</span> <span class="token string">"find -E "</span> <span class="token operator">&#x26;</span> <span class="token operator">_</span>
+                      folderPath <span class="token operator">&#x26;</span> <span class="token string">" -iregex "</span> <span class="token operator">&#x26;</span> FileNameFilter <span class="token operator">&#x26;</span> <span class="token string">"-maxdepth "</span> <span class="token operator">&#x26;</span> <span class="token operator">_</span>
+                      Level <span class="token operator">&#x26;</span> <span class="token string">""" "</span>
+    <span class="token keyword">End</span> <span class="token keyword">If</span>
+    <span class="token keyword">On</span> <span class="token keyword">Error</span> <span class="token keyword">Resume</span> <span class="token keyword">Next</span>
+    MyFiles <span class="token operator">=</span> MacScript<span class="token punctuation">(</span>ScriptToRun<span class="token punctuation">)</span>
+    <span class="token keyword">On</span> <span class="token keyword">Error</span> <span class="token keyword">GoTo</span> <span class="token number">0</span>
+<span class="token keyword">End</span> <span class="token keyword">Function</span>
+
+
+<span class="token keyword">Sub</span> SortData<span class="token punctuation">(</span><span class="token punctuation">)</span>
+    <span class="token keyword">Dim</span> rng <span class="token keyword">As</span> Range
+    <span class="token keyword">On</span> <span class="token keyword">Error</span> <span class="token keyword">Resume</span> <span class="token keyword">Next</span>
+    <span class="token keyword">Set</span> rng <span class="token operator">=</span> Range<span class="token punctuation">(</span><span class="token string">"A1"</span><span class="token punctuation">)</span><span class="token punctuation">.</span>CurrentRegion
+    rng<span class="token punctuation">.</span>Sort key1<span class="token punctuation">:</span><span class="token operator">=</span>rng<span class="token punctuation">.</span>Cells<span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token operator">_</span>
+             order1<span class="token punctuation">:</span><span class="token operator">=</span>xlAscending<span class="token punctuation">,</span> <span class="token operator">_</span>
+             Header<span class="token punctuation">:</span><span class="token operator">=</span>xlNo
+    Application<span class="token punctuation">.</span>ScreenUpdating <span class="token operator">=</span> <span class="token boolean">True</span>
+<span class="token keyword">End</span> <span class="token keyword">Sub</span>
+</code></pre>
 <p>グローバル変数 <code>MyFiles</code> に結果を返すようにしている他、<code>Application.Version</code> が <code>15</code> 未満の MacOS は AppleScript の書き方が異なる。少し古い Excel for Mac での動作検証はしていないので、上述の簡素化したコードは環境によっては動かないかもしれない。</p>
 <p>あとは以前紹介した OS 判定コードと組み合わせて、「Mac では AppleScript を使ってファイル一覧を取得する」「Windows では <code>Dir()</code> 等を使ってファイル一覧を取得する」という風に作ればよかろう。ただ、<code>Dir()</code> 関数はフルパスを返さないことに注意。フルパスを返すよう文字列結合して、配列を返すようにすると、どちらの OS でも同じように関数を使えるようになるだろう。</p>
 <h2 id="ちなみに-mkdir-は"><a class="header-link" href="#ちなみに-mkdir-は"><span class="header-link-mark"></span></a>ちなみに <code>MkDir()</code> は…</h2>

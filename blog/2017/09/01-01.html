@@ -84,9 +84,927 @@
 </ul>
 <p>AngularJS 向けと Angular4 向けのコードを作ったので以下を参考にされたし。</p>
 <ul>
-  <li><a href="https://gist.github.com/Neos21/418765745f73febbd96d4f5fa98f6427">log4javascript 拡張クラス：AngularJS 向け・Cordova-Plugin-File・ngCordova $cordovaFile 使用 · GitHub</a></li>
-  <li><a href="https://gist.github.com/Neos21/d7ae1a320b79ce51e1541c1d80247030">log4javascript 拡張クラス：Angular4 向け・Cordova-Plugin-File・@ionic-native/file 使用 · GitHub</a></li>
+  <li>log4javascript 拡張クラス：AngularJS 向け・Cordova-Plugin-File・ngCordova $cordovaFile 使用
+    <ul>
+      <li><code>LocalFileAppender.js</code></li>
+    </ul>
+  </li>
 </ul>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword">const</span> log4j <span class="token operator">=</span> log4javascript<span class="token punctuation">;</span>
+
+<span class="token doc-comment comment">/**
+ * AngularJS 向け・ログファイルを生成し、ログを追記する Appender
+ * log4javascript の Appender を拡張しており、cordova-plugin-file プラグイン・$cordovaFile を使用してファイル操作を行う
+ */</span>
+<span class="token keyword">class</span> <span class="token class-name">LocalFileAppender</span> <span class="token keyword">extends</span> <span class="token class-name">log4j<span class="token punctuation">.</span>Appender</span> <span class="token punctuation">{</span>
+  <span class="token doc-comment comment">/**
+   * コンストラクタ
+   * 
+   * <span class="token keyword">@param</span> <span class="token parameter">$cordovaFile</span> ngCordova が提供するファイル操作プラグインの API
+   * <span class="token keyword">@param</span> <span class="token parameter">$q</span> 非同期処理を行うためのサービス
+   * <span class="token keyword">@param</span> <span class="token parameter">$window</span> File API を呼び出すために使用する
+   * <span class="token keyword">@param</span> <span class="token parameter">appenderOptions</span> アペンダオプション
+   */</span>
+  <span class="token function">constructor</span><span class="token punctuation">(</span><span class="token parameter">$cordovaFile<span class="token punctuation">,</span> $q<span class="token punctuation">,</span> $<span class="token dom variable">window</span><span class="token punctuation">,</span> appenderOptions</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token comment">// DI</span>
+    <span class="token keyword">super</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">_$cordovaFile</span> <span class="token operator">=</span> $cordovaFile<span class="token punctuation">;</span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">_$q</span> <span class="token operator">=</span> $q<span class="token punctuation">;</span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">_$window</span> <span class="token operator">=</span> $<span class="token dom variable">window</span><span class="token punctuation">;</span>
+    
+    <span class="token comment">// 不変プロパティの宣言</span>
+    <span class="token comment">// デフォルトのアペンダオプション</span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">defaultAppenderOptions</span> <span class="token operator">=</span> <span class="token punctuation">{</span>
+      fileName<span class="token operator">:</span> <span class="token string">'MyLogger.log'</span><span class="token punctuation">,</span>
+      rotateDays<span class="token operator">:</span> <span class="token number">0</span><span class="token punctuation">,</span>
+      layout<span class="token operator">:</span> <span class="token string">'[%d{yyyy-MM-dd HH:mm:ss.SSS}] [%-5p] %m'</span><span class="token punctuation">,</span>
+      threshold<span class="token operator">:</span> log4j<span class="token punctuation">.</span><span class="token property-access"><span class="token maybe-class-name">Level</span></span><span class="token punctuation">.</span><span class="token constant">INFO</span>
+    <span class="token punctuation">}</span><span class="token punctuation">;</span>
+    <span class="token comment">// ログ出力先ディレクトリ : グローバル変数 cordova より取得する</span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">logDirectory</span> <span class="token operator">=</span> <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">_$window</span><span class="token punctuation">.</span><span class="token property-access">cordova</span><span class="token punctuation">.</span><span class="token property-access">file</span><span class="token punctuation">.</span><span class="token property-access">dataDirectory</span><span class="token punctuation">;</span>
+    
+    <span class="token comment">// 可変プロパティの宣言</span>
+    <span class="token comment">// キャッシュしているログを格納する配列。ログ出力が可能になったらこの配列内のログを出力する</span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">cachedLogEventsQueue</span> <span class="token operator">=</span> <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token punctuation">;</span>
+    <span class="token comment">// ログ出力できない問題がある場合は true にするフラグ変数。true の場合はコンソールに出力する</span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">isFatal</span> <span class="token operator">=</span> <span class="token boolean">false</span><span class="token punctuation">;</span>
+    <span class="token comment">// ログ出力の準備中は true にするフラグ変数。ログファイルの準備ができたら false にする</span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">isGettingReady</span> <span class="token operator">=</span> <span class="token boolean">true</span><span class="token punctuation">;</span>
+    <span class="token comment">// ローテート作業中は true にするフラグ変数。ログファイルの準備ができたら false にする</span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">isRotating</span> <span class="token operator">=</span> <span class="token boolean">false</span><span class="token punctuation">;</span>
+    
+    <span class="token comment">// 内部ロガーの準備</span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">internalAppender</span> <span class="token operator">=</span> <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token method function property-access">_createInternalAppender</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">internalLogger</span> <span class="token operator">=</span> <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token method function property-access">_createInternalLogger</span><span class="token punctuation">(</span><span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">internalAppender</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    
+    <span class="token comment">// このクラス全体で使う Promise チェーンを用意する</span>
+    <span class="token comment">// この Promise チェーンの then() に行いたい処理を設定することで、非同期処理を順番に処理させる</span>
+    <span class="token comment">// 最初は処理がないので then() に繋げさせるため空で Resolve しておく</span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">_promiseChain</span> <span class="token operator">=</span> <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">_$q</span><span class="token punctuation">.</span><span class="token method function property-access">resolve</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    
+    <span class="token comment">// 初期化処理呼び出し</span>
+    <span class="token comment">// アペンダオプションの設定処理</span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token method function property-access">initAppenderOptions</span><span class="token punctuation">(</span>appenderOptions<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token comment">// ログファイルの確認・生成処理</span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token method function property-access">initLogFile</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  
+  <span class="token doc-comment comment">/**
+   * 内部ロガーが使用する Appender を生成する
+   * append() メソッドにて、コンソールにログ出力する際にレイアウト設定するためにも使用する
+   * 
+   * <span class="token keyword">@return</span> <span class="token class-name"><span class="token punctuation">{</span>Object<span class="token punctuation">}</span></span> 出力レベル、レイアウトを設定した BrowserConsoleAppender オブジェクト
+   */</span>
+  <span class="token function">_createInternalAppender</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token keyword">const</span> internalAppender <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">log4j<span class="token punctuation">.</span>BrowserConsoleAppender</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    internalAppender<span class="token punctuation">.</span><span class="token method function property-access">setThreshold</span><span class="token punctuation">(</span>log4j<span class="token punctuation">.</span><span class="token property-access"><span class="token maybe-class-name">Level</span></span><span class="token punctuation">.</span><span class="token constant">WARN</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    internalAppender<span class="token punctuation">.</span><span class="token method function property-access">setLayout</span><span class="token punctuation">(</span><span class="token keyword">new</span> <span class="token class-name">log4j<span class="token punctuation">.</span>PatternLayout</span><span class="token punctuation">(</span><span class="token string">'[%d{yyyy-MM-dd HH:mm:ss.SSS}] [my-logger] [%-5p] %m%n'</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword control-flow">return</span> internalAppender<span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  
+  <span class="token doc-comment comment">/**
+   * 本 Appender クラスの内部で使用する、コンソール出力用のロガーを生成する
+   * デバッグログやエラーログの出力の他、ログファイルへの出力が不可能と判断した場合にログをコンソールへ出力するためにも使用する
+   *
+   * <span class="token keyword">@param</span> <span class="token class-name"><span class="token punctuation">{</span>Object<span class="token punctuation">}</span></span> <span class="token parameter">appender</span> 内部ロガーに適用するコンソール出力アペンダ
+   * <span class="token keyword">@return</span> <span class="token class-name"><span class="token punctuation">{</span>Object<span class="token punctuation">}</span></span> コンソール出力用のロガーオブジェクト
+   */</span>
+  <span class="token function">_createInternalLogger</span><span class="token punctuation">(</span><span class="token parameter">appender</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token keyword">const</span> internalLogger <span class="token operator">=</span> log4j<span class="token punctuation">.</span><span class="token method function property-access">getLogger</span><span class="token punctuation">(</span><span class="token string">'my-logger.internal'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    internalLogger<span class="token punctuation">.</span><span class="token method function property-access">addAppender</span><span class="token punctuation">(</span>appender<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword control-flow">return</span> internalLogger<span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  
+  <span class="token doc-comment comment">/**
+   * 本 Appender クラスの各種設定を行う
+   *
+   * <span class="token keyword">@param</span> <span class="token class-name"><span class="token punctuation">{</span>Ojbect<span class="token punctuation">}</span></span> <span class="token parameter">appenderOptions</span> ユーザ指定のアペンダオプション
+   */</span>
+  <span class="token function">initAppenderOptions</span><span class="token punctuation">(</span><span class="token parameter">appenderOptions</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token comment">// デフォルトのオプションに対しユーザ指定のオプションをマージする</span>
+    <span class="token keyword">const</span> mergedAppenderOptions <span class="token operator">=</span> _<span class="token punctuation">.</span><span class="token method function property-access">merge</span><span class="token punctuation">(</span><span class="token punctuation">{</span><span class="token punctuation">}</span><span class="token punctuation">,</span> <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">defaultAppenderOptions</span><span class="token punctuation">,</span> appenderOptions<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    
+    <span class="token comment">// ファイル名がない場合、もしくはローテート期間が 0 未満など不正値の場合は NG とする</span>
+    <span class="token keyword control-flow">if</span> <span class="token punctuation">(</span><span class="token operator">!</span>mergedAppenderOptions<span class="token punctuation">.</span><span class="token property-access">fileName</span> <span class="token operator">||</span> mergedAppenderOptions<span class="token punctuation">.</span><span class="token property-access">rotateDays</span> <span class="token operator">&#x3C;</span> <span class="token number">0</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token keyword control-flow">throw</span> <span class="token keyword">new</span> <span class="token class-name">Error</span><span class="token punctuation">(</span><span class="token string">'アペンダオプションの設定が不正です'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+    
+    <span class="token comment">// アペンダオプションを設定する</span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">appenderOptions</span> <span class="token operator">=</span> mergedAppenderOptions<span class="token punctuation">;</span>
+    
+    <span class="token comment">// ログ出力対象日付 (当日日付) を yyyyMMdd の形式で取得・設定する</span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">logDate</span> <span class="token operator">=</span> <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token method function property-access">_getCurrentDate</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token comment">// 当日日付のログファイルの名前 (fileName.log.yyyyMMdd) を設定する</span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">logFileName</span> <span class="token operator">=</span> <span class="token template-string"><span class="token template-punctuation string">`</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span><span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">appenderOptions</span><span class="token punctuation">.</span><span class="token property-access">fileName</span><span class="token interpolation-punctuation punctuation">}</span></span><span class="token string">.</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span><span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">logDate</span><span class="token interpolation-punctuation punctuation">}</span></span><span class="token template-punctuation string">`</span></span><span class="token punctuation">;</span>
+    <span class="token comment">// 出力レベル : log4javascript.Level クラスの定数で指定</span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token method function property-access">setThreshold</span><span class="token punctuation">(</span><span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">appenderOptions</span><span class="token punctuation">.</span><span class="token property-access">threshold</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token comment">// レイアウト : 指定のレイアウト文字列の末尾に改行コードを付与する</span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token method function property-access">setLayout</span><span class="token punctuation">(</span><span class="token keyword">new</span> <span class="token class-name">log4j<span class="token punctuation">.</span>PatternLayout</span><span class="token punctuation">(</span><span class="token template-string"><span class="token template-punctuation string">`</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span><span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">appenderOptions</span><span class="token punctuation">.</span><span class="token property-access">layout</span><span class="token interpolation-punctuation punctuation">}</span></span><span class="token string">%n</span><span class="token template-punctuation string">`</span></span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  
+  <span class="token doc-comment comment">/**
+   * ログを出力するファイルの生成処理を行う
+   * 
+   * - ログファイルが既に存在する場合は生成処理を行わない
+   * - ログファイルの準備が完了次第、キャッシュ配列に格納されているログを出力する
+   * - 一連の処理中に問題があった場合はファイル出力を止め、コンソール出力に切り替える
+   */</span>
+  <span class="token function">initLogFile</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token comment">// ログファイルの存在確認</span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">_$cordovaFile</span><span class="token punctuation">.</span><span class="token method function property-access">checkFile</span><span class="token punctuation">(</span><span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">logDirectory</span><span class="token punctuation">,</span> <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">logFileName</span><span class="token punctuation">)</span>
+      <span class="token punctuation">.</span><span class="token method function property-access">then</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+        <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">internalLogger</span><span class="token punctuation">.</span><span class="token method function property-access">debug</span><span class="token punctuation">(</span><span class="token string">'ログファイル生成済'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token comment">// ログファイルが既に生成されているので準備中フラグを false にする</span>
+        <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">isGettingReady</span> <span class="token operator">=</span> <span class="token boolean">false</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+        <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">internalLogger</span><span class="token punctuation">.</span><span class="token method function property-access">debug</span><span class="token punctuation">(</span><span class="token string">'ログファイル未生成・生成処理開始'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword control-flow">return</span> <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">_$cordovaFile</span><span class="token punctuation">.</span><span class="token method function property-access">createFile</span><span class="token punctuation">(</span><span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">logDirectory</span><span class="token punctuation">,</span> <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">logFileName</span><span class="token punctuation">,</span> <span class="token boolean">true</span><span class="token punctuation">)</span>
+          <span class="token punctuation">.</span><span class="token method function property-access">then</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+            <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">internalLogger</span><span class="token punctuation">.</span><span class="token method function property-access">debug</span><span class="token punctuation">(</span><span class="token string">'ログファイル生成完了'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+            <span class="token comment">// ログファイルの生成が完了したら準備中フラグを false にする</span>
+            <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">isGettingReady</span> <span class="token operator">=</span> <span class="token boolean">false</span><span class="token punctuation">;</span>
+          <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span><span class="token punctuation">)</span>
+      <span class="token punctuation">.</span><span class="token method function property-access">then</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+        <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">internalLogger</span><span class="token punctuation">.</span><span class="token method function property-access">debug</span><span class="token punctuation">(</span><span class="token string">'ログファイル準備完了・キャッシュログの出力開始'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword control-flow">return</span> <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token method function property-access">_putCachedLogs</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span><span class="token punctuation">)</span>
+      <span class="token punctuation">.</span><span class="token keyword control-flow">catch</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token parameter">error</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+        <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">internalLogger</span><span class="token punctuation">.</span><span class="token method function property-access">warn</span><span class="token punctuation">(</span><span class="token string">'ログファイル準備中にエラーが発生しました。コンソール出力に切り替えます'</span><span class="token punctuation">,</span> error<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token comment">// ファイル出力不可能のフラグを設定し、コンソール出力させるようにする</span>
+        <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">isFatal</span> <span class="token operator">=</span> <span class="token boolean">true</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  
+  <span class="token doc-comment comment">/**
+   * 現在日付を 'yyyyMMdd' の形式で取得し返却する
+   * 
+   * <span class="token keyword">@return</span> <span class="token class-name"><span class="token punctuation">{</span>Object<span class="token punctuation">}</span></span> 'yyyyMMdd' の形式にした現在日付
+   */</span>
+  <span class="token function">_getCurrentDate</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token keyword control-flow">return</span> <span class="token function">moment</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">format</span><span class="token punctuation">(</span><span class="token string">'YYYYMMDD'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  
+  <span class="token doc-comment comment">/**
+   * log4javascript.Appender より継承するログの追記メソッド
+   * 
+   * <span class="token keyword">@param</span> <span class="token class-name"><span class="token punctuation">{</span>Object<span class="token punctuation">}</span></span> <span class="token parameter">log4javascript<span class="token punctuation">.</span>LoggingEvent</span> オブジェクト
+   */</span>
+  <span class="token function">append</span><span class="token punctuation">(</span><span class="token parameter">loggingEvent</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token comment">// ログ出力できない場合はキャッシュ配列をコンソールに出力する</span>
+    <span class="token keyword control-flow">if</span> <span class="token punctuation">(</span><span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">isFatal</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">cachedLogEventsQueue</span><span class="token punctuation">.</span><span class="token property-access">length</span> <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span>
+      <span class="token comment">// loggingEvent 内のレベルに応じて出力する</span>
+      <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">internalLogger</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span>loggingEvent<span class="token punctuation">.</span><span class="token property-access">level</span><span class="token punctuation">,</span> <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">internalAppender</span><span class="token punctuation">.</span><span class="token method function property-access">getLayout</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">format</span><span class="token punctuation">(</span>loggingEvent<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token keyword control-flow">return</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+    
+    <span class="token comment">// アペンダ準備中・ローテート中の場合はキャッシュ配列に追加する</span>
+    <span class="token keyword control-flow">if</span> <span class="token punctuation">(</span><span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">isGettingReady</span> <span class="token operator">||</span> <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">isRotating</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">cachedLogEventsQueue</span><span class="token punctuation">.</span><span class="token method function property-access">push</span><span class="token punctuation">(</span>loggingEvent<span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token keyword control-flow">return</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+    
+    <span class="token comment">// 現在日付を再取得する</span>
+    <span class="token keyword">const</span> currentDate <span class="token operator">=</span> <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token method function property-access">_getCurrentDate</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token comment">// ログローテートが必要な場合</span>
+    <span class="token keyword control-flow">if</span> <span class="token punctuation">(</span><span class="token keyword">this</span><span class="token punctuation">.</span><span class="token method function property-access">_needsRotate</span><span class="token punctuation">(</span>currentDate<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token comment">// ローテート中フラグを設定する</span>
+      <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">isRotating</span> <span class="token operator">=</span> <span class="token boolean">true</span><span class="token punctuation">;</span>
+      <span class="token comment">// ログ出力日を現在日付に変更する</span>
+      <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">logDate</span> <span class="token operator">=</span> currentDate<span class="token punctuation">;</span>
+      <span class="token comment">// ログファイル名を現在日付が末尾に付与されたものに変更する</span>
+      <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">logFileName</span> <span class="token operator">=</span> <span class="token template-string"><span class="token template-punctuation string">`</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span><span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">appenderOptions</span><span class="token punctuation">.</span><span class="token property-access">fileName</span><span class="token interpolation-punctuation punctuation">}</span></span><span class="token string">.</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span><span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">logDate</span><span class="token interpolation-punctuation punctuation">}</span></span><span class="token template-punctuation string">`</span></span><span class="token punctuation">;</span>
+      <span class="token comment">// ログはキャッシュ配列に追加しておく</span>
+      <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">cachedLogEventsQueue</span><span class="token punctuation">.</span><span class="token method function property-access">push</span><span class="token punctuation">(</span>loggingEvent<span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token comment">// ローテート処理を呼ぶ</span>
+      <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token method function property-access">_rotateLogs</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+        <span class="token punctuation">.</span><span class="token method function property-access">then</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+          <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">internalLogger</span><span class="token punctuation">.</span><span class="token method function property-access">debug</span><span class="token punctuation">(</span><span class="token string">'ローテート処理完了・キャッシュログ出力開始'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+          <span class="token keyword control-flow">return</span> <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token method function property-access">_putCachedLogs</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token punctuation">}</span><span class="token punctuation">)</span>
+        <span class="token punctuation">.</span><span class="token method function property-access">then</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+          <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">internalLogger</span><span class="token punctuation">.</span><span class="token method function property-access">debug</span><span class="token punctuation">(</span><span class="token string">'キャッシュログ出力完了・ログローテート処理完了'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+          <span class="token comment">// ローテート中フラグを戻す</span>
+          <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">isRotating</span> <span class="token operator">=</span> <span class="token boolean">false</span><span class="token punctuation">;</span>
+        <span class="token punctuation">}</span><span class="token punctuation">)</span>
+        <span class="token punctuation">.</span><span class="token keyword control-flow">catch</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token parameter">error</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+          <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">internalLogger</span><span class="token punctuation">.</span><span class="token method function property-access">error</span><span class="token punctuation">(</span><span class="token string">'ログローテート処理に失敗しました。コンソール出力に切り替えます'</span><span class="token punctuation">,</span> error<span class="token punctuation">)</span><span class="token punctuation">;</span>
+          <span class="token comment">// ローテート中フラグを戻す</span>
+          <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">isRotating</span> <span class="token operator">=</span> <span class="token boolean">false</span><span class="token punctuation">;</span>
+          <span class="token comment">// コンソール出力に切り替えるためのフラグを設定する</span>
+          <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">isFatal</span> <span class="token operator">=</span> <span class="token boolean">true</span><span class="token punctuation">;</span>
+          <span class="token comment">// キャッシュログをクリアする</span>
+          <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">cachedLogEventsQueue</span><span class="token punctuation">.</span><span class="token property-access">length</span> <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span>
+          <span class="token comment">// loggingEvent 内のレベルに応じてコンソール出力する</span>
+          <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">internalLogger</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span>loggingEvent<span class="token punctuation">.</span><span class="token property-access">level</span><span class="token punctuation">,</span> <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">internalAppender</span><span class="token punctuation">.</span><span class="token method function property-access">getLayout</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">format</span><span class="token punctuation">(</span>loggingEvent<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token keyword control-flow">return</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+    
+    <span class="token comment">// 通常のログ出力</span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token method function property-access">_putLog</span><span class="token punctuation">(</span>loggingEvent<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  
+  <span class="token doc-comment comment">/**
+   * ログ出力を行う
+   * Cordova のネイティブ連携処理 (ファイル操作含む) は非同期で処理されるので、実行順序を保証するため、クラス内に生成した Promise に繋げて処理する
+   * 
+   * <span class="token keyword">@param</span> <span class="token class-name"><span class="token punctuation">{</span>Object<span class="token punctuation">}</span></span> <span class="token parameter">log4javascript<span class="token punctuation">.</span>LoggingEvent</span> オブジェクト
+   * <span class="token keyword">@return</span> <span class="token class-name"><span class="token punctuation">{</span>Promise<span class="token punctuation">}</span></span> ファイル追記が成功した場合に Resolve される
+   */</span>
+  <span class="token function">_putLog</span><span class="token punctuation">(</span><span class="token parameter">loggingEvent</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token comment">// 実行順序を把握するためのデバッグログ文字列</span>
+    <span class="token keyword">let</span> logStr <span class="token operator">=</span> <span class="token string">''</span><span class="token punctuation">;</span>
+    <span class="token comment">// この非同期処理の結果を返却するための Promise を用意する</span>
+    <span class="token keyword">const</span> deferred <span class="token operator">=</span> <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">_$q</span><span class="token punctuation">.</span><span class="token method function property-access">defer</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token comment">// 設定済みの Promise 処理を実行後、then() 内で引数のログを出力する</span>
+    <span class="token comment">// 処理後の結果を自身に再代入することで直列化する</span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">_promiseChain</span> <span class="token operator">=</span> <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">_promiseChain</span>
+      <span class="token punctuation">.</span><span class="token method function property-access">then</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+        logStr <span class="token operator">+=</span> <span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">ログ書込:[</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>loggingEvent<span class="token punctuation">.</span><span class="token property-access">messages</span><span class="token interpolation-punctuation punctuation">}</span></span><span class="token string">]…</span><span class="token template-punctuation string">`</span></span><span class="token punctuation">;</span>
+        <span class="token keyword control-flow">return</span> <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">_$cordovaFile</span><span class="token punctuation">.</span><span class="token method function property-access">writeExistingFile</span><span class="token punctuation">(</span>
+          <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">logDirectory</span><span class="token punctuation">,</span>
+          <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">logFileName</span><span class="token punctuation">,</span>
+          <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token method function property-access">getLayout</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+          <span class="token punctuation">.</span><span class="token method function property-access">format</span><span class="token punctuation">(</span>loggingEvent<span class="token punctuation">)</span><span class="token punctuation">,</span>
+          <span class="token boolean">false</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span><span class="token punctuation">)</span>
+      <span class="token punctuation">.</span><span class="token method function property-access">then</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+        logStr <span class="token operator">+=</span> <span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">書込成功</span><span class="token template-punctuation string">`</span></span><span class="token punctuation">;</span>
+        <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">internalLogger</span><span class="token punctuation">.</span><span class="token method function property-access">debug</span><span class="token punctuation">(</span>logStr<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        deferred<span class="token punctuation">.</span><span class="token method function property-access">resolve</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span><span class="token punctuation">)</span>
+      <span class="token punctuation">.</span><span class="token keyword control-flow">catch</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token parameter">error</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+        logStr <span class="token operator">+=</span> <span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">書込失敗:[</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>error<span class="token interpolation-punctuation punctuation">}</span></span><span class="token string">]</span><span class="token template-punctuation string">`</span></span><span class="token punctuation">;</span>
+        <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">internalLogger</span><span class="token punctuation">.</span><span class="token method function property-access">debug</span><span class="token punctuation">(</span>logStr<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        deferred<span class="token punctuation">.</span><span class="token method function property-access">reject</span><span class="token punctuation">(</span>error<span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword control-flow">return</span> deferred<span class="token punctuation">.</span><span class="token property-access">promise</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  
+  <span class="token doc-comment comment">/**
+   * キャッシュされているログを全て出力する
+   *
+   * <span class="token keyword">@return</span> <span class="token class-name"><span class="token punctuation">{</span>Promise<span class="token punctuation">}</span></span> ログ出力処理を連結した Promise
+   */</span>
+  <span class="token function">_putCachedLogs</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token keyword">let</span> promiseChain <span class="token operator">=</span> <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">_$q</span><span class="token punctuation">.</span><span class="token property-access">promise</span><span class="token punctuation">;</span>
+    <span class="token comment">// キャッシュ配列がなくなるまで繰り返す</span>
+    <span class="token keyword control-flow">while</span> <span class="token punctuation">(</span><span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">cachedLogEventsQueue</span><span class="token punctuation">.</span><span class="token property-access">length</span> <span class="token operator">></span> <span class="token number">0</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token comment">// キャッシュ配列の先頭の要素を取り出す</span>
+      <span class="token keyword">const</span> loggingEvent <span class="token operator">=</span> <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">cachedLogEventsQueue</span><span class="token punctuation">.</span><span class="token method function property-access">shift</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      promiseChain <span class="token operator">=</span> promiseChain<span class="token punctuation">.</span><span class="token method function property-access">then</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+        <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">internalLogger</span><span class="token punctuation">.</span><span class="token method function property-access">debug</span><span class="token punctuation">(</span><span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">PromiseChain:[</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>loggingEvent<span class="token punctuation">.</span><span class="token property-access">messages</span><span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token interpolation-punctuation punctuation">}</span></span><span class="token string">]</span><span class="token template-punctuation string">`</span></span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword control-flow">return</span> <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token method function property-access">_putLog</span><span class="token punctuation">(</span>loggingEvent<span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+    <span class="token keyword control-flow">return</span> promiseChain<span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  
+  <span class="token doc-comment comment">/**
+   * ログ出力中の日付より、現在日付の方が新しくなった場合は true を返却しログローテートが必要であることを知らせる
+   * 
+   * <span class="token keyword">@param</span> <span class="token class-name"><span class="token punctuation">{</span>Date<span class="token punctuation">}</span></span> <span class="token parameter">現在日付</span>
+   * <span class="token keyword">@return</span> <span class="token class-name"><span class="token punctuation">{</span>Boolean<span class="token punctuation">}</span></span> ログ出力中の日付より現在日付の方が新しい場合は true
+   */</span>
+  <span class="token function">_needsRotate</span><span class="token punctuation">(</span><span class="token parameter">currentDate</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token keyword control-flow">return</span> <span class="token punctuation">(</span><span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">logDate</span> <span class="token operator">&#x3C;</span> currentDate<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  
+  <span class="token doc-comment comment">/**
+   * ログのローテート処理を行う
+   * 
+   * - 不要になった古いログファイルを削除し、新たな日付のログファイルを生成する
+   * - 古いファイルの削除処理に失敗した場合も、新たなログファイルの生成は行う
+   * - ログファイルの生成に失敗した場合は、呼び出し元である append() にてコンソール出力に切り替える処理を行う
+   * 
+   * <span class="token keyword">@return</span> <span class="token class-name"><span class="token punctuation">{</span>Promise<span class="token punctuation">}</span></span> ログファイル生成処理の結果を持った Promise
+   */</span>
+  <span class="token function">_rotateLogs</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token comment">// 古いログファイルを取得する</span>
+    <span class="token keyword control-flow">return</span> <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token method function property-access">_resolveLocalFiles</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+      <span class="token punctuation">.</span><span class="token method function property-access">then</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token parameter">removeFiles</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+        <span class="token comment">// 削除処理を一括で実行する</span>
+        <span class="token keyword control-flow">return</span> <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">_$q</span><span class="token punctuation">.</span><span class="token method function property-access">all</span><span class="token punctuation">(</span>removeFiles<span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+        <span class="token comment">// this._resolveLocalFiles() でのエラーを吸収する</span>
+        <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">internalLogger</span><span class="token punctuation">.</span><span class="token method function property-access">warn</span><span class="token punctuation">(</span><span class="token string">'古いログファイルの取得処理に失敗'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span><span class="token punctuation">)</span>
+      <span class="token punctuation">.</span><span class="token method function property-access">then</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+        <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">internalLogger</span><span class="token punctuation">.</span><span class="token method function property-access">debug</span><span class="token punctuation">(</span><span class="token string">'古いログファイルの削除処理終了'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+        <span class="token comment">// this._$q.all() が失敗してもログファイル生成は行わせる</span>
+        <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">internalLogger</span><span class="token punctuation">.</span><span class="token method function property-access">warn</span><span class="token punctuation">(</span><span class="token string">'古いログファイルの削除処理中にエラー'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span><span class="token punctuation">)</span>
+      <span class="token punctuation">.</span><span class="token method function property-access">then</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+        <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">internalLogger</span><span class="token punctuation">.</span><span class="token method function property-access">debug</span><span class="token punctuation">(</span><span class="token string">'ログファイル生成開始'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token comment">// 当日日付のログファイルを生成する</span>
+        <span class="token keyword control-flow">return</span> <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">_$cordovaFile</span><span class="token punctuation">.</span><span class="token method function property-access">createFile</span><span class="token punctuation">(</span><span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">logDirectory</span><span class="token punctuation">,</span> <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">logFileName</span><span class="token punctuation">,</span> <span class="token boolean">true</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token comment">// ログ生成に問題があった場合は呼び出し元の catch() にてコンソール出力に切り替える</span>
+  <span class="token punctuation">}</span>
+  
+  <span class="token doc-comment comment">/**
+   * ログ出力先ディレクトリ配下のファイル一覧を取得し、削除対象ファイルを判定する _getOldFiles() を呼び出す
+   *
+   * <span class="token keyword">@returns</span> <span class="token class-name"><span class="token punctuation">{</span>Promise<span class="token punctuation">}</span></span> 削除対象ファイルの収集処理結果を持った Promise
+   */</span>
+  <span class="token function">_resolveLocalFiles</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token keyword">const</span> deferred <span class="token operator">=</span> <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">_$q</span><span class="token punctuation">.</span><span class="token method function property-access">defer</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">_$window</span><span class="token punctuation">.</span><span class="token method function property-access">resolveLocalFileSystemURL</span><span class="token punctuation">(</span><span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">logDirectory</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token parameter">fs</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+      <span class="token comment">// ディレクトリ配下のファイル一覧を取得する</span>
+      <span class="token keyword">const</span> reader <span class="token operator">=</span> fs<span class="token punctuation">.</span><span class="token method function property-access">createReader</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      reader<span class="token punctuation">.</span><span class="token method function property-access">readEntries</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token parameter">entries</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+        <span class="token comment">// 削除対象のファイルを収集する</span>
+        <span class="token keyword">const</span> removeFiles <span class="token operator">=</span> <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token method function property-access">_getOldFiles</span><span class="token punctuation">(</span>entries<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">internalLogger</span><span class="token punctuation">.</span><span class="token method function property-access">debug</span><span class="token punctuation">(</span><span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">削除対象ファイル数:</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>removeFiles<span class="token punctuation">.</span><span class="token property-access">length</span><span class="token interpolation-punctuation punctuation">}</span></span><span class="token template-punctuation string">`</span></span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token comment">// 削除するファイルの配列を格納して Resolve する</span>
+        deferred<span class="token punctuation">.</span><span class="token method function property-access">resolve</span><span class="token punctuation">(</span>removeFiles<span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token parameter">error</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+        <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">internalLogger</span><span class="token punctuation">.</span><span class="token method function property-access">warn</span><span class="token punctuation">(</span><span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">ファイル一覧取得に失敗・古いファイルの削除処理を中止:</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>error<span class="token interpolation-punctuation punctuation">}</span></span><span class="token template-punctuation string">`</span></span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        deferred<span class="token punctuation">.</span><span class="token method function property-access">reject</span><span class="token punctuation">(</span><span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">ファイル一覧取得に失敗・古いファイルの削除処理を中止:</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>error<span class="token interpolation-punctuation punctuation">}</span></span><span class="token template-punctuation string">`</span></span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token parameter">error</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+      <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">internalLogger</span><span class="token punctuation">.</span><span class="token method function property-access">warn</span><span class="token punctuation">(</span><span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">ディレクトリ情報取得に失敗・古いファイルの削除処理を中止:</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>error<span class="token interpolation-punctuation punctuation">}</span></span><span class="token template-punctuation string">`</span></span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      deferred<span class="token punctuation">.</span><span class="token method function property-access">reject</span><span class="token punctuation">(</span><span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">ディレクトリ情報取得に失敗・古いファイルの削除処理を中止:</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>error<span class="token interpolation-punctuation punctuation">}</span></span><span class="token template-punctuation string">`</span></span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword control-flow">return</span> deferred<span class="token punctuation">.</span><span class="token property-access">promise</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  
+  <span class="token doc-comment comment">/**
+   * 削除対象となる古いログファイルを判別し、そのファイルを削除する処理を配列に詰めて返却する
+   * 
+   * <span class="token keyword">@param</span> <span class="token class-name"><span class="token punctuation">{</span>Object<span class="token punctuation">}</span></span> <span class="token parameter">FileEntry</span> の配列オブジェクト
+   * <span class="token keyword">@return</span> <span class="token class-name"><span class="token punctuation">{</span>Array<span class="token punctuation">&#x3C;</span>Promise<span class="token punctuation">></span><span class="token punctuation">}</span></span> 削除対象ファイルの削除処理を格納した配列
+   */</span>
+  <span class="token function">_getOldFiles</span><span class="token punctuation">(</span><span class="token parameter">entries</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token comment">// ログ出力日 'yyyyMMdd' から、現在の moment (日付) オブジェクトを作る</span>
+    <span class="token keyword">const</span> currentDate <span class="token operator">=</span> <span class="token function">moment</span><span class="token punctuation">(</span><span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">logDate</span><span class="token punctuation">,</span> <span class="token string">'YYYYMMDD'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token comment">// 対象のファイルを削除する Promise 処理を格納する配列</span>
+    <span class="token keyword">const</span> removeFiles <span class="token operator">=</span> <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token punctuation">;</span>
+    <span class="token comment">// FileEntry : isFile, isDirectory, name</span>
+    entries<span class="token punctuation">.</span><span class="token method function property-access">forEach</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token parameter">entry</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+      <span class="token comment">// ロギング中のログファイル名と同じ名前で始まるログファイルのみ対象にする</span>
+      <span class="token keyword control-flow">if</span> <span class="token punctuation">(</span><span class="token operator">!</span>entry<span class="token punctuation">.</span><span class="token property-access">isFile</span> <span class="token operator">||</span> <span class="token operator">!</span>entry<span class="token punctuation">.</span><span class="token property-access">name</span><span class="token punctuation">.</span><span class="token method function property-access">startsWith</span><span class="token punctuation">(</span><span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">appenderOptions</span><span class="token punctuation">.</span><span class="token property-access">fileName</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">internalLogger</span><span class="token punctuation">.</span><span class="token method function property-access">debug</span><span class="token punctuation">(</span><span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">対象外:[</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>entry<span class="token punctuation">.</span><span class="token property-access">name</span><span class="token interpolation-punctuation punctuation">}</span></span><span class="token string">]</span><span class="token template-punctuation string">`</span></span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword control-flow">return</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span>
+      
+      <span class="token comment">// ファイル名末尾の日付 'yyyyMMdd' 部分を取得する</span>
+      <span class="token keyword">const</span> fileDateStr <span class="token operator">=</span> entry<span class="token punctuation">.</span><span class="token property-access">name</span><span class="token punctuation">.</span><span class="token method function property-access">slice</span><span class="token punctuation">(</span><span class="token operator">-</span><span class="token number">8</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token comment">// 取得した文字列から moment オブジェクトを作る</span>
+      <span class="token keyword">const</span> fileDate <span class="token operator">=</span> <span class="token function">moment</span><span class="token punctuation">(</span>fileDateStr<span class="token punctuation">,</span> <span class="token string">'YYYYMMDD'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token comment">// 現在日付と比較し、差分の日数を算出する</span>
+      <span class="token keyword">const</span> diff <span class="token operator">=</span> currentDate<span class="token punctuation">.</span><span class="token method function property-access">diff</span><span class="token punctuation">(</span>fileDate<span class="token punctuation">,</span> <span class="token string">'days'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      
+      <span class="token comment">// 指定のローテート期間を過ぎていれば削除対象とする</span>
+      <span class="token keyword control-flow">if</span> <span class="token punctuation">(</span>diff <span class="token operator">></span> <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">appenderOptions</span><span class="token punctuation">.</span><span class="token property-access">rotateDays</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">internalLogger</span><span class="token punctuation">.</span><span class="token method function property-access">debug</span><span class="token punctuation">(</span><span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">削除対象:[</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>entry<span class="token punctuation">.</span><span class="token property-access">name</span><span class="token interpolation-punctuation punctuation">}</span></span><span class="token string">]</span><span class="token template-punctuation string">`</span></span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token comment">// 指定のファイルを消す処理ごと配列に詰める</span>
+        removeFiles<span class="token punctuation">.</span><span class="token method function property-access">push</span><span class="token punctuation">(</span><span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">_$cordovaFile</span><span class="token punctuation">.</span><span class="token method function property-access">removeFile</span><span class="token punctuation">(</span><span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">logDirectory</span><span class="token punctuation">,</span> entry<span class="token punctuation">.</span><span class="token property-access">name</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span> <span class="token keyword control-flow">else</span> <span class="token punctuation">{</span>
+        <span class="token comment">// ローテート期間内であれば削除しない</span>
+        <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">internalLogger</span><span class="token punctuation">.</span><span class="token method function property-access">debug</span><span class="token punctuation">(</span><span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">削除対象外:[</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>entry<span class="token punctuation">.</span><span class="token property-access">name</span><span class="token interpolation-punctuation punctuation">}</span></span><span class="token string">]</span><span class="token template-punctuation string">`</span></span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword control-flow">return</span> removeFiles<span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  
+  <span class="token doc-comment comment">/**
+   * 本 Appender の文字列表現を返す
+   *
+   * <span class="token keyword">@return</span> <span class="token class-name"><span class="token punctuation">{</span>String<span class="token punctuation">}</span></span> 本 Appender の文字列表現
+   */</span>
+  <span class="token function">toString</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token keyword control-flow">return</span> <span class="token string">'LocalFileAppender'</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+
+<span class="token doc-comment comment">/**
+ * LocalFileAppender のインスタンスを返却するクラス
+ */</span>
+<span class="token keyword">class</span> <span class="token class-name">LocalFileAppenderFactory</span> <span class="token punctuation">{</span>
+  <span class="token doc-comment comment">/**
+   * LocalFileAppender のインスタンスを返却する
+   * インスタンス生成に必要な Angular サービスは、本 Factory を返却する Function より渡される
+   * 
+   * <span class="token keyword">@param</span> <span class="token class-name"><span class="token punctuation">{</span>Object<span class="token punctuation">}</span></span> <span class="token parameter">アペンダオプション</span>
+   * <span class="token keyword">@return</span> <span class="token class-name"><span class="token punctuation">{</span>Object<span class="token punctuation">}</span></span> LocalFileAppender のインスタンス
+   */</span>
+  <span class="token keyword">static</span> <span class="token function">getInstance</span><span class="token punctuation">(</span><span class="token parameter">options</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token comment">// インスタンスが生成済みならそれを返す</span>
+    <span class="token keyword control-flow">if</span> <span class="token punctuation">(</span><span class="token maybe-class-name">LocalFileAppenderFactory</span><span class="token punctuation">.</span><span class="token property-access">appender</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token comment">// オプション指定を反映させるため再度初期化処理を呼ぶ</span>
+      <span class="token maybe-class-name">LocalFileAppenderFactory</span><span class="token punctuation">.</span><span class="token property-access">appender</span><span class="token punctuation">.</span><span class="token method function property-access">initAppenderOptions</span><span class="token punctuation">(</span>options<span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token maybe-class-name">LocalFileAppenderFactory</span><span class="token punctuation">.</span><span class="token property-access">appender</span><span class="token punctuation">.</span><span class="token method function property-access">initLogFile</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token keyword control-flow">return</span> <span class="token maybe-class-name">LocalFileAppenderFactory</span><span class="token punctuation">.</span><span class="token property-access">appender</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+    
+    <span class="token comment">// Function から本 Factory に持たせてあったサービスと共にインスタンス化する</span>
+    <span class="token maybe-class-name">LocalFileAppenderFactory</span><span class="token punctuation">.</span><span class="token property-access">appender</span> <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">LocalFileAppender</span><span class="token punctuation">(</span>
+      <span class="token maybe-class-name">LocalFileAppenderFactory</span><span class="token punctuation">.</span><span class="token property-access">$cordovaFile</span><span class="token punctuation">,</span>
+      <span class="token maybe-class-name">LocalFileAppenderFactory</span><span class="token punctuation">.</span><span class="token property-access">$q</span><span class="token punctuation">,</span>
+      <span class="token maybe-class-name">LocalFileAppenderFactory</span><span class="token punctuation">.</span><span class="token property-access">$window</span><span class="token punctuation">,</span>
+      options<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword control-flow">return</span> <span class="token maybe-class-name">LocalFileAppenderFactory</span><span class="token punctuation">.</span><span class="token property-access">appender</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+
+<span class="token doc-comment comment">/**
+ * LocalFileAppender のインスタンスを返却する Factory クラスを返却する
+ * Angular サービスの DI のため、本 Function を Angular モジュールとして提供する
+ * 
+ * import localFileAppenderFactoryClassFactory from './localFileAppender';
+ * module.factory('LOCAL_FILE_APPENDER', localFileAppenderFactoryClassFactory);
+ * 
+ * <span class="token keyword">@param</span> <span class="token class-name"><span class="token punctuation">{</span>Object<span class="token punctuation">}</span></span> <span class="token parameter">$cordovaFile</span> ngCordova が提供するファイル操作プラグインの API
+ * <span class="token keyword">@param</span> <span class="token class-name"><span class="token punctuation">{</span>Object<span class="token punctuation">}</span></span> <span class="token parameter">$q</span> 非同期処理を行うためのサービス
+ * <span class="token keyword">@param</span> <span class="token class-name"><span class="token punctuation">{</span>Object<span class="token punctuation">}</span></span> <span class="token parameter">$window</span> File API を呼び出すために使用する
+ */</span>
+<span class="token keyword module">export</span> <span class="token keyword module">default</span> <span class="token keyword">function</span> <span class="token function">localFileAppenderFactoryClassFactory</span><span class="token punctuation">(</span><span class="token parameter">$cordovaFile<span class="token punctuation">,</span> $q<span class="token punctuation">,</span> $<span class="token dom variable">window</span></span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token comment">// Factory に必要なサービスを持たせておく</span>
+  <span class="token maybe-class-name">LocalFileAppenderFactory</span><span class="token punctuation">.</span><span class="token property-access">$cordovaFile</span> <span class="token operator">=</span> $cordovaFile<span class="token punctuation">;</span>
+  <span class="token maybe-class-name">LocalFileAppenderFactory</span><span class="token punctuation">.</span><span class="token property-access">$q</span> <span class="token operator">=</span> $q<span class="token punctuation">;</span>
+  <span class="token maybe-class-name">LocalFileAppenderFactory</span><span class="token punctuation">.</span><span class="token property-access">$window</span> <span class="token operator">=</span> $<span class="token dom variable">window</span><span class="token punctuation">;</span>
+  <span class="token keyword control-flow">return</span> <span class="token maybe-class-name">LocalFileAppenderFactory</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+localFileAppenderFactoryClassFactory<span class="token punctuation">.</span><span class="token property-access">$inject</span> <span class="token operator">=</span> <span class="token punctuation">[</span><span class="token string">'$cordovaFile'</span><span class="token punctuation">,</span> <span class="token string">'$q'</span><span class="token punctuation">,</span> <span class="token string">'$window'</span><span class="token punctuation">]</span><span class="token punctuation">;</span>
+</code></pre>
+<ul>
+  <li>log4javascript 拡張クラス：Angular4 向け・Cordova-Plugin-File・@ionic-native/file 使用
+    <ul>
+      <li><code>LocalFileAppender.ts</code></li>
+    </ul>
+  </li>
+</ul>
+<pre class="language-typescript"><code class="language-typescript"><span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">Inject</span><span class="token punctuation">,</span> <span class="token maybe-class-name">Injectable</span> <span class="token punctuation">}</span></span> <span class="token keyword">from</span> <span class="token string">'@angular/core'</span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">File</span> <span class="token punctuation">}</span></span> <span class="token keyword">from</span> <span class="token string">'@ionic-native/file'</span><span class="token punctuation">;</span>
+
+<span class="token keyword">import</span> <span class="token imports"><span class="token operator">*</span> <span class="token keyword">as</span> _</span> <span class="token keyword">from</span> <span class="token string">'lodash'</span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token imports"><span class="token operator">*</span> <span class="token keyword">as</span> log4javascript</span> <span class="token keyword">from</span> <span class="token string">'log4javascript'</span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token imports"><span class="token operator">*</span> <span class="token keyword">as</span> moment</span> <span class="token keyword">from</span> <span class="token string">'moment'</span><span class="token punctuation">;</span>
+
+<span class="token doc-comment comment">/**
+ * window オブジェクトを返す関数
+ */</span>
+<span class="token keyword">function</span> <span class="token function">_window</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator">:</span> <span class="token builtin">any</span> <span class="token punctuation">{</span>
+  <span class="token keyword">return</span> <span class="token dom variable">window</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+
+<span class="token doc-comment comment">/**
+ * Window の参照を返すクラス
+ */</span>
+@<span class="token function"><span class="token maybe-class-name">Injectable</span></span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+<span class="token keyword">export</span> <span class="token keyword">class</span> <span class="token class-name"><span class="token maybe-class-name">WindowRefService</span></span> <span class="token punctuation">{</span>
+  <span class="token doc-comment comment">/**
+   * window オブジェクトを返す
+   *
+   * <span class="token keyword">@return</span> window オブジェクト
+   */</span>
+  <span class="token keyword">get</span> <span class="token function">nativeWindow</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator">:</span> <span class="token builtin">any</span> <span class="token punctuation">{</span>
+    <span class="token keyword">return</span> <span class="token function">_window</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+
+
+
+<span class="token doc-comment comment">/**
+ * アペンダオプションを設定するインターフェースクラス
+ */</span>
+<span class="token keyword">export</span> <span class="token keyword">interface</span> <span class="token class-name"><span class="token maybe-class-name">LocalFileAppenderOptions</span></span> <span class="token punctuation">{</span>
+  <span class="token doc-comment comment">/** ファイル名 : 必須 */</span>
+  fileName<span class="token operator">:</span> <span class="token builtin">string</span><span class="token punctuation">;</span>
+  <span class="token doc-comment comment">/** ローテート日数 */</span>
+  rotateDays<span class="token operator">?</span><span class="token operator">:</span> <span class="token builtin">number</span><span class="token punctuation">;</span>
+  <span class="token doc-comment comment">/** レイアウト */</span>
+  layout<span class="token operator">?</span><span class="token operator">:</span> <span class="token builtin">string</span><span class="token punctuation">;</span>
+  <span class="token doc-comment comment">/** 最低ログ出力レベル */</span>
+  threshold<span class="token operator">?</span><span class="token operator">:</span> log4javascript<span class="token punctuation">.</span><span class="token property-access"><span class="token maybe-class-name">Level</span></span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+
+<span class="token doc-comment comment">/**
+ * アペンダオプションのデフォルト設定
+ */</span>
+<span class="token keyword">export</span> <span class="token keyword">const</span> <span class="token constant">APPENDER_OPTIONS</span><span class="token operator">:</span> <span class="token maybe-class-name">LocalFileAppenderOptions</span> <span class="token operator">=</span> <span class="token punctuation">{</span>
+  fileName<span class="token operator">:</span> <span class="token string">'MyLogger.log'</span><span class="token punctuation">,</span>
+  rotateDays<span class="token operator">:</span> <span class="token number">0</span><span class="token punctuation">,</span>
+  layout<span class="token operator">:</span> <span class="token string">'[%d{yyyy-MM-dd HH:mm:ss.SSS}] [%-5p] %m'</span><span class="token punctuation">,</span>
+  threshold<span class="token operator">:</span> log4javascript<span class="token punctuation">.</span><span class="token property-access"><span class="token maybe-class-name">Level</span></span><span class="token punctuation">.</span><span class="token constant">INFO</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+
+
+
+<span class="token doc-comment comment">/**
+ * Angular4 向け・ログファイルを生成し、ログを追記する Appender
+ * log4javascript の Appender を拡張しており、cordova-plugin-file プラグインおよび @ionic-native/file を使用してファイル操作を行う
+ */</span>
+@<span class="token function"><span class="token maybe-class-name">Injectable</span></span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+<span class="token keyword">export</span> <span class="token keyword">class</span> <span class="token class-name"><span class="token maybe-class-name">LocalFileAppenderService</span></span> <span class="token keyword">extends</span> <span class="token class-name">log4javascript</span><span class="token punctuation">.</span><span class="token property-access"><span class="token maybe-class-name">Appender</span></span> <span class="token punctuation">{</span>
+  <span class="token doc-comment comment">/** アペンダオプション */</span>
+  appenderOptions<span class="token operator">:</span> <span class="token maybe-class-name">LocalFileAppenderOptions</span><span class="token punctuation">;</span>
+  <span class="token doc-comment comment">/** ログ出力日 ('yyyyMMdd' 形式) */</span>
+  logDate<span class="token operator">:</span> <span class="token builtin">string</span><span class="token punctuation">;</span>
+  <span class="token doc-comment comment">/** ログファイル名 */</span>
+  logFileName<span class="token operator">:</span> <span class="token builtin">string</span><span class="token punctuation">;</span>
+  <span class="token doc-comment comment">/** ログ出力先ディレクトリ : @ionic-native/file より取得する */</span>
+  logDirectory<span class="token operator">:</span> <span class="token builtin">string</span><span class="token punctuation">;</span>
+  <span class="token doc-comment comment">/** Promise チェーン : この Promise チェーンの then() に処理を追加していくことで、非同期処理を順番に処理させる */</span>
+  promiseChain<span class="token operator">:</span> <span class="token known-class-name class-name">Promise</span><span class="token operator">&#x3C;</span><span class="token builtin">any</span><span class="token operator">></span><span class="token punctuation">;</span>
+  
+  <span class="token doc-comment comment">/** キャッシュしているログを格納する配列。ログ出力が可能になったらこの配列内のログを出力する */</span>
+  cachedLogEventsQueue<span class="token operator">:</span> <span class="token known-class-name class-name">Array</span><span class="token operator">&#x3C;</span>log4javascript<span class="token punctuation">.</span><span class="token property-access"><span class="token maybe-class-name">LoggingEvent</span></span><span class="token operator">></span> <span class="token operator">=</span> <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token punctuation">;</span>
+  <span class="token doc-comment comment">/** ログ出力できない問題がある場合は true にするフラグ変数。true の場合はコンソールに出力する */</span>
+  isFatal<span class="token operator">:</span> <span class="token builtin">boolean</span> <span class="token operator">=</span> <span class="token boolean">false</span><span class="token punctuation">;</span>
+  <span class="token doc-comment comment">/** ログ出力の準備中は true にするフラグ変数。ログファイルの準備ができたら false にする */</span>
+  isGettingReady<span class="token operator">:</span> <span class="token builtin">boolean</span> <span class="token operator">=</span> <span class="token boolean">true</span><span class="token punctuation">;</span>
+  <span class="token doc-comment comment">/** ローテート作業中は true にするフラグ変数。ログファイルの準備ができたら false にする */</span>
+  isRotating<span class="token operator">:</span> <span class="token builtin">boolean</span> <span class="token operator">=</span> <span class="token boolean">false</span><span class="token punctuation">;</span>
+  
+  <span class="token doc-comment comment">/** 内部ロガーのアペンダ */</span>
+  internalAppender<span class="token operator">:</span> log4javascript<span class="token punctuation">.</span><span class="token property-access"><span class="token maybe-class-name">Appender</span></span><span class="token punctuation">;</span>
+  <span class="token doc-comment comment">/** 内部ロガー */</span>
+  internalLogger<span class="token operator">:</span> log4javascript<span class="token punctuation">.</span><span class="token property-access"><span class="token maybe-class-name">Logger</span></span><span class="token punctuation">;</span>
+  
+  <span class="token doc-comment comment">/**
+   * コンストラクタ
+   * 
+   * <span class="token keyword">@param</span> <span class="token parameter">file</span> cordova-plugin-file プラグインをラップする @ionic-native/file クラス
+   * <span class="token keyword">@param</span> <span class="token parameter">appenderOptions</span> アペンダオプション
+   * <span class="token keyword">@param</span> <span class="token parameter">windowRefSrv</span> window の参照を返すサービス
+   */</span>
+  <span class="token keyword">constructor</span><span class="token punctuation">(</span><span class="token keyword">protected</span> file<span class="token operator">:</span> <span class="token maybe-class-name">File</span><span class="token punctuation">,</span> @<span class="token function"><span class="token maybe-class-name">Inject</span></span><span class="token punctuation">(</span><span class="token constant">APPENDER_OPTIONS</span><span class="token punctuation">)</span> appenderOptions<span class="token operator">:</span> <span class="token maybe-class-name">LocalFileAppenderOptions</span><span class="token punctuation">,</span> <span class="token keyword">protected</span> windowRefSrv<span class="token operator">:</span> <span class="token maybe-class-name">WindowRefService</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token keyword">super</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    
+    <span class="token comment">// ログ出力先ディレクトリ</span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">logDirectory</span> <span class="token operator">=</span> <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">file</span><span class="token punctuation">.</span><span class="token property-access">dataDirectory</span><span class="token punctuation">;</span>
+    
+    <span class="token comment">// 内部ロガーの準備</span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">internalAppender</span> <span class="token operator">=</span> <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token method function property-access">createInternalAppender</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">internalLogger</span> <span class="token operator">=</span> <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token method function property-access">createInternalLogger</span><span class="token punctuation">(</span><span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">internalAppender</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    
+    <span class="token comment">// このクラス全体で使う Promise チェーンを用意する</span>
+    <span class="token comment">// この Promise チェーンの then() に行いたい処理を設定することで、非同期処理を順番に処理させる</span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">promiseChain</span> <span class="token operator">=</span> <span class="token known-class-name class-name">Promise</span><span class="token punctuation">.</span><span class="token method function property-access">resolve</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    
+    <span class="token comment">// 初期化処理呼び出し</span>
+    <span class="token comment">// アペンダオプションの設定処理</span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token method function property-access">initAppenderOptions</span><span class="token punctuation">(</span>appenderOptions<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token comment">// ログファイルの確認・生成処理</span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token method function property-access">initLogFile</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  
+  <span class="token doc-comment comment">/**
+   * 内部ロガーが使用する Appender を生成し返却する
+   * append() メソッドにて、コンソールにログ出力する際にレイアウト設定するためにも使用する
+   * 
+   * <span class="token keyword">@return</span> 出力レベル、レイアウトを設定した BrowserConsoleAppender オブジェクト
+   */</span>
+  <span class="token function">createInternalAppender</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator">:</span> log4javascript<span class="token punctuation">.</span><span class="token property-access"><span class="token maybe-class-name">Appender</span></span> <span class="token punctuation">{</span>
+    <span class="token keyword">const</span> internalAppender <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">log4javascript</span><span class="token punctuation">.</span><span class="token method function property-access"><span class="token maybe-class-name">BrowserConsoleAppender</span></span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    internalAppender<span class="token punctuation">.</span><span class="token method function property-access">setThreshold</span><span class="token punctuation">(</span>log4javascript<span class="token punctuation">.</span><span class="token property-access"><span class="token maybe-class-name">Level</span></span><span class="token punctuation">.</span><span class="token constant">WARN</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    internalAppender<span class="token punctuation">.</span><span class="token method function property-access">setLayout</span><span class="token punctuation">(</span><span class="token keyword">new</span> <span class="token class-name">log4javascript</span><span class="token punctuation">.</span><span class="token method function property-access"><span class="token maybe-class-name">PatternLayout</span></span><span class="token punctuation">(</span><span class="token string">'[%d{yyyy-MM-dd HH:mm:ss.SSS}] [my-logger] [%-5p] %m%n'</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">return</span> internalAppender<span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  
+  <span class="token doc-comment comment">/**
+   * 本 Appender クラスの内部で使用する、コンソール出力用のロガーを生成し返却する
+   * デバッグログやエラーログの出力の他、ログファイルへの出力が不可能と判断した場合にログをコンソールへ出力するためにも使用する
+   * 
+   * <span class="token keyword">@param</span> <span class="token parameter">appender</span> 内部ロガーに適用するコンソール出力アペンダ
+   * <span class="token keyword">@return</span> コンソール出力用のロガーオブジェクト
+   */</span>
+  <span class="token function">createInternalLogger</span><span class="token punctuation">(</span>appender<span class="token operator">:</span> log4javascript<span class="token punctuation">.</span><span class="token property-access"><span class="token maybe-class-name">Appender</span></span><span class="token punctuation">)</span><span class="token operator">:</span> log4javascript<span class="token punctuation">.</span><span class="token property-access"><span class="token maybe-class-name">Logger</span></span> <span class="token punctuation">{</span>
+    <span class="token keyword">const</span> internalLogger <span class="token operator">=</span> log4javascript<span class="token punctuation">.</span><span class="token method function property-access">getLogger</span><span class="token punctuation">(</span><span class="token string">'my-logger.internal'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    internalLogger<span class="token punctuation">.</span><span class="token method function property-access">addAppender</span><span class="token punctuation">(</span>appender<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">return</span> internalLogger<span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  
+  <span class="token doc-comment comment">/**
+   * 本 Appender クラスの各種設定を行う
+   * 
+   * <span class="token keyword">@param</span> <span class="token parameter">appenderOptions</span> ユーザ指定のアペンダオプション
+   */</span>
+  <span class="token function">initAppenderOptions</span><span class="token punctuation">(</span>appenderOptions<span class="token operator">:</span> <span class="token maybe-class-name">LocalFileAppenderOptions</span><span class="token punctuation">)</span><span class="token operator">:</span> <span class="token keyword">void</span> <span class="token punctuation">{</span>
+    <span class="token comment">// デフォルトのオプションに対しユーザ指定のオプションをマージする</span>
+    <span class="token keyword">const</span> mergedAppenderOptions <span class="token operator">=</span> _<span class="token punctuation">.</span><span class="token method function property-access">merge</span><span class="token punctuation">(</span><span class="token punctuation">{</span><span class="token punctuation">}</span><span class="token punctuation">,</span> <span class="token constant">APPENDER_OPTIONS</span><span class="token punctuation">,</span> appenderOptions<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    
+    <span class="token comment">// ファイル名がない場合、もしくはローテート期間が 0 未満など不正値の場合は NG とする</span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token operator">!</span>mergedAppenderOptions<span class="token punctuation">.</span><span class="token property-access">fileName</span> <span class="token operator">||</span> mergedAppenderOptions<span class="token punctuation">.</span><span class="token property-access">rotateDays</span> <span class="token operator">&#x3C;</span> <span class="token number">0</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token keyword">throw</span> <span class="token keyword">new</span> <span class="token class-name"><span class="token known-class-name class-name">Error</span></span><span class="token punctuation">(</span><span class="token string">'アペンダオプションの設定が不正です'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+    
+    <span class="token comment">// アペンダオプションを設定する</span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">appenderOptions</span> <span class="token operator">=</span> mergedAppenderOptions<span class="token punctuation">;</span>
+    
+    <span class="token comment">// ログ出力対象日付 (当日日付) を yyyyMMdd の形式で取得・設定する</span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">logDate</span> <span class="token operator">=</span> <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token method function property-access">getCurrentDate</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token comment">// 当日日付のログファイルの名前 (fileName.log.yyyyMMdd) を設定する</span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">logFileName</span> <span class="token operator">=</span> <span class="token template-string"><span class="token template-punctuation string">`</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span><span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">appenderOptions</span><span class="token punctuation">.</span><span class="token property-access">fileName</span><span class="token interpolation-punctuation punctuation">}</span></span><span class="token string">.</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span><span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">logDate</span><span class="token interpolation-punctuation punctuation">}</span></span><span class="token template-punctuation string">`</span></span><span class="token punctuation">;</span>
+    <span class="token comment">// 出力レベル : log4javascript.Level クラスの定数で指定</span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token method function property-access">setThreshold</span><span class="token punctuation">(</span><span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">appenderOptions</span><span class="token punctuation">.</span><span class="token property-access">threshold</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token comment">// レイアウト : 指定のレイアウト文字列の末尾に改行コードを付与する</span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token method function property-access">setLayout</span><span class="token punctuation">(</span><span class="token keyword">new</span> <span class="token class-name">log4javascript</span><span class="token punctuation">.</span><span class="token method function property-access"><span class="token maybe-class-name">PatternLayout</span></span><span class="token punctuation">(</span><span class="token template-string"><span class="token template-punctuation string">`</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span><span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">appenderOptions</span><span class="token punctuation">.</span><span class="token property-access">layout</span><span class="token interpolation-punctuation punctuation">}</span></span><span class="token string">%n</span><span class="token template-punctuation string">`</span></span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  
+  <span class="token doc-comment comment">/**
+   * ログを出力するファイルの生成処理を行う
+   * 
+   * - ログファイルが既に存在する場合は生成処理を行わない
+   * - ログファイルの準備が完了次第、キャッシュ配列に格納されているログを出力する
+   * - 一連の処理中に問題があった場合はファイル出力を止め、コンソール出力に切り替える
+   */</span>
+  <span class="token function">initLogFile</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator">:</span> <span class="token keyword">void</span> <span class="token punctuation">{</span>
+    <span class="token comment">// ログファイルの存在確認</span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">file</span><span class="token punctuation">.</span><span class="token method function property-access">checkFile</span><span class="token punctuation">(</span><span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">logDirectory</span><span class="token punctuation">,</span> <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">logFileName</span><span class="token punctuation">)</span>
+      <span class="token punctuation">.</span><span class="token method function property-access">then</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token comment">/* isExists: boolean */</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+        <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">internalLogger</span><span class="token punctuation">.</span><span class="token method function property-access">debug</span><span class="token punctuation">(</span><span class="token string">'ログファイル生成済'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token comment">// ログファイルが既に生成されているので準備中フラグを false にする</span>
+        <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">isGettingReady</span> <span class="token operator">=</span> <span class="token boolean">false</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+        <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">internalLogger</span><span class="token punctuation">.</span><span class="token method function property-access">debug</span><span class="token punctuation">(</span><span class="token string">'ログファイル未生成・生成処理開始'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">return</span> <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">file</span><span class="token punctuation">.</span><span class="token method function property-access">createFile</span><span class="token punctuation">(</span><span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">logDirectory</span><span class="token punctuation">,</span> <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">logFileName</span><span class="token punctuation">,</span> <span class="token boolean">true</span><span class="token punctuation">)</span>
+          <span class="token punctuation">.</span><span class="token method function property-access">then</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+            <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">internalLogger</span><span class="token punctuation">.</span><span class="token method function property-access">debug</span><span class="token punctuation">(</span><span class="token string">'ログファイル生成完了'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+            <span class="token comment">// ログファイルの生成が完了したら準備中フラグを false にする</span>
+            <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">isGettingReady</span> <span class="token operator">=</span> <span class="token boolean">false</span><span class="token punctuation">;</span>
+          <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span><span class="token punctuation">)</span>
+      <span class="token punctuation">.</span><span class="token method function property-access">then</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+        <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">internalLogger</span><span class="token punctuation">.</span><span class="token method function property-access">debug</span><span class="token punctuation">(</span><span class="token string">'ログファイル準備完了・キャッシュログの出力開始'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token method function property-access">putCachedLogs</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span><span class="token punctuation">)</span>
+      <span class="token punctuation">.</span><span class="token keyword">catch</span><span class="token punctuation">(</span><span class="token punctuation">(</span>error<span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+        <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">internalLogger</span><span class="token punctuation">.</span><span class="token method function property-access">warn</span><span class="token punctuation">(</span><span class="token string">'ログファイル準備中にエラーが発生しました。コンソール出力に切り替えます'</span><span class="token punctuation">,</span> error<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token comment">// ファイル出力不可能のフラグを設定し、コンソール出力させるようにする</span>
+        <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">isFatal</span> <span class="token operator">=</span> <span class="token boolean">true</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  
+  <span class="token doc-comment comment">/**
+   * 現在日付を 'yyyyMMdd' の形式で取得し返却する
+   *
+   * <span class="token keyword">@return</span> 'yyyyMMdd' の形式にした現在日付
+   */</span>
+  <span class="token function">getCurrentDate</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator">:</span> <span class="token builtin">string</span> <span class="token punctuation">{</span>
+    <span class="token keyword">return</span> <span class="token function">moment</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">format</span><span class="token punctuation">(</span><span class="token string">'YYYYMMDD'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  
+  <span class="token doc-comment comment">/**
+   * log4javascript.Appender より継承するログの追記メソッド
+   *
+   * <span class="token keyword">@param</span> <span class="token parameter">loggingEvent</span> LoggingEvent オブジェクト
+   */</span>
+  <span class="token function">append</span><span class="token punctuation">(</span>loggingEvent<span class="token operator">:</span> log4javascript<span class="token punctuation">.</span><span class="token property-access"><span class="token maybe-class-name">LoggingEvent</span></span><span class="token punctuation">)</span><span class="token operator">:</span> <span class="token keyword">void</span> <span class="token punctuation">{</span>
+    <span class="token comment">// ログ出力できない場合はキャッシュ配列をコンソールに出力する</span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">isFatal</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">cachedLogEventsQueue</span><span class="token punctuation">.</span><span class="token property-access">length</span> <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span>
+      <span class="token comment">// loggingEvent 内のレベルに応じて出力する</span>
+      <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">internalLogger</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span>loggingEvent<span class="token punctuation">.</span><span class="token property-access">level</span><span class="token punctuation">,</span> <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">internalAppender</span><span class="token punctuation">.</span><span class="token method function property-access">getLayout</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">format</span><span class="token punctuation">(</span>loggingEvent<span class="token punctuation">)</span> <span class="token keyword">as</span> <span class="token builtin">any</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token keyword">return</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+    
+    <span class="token comment">// アペンダ準備中・ローテート中の場合はキャッシュ配列に追加する</span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">isGettingReady</span> <span class="token operator">||</span> <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">isRotating</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">cachedLogEventsQueue</span><span class="token punctuation">.</span><span class="token method function property-access">push</span><span class="token punctuation">(</span>loggingEvent<span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token keyword">return</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+    
+    <span class="token comment">// 現在日付を再取得する</span>
+    <span class="token keyword">const</span> currentDate <span class="token operator">=</span> <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token method function property-access">getCurrentDate</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token comment">// ログローテートが必要な場合</span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token keyword">this</span><span class="token punctuation">.</span><span class="token method function property-access">needsRotate</span><span class="token punctuation">(</span>currentDate<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token comment">// ローテート中フラグを設定する</span>
+      <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">isRotating</span> <span class="token operator">=</span> <span class="token boolean">true</span><span class="token punctuation">;</span>
+      <span class="token comment">// ログ出力日を現在日付に変更する</span>
+      <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">logDate</span> <span class="token operator">=</span> currentDate<span class="token punctuation">;</span>
+      <span class="token comment">// ログファイル名を現在日付が末尾に付与されたものに変更する</span>
+      <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">logFileName</span> <span class="token operator">=</span> <span class="token template-string"><span class="token template-punctuation string">`</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span><span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">appenderOptions</span><span class="token punctuation">.</span><span class="token property-access">fileName</span><span class="token interpolation-punctuation punctuation">}</span></span><span class="token string">.</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span><span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">logDate</span><span class="token interpolation-punctuation punctuation">}</span></span><span class="token template-punctuation string">`</span></span><span class="token punctuation">;</span>
+      <span class="token comment">// ログはキャッシュ配列に追加しておく</span>
+      <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">cachedLogEventsQueue</span><span class="token punctuation">.</span><span class="token method function property-access">push</span><span class="token punctuation">(</span>loggingEvent<span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token comment">// ローテート処理を呼ぶ</span>
+      <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token method function property-access">rotateLogs</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+        <span class="token punctuation">.</span><span class="token method function property-access">then</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+          <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">internalLogger</span><span class="token punctuation">.</span><span class="token method function property-access">debug</span><span class="token punctuation">(</span><span class="token string">'ローテート処理完了・キャッシュログ出力開始'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+          <span class="token keyword">return</span> <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token method function property-access">putCachedLogs</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token punctuation">}</span><span class="token punctuation">)</span>
+        <span class="token punctuation">.</span><span class="token method function property-access">then</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+          <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">internalLogger</span><span class="token punctuation">.</span><span class="token method function property-access">debug</span><span class="token punctuation">(</span><span class="token string">'キャッシュログ出力完了・ログローテート処理完了'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+          <span class="token comment">// ローテート中フラグを戻す</span>
+          <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">isRotating</span> <span class="token operator">=</span> <span class="token boolean">false</span><span class="token punctuation">;</span>
+        <span class="token punctuation">}</span><span class="token punctuation">)</span>
+        <span class="token punctuation">.</span><span class="token keyword">catch</span><span class="token punctuation">(</span><span class="token punctuation">(</span>error<span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+          <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">internalLogger</span><span class="token punctuation">.</span><span class="token method function property-access">error</span><span class="token punctuation">(</span><span class="token string">'ログローテート処理に失敗しました。コンソール出力に切り替えます'</span><span class="token punctuation">,</span> error<span class="token punctuation">)</span><span class="token punctuation">;</span>
+          <span class="token comment">// ローテート中フラグを戻す</span>
+          <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">isRotating</span> <span class="token operator">=</span> <span class="token boolean">false</span><span class="token punctuation">;</span>
+          <span class="token comment">// コンソール出力に切り替えるためのフラグを設定する</span>
+          <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">isFatal</span> <span class="token operator">=</span> <span class="token boolean">true</span><span class="token punctuation">;</span>
+          <span class="token comment">// キャッシュログをクリアする</span>
+          <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">cachedLogEventsQueue</span><span class="token punctuation">.</span><span class="token property-access">length</span> <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span>
+          <span class="token comment">// loggingEvent 内のレベルに応じてコンソール出力する</span>
+          <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">internalLogger</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span>loggingEvent<span class="token punctuation">.</span><span class="token property-access">level</span><span class="token punctuation">,</span> <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">internalAppender</span><span class="token punctuation">.</span><span class="token method function property-access">getLayout</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">format</span><span class="token punctuation">(</span>loggingEvent<span class="token punctuation">)</span> <span class="token keyword">as</span> <span class="token builtin">any</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token keyword">return</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+    
+    <span class="token comment">// 通常のログ出力</span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token method function property-access">putLog</span><span class="token punctuation">(</span>loggingEvent<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  
+  <span class="token doc-comment comment">/**
+   * ログ出力を行う
+   * Cordova のネイティブ連携処理 (ファイル操作含む) は非同期で処理されるので、実行順序を保証するため、クラス内に生成した Promise に繋げて処理する
+   *
+   * <span class="token keyword">@param</span> <span class="token parameter">loggingEvent</span> LoggingEvent オブジェクト
+   * <span class="token keyword">@return</span> ファイル追記が成功した場合に Resolve される
+   */</span>
+  <span class="token function">putLog</span><span class="token punctuation">(</span>loggingEvent<span class="token operator">:</span> log4javascript<span class="token punctuation">.</span><span class="token property-access"><span class="token maybe-class-name">LoggingEvent</span></span><span class="token punctuation">)</span><span class="token operator">:</span> <span class="token known-class-name class-name">Promise</span><span class="token operator">&#x3C;</span><span class="token keyword">void</span><span class="token operator">></span> <span class="token punctuation">{</span>
+    <span class="token comment">// 実行順序を把握するためのデバッグログ文字列</span>
+    <span class="token keyword">let</span> logStr <span class="token operator">=</span> <span class="token string">''</span><span class="token punctuation">;</span>
+    <span class="token comment">// この非同期処理の結果を返却するための Promise を用意する</span>
+    <span class="token keyword">return</span> <span class="token keyword">new</span> <span class="token class-name"><span class="token known-class-name class-name">Promise</span><span class="token operator">&#x3C;</span><span class="token keyword">void</span><span class="token operator">></span></span><span class="token punctuation">(</span><span class="token punctuation">(</span>resolve<span class="token punctuation">,</span> reject<span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+      <span class="token comment">// 設定済みの Promise 処理を実行後、then() 内で引数のログを出力する</span>
+      <span class="token comment">// 処理後の結果を自身に再代入することで直列化する</span>
+      <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">promiseChain</span> <span class="token operator">=</span> <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">promiseChain</span>
+        <span class="token punctuation">.</span><span class="token method function property-access">then</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+          logStr <span class="token operator">+=</span> <span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">ログ書込:[</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>loggingEvent<span class="token punctuation">.</span><span class="token property-access">messages</span><span class="token interpolation-punctuation punctuation">}</span></span><span class="token string">]…</span><span class="token template-punctuation string">`</span></span><span class="token punctuation">;</span>
+          <span class="token keyword">return</span> <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">file</span><span class="token punctuation">.</span><span class="token method function property-access">writeExistingFile</span><span class="token punctuation">(</span>
+            <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">logDirectory</span><span class="token punctuation">,</span>
+            <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">logFileName</span><span class="token punctuation">,</span>
+            <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token method function property-access">getLayout</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">format</span><span class="token punctuation">(</span>loggingEvent<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token punctuation">}</span><span class="token punctuation">)</span>
+        <span class="token punctuation">.</span><span class="token method function property-access">then</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+          logStr <span class="token operator">+=</span> <span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">書込成功</span><span class="token template-punctuation string">`</span></span><span class="token punctuation">;</span>
+          <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">internalLogger</span><span class="token punctuation">.</span><span class="token method function property-access">debug</span><span class="token punctuation">(</span>logStr<span class="token punctuation">)</span><span class="token punctuation">;</span>
+          <span class="token function">resolve</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token punctuation">}</span><span class="token punctuation">)</span>
+        <span class="token punctuation">.</span><span class="token keyword">catch</span><span class="token punctuation">(</span><span class="token punctuation">(</span>error<span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+          logStr <span class="token operator">+=</span> <span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">書込失敗:[</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>error<span class="token interpolation-punctuation punctuation">}</span></span><span class="token string">]</span><span class="token template-punctuation string">`</span></span><span class="token punctuation">;</span>
+          <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">internalLogger</span><span class="token punctuation">.</span><span class="token method function property-access">debug</span><span class="token punctuation">(</span>logStr<span class="token punctuation">)</span><span class="token punctuation">;</span>
+          <span class="token function">reject</span><span class="token punctuation">(</span>error<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+
+  <span class="token doc-comment comment">/**
+   * キャッシュされているログを全て出力する
+   *
+   * <span class="token keyword">@return</span> ログ出力処理を連結した Promise
+   */</span>
+  <span class="token function">putCachedLogs</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator">:</span> <span class="token known-class-name class-name">Promise</span><span class="token operator">&#x3C;</span><span class="token keyword">void</span><span class="token operator">></span> <span class="token punctuation">{</span>
+    <span class="token keyword">let</span> promiseChain <span class="token operator">=</span> <span class="token known-class-name class-name">Promise</span><span class="token punctuation">.</span><span class="token method function property-access">resolve</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token comment">// キャッシュ配列がなくなるまで繰り返す</span>
+    <span class="token keyword">while</span> <span class="token punctuation">(</span><span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">cachedLogEventsQueue</span><span class="token punctuation">.</span><span class="token property-access">length</span> <span class="token operator">></span> <span class="token number">0</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token comment">// キャッシュ配列の先頭の要素を取り出す</span>
+      <span class="token keyword">const</span> loggingEvent <span class="token operator">=</span> <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">cachedLogEventsQueue</span><span class="token punctuation">.</span><span class="token method function property-access">shift</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      promiseChain <span class="token operator">=</span> promiseChain<span class="token punctuation">.</span><span class="token method function property-access">then</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+        <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">internalLogger</span><span class="token punctuation">.</span><span class="token method function property-access">debug</span><span class="token punctuation">(</span><span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">PromiseChain:[</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>loggingEvent<span class="token punctuation">.</span><span class="token property-access">messages</span><span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token interpolation-punctuation punctuation">}</span></span><span class="token string">]</span><span class="token template-punctuation string">`</span></span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">return</span> <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token method function property-access">putLog</span><span class="token punctuation">(</span>loggingEvent<span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+    <span class="token keyword">return</span> promiseChain<span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  
+  <span class="token doc-comment comment">/**
+   * ログ出力中の日付より、現在日付の方が新しくなった場合は true を返却し、ログローテートが必要であることを知らせる
+   *
+   * <span class="token keyword">@param</span> <span class="token parameter">currentDate</span> 現在日付
+   * <span class="token keyword">@return</span> ログ出力中の日付より現在日付の方が新しい場合は true
+   */</span>
+  <span class="token function">needsRotate</span><span class="token punctuation">(</span>currentDate<span class="token operator">:</span> <span class="token builtin">string</span><span class="token punctuation">)</span><span class="token operator">:</span> <span class="token builtin">boolean</span> <span class="token punctuation">{</span>
+    <span class="token keyword">return</span> <span class="token punctuation">(</span><span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">logDate</span> <span class="token operator">&#x3C;</span> currentDate<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  
+  <span class="token doc-comment comment">/**
+   * ログのローテート処理を行う
+   * 
+   * - 不要になった古いログファイルを削除し、新たな日付のログファイルを生成する
+   * - 古いファイルの削除処理に失敗した場合も、新たなログファイルの生成は行う
+   * - ログファイルの生成に失敗した場合は、呼び出し元である append() にてコンソール出力に切り替える処理を行う
+   * 
+   * <span class="token keyword">@return</span> ログファイル生成処理の結果を持った Promise
+   */</span>
+  <span class="token function">rotateLogs</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator">:</span> <span class="token known-class-name class-name">Promise</span><span class="token operator">&#x3C;</span><span class="token builtin">any</span><span class="token operator">></span> <span class="token punctuation">{</span>
+    <span class="token comment">// 古いログファイルを取得する</span>
+    <span class="token keyword">return</span> <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token method function property-access">resolveLocalFiles</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+      <span class="token punctuation">.</span><span class="token method function property-access">then</span><span class="token punctuation">(</span><span class="token punctuation">(</span>removeFiles<span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+        <span class="token comment">// 削除処理を一括で実行する</span>
+        <span class="token keyword">return</span> <span class="token known-class-name class-name">Promise</span><span class="token punctuation">.</span><span class="token method function property-access">all</span><span class="token punctuation">(</span>removeFiles<span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+        <span class="token comment">// this._resolveLocalFiles() でのエラーを吸収する</span>
+        <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">internalLogger</span><span class="token punctuation">.</span><span class="token method function property-access">warn</span><span class="token punctuation">(</span><span class="token string">'古いログファイルの取得処理に失敗'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span><span class="token punctuation">)</span>
+      <span class="token punctuation">.</span><span class="token method function property-access">then</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+        <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">internalLogger</span><span class="token punctuation">.</span><span class="token method function property-access">debug</span><span class="token punctuation">(</span><span class="token string">'古いログファイルの削除処理終了'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+        <span class="token comment">// Promise.all() が失敗してもログファイル生成は行わせる</span>
+        <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">internalLogger</span><span class="token punctuation">.</span><span class="token method function property-access">warn</span><span class="token punctuation">(</span><span class="token string">'古いログファイルの削除処理中にエラー'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span><span class="token punctuation">)</span>
+      <span class="token punctuation">.</span><span class="token method function property-access">then</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+        <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">internalLogger</span><span class="token punctuation">.</span><span class="token method function property-access">debug</span><span class="token punctuation">(</span><span class="token string">'ログファイル生成開始'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token comment">// 当日日付のログファイルを生成する</span>
+        <span class="token keyword">return</span> <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">file</span><span class="token punctuation">.</span><span class="token method function property-access">createFile</span><span class="token punctuation">(</span><span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">logDirectory</span><span class="token punctuation">,</span> <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">logFileName</span><span class="token punctuation">,</span> <span class="token boolean">true</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token comment">// ログ生成に問題があった場合は呼び出し元の catch() にてコンソール出力に切り替える</span>
+  <span class="token punctuation">}</span>
+  
+  <span class="token doc-comment comment">/**
+   * ログ出力先ディレクトリ配下のファイル一覧を取得し、削除対象ファイルを判定する getOldFiles() を呼び出す
+   *
+   * <span class="token keyword">@return</span> 削除対象ファイルの収集処理結果を持った Promise
+   */</span>
+  <span class="token function">resolveLocalFiles</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator">:</span> <span class="token known-class-name class-name">Promise</span><span class="token operator">&#x3C;</span><span class="token known-class-name class-name">Array</span><span class="token operator">&#x3C;</span><span class="token known-class-name class-name">Promise</span><span class="token operator">&#x3C;</span><span class="token builtin">any</span><span class="token operator">>>></span> <span class="token punctuation">{</span>
+    <span class="token keyword">return</span> <span class="token keyword">new</span> <span class="token class-name"><span class="token known-class-name class-name">Promise</span></span><span class="token punctuation">(</span><span class="token punctuation">(</span>resolve<span class="token punctuation">,</span> reject<span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+      <span class="token comment">// window.resolveLocalFileSystemURL の定義がないため回避する</span>
+      <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">windowRefSrv</span><span class="token punctuation">.</span><span class="token property-access">nativeWindow</span><span class="token punctuation">.</span><span class="token method function property-access">resolveLocalFileSystemURL</span><span class="token punctuation">(</span><span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">logDirectory</span><span class="token punctuation">,</span> <span class="token punctuation">(</span>fs<span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+        <span class="token comment">// ディレクトリ配下のファイル一覧を取得する</span>
+        <span class="token keyword">const</span> reader <span class="token operator">=</span> fs<span class="token punctuation">.</span><span class="token method function property-access">createReader</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        reader<span class="token punctuation">.</span><span class="token method function property-access">readEntries</span><span class="token punctuation">(</span><span class="token punctuation">(</span>entries<span class="token operator">:</span> <span class="token known-class-name class-name">Array</span><span class="token operator">&#x3C;</span><span class="token builtin">any</span><span class="token operator">></span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+          <span class="token comment">// 削除対象のファイルを収集する</span>
+          <span class="token keyword">const</span> removeFiles <span class="token operator">=</span> <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token method function property-access">getOldFiles</span><span class="token punctuation">(</span>entries<span class="token punctuation">)</span><span class="token punctuation">;</span>
+          <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">internalLogger</span><span class="token punctuation">.</span><span class="token method function property-access">debug</span><span class="token punctuation">(</span><span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">削除対象ファイル数:</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>removeFiles<span class="token punctuation">.</span><span class="token property-access">length</span><span class="token interpolation-punctuation punctuation">}</span></span><span class="token template-punctuation string">`</span></span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+          <span class="token comment">// 削除するファイルの配列を格納して Resolve する</span>
+          <span class="token function">resolve</span><span class="token punctuation">(</span>removeFiles<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token punctuation">}</span><span class="token punctuation">,</span> <span class="token punctuation">(</span>error<span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+          <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">internalLogger</span><span class="token punctuation">.</span><span class="token method function property-access">warn</span><span class="token punctuation">(</span><span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">ファイル一覧取得に失敗・古いファイルの削除処理を中止:</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>error<span class="token interpolation-punctuation punctuation">}</span></span><span class="token template-punctuation string">`</span></span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+          <span class="token function">reject</span><span class="token punctuation">(</span><span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">ファイル一覧取得に失敗・古いファイルの削除処理を中止:</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>error<span class="token interpolation-punctuation punctuation">}</span></span><span class="token template-punctuation string">`</span></span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span> <span class="token punctuation">(</span>error<span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+        <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">internalLogger</span><span class="token punctuation">.</span><span class="token method function property-access">warn</span><span class="token punctuation">(</span><span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">ディレクトリ情報取得に失敗・古いファイルの削除処理を中止:</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>error<span class="token interpolation-punctuation punctuation">}</span></span><span class="token template-punctuation string">`</span></span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token function">reject</span><span class="token punctuation">(</span><span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">ディレクトリ情報取得に失敗・古いファイルの削除処理を中止:</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>error<span class="token interpolation-punctuation punctuation">}</span></span><span class="token template-punctuation string">`</span></span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  
+  <span class="token doc-comment comment">/**
+   * 削除対象となる古いログファイルを判別し、そのファイルを削除する処理を配列に詰めて返却する
+   *
+   * <span class="token keyword">@param</span> <span class="token parameter">entries</span> FileEntry の配列オブジェクト
+   * <span class="token keyword">@return</span> 削除対象ファイルの削除処理を格納した配列
+   */</span>
+  <span class="token function">getOldFiles</span><span class="token punctuation">(</span>entries<span class="token operator">:</span> <span class="token known-class-name class-name">Array</span><span class="token operator">&#x3C;</span><span class="token builtin">any</span><span class="token operator">></span><span class="token punctuation">)</span><span class="token operator">:</span> <span class="token known-class-name class-name">Array</span><span class="token operator">&#x3C;</span><span class="token known-class-name class-name">Promise</span><span class="token operator">&#x3C;</span><span class="token builtin">any</span><span class="token operator">>></span> <span class="token punctuation">{</span>
+    <span class="token comment">// ログ出力日 'yyyyMMdd' から、現在の moment (日付) オブジェクトを作る</span>
+    <span class="token keyword">const</span> currentDate <span class="token operator">=</span> <span class="token function">moment</span><span class="token punctuation">(</span><span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">logDate</span><span class="token punctuation">,</span> <span class="token string">'YYYYMMDD'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token comment">// 対象のファイルを削除する Promise 処理を格納する配列</span>
+    <span class="token keyword">const</span> removeFiles <span class="token operator">=</span> <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token punctuation">;</span>
+    <span class="token comment">// FileEntry : isFile, isDirectory, name</span>
+    entries<span class="token punctuation">.</span><span class="token method function property-access">forEach</span><span class="token punctuation">(</span><span class="token punctuation">(</span>entry<span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+      <span class="token comment">// ロギング中のログファイル名と同じ名前で始まるログファイルのみ対象にする</span>
+      <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token operator">!</span>entry<span class="token punctuation">.</span><span class="token property-access">isFile</span> <span class="token operator">||</span> <span class="token operator">!</span>entry<span class="token punctuation">.</span><span class="token property-access">name</span><span class="token punctuation">.</span><span class="token method function property-access">startsWith</span><span class="token punctuation">(</span><span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">appenderOptions</span><span class="token punctuation">.</span><span class="token property-access">fileName</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">internalLogger</span><span class="token punctuation">.</span><span class="token method function property-access">debug</span><span class="token punctuation">(</span><span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">対象外:[</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>entry<span class="token punctuation">.</span><span class="token property-access">name</span><span class="token interpolation-punctuation punctuation">}</span></span><span class="token string">]</span><span class="token template-punctuation string">`</span></span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">return</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span>
+      
+      <span class="token comment">// ファイル名末尾の日付 'yyyyMMdd' 部分を取得する</span>
+      <span class="token keyword">const</span> dateStrSlice <span class="token operator">=</span> <span class="token operator">-</span><span class="token number">8</span><span class="token punctuation">;</span>
+      <span class="token keyword">const</span> fileDateStr <span class="token operator">=</span> entry<span class="token punctuation">.</span><span class="token property-access">name</span><span class="token punctuation">.</span><span class="token method function property-access">slice</span><span class="token punctuation">(</span>dateStrSlice<span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token comment">// 取得した文字列から moment オブジェクトを作る</span>
+      <span class="token keyword">const</span> fileDate <span class="token operator">=</span> <span class="token function">moment</span><span class="token punctuation">(</span>fileDateStr<span class="token punctuation">,</span> <span class="token string">'YYYYMMDD'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token comment">// 現在日付と比較し、差分の日数を算出する</span>
+      <span class="token keyword">const</span> diff <span class="token operator">=</span> currentDate<span class="token punctuation">.</span><span class="token method function property-access">diff</span><span class="token punctuation">(</span>fileDate<span class="token punctuation">,</span> <span class="token string">'days'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      
+      <span class="token comment">// 指定のローテート期間を過ぎていれば削除対象とする</span>
+      <span class="token keyword">if</span> <span class="token punctuation">(</span>diff <span class="token operator">></span> <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">appenderOptions</span><span class="token punctuation">.</span><span class="token property-access">rotateDays</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">internalLogger</span><span class="token punctuation">.</span><span class="token method function property-access">debug</span><span class="token punctuation">(</span><span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">削除対象:[</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>entry<span class="token punctuation">.</span><span class="token property-access">name</span><span class="token interpolation-punctuation punctuation">}</span></span><span class="token string">]</span><span class="token template-punctuation string">`</span></span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token comment">// 指定のファイルを消す処理ごと配列に詰める</span>
+        removeFiles<span class="token punctuation">.</span><span class="token method function property-access">push</span><span class="token punctuation">(</span><span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">file</span><span class="token punctuation">.</span><span class="token method function property-access">removeFile</span><span class="token punctuation">(</span><span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">logDirectory</span><span class="token punctuation">,</span> entry<span class="token punctuation">.</span><span class="token property-access">name</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span> <span class="token keyword">else</span> <span class="token punctuation">{</span>
+        <span class="token comment">// ローテート期間内であれば削除しない</span>
+        <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">internalLogger</span><span class="token punctuation">.</span><span class="token method function property-access">debug</span><span class="token punctuation">(</span><span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">削除対象外:[</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>entry<span class="token punctuation">.</span><span class="token property-access">name</span><span class="token interpolation-punctuation punctuation">}</span></span><span class="token string">]</span><span class="token template-punctuation string">`</span></span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">return</span> removeFiles<span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  
+  <span class="token doc-comment comment">/**
+   * 本 Appender の文字列表現を返す
+   *
+   * <span class="token keyword">@return</span> 本 Appender の文字列表現
+   */</span>
+  <span class="token function">toString</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator">:</span> <span class="token builtin">string</span> <span class="token punctuation">{</span>
+    <span class="token keyword">return</span> <span class="token string">'LocalFileAppender'</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+
+<span class="token doc-comment comment">/**
+ * プロバイダのエクスポート設定
+ * 
+ * @NgModule(<span class="token punctuation">{</span>
+ *   providers: [LOCAL_FILE_APPENDER_PROVIDERS]
+ * <span class="token punctuation">}</span>)
+ */</span>
+<span class="token keyword">export</span> <span class="token keyword">const</span> <span class="token constant">LOCAL_FILE_APPENDER_PROVIDERS</span> <span class="token operator">=</span> <span class="token punctuation">[</span>
+  <span class="token punctuation">{</span>
+    provide<span class="token operator">:</span> <span class="token maybe-class-name">LocalFileAppenderService</span><span class="token punctuation">,</span>
+    useClass<span class="token operator">:</span> <span class="token maybe-class-name">LocalFileAppenderService</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span>
+    provide<span class="token operator">:</span> <span class="token constant">APPENDER_OPTIONS</span><span class="token punctuation">,</span>
+    useValue<span class="token operator">:</span> <span class="token constant">APPENDER_OPTIONS</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">]</span><span class="token punctuation">;</span>
+</code></pre>
 
       </main>
       <footer id="footer">

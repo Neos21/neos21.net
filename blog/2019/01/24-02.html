@@ -68,10 +68,350 @@
   <li><a href="#%E4%BB%A5%E4%B8%8A">以上</a></li>
 </ul>
 <h2 id="まずはコード紹介"><a class="header-link" href="#まずはコード紹介"><span class="header-link-mark"></span></a>まずはコード紹介</h2>
-<p>先にマクロを紹介する。以下の Gist に上げたので、「標準モジュール」として取り込んでおき、適当な Excel マクロブックから <code>exec()</code> サブプロシージャを呼び出してあげれば OK。</p>
+<p>先にマクロを紹介する。以下のコードを「標準モジュール」として取り込んでおき、適当な Excel マクロブックから <code>exec()</code> サブプロシージャを呼び出してあげれば OK。</p>
 <ul>
-  <li><a href="https://gist.github.com/Neos21/c0eb6fa4523c159f72b5a409b5610ea6">Format Excel Workbooks · GitHub</a></li>
+  <li><code>module.bas</code></li>
 </ul>
+<pre class="language-vb"><code class="language-vb"><span class="token keyword">Option</span> Explicit
+
+<span class="token comment">' ================================================================================</span>
+<span class="token comment">' Format Excel Workbooks</span>
+<span class="token comment">'</span>
+<span class="token comment">' - Delete unnecessary names</span>
+<span class="token comment">' - Delete unnecessary styles</span>
+<span class="token comment">' - Zoom to 100%</span>
+<span class="token comment">' - Select A1 cell with scrolling</span>
+<span class="token comment">' - Select the first worksheet</span>
+<span class="token comment">' - Save it to './Modified/' directory (If the file exists in './Modified/' directory, it will be overwritten)</span>
+<span class="token comment">' ================================================================================</span>
+<span class="token comment">' CAUTIONS On MacOS</span>
+<span class="token comment">'</span>
+<span class="token comment">' - You can't use Japanese in VBA codes (Including comments)</span>
+<span class="token comment">' - Dir() function doesn't working in Mac Excel, So We use AppleScript instead</span>
+<span class="token comment">' - Path splitter is Slash (MacOS POSIX) or Colon (MacOS), not Backslash (Windows)</span>
+<span class="token comment">' - Backslash characters are removed when save the workbook on MacOS. So use Chr(92) instead</span>
+<span class="token comment">' ================================================================================</span>
+
+
+
+<span class="token comment">' The name of 'Modified' directory</span>
+<span class="token keyword">Const</span> modifiedDirectoryName <span class="token keyword">As</span> <span class="token keyword">String</span> <span class="token operator">=</span> <span class="token string">"Modified"</span>
+
+<span class="token comment">' Execute</span>
+<span class="token comment">'</span>
+<span class="token comment">' @param targetDirectoryPath Full path string of the target directory</span>
+<span class="token keyword">Sub</span> exec<span class="token punctuation">(</span><span class="token punctuation">)</span>
+  <span class="token comment">' Detect target directory path</span>
+  <span class="token keyword">Dim</span> targetDirectoryPath <span class="token keyword">As</span> <span class="token keyword">String</span>
+  targetDirectoryPath <span class="token operator">=</span> detectTargetDirectoryPath
+  
+  <span class="token keyword">If</span> targetDirectoryPath <span class="token operator">=</span> <span class="token string">""</span> <span class="token keyword">Then</span>
+    Debug<span class="token punctuation">.</span>Print <span class="token string">"Abort : Target directory path is empty"</span>
+    MsgBox <span class="token string">"ディレクトリが正しく選択されませんでした。処理を中断します"</span>
+    <span class="token keyword">Exit</span> <span class="token keyword">Sub</span>
+  <span class="token keyword">End</span> <span class="token keyword">If</span>
+  
+  <span class="token comment">' List file paths</span>
+  <span class="token keyword">Dim</span> filePaths<span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token keyword">As</span> <span class="token keyword">String</span>
+  filePaths <span class="token operator">=</span> listFilePaths<span class="token punctuation">(</span>targetDirectoryPath<span class="token punctuation">)</span>  <span class="token comment">' ex. "/path/to/directory" or "/path/to/directory/"</span>
+  
+  <span class="token keyword">If</span> UBound<span class="token punctuation">(</span>filePaths<span class="token punctuation">)</span> <span class="token operator">&#x3C;</span><span class="token operator">=</span> <span class="token number">0</span> <span class="token keyword">Then</span>
+    Debug<span class="token punctuation">.</span>Print <span class="token string">"Abort : Excel files not exist"</span>
+    MsgBox <span class="token string">"指定のディレクトリ配下に Excel ファイルがありませんでした。パスを確認してください"</span>
+    <span class="token keyword">Exit</span> <span class="token keyword">Sub</span>
+  <span class="token keyword">End</span> <span class="token keyword">If</span>
+  
+  Application<span class="token punctuation">.</span>ScreenUpdating <span class="token operator">=</span> <span class="token boolean">False</span>
+  Application<span class="token punctuation">.</span>DisplayAlerts <span class="token operator">=</span> <span class="token boolean">False</span>
+  
+  <span class="token comment">' Detect path splitter</span>
+  <span class="token keyword">Dim</span> pathSplitter <span class="token keyword">As</span> <span class="token keyword">String</span>
+  pathSplitter <span class="token operator">=</span> detectPathSplitter
+  
+  <span class="token comment">' Make './Modified/' directory</span>
+  makeModifiedDirectory targetDirectoryPath<span class="token punctuation">,</span> pathSplitter
+  
+  <span class="token keyword">Dim</span> filePath <span class="token keyword">As</span> <span class="token keyword">Variant</span>  <span class="token comment">' For Each needs Variant</span>
+  <span class="token keyword">For</span> <span class="token keyword">Each</span> filePath <span class="token keyword">In</span> filePaths<span class="token punctuation">(</span><span class="token punctuation">)</span>
+    formatWorkbook filePath<span class="token punctuation">,</span> pathSplitter
+  <span class="token keyword">Next</span> filePath
+   
+  Application<span class="token punctuation">.</span>DisplayAlerts <span class="token operator">=</span> <span class="token boolean">True</span>
+  Application<span class="token punctuation">.</span>ScreenUpdating <span class="token operator">=</span> <span class="token boolean">True</span>
+  
+  MsgBox <span class="token string">"完了"</span>
+<span class="token keyword">End</span> <span class="token keyword">Sub</span>
+
+<span class="token comment">' Detect target directory path</span>
+<span class="token comment">'</span>
+<span class="token comment">' @return Target directory path</span>
+<span class="token keyword">Private</span> <span class="token keyword">Function</span> detectTargetDirectoryPath<span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token keyword">As</span> <span class="token keyword">String</span>
+  <span class="token keyword">Dim</span> targetDirectoryPath <span class="token keyword">As</span> <span class="token keyword">String</span>
+  
+  <span class="token keyword">If</span> Application<span class="token punctuation">.</span>OperatingSystem <span class="token keyword">Like</span> <span class="token string">"*Mac*"</span> <span class="token keyword">Then</span>
+    Debug<span class="token punctuation">.</span>Print <span class="token string">"MacOS : Detect target directory path"</span>
+    
+    <span class="token comment">' Ignore AppleScript runtime error</span>
+    <span class="token keyword">On</span> <span class="token keyword">Error</span> <span class="token keyword">Resume</span> <span class="token keyword">Next</span>
+    
+    <span class="token comment">' For allowing access to the directory</span>
+    targetDirectoryPath <span class="token operator">=</span> MacScript<span class="token punctuation">(</span><span class="token string">"choose folder as string"</span><span class="token punctuation">)</span>
+    
+    <span class="token keyword">If</span> Err<span class="token punctuation">.</span>Number <span class="token operator">&#x3C;</span><span class="token operator">></span> <span class="token number">0</span> <span class="token keyword">Then</span>
+      Debug<span class="token punctuation">.</span>Print <span class="token string">"Abort : Cancelled or runtime error : "</span> <span class="token operator">&#x26;</span> Err<span class="token punctuation">.</span>Number <span class="token operator">&#x26;</span> <span class="token string">" : "</span> <span class="token operator">&#x26;</span> Err<span class="token punctuation">.</span>Description
+      <span class="token keyword">Exit</span> <span class="token keyword">Function</span>
+    <span class="token keyword">End</span> <span class="token keyword">If</span>
+    
+    <span class="token keyword">If</span> targetDirectoryPath <span class="token operator">=</span> <span class="token string">""</span> <span class="token keyword">Then</span>
+      Debug<span class="token punctuation">.</span>Print <span class="token string">"Abort : Cancelled or invalid path"</span>
+      <span class="token keyword">Exit</span> <span class="token keyword">Function</span>
+    <span class="token keyword">End</span> <span class="token keyword">If</span>
+    
+    <span class="token comment">' Replace to POSIX path with single quote</span>
+    targetDirectoryPath <span class="token operator">=</span> MacScript<span class="token punctuation">(</span><span class="token string">"tell text 1 thru -2 of "</span> <span class="token operator">&#x26;</span> Chr<span class="token punctuation">(</span><span class="token number">34</span><span class="token punctuation">)</span> <span class="token operator">&#x26;</span> targetDirectoryPath <span class="token operator">&#x26;</span> Chr<span class="token punctuation">(</span><span class="token number">34</span><span class="token punctuation">)</span> <span class="token operator">&#x26;</span> <span class="token string">" to return quoted form of it's POSIX Path"</span><span class="token punctuation">)</span>
+    <span class="token comment">' Remove single quote</span>
+    targetDirectoryPath <span class="token operator">=</span> Replace<span class="token punctuation">(</span>targetDirectoryPath<span class="token punctuation">,</span> <span class="token string">"'"</span><span class="token punctuation">,</span> <span class="token string">""</span><span class="token punctuation">)</span>
+    
+    <span class="token keyword">On</span> <span class="token keyword">Error</span> <span class="token keyword">GoTo</span> <span class="token number">0</span>
+    Debug<span class="token punctuation">.</span>Print targetDirectoryPath
+    detectTargetDirectoryPath <span class="token operator">=</span> targetDirectoryPath
+  <span class="token keyword">Else</span>
+    Debug<span class="token punctuation">.</span>Print <span class="token string">"Windows : Detect target directory path"</span>
+    
+     <span class="token comment">' Application.FileDialog(msoFileDialogFolderPicker) can't use when exec on MacOS</span>
+    targetDirectoryPath <span class="token operator">=</span> Application<span class="token punctuation">.</span>InputBox<span class="token punctuation">(</span>Prompt<span class="token punctuation">:</span><span class="token operator">=</span><span class="token string">"対象ディレクトリへのフルパスを指定してください"</span><span class="token punctuation">,</span> Title<span class="token punctuation">:</span><span class="token operator">=</span><span class="token string">"対象ディレクトリへのフルパスを指定してください"</span><span class="token punctuation">,</span> <span class="token keyword">Type</span><span class="token punctuation">:</span><span class="token operator">=</span><span class="token number">2</span><span class="token punctuation">)</span>
+    
+    <span class="token keyword">If</span> targetDirectoryPath <span class="token operator">=</span> <span class="token string">"False"</span> <span class="token keyword">Or</span> targetDirectoryPath <span class="token operator">=</span> <span class="token string">""</span> <span class="token keyword">Then</span>
+      Debug<span class="token punctuation">.</span>Print <span class="token string">"Abort : Cancelled or invalid path"</span>
+      <span class="token keyword">Exit</span> <span class="token keyword">Function</span>
+    <span class="token keyword">End</span> <span class="token keyword">If</span>
+    
+    Debug<span class="token punctuation">.</span>Print targetDirectoryPath
+    detectTargetDirectoryPath <span class="token operator">=</span> targetDirectoryPath
+  <span class="token keyword">End</span> <span class="token keyword">If</span>
+<span class="token keyword">End</span> <span class="token keyword">Function</span>
+
+<span class="token comment">' List file paths</span>
+<span class="token comment">'</span>
+<span class="token comment">' @param targetDirectoryPath Full path string of the target directory</span>
+<span class="token comment">' @return Array of full path string of the files under the target directory</span>
+<span class="token keyword">Private</span> <span class="token keyword">Function</span> listFilePaths<span class="token punctuation">(</span><span class="token keyword">ByVal</span> targetDirectoryPath <span class="token keyword">As</span> <span class="token keyword">String</span><span class="token punctuation">)</span> <span class="token keyword">As</span> <span class="token keyword">String</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+  <span class="token keyword">Dim</span> filePaths<span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token keyword">As</span> <span class="token keyword">String</span>
+  
+  <span class="token keyword">If</span> Application<span class="token punctuation">.</span>OperatingSystem <span class="token keyword">Like</span> <span class="token string">"*Mac*"</span> <span class="token keyword">Then</span>
+    Debug<span class="token punctuation">.</span>Print <span class="token string">"MacOS : List file paths"</span>
+    
+    <span class="token comment">' Ignore AppleScript runtime error</span>
+    <span class="token keyword">On</span> <span class="token keyword">Error</span> <span class="token keyword">Resume</span> <span class="token keyword">Next</span>
+    
+    <span class="token comment">' Find Excel files : do shell script "find -E '/path/to/directory' -type f -iregex '.*.[xls|xlsx|xlsm]' -maxdepth 1"</span>
+    <span class="token keyword">Dim</span> appleScript <span class="token keyword">As</span> <span class="token keyword">String</span>
+    appleScript <span class="token operator">=</span> <span class="token string">"do shell script "</span> <span class="token operator">&#x26;</span> Chr<span class="token punctuation">(</span><span class="token number">34</span><span class="token punctuation">)</span> <span class="token operator">&#x26;</span> <span class="token string">"find -E '"</span> <span class="token operator">&#x26;</span> targetDirectoryPath <span class="token operator">&#x26;</span> <span class="token string">"' -type f -iregex '.*.[xls|xlsx|xlsm]' -maxdepth 1"</span> <span class="token operator">&#x26;</span> Chr<span class="token punctuation">(</span><span class="token number">34</span><span class="token punctuation">)</span>
+    Debug<span class="token punctuation">.</span>Print appleScript
+    
+    <span class="token comment">' Execute AppleScript</span>
+    <span class="token keyword">Dim</span> result <span class="token keyword">As</span> <span class="token keyword">String</span>
+    result <span class="token operator">=</span> MacScript<span class="token punctuation">(</span>appleScript<span class="token punctuation">)</span>
+    
+    <span class="token keyword">If</span> Err<span class="token punctuation">.</span>Number <span class="token operator">&#x3C;</span><span class="token operator">></span> <span class="token number">0</span> <span class="token keyword">Then</span>
+      Debug<span class="token punctuation">.</span>Print <span class="token string">"Abort : Failure to find files"</span>
+      MsgBox <span class="token string">"ファイル一覧の取得に失敗しました。処理を中断します："</span> <span class="token operator">&#x26;</span> vbCrLf <span class="token operator">&#x26;</span> Err<span class="token punctuation">.</span>Number <span class="token operator">&#x26;</span> <span class="token string">" : "</span> <span class="token operator">&#x26;</span> Err<span class="token punctuation">.</span>Description
+      <span class="token keyword">Exit</span> <span class="token keyword">Function</span>
+    <span class="token keyword">End</span> <span class="token keyword">If</span>
+    
+    Debug<span class="token punctuation">.</span>Print result
+    <span class="token keyword">On</span> <span class="token keyword">Error</span> <span class="token keyword">GoTo</span> <span class="token number">0</span>
+    
+    <span class="token comment">' Split by CR</span>
+    filePaths <span class="token operator">=</span> Split<span class="token punctuation">(</span>result<span class="token punctuation">,</span> vbCr<span class="token punctuation">)</span>
+    
+    <span class="token comment">' When result is empty, UBound(filePaths) is -1</span>
+    <span class="token keyword">If</span> UBound<span class="token punctuation">(</span>filePaths<span class="token punctuation">)</span> <span class="token operator">&#x3C;</span> <span class="token number">0</span> <span class="token keyword">Then</span>
+      <span class="token keyword">ReDim</span> filePaths<span class="token punctuation">(</span><span class="token number">0</span><span class="token punctuation">)</span>
+    <span class="token keyword">End</span> <span class="token keyword">If</span>
+    
+    Debug<span class="token punctuation">.</span>Print UBound<span class="token punctuation">(</span>filePaths<span class="token punctuation">)</span> <span class="token operator">&#x26;</span> <span class="token string">" files"</span>
+    listFilePaths <span class="token operator">=</span> filePaths
+    <span class="token keyword">Exit</span> <span class="token keyword">Function</span>
+  <span class="token keyword">Else</span>
+    Debug<span class="token punctuation">.</span>Print <span class="token string">"Windows : List file paths"</span>
+    
+    <span class="token keyword">Dim</span> pathSplitter <span class="token keyword">As</span> <span class="token keyword">String</span><span class="token punctuation">:</span> pathSplitter <span class="token operator">=</span> Chr<span class="token punctuation">(</span><span class="token number">92</span><span class="token punctuation">)</span>  <span class="token comment">' Backslash (Because of MacOS removing backslash characters)</span>
+    <span class="token keyword">ReDim</span> filePaths<span class="token punctuation">(</span><span class="token number">0</span><span class="token punctuation">)</span>
+    
+    <span class="token comment">' Find files</span>
+    <span class="token keyword">Dim</span> fileName <span class="token keyword">As</span> <span class="token keyword">String</span>
+    fileName <span class="token operator">=</span> Dir<span class="token punctuation">(</span>targetDirectoryPath <span class="token operator">&#x26;</span> pathSplitter <span class="token operator">&#x26;</span> <span class="token string">"*.*"</span><span class="token punctuation">)</span>
+    
+    <span class="token keyword">Do</span> <span class="token keyword">While</span> fileName <span class="token operator">&#x3C;</span><span class="token operator">></span> <span class="token string">""</span>
+      <span class="token comment">' Find only Excel files</span>
+      <span class="token keyword">If</span> Right<span class="token punctuation">(</span>fileName<span class="token punctuation">,</span> <span class="token number">4</span><span class="token punctuation">)</span> <span class="token operator">=</span> <span class="token string">".xls"</span> <span class="token keyword">Or</span> Right<span class="token punctuation">(</span>fileName<span class="token punctuation">,</span> <span class="token number">5</span><span class="token punctuation">)</span> <span class="token operator">=</span> <span class="token string">".xlsx"</span> <span class="token keyword">Or</span> Right<span class="token punctuation">(</span>fileName<span class="token punctuation">,</span> <span class="token number">5</span><span class="token punctuation">)</span> <span class="token operator">=</span> <span class="token string">".xlsm"</span> <span class="token keyword">Then</span>
+        <span class="token keyword">Dim</span> filePath <span class="token keyword">As</span> <span class="token keyword">String</span><span class="token punctuation">:</span> filePath <span class="token operator">=</span> targetDirectoryPath <span class="token operator">&#x26;</span> pathSplitter <span class="token operator">&#x26;</span> fileName
+        <span class="token comment">' Push (and extend)</span>
+        filePaths<span class="token punctuation">(</span>UBound<span class="token punctuation">(</span>filePaths<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token operator">=</span> filePath
+        <span class="token keyword">ReDim</span> Preserve filePaths<span class="token punctuation">(</span>UBound<span class="token punctuation">(</span>filePaths<span class="token punctuation">)</span> <span class="token operator">+</span> <span class="token number">1</span><span class="token punctuation">)</span>
+      <span class="token keyword">End</span> <span class="token keyword">If</span>
+      <span class="token comment">' Next file</span>
+      fileName <span class="token operator">=</span> Dir<span class="token punctuation">(</span><span class="token punctuation">)</span>
+    <span class="token keyword">Loop</span>
+    
+    <span class="token comment">' Adjust length</span>
+    <span class="token keyword">If</span> UBound<span class="token punctuation">(</span>filePaths<span class="token punctuation">)</span> <span class="token operator">></span> <span class="token number">0</span> <span class="token keyword">Then</span>
+      <span class="token keyword">ReDim</span> Preserve filePaths<span class="token punctuation">(</span>UBound<span class="token punctuation">(</span>filePaths<span class="token punctuation">)</span> <span class="token operator">-</span> <span class="token number">1</span><span class="token punctuation">)</span>
+    <span class="token keyword">End</span> <span class="token keyword">If</span>
+    
+    Debug<span class="token punctuation">.</span>Print UBound<span class="token punctuation">(</span>filePaths<span class="token punctuation">)</span> <span class="token operator">&#x26;</span> <span class="token string">" files"</span>
+    listFilePaths <span class="token operator">=</span> filePaths
+    <span class="token keyword">Exit</span> <span class="token keyword">Function</span>
+  <span class="token keyword">End</span> <span class="token keyword">If</span>
+<span class="token keyword">End</span> <span class="token keyword">Function</span>
+
+<span class="token comment">' Detect path splitter</span>
+<span class="token comment">'</span>
+<span class="token comment">' @return Slash (MacOS) or Backslash (Windows)</span>
+<span class="token keyword">Private</span> <span class="token keyword">Function</span> detectPathSplitter<span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token keyword">As</span> <span class="token keyword">String</span>
+  <span class="token keyword">If</span> Application<span class="token punctuation">.</span>OperatingSystem <span class="token keyword">Like</span> <span class="token string">"*Mac*"</span> <span class="token keyword">Then</span>
+    detectPathSplitter <span class="token operator">=</span> <span class="token string">"/"</span>
+  <span class="token keyword">Else</span>
+    detectPathSplitter <span class="token operator">=</span> Chr<span class="token punctuation">(</span><span class="token number">92</span><span class="token punctuation">)</span>  <span class="token comment">' Backslash (Because of MacOS removing backslash characters)</span>
+  <span class="token keyword">End</span> <span class="token keyword">If</span>
+<span class="token keyword">End</span> <span class="token keyword">Function</span>
+
+<span class="token comment">' Make './Modified/' directory if it doesn't exist</span>
+<span class="token comment">'</span>
+<span class="token comment">' @param targetDirectory Path Full path string of the target directory</span>
+<span class="token comment">' @param pathSplitter Character of path splitter. Slash (MacOS) or Backslash (Windows)</span>
+<span class="token keyword">Private</span> <span class="token keyword">Sub</span> makeModifiedDirectory<span class="token punctuation">(</span><span class="token keyword">ByVal</span> targetDirectoryPath <span class="token keyword">As</span> <span class="token keyword">String</span><span class="token punctuation">,</span> <span class="token keyword">ByVal</span> pathSplitter <span class="token keyword">As</span> <span class="token keyword">String</span><span class="token punctuation">)</span>
+  <span class="token keyword">Dim</span> modifiedDirectoryPath <span class="token keyword">As</span> <span class="token keyword">String</span><span class="token punctuation">:</span> modifiedDirectoryPath <span class="token operator">=</span> targetDirectoryPath <span class="token operator">&#x26;</span> pathSplitter <span class="token operator">&#x26;</span> modifiedDirectoryName
+  
+  <span class="token keyword">Dim</span> pathExists <span class="token keyword">As</span> <span class="token keyword">String</span><span class="token punctuation">:</span> pathExists <span class="token operator">=</span> Dir<span class="token punctuation">(</span>modifiedDirectoryPath<span class="token punctuation">,</span> vbDirectory<span class="token punctuation">)</span>
+  <span class="token keyword">If</span> pathExists <span class="token operator">=</span> <span class="token string">""</span> <span class="token keyword">Then</span>
+    Debug<span class="token punctuation">.</span>Print <span class="token string">"Modified directory does not exist. Make it"</span>
+    MkDir modifiedDirectoryPath
+  <span class="token keyword">Else</span>
+    Debug<span class="token punctuation">.</span>Print <span class="token string">"Modified directory already exists"</span>
+  <span class="token keyword">End</span> <span class="token keyword">If</span>
+<span class="token keyword">End</span> <span class="token keyword">Sub</span>
+ 
+<span class="token comment">' Format the workbook</span>
+<span class="token comment">'</span>
+<span class="token comment">' @param filePath Full path string of the target workbook</span>
+<span class="token comment">' @param pathSplitter Character of path splitter. Slash (MacOS) or Backslash (Windows)</span>
+<span class="token keyword">Private</span> <span class="token keyword">Sub</span> formatWorkbook<span class="token punctuation">(</span><span class="token keyword">ByVal</span> filePath <span class="token keyword">As</span> <span class="token keyword">String</span><span class="token punctuation">,</span> <span class="token keyword">ByVal</span> pathSplitter <span class="token keyword">As</span> <span class="token keyword">String</span><span class="token punctuation">)</span>
+  Debug<span class="token punctuation">.</span>Print <span class="token string">"Exec format : "</span> <span class="token operator">&#x26;</span> filePath
+  
+  <span class="token keyword">Dim</span> targetWorkbook <span class="token keyword">As</span> Workbook
+  
+  <span class="token comment">' Open the workbook</span>
+  <span class="token keyword">On</span> <span class="token keyword">Error</span> <span class="token keyword">GoTo</span> failureOpen
+  <span class="token keyword">Set</span> targetWorkbook <span class="token operator">=</span> Workbooks<span class="token punctuation">.</span>Open<span class="token punctuation">(</span>filePath<span class="token punctuation">)</span>
+  <span class="token keyword">On</span> <span class="token keyword">Error</span> <span class="token keyword">GoTo</span> <span class="token number">0</span>
+  
+  <span class="token comment">' Execute Subs</span>
+  deleteNames
+  deleteStyles
+  setHomePosition
+  
+   <span class="token comment">' Save as './Modified/' directory</span>
+  saveWorkbook pathSplitter
+  <span class="token comment">' Close</span>
+  <span class="token keyword">On</span> <span class="token keyword">Error</span> <span class="token keyword">Resume</span> <span class="token keyword">Next</span>
+  targetWorkbook<span class="token punctuation">.</span>Close
+  <span class="token keyword">On</span> <span class="token keyword">Error</span> <span class="token keyword">GoTo</span> <span class="token number">0</span>
+  <span class="token keyword">Exit</span> <span class="token keyword">Sub</span>
+failureOpen<span class="token punctuation">:</span>
+  Debug<span class="token punctuation">.</span>Print <span class="token string">"Failure to open the workbook : "</span> <span class="token operator">&#x26;</span> filePath
+  MsgBox <span class="token string">"ブックを開けませんでした"</span> <span class="token operator">&#x26;</span> vbCrLf <span class="token operator">&#x26;</span> filePath
+  <span class="token keyword">Exit</span> <span class="token keyword">Sub</span>
+<span class="token keyword">End</span> <span class="token keyword">Sub</span>
+
+<span class="token comment">' Delete Names</span>
+<span class="token comment">'</span>
+<span class="token comment">' This Sub uses ActiveWorkbook</span>
+<span class="token keyword">Private</span> <span class="token keyword">Sub</span> deleteNames<span class="token punctuation">(</span><span class="token punctuation">)</span>
+  <span class="token keyword">On</span> <span class="token keyword">Error</span> <span class="token keyword">Resume</span> <span class="token keyword">Next</span>
+  <span class="token keyword">Dim</span> name <span class="token keyword">As</span> <span class="token keyword">Variant</span>
+  <span class="token keyword">For</span> <span class="token keyword">Each</span> name <span class="token keyword">In</span> ActiveWorkbook<span class="token punctuation">.</span>Names
+    <span class="token keyword">If</span> InStr<span class="token punctuation">(</span>name<span class="token punctuation">.</span>name<span class="token punctuation">,</span> <span class="token string">"Print_Area"</span><span class="token punctuation">)</span> <span class="token operator">=</span> <span class="token number">0</span> <span class="token keyword">And</span> InStr<span class="token punctuation">(</span>name<span class="token punctuation">.</span>name<span class="token punctuation">,</span> <span class="token string">"Print_Titles"</span><span class="token punctuation">)</span> <span class="token operator">=</span> <span class="token number">0</span> <span class="token keyword">And</span> <span class="token keyword">Not</span> name<span class="token punctuation">.</span>BuiltIn <span class="token keyword">Then</span>
+      name<span class="token punctuation">.</span>Delete
+    <span class="token keyword">End</span> <span class="token keyword">If</span>
+  <span class="token keyword">Next</span>
+  <span class="token keyword">On</span> <span class="token keyword">Error</span> <span class="token keyword">GoTo</span> <span class="token number">0</span>
+<span class="token keyword">End</span> <span class="token keyword">Sub</span>
+
+<span class="token comment">' Delete Styles</span>
+<span class="token comment">'</span>
+<span class="token comment">' This Sub uses ActiveWorkbook</span>
+<span class="token keyword">Private</span> <span class="token keyword">Sub</span> deleteStyles<span class="token punctuation">(</span><span class="token punctuation">)</span>
+  <span class="token keyword">On</span> <span class="token keyword">Error</span> <span class="token keyword">Resume</span> <span class="token keyword">Next</span>
+  <span class="token keyword">Dim</span> style <span class="token keyword">As</span> <span class="token keyword">Variant</span>
+  <span class="token keyword">For</span> <span class="token keyword">Each</span> style <span class="token keyword">In</span> ActiveWorkbook<span class="token punctuation">.</span>Styles
+    <span class="token keyword">If</span> <span class="token keyword">Not</span> style<span class="token punctuation">.</span>BuiltIn <span class="token keyword">Then</span>
+      style<span class="token punctuation">.</span>Delete
+    <span class="token keyword">End</span> <span class="token keyword">If</span>
+  <span class="token keyword">Next</span>
+  <span class="token keyword">On</span> <span class="token keyword">Error</span> <span class="token keyword">GoTo</span> <span class="token number">0</span>
+<span class="token keyword">End</span> <span class="token keyword">Sub</span>
+
+<span class="token comment">' Set Home Position</span>
+<span class="token comment">'</span>
+<span class="token comment">' This Sub uses ActiveWorkbook</span>
+<span class="token keyword">Private</span> <span class="token keyword">Sub</span> setHomePosition<span class="token punctuation">(</span><span class="token punctuation">)</span>
+  <span class="token keyword">Dim</span> ws <span class="token keyword">As</span> <span class="token keyword">Variant</span>
+  <span class="token keyword">For</span> <span class="token keyword">Each</span> ws <span class="token keyword">In</span> ActiveWorkbook<span class="token punctuation">.</span>Worksheets
+    <span class="token keyword">If</span> Worksheets<span class="token punctuation">(</span>ws<span class="token punctuation">.</span>name<span class="token punctuation">)</span><span class="token punctuation">.</span>Visible <span class="token operator">=</span> <span class="token boolean">True</span> <span class="token keyword">Then</span>
+      Worksheets<span class="token punctuation">(</span>ws<span class="token punctuation">.</span>name<span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token keyword">Select</span>
+      <span class="token comment">' Zoom to 100%</span>
+      ActiveWindow<span class="token punctuation">.</span>Zoom <span class="token operator">=</span> <span class="token number">100</span>
+      <span class="token comment">' Select A1 cell with scrolling</span>
+      Application<span class="token punctuation">.</span><span class="token keyword">Goto</span> Reference<span class="token punctuation">:</span><span class="token operator">=</span>ActiveWindow<span class="token punctuation">.</span>ActiveSheet<span class="token punctuation">.</span>Range<span class="token punctuation">(</span><span class="token string">"A1"</span><span class="token punctuation">)</span><span class="token punctuation">,</span> Scroll<span class="token punctuation">:</span><span class="token operator">=</span><span class="token boolean">True</span>
+    <span class="token keyword">End</span> <span class="token keyword">If</span>
+  <span class="token keyword">Next</span>
+  
+  <span class="token comment">' Select the first worksheet</span>
+  <span class="token keyword">For</span> <span class="token keyword">Each</span> ws <span class="token keyword">In</span> ActiveWorkbook<span class="token punctuation">.</span>Worksheets
+    <span class="token keyword">If</span> Worksheets<span class="token punctuation">(</span>ws<span class="token punctuation">.</span>name<span class="token punctuation">)</span><span class="token punctuation">.</span>Visible <span class="token operator">=</span> <span class="token boolean">True</span> <span class="token keyword">Then</span>
+      Worksheets<span class="token punctuation">(</span>ws<span class="token punctuation">.</span>name<span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token keyword">Select</span>
+      <span class="token keyword">Exit</span> <span class="token keyword">For</span>
+    <span class="token keyword">End</span> <span class="token keyword">If</span>
+  <span class="token keyword">Next</span>
+<span class="token keyword">End</span> <span class="token keyword">Sub</span>
+
+<span class="token comment">' Save Workbook</span>
+<span class="token comment">'</span>
+<span class="token comment">' This Sub uses ActiveWorkbook</span>
+<span class="token comment">'</span>
+<span class="token comment">' @param pathSplitter Character of path splitter. Slash (MacOS) or Backslash (Windows)</span>
+<span class="token keyword">Private</span> <span class="token keyword">Sub</span> saveWorkbook<span class="token punctuation">(</span><span class="token keyword">ByVal</span> pathSplitter <span class="token keyword">As</span> <span class="token keyword">String</span><span class="token punctuation">)</span>
+  <span class="token comment">' Create file name : ex. '/path/to/directory/Modified/Book.xls'</span>
+  <span class="token keyword">Dim</span> fileName <span class="token keyword">As</span> <span class="token keyword">String</span><span class="token punctuation">:</span> fileName <span class="token operator">=</span> ActiveWorkbook<span class="token punctuation">.</span>path <span class="token operator">&#x26;</span> pathSplitter <span class="token operator">&#x26;</span> modifiedDirectoryName <span class="token operator">&#x26;</span> pathSplitter <span class="token operator">&#x26;</span> ActiveWorkbook<span class="token punctuation">.</span>name
+  
+  <span class="token keyword">If</span> Right<span class="token punctuation">(</span>ActiveWorkbook<span class="token punctuation">.</span>name<span class="token punctuation">,</span> <span class="token number">5</span><span class="token punctuation">)</span> <span class="token operator">=</span> <span class="token string">".xlsx"</span> <span class="token keyword">Or</span> Right<span class="token punctuation">(</span>ActiveWorkbook<span class="token punctuation">.</span>name<span class="token punctuation">,</span> <span class="token number">5</span><span class="token punctuation">)</span> <span class="token operator">=</span> <span class="token string">".xlsm"</span> <span class="token keyword">Then</span>
+    Debug<span class="token punctuation">.</span>Print <span class="token string">"Save it to same extension (.xlsx or .xlsm)"</span>
+    <span class="token keyword">On</span> <span class="token keyword">Error</span> <span class="token keyword">Resume</span> <span class="token keyword">Next</span>
+    ActiveWorkbook<span class="token punctuation">.</span>SaveAs fileName<span class="token punctuation">:</span><span class="token operator">=</span>fileName
+    <span class="token keyword">On</span> <span class="token keyword">Error</span> <span class="token keyword">GoTo</span> <span class="token number">0</span>
+    <span class="token keyword">Exit</span> <span class="token keyword">Sub</span>
+  <span class="token keyword">ElseIf</span> Right<span class="token punctuation">(</span>ActiveWorkbook<span class="token punctuation">.</span>name<span class="token punctuation">,</span> <span class="token number">4</span><span class="token punctuation">)</span> <span class="token operator">=</span> <span class="token string">".xls"</span> <span class="token keyword">Then</span>
+    <span class="token comment">' Convert '.xls' to '.xlsx' or '.xlsm'</span>
+    <span class="token keyword">If</span> ActiveWorkbook<span class="token punctuation">.</span>HasVBProject <span class="token keyword">Then</span>
+      Debug<span class="token punctuation">.</span>Print <span class="token string">"Save as '.xlsm'"</span>
+      <span class="token keyword">On</span> <span class="token keyword">Error</span> <span class="token keyword">Resume</span> <span class="token keyword">Next</span>
+      ActiveWorkbook<span class="token punctuation">.</span>SaveAs fileName<span class="token punctuation">:</span><span class="token operator">=</span>fileName <span class="token operator">&#x26;</span> <span class="token string">"m"</span><span class="token punctuation">,</span> FileFormat<span class="token punctuation">:</span><span class="token operator">=</span>xlOpenXMLWorkbookMacroEnabled
+      <span class="token keyword">On</span> <span class="token keyword">Error</span> <span class="token keyword">GoTo</span> <span class="token number">0</span>
+      <span class="token keyword">Exit</span> <span class="token keyword">Sub</span>
+    <span class="token keyword">Else</span>
+      Debug<span class="token punctuation">.</span>Print <span class="token string">"Save as '.xlsx'"</span>
+      <span class="token keyword">On</span> <span class="token keyword">Error</span> <span class="token keyword">Resume</span> <span class="token keyword">Next</span>
+      ActiveWorkbook<span class="token punctuation">.</span>SaveAs fileName<span class="token punctuation">:</span><span class="token operator">=</span>fileName <span class="token operator">&#x26;</span> <span class="token string">"x"</span><span class="token punctuation">,</span> FileFormat<span class="token punctuation">:</span><span class="token operator">=</span>xlOpenXMLWorkbook
+      <span class="token keyword">On</span> <span class="token keyword">Error</span> <span class="token keyword">GoTo</span> <span class="token number">0</span>
+      <span class="token keyword">Exit</span> <span class="token keyword">Sub</span>
+    <span class="token keyword">End</span> <span class="token keyword">If</span>
+  <span class="token keyword">Else</span>
+    Debug<span class="token punctuation">.</span>Print <span class="token string">"Unspported file format : "</span> <span class="token operator">&#x26;</span> ActiveWorkbook<span class="token punctuation">.</span>name
+  <span class="token keyword">End</span> <span class="token keyword">If</span>
+<span class="token keyword">End</span> <span class="token keyword">Sub</span>
+</code></pre>
 <p>コードコメントが英語なのは、Mac の VBEditor で日本語入力できないため。英文法メチャクチャで恥ずかしいから、なるべく個々の関数を簡素に作って、簡単な単語で伝わるようにした…。</p>
 <p>以降、説明。</p>
 <h2 id="このマクロがやれること"><a class="header-link" href="#このマクロがやれること"><span class="header-link-mark"></span></a>このマクロがやれること</h2>

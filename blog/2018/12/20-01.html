@@ -64,10 +64,168 @@
 <p>対して、Windows のエクスプローラで見えるフォルダ名やファイル名は、「NFC」という形式で Unicode 正規化されている。コチラは通常どおり、「ガ」で1文字、「プ」で1文字とする仕様だ。</p>
 <p>複数の Markdown ファイルを書いていて、Markdown ファイル同士のリンクを書いていたのだが、Mac ユーザは Finder から、Windows ユーザはエクスプローラから、リンク先のファイル名をコピペして Markdown リンクを書いていたため、リンクパスに NFD 正規化された文字列と NFC 正規化された文字列とが混在してしまうことになった。こうなると、Mac 環境では Windows ユーザが書いた Markdown リンクが効かないし、Windows ユーザは Mac 環境で書いたリンクが効かない。</p>
 <p>コレは不便だということで、指定のディレクトリ配下にある Markdown ファイルを全て拾い上げて、その中に <em>NFD 文字が出てきたら NFC 文字に変換</em>する Node.js スクリプトと、その逆に <strong>NFC 文字を NFD 文字に変換する</strong> Node.js スクリプトの2つを作った。</p>
-<p>ソースコードは以下の Gist に上げた。</p>
+<p>ソースコードは以下の4ファイル分。</p>
 <ul>
-  <li><a href="https://gist.github.com/Neos21/cad4fce6addb27067f7eda18f0dc6cae">指定ディレクトリ配下の Markdown ファイルに含まれる NFD・NFC 文字を一括変換する : 要「replace」「unorm」パッケージ · GitHub</a></li>
+  <li><code>nfd-to-nfc.js</code></li>
 </ul>
+<pre class="language-javascript"><code class="language-javascript"><span class="token comment">/*!
+ * Markdown リンクや画像貼付部分の文字列から NFD 文字を検索し NFC 文字に変換するスクリプト
+ */</span>
+
+<span class="token comment">// ファイル置換用に使用するパッケージ</span>
+<span class="token keyword">const</span> replace <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'replace'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token comment">// NFD 文字を生成するためのパッケージ</span>
+<span class="token keyword">const</span> unorm <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'unorm'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// unorm パッケージの変換結果から NFD 形式の文字列で使用される濁点と半濁点を取得し、コレを検索する</span>
+<span class="token keyword">const</span> strs <span class="token operator">=</span> <span class="token string">'ビ'</span><span class="token punctuation">.</span><span class="token method function property-access">normalize</span><span class="token punctuation">(</span><span class="token string">'NFD'</span><span class="token punctuation">)</span><span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span> <span class="token operator">+</span> <span class="token string">'ピ'</span><span class="token punctuation">.</span><span class="token method function property-access">normalize</span><span class="token punctuation">(</span><span class="token string">'NFD'</span><span class="token punctuation">)</span><span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span><span class="token punctuation">;</span>
+
+<span class="token function">replace</span><span class="token punctuation">(</span><span class="token punctuation">{</span>
+  <span class="token comment">// Markdown リンクや画像貼付で登場する「](」「)」の間に検索対象文字が含まれている箇所を検索する</span>
+  regex<span class="token operator">:</span> <span class="token keyword">new</span> <span class="token class-name">RegExp</span><span class="token punctuation">(</span>   <span class="token string">'('</span>
+                         <span class="token operator">+</span> <span class="token string">'\\]\\('</span>        <span class="token comment">// "]("</span>
+                         <span class="token operator">+</span> <span class="token string">'(?!(#|http))'</span>  <span class="token comment">// "#" (ページ内リンク) か "http" (外部リンク) 始まりを除外する</span>
+                         <span class="token operator">+</span> <span class="token string">'.*?'</span>           <span class="token comment">// 任意文字列 (閉じカッコ ")" までの最短マッチ用「?」)</span>
+                     <span class="token operator">+</span> <span class="token string">')'</span>
+                     <span class="token operator">+</span> <span class="token string">'(['</span> <span class="token operator">+</span> strs <span class="token operator">+</span> <span class="token string">'])'</span>  <span class="token comment">// 検索対象文字列 (NFD の濁点 or 半濁点) のいずれかを含む</span>
+                     <span class="token operator">+</span> <span class="token string">'('</span>
+                         <span class="token operator">+</span> <span class="token string">'.*?'</span>           <span class="token comment">// 任意文字列 (閉じカッコ ")" までの最短マッチ用「?」)</span>
+                         <span class="token operator">+</span> <span class="token string">'\\)'</span>           <span class="token comment">// ")"</span>
+                     <span class="token operator">+</span> <span class="token string">')'</span><span class="token punctuation">,</span>
+                     <span class="token string">'g'</span>
+                   <span class="token punctuation">)</span><span class="token punctuation">,</span>
+  replacement<span class="token operator">:</span> <span class="token boolean">false</span><span class="token punctuation">,</span>              <span class="token comment">// 置換文字列を指定しない (funcFile 使用時は false 指定が要る)</span>
+  funcFile<span class="token operator">:</span> <span class="token string">'nfd-to-nfc-func.js'</span><span class="token punctuation">,</span>  <span class="token comment">// 文字列を置換する関数を記述したファイルの指定</span>
+  paths<span class="token operator">:</span> <span class="token punctuation">[</span><span class="token string">'./texts'</span><span class="token punctuation">]</span><span class="token punctuation">,</span>              <span class="token comment">// 検索対象ファイルの指定</span>
+  include<span class="token operator">:</span> <span class="token string">'*.md'</span><span class="token punctuation">,</span>                 <span class="token comment">// 検索対象ファイルに含める拡張子</span>
+  recursive<span class="token operator">:</span> <span class="token boolean">true</span>                  <span class="token comment">// サブディレクトリも検索する</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<ul>
+  <li><code>nfd-to-nfd-func.js</code></li>
+</ul>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword">function</span><span class="token punctuation">(</span><span class="token parameter">match</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token comment">/*!
+   * ヒットした NFD 文字 (変数 match) を NFC 文字に変換して返却する
+   * 
+   * replace パッケージの内部処理で、このファイルの中身全体を eval で変数に詰め込んで使うので、この function 外にコードを記述してはならない
+   */</span>
+  
+  <span class="token comment">// NFD 文字を生成するためのパッケージ</span>
+  <span class="token keyword">const</span> unorm <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'unorm'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  
+  <span class="token comment">// NFC 文字列</span>
+  <span class="token keyword">const</span> nfcStrs <span class="token operator">=</span> <span class="token string">'がぎぐげござじずぜぞだぢづでどばびぶべぼぱぴぷぺぽガギグゲゴザジズゼゾダヂヅデドバビブベボパピプペポヴ'</span><span class="token punctuation">;</span>
+  nfcStrs<span class="token punctuation">.</span><span class="token method function property-access">split</span><span class="token punctuation">(</span><span class="token string">''</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">forEach</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token parameter">nfcStr</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+    <span class="token comment">// NFD 文字列を生成する</span>
+    <span class="token keyword">const</span> nfdStr <span class="token operator">=</span> nfcStr<span class="token punctuation">.</span><span class="token method function property-access">normalize</span><span class="token punctuation">(</span><span class="token string">'NFD'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token comment">// NFD 文字列を NFC 文字列に変換する</span>
+    match <span class="token operator">=</span> match<span class="token punctuation">.</span><span class="token method function property-access">replace</span><span class="token punctuation">(</span><span class="token keyword">new</span> <span class="token class-name">RegExp</span><span class="token punctuation">(</span>nfdStr<span class="token punctuation">,</span> <span class="token string">'g'</span><span class="token punctuation">)</span><span class="token punctuation">,</span> nfcStr<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  
+  <span class="token keyword control-flow">return</span> match<span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<ul>
+  <li><code>nfc-to-nfd.js</code></li>
+</ul>
+<pre class="language-javascript"><code class="language-javascript"><span class="token comment">/*!
+ * Markdown リンクや画像貼付部分の文字列から NFC 文字を検索し NFD 文字に変換するスクリプト
+ */</span>
+
+<span class="token comment">// ファイル置換用に使用するパッケージ</span>
+<span class="token keyword">const</span> replace <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'replace'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// 検索対象文字 (NFC)</span>
+<span class="token keyword">const</span> strs <span class="token operator">=</span> <span class="token string">'がぎぐげござじずぜぞだぢづでどばびぶべぼぱぴぷぺぽガギグゲゴザジズゼゾダヂヅデドバビブベボパピプペポヴ'</span><span class="token punctuation">;</span>
+
+<span class="token function">replace</span><span class="token punctuation">(</span><span class="token punctuation">{</span>
+  <span class="token comment">// Markdown リンクや画像貼付で登場する「](」「)」の間に検索対象文字が含まれている箇所を検索する</span>
+  <span class="token comment">// このやり方だと1行に複数回リンク文字列が登場した時にひとまとめに検出してしまうので、funcFile 内で分割して変換している</span>
+  regex<span class="token operator">:</span> <span class="token keyword">new</span> <span class="token class-name">RegExp</span><span class="token punctuation">(</span>   <span class="token string">'('</span>
+                         <span class="token operator">+</span> <span class="token string">'\\]\\('</span>        <span class="token comment">// "]("</span>
+                         <span class="token operator">+</span> <span class="token string">'(?!(#|http))'</span>  <span class="token comment">// "#" (ページ内リンク) か "http" (外部リンク) 始まりを除外する</span>
+                         <span class="token operator">+</span> <span class="token string">'.*?'</span>           <span class="token comment">// 任意文字列 (閉じカッコ ")" までの最短マッチ用「?」)</span>
+                     <span class="token operator">+</span> <span class="token string">')'</span>
+                     <span class="token operator">+</span> <span class="token string">'(['</span> <span class="token operator">+</span> strs <span class="token operator">+</span> <span class="token string">'])'</span>  <span class="token comment">// 検索対象文字列のいずれかを含む</span>
+                     <span class="token operator">+</span> <span class="token string">'('</span>
+                         <span class="token operator">+</span> <span class="token string">'.*?'</span>           <span class="token comment">// 任意文字列 (閉じカッコ ")" までの最短マッチ用「?」)</span>
+                         <span class="token operator">+</span> <span class="token string">'\\)'</span>           <span class="token comment">// ")"</span>
+                     <span class="token operator">+</span> <span class="token string">')'</span><span class="token punctuation">,</span>
+                     <span class="token string">'g'</span>
+                   <span class="token punctuation">)</span><span class="token punctuation">,</span>
+  replacement<span class="token operator">:</span> <span class="token boolean">false</span><span class="token punctuation">,</span>              <span class="token comment">// 置換文字列を指定しない (funcFile 使用時は false 指定が要る)</span>
+  funcFile<span class="token operator">:</span> <span class="token string">'nfc-to-nfd-func.js'</span><span class="token punctuation">,</span>  <span class="token comment">// 文字列を置換する関数を記述したファイルの指定</span>
+  paths<span class="token operator">:</span> <span class="token punctuation">[</span><span class="token string">'./texts'</span><span class="token punctuation">]</span><span class="token punctuation">,</span>              <span class="token comment">// 検索対象ファイルの指定</span>
+  include<span class="token operator">:</span> <span class="token string">'*.md'</span><span class="token punctuation">,</span>                 <span class="token comment">// 検索対象ファイルに含める拡張子</span>
+  recursive<span class="token operator">:</span> <span class="token boolean">true</span>                  <span class="token comment">// サブディレクトリも検索する</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<ul>
+  <li><code>nfc-to-nfd-func.js</code></li>
+</ul>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword">function</span><span class="token punctuation">(</span><span class="token parameter">match</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token comment">/*!
+   * ヒットした NFC 文字 (変数 match) を NFD 文字に変換して返却する
+   * 
+   * replace パッケージの内部処理で、このファイルの中身全体を eval で変数に詰め込んで使うので、この function 外にコードを記述してはならない
+   */</span>
+  
+  <span class="token comment">// NFD 文字を生成するためのパッケージ</span>
+  <span class="token keyword">const</span> unorm <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'unorm'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token comment">// NFC 文字列</span>
+  <span class="token keyword">const</span> nfcStrs <span class="token operator">=</span> <span class="token string">'がぎぐげござじずぜぞだぢづでどばびぶべぼぱぴぷぺぽガギグゲゴザジズゼゾダヂヅデドバビブベボパピプペポヴ'</span><span class="token punctuation">;</span>
+  
+  <span class="token comment">// 置換結果文字列</span>
+  <span class="token keyword">let</span> result <span class="token operator">=</span> <span class="token string">''</span><span class="token punctuation">;</span>
+  
+  <span class="token comment">// マッチした文字列を、Markdown リンクを構成する ")" か "]" の文字で分割し、個別に処理する</span>
+  <span class="token comment">// (1行に複数のリンクがあった場合にリンク外の文字を置換しないようにするため)</span>
+  <span class="token keyword">const</span> split <span class="token operator">=</span> match<span class="token punctuation">.</span><span class="token method function property-access">split</span><span class="token punctuation">(</span><span class="token regex"><span class="token regex-delimiter">/</span><span class="token regex-source language-regex">\)|\]</span><span class="token regex-delimiter">/</span><span class="token regex-flags">g</span></span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  
+  split<span class="token punctuation">.</span><span class="token method function property-access">forEach</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token parameter">str<span class="token punctuation">,</span> index</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+    <span class="token comment">// "(" で始まる要素がリンクパスを保持している文字列 = 置換対象となる</span>
+    <span class="token keyword control-flow">if</span><span class="token punctuation">(</span>str<span class="token punctuation">.</span><span class="token method function property-access">startsWith</span><span class="token punctuation">(</span><span class="token string">'('</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token comment">// split() でちぎった文字列 "]" 自体は失われるので入れておく</span>
+      <span class="token comment">// ただし直前に閉じカッコ ")" がある場合は付与しない (Markdown の仕様上リンク文字列に閉じカッコは含まれず、リンク文字列ではないカッコ書きを認識している)</span>
+      <span class="token keyword control-flow">if</span><span class="token punctuation">(</span><span class="token operator">!</span>result<span class="token punctuation">.</span><span class="token method function property-access">endsWith</span><span class="token punctuation">(</span><span class="token string">')'</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        result <span class="token operator">+=</span> <span class="token string">']'</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span>
+      
+      <span class="token keyword control-flow">if</span><span class="token punctuation">(</span><span class="token operator">!</span><span class="token punctuation">(</span> <span class="token keyword">new</span> <span class="token class-name">RegExp</span><span class="token punctuation">(</span><span class="token string">'['</span> <span class="token operator">+</span> nfcStrs <span class="token operator">+</span> <span class="token string">']'</span><span class="token punctuation">,</span> <span class="token string">'g'</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">test</span><span class="token punctuation">(</span>str<span class="token punctuation">)</span> <span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        <span class="token comment">// 検出されたリンクの中に置換対象となる NFC 文字列がない場合は結合のみ</span>
+        <span class="token comment">// (1行に複数のリンクが書かれていた場合に、リンク外の文字から置換対象を検知してしまった場合)</span>
+        result <span class="token operator">+=</span> str<span class="token punctuation">;</span>
+      <span class="token punctuation">}</span>
+      <span class="token keyword control-flow">else</span> <span class="token punctuation">{</span>
+        <span class="token comment">// リンク文字列部分のみ置換する</span>
+        nfcStrs<span class="token punctuation">.</span><span class="token method function property-access">split</span><span class="token punctuation">(</span><span class="token string">''</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">forEach</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token parameter">nfcStr</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+          <span class="token comment">// NFD 文字列を生成する</span>
+          <span class="token keyword">const</span> nfdStr <span class="token operator">=</span> nfcStr<span class="token punctuation">.</span><span class="token method function property-access">normalize</span><span class="token punctuation">(</span><span class="token string">'NFD'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+          <span class="token comment">// NFD 文字列を NFC 文字列に変換する</span>
+          str <span class="token operator">=</span> str<span class="token punctuation">.</span><span class="token method function property-access">replace</span><span class="token punctuation">(</span><span class="token keyword">new</span> <span class="token class-name">RegExp</span><span class="token punctuation">(</span>nfcStr<span class="token punctuation">,</span> <span class="token string">'g'</span><span class="token punctuation">)</span><span class="token punctuation">,</span> nfdStr<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        result <span class="token operator">+=</span> str<span class="token punctuation">;</span>
+      <span class="token punctuation">}</span>
+      
+      <span class="token comment">// split() でちぎった文字列 ")" 自体は失われるので入れておく</span>
+      result <span class="token operator">+=</span> <span class="token string">')'</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+    <span class="token keyword control-flow">else</span> <span class="token punctuation">{</span>
+      <span class="token comment">// 置換対象でなければ結合するだけ (split() の対象文字が含まれていた要素は空文字になるので、空文字も結合される)</span>
+      result <span class="token operator">+=</span> str<span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  
+  <span class="token comment">// 置換後の文字列の末尾が閉じカッコで終わっていない場合は閉じカッコを付与する</span>
+  <span class="token keyword control-flow">if</span><span class="token punctuation">(</span><span class="token operator">!</span>result<span class="token punctuation">.</span><span class="token method function property-access">endsWith</span><span class="token punctuation">(</span><span class="token string">')'</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    result <span class="token operator">+=</span> <span class="token string">')'</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  
+  <span class="token comment">// 置換後の文字列を返却する</span>
+  <span class="token keyword control-flow">return</span> result<span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre>
 <p>4つファイルがあるが、以下のように2ファイルずつ使う。</p>
 <ul>
   <li><code>nfd-to-nfc.js</code>・<code>nfd-to-nfc-func.js</code> : NFD 文字を NFC 文字に変換する

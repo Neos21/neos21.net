@@ -60,8 +60,83 @@
 
 <p>共有ブックを編集モードで開きっぱなしにする人と仕事してた時にこれ埋め込んでた。全く改善する気配なかったけど。</p>
 <ul>
-  <li><a href="https://gist.github.com/Neos21/f81184347c6b8540974b25f836f09601">ブックを開きたい人が現れたら通知する Excel マクロ</a></li>
+  <li><code>Module.bas</code></li>
 </ul>
+<pre class="language-vb"><code class="language-vb"><span class="token comment">' 通知ファイル名のフルパス (ThisWorkbook の notifyFile と同じ値を保持する)</span>
+<span class="token keyword">Dim</span> notifyFilePath <span class="token keyword">As</span> <span class="token keyword">String</span>
+
+<span class="token comment">' 通知をしたか・通知を出したら True にする</span>
+<span class="token keyword">Dim</span> notified <span class="token keyword">As</span> <span class="token keyword">Boolean</span>
+
+<span class="token comment">' 監視プロシージャの呼び出し</span>
+<span class="token keyword">Sub</span> audit<span class="token punctuation">(</span>notifyFile <span class="token keyword">As</span> <span class="token keyword">String</span><span class="token punctuation">)</span>
+  <span class="token comment">' ThisWorkbook から引数で受け取った通知ファイル名をセットし直す (変数のスコープが異なるため)</span>
+  notifyFilePath <span class="token operator">=</span> notifyFile
+  
+  <span class="token comment">' 通知をしたか管理する変数の初期化</span>
+  notified <span class="token operator">=</span> <span class="token boolean">False</span>
+  
+  <span class="token comment">' 監視プロシージャを呼び出す</span>
+  <span class="token keyword">Call</span> intervalAction
+<span class="token keyword">End</span> <span class="token keyword">Sub</span>
+
+<span class="token comment">' 監視プロシージャ</span>
+<span class="token keyword">Sub</span> intervalAction<span class="token punctuation">(</span><span class="token punctuation">)</span>
+  <span class="token comment">' 既に通知済なら中止する</span>
+  <span class="token keyword">If</span> notified <span class="token operator">=</span> <span class="token boolean">True</span> <span class="token keyword">Then</span>
+    <span class="token keyword">Exit</span> <span class="token keyword">Sub</span>
+  <span class="token keyword">End</span> <span class="token keyword">If</span>
+  
+  <span class="token comment">' 通知ファイルを取得する</span>
+  <span class="token keyword">If</span> Dir<span class="token punctuation">(</span>notifyFilePath<span class="token punctuation">)</span> <span class="token operator">&#x3C;</span><span class="token operator">></span> <span class="token string">""</span> <span class="token keyword">And</span> notified <span class="token operator">&#x3C;</span><span class="token operator">></span> <span class="token boolean">True</span> <span class="token keyword">Then</span>
+    <span class="token comment">' ファイル名が返却され、通知が未済なら通知を行う</span>
+    MsgBox <span class="token string">"ブックを閉じて欲しい人が現れました！編集が完了したら速やかにブックを閉じてください。"</span>
+    
+    <span class="token comment">' 通知済にする</span>
+    notified <span class="token operator">=</span> <span class="token boolean">True</span>
+  <span class="token keyword">Else</span>
+    <span class="token comment">' 通知ファイルがないようであれば5秒後に再実行する</span>
+    Application<span class="token punctuation">.</span>OnTime Now <span class="token operator">+</span> TimeValue<span class="token punctuation">(</span><span class="token string">"00:00:05"</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token string">"intervalAction"</span>
+  <span class="token keyword">End</span> <span class="token keyword">If</span>
+<span class="token keyword">End</span> <span class="token keyword">Sub</span>
+</code></pre>
+<ul>
+  <li><code>ThisWorkbook.vba</code></li>
+</ul>
+<pre class="language-vb"><code class="language-vb"><span class="token comment">' 通知ファイル名のフルパスを保持する</span>
+<span class="token keyword">Dim</span> notifyFile <span class="token keyword">As</span> <span class="token keyword">String</span>
+
+<span class="token comment">' ブックを開いた時に実行する</span>
+<span class="token keyword">Sub</span> Workbook_Open<span class="token punctuation">(</span><span class="token punctuation">)</span>
+  <span class="token comment">' 通知ファイル名の生成</span>
+  notifyFile <span class="token operator">=</span> ThisWorkbook<span class="token punctuation">.</span>FullName <span class="token operator">&#x26;</span> <span class="token string">"_.notify"</span>
+  
+  <span class="token keyword">If</span> ThisWorkbook<span class="token punctuation">.</span><span class="token keyword">ReadOnly</span> <span class="token operator">=</span> <span class="token boolean">True</span> <span class="token keyword">Then</span>
+    <span class="token comment">' 読み取り専用で開いた場合、ファイルを開いている人に通知を投げるか確認する</span>
+    <span class="token keyword">Dim</span> prompt <span class="token keyword">As</span> <span class="token keyword">Integer</span>
+    prompt <span class="token operator">=</span> MsgBox<span class="token punctuation">(</span><span class="token string">"ファイルを開いている人に通知を送信しますか？"</span><span class="token punctuation">,</span> vbYesNo <span class="token operator">+</span> vbQuestion<span class="token punctuation">)</span>
+    
+    <span class="token keyword">If</span> prompt <span class="token operator">=</span> vbYes <span class="token keyword">Then</span>
+      <span class="token comment">' 通知ファイルを生成する</span>
+      CreateObject<span class="token punctuation">(</span><span class="token string">"Scripting.FileSystemObject"</span><span class="token punctuation">)</span><span class="token punctuation">.</span>CreateTextFile notifyFile
+      MsgBox <span class="token string">"通知を送信しました。"</span>
+    <span class="token keyword">End</span> <span class="token keyword">If</span>
+  <span class="token keyword">Else</span>
+    <span class="token comment">' 編集モードで開いた場合、通知ファイルがあるか定期的に監視して、通知ファイルができたらアラートを出す</span>
+    audit notifyFile
+  <span class="token keyword">End</span> <span class="token keyword">If</span>
+<span class="token keyword">End</span> <span class="token keyword">Sub</span>
+
+<span class="token comment">' ブックを閉じる時に実行する</span>
+<span class="token keyword">Sub</span> Workbook_BeforeClose<span class="token punctuation">(</span>Cancel <span class="token keyword">As</span> <span class="token keyword">Boolean</span><span class="token punctuation">)</span>
+  <span class="token comment">' 編集モードだった人がファイルを閉じる時は、通知ファイルを削除する</span>
+  <span class="token keyword">If</span> ThisWorkBook<span class="token punctuation">.</span><span class="token keyword">ReadOnly</span> <span class="token operator">=</span> <span class="token boolean">False</span> <span class="token keyword">Then</span>
+    <span class="token keyword">On</span> <span class="token keyword">Error</span> <span class="token keyword">Resume</span> <span class="token keyword">Next</span>
+    Kill notifyFile
+    <span class="token keyword">On</span> <span class="token keyword">Error</span> <span class="token keyword">GoTo</span> <span class="token number">0</span>
+  <span class="token keyword">End</span> <span class="token keyword">If</span>
+<span class="token keyword">End</span> <span class="token keyword">Sub</span>
+</code></pre>
 <p>このマクロをワークブックと標準モジュールにそれぞれ貼り付けておく。</p>
 <p>そのブックを読み取り専用で開くと、ブックと同じフォルダに通知ファイル (空ファイル) を作成する。</p>
 <p>編集モードで開いてる人は定期的に通知ファイルが存在していないか裏で監視しているので、通知ファイルが見付かったら「同じブックを開きたい人がいるよ！」と通知を出す、という仕組み。</p>

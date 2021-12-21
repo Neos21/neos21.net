@@ -60,8 +60,111 @@
 
 <p>Excel しかない環境でテスト証跡を撮らなきゃいけない仕事をしているときなどにドウゾ。</p>
 <ul>
-  <li><a href="https://gist.github.com/Neos21/f9677ca17000359fd602c0783f32b208">Excel シートにスクリーンショットを自動貼り付けするマクロ</a></li>
+  <li>Excel シートにスクリーンショットを自動貼り付けするマクロ
+    <ul>
+      <li><code>Module.bas</code></li>
+    </ul>
+  </li>
 </ul>
+<pre class="language-vb"><code class="language-vb"><span class="token comment">' キャプチャ収集状態なら True</span>
+<span class="token keyword">Private</span> isLogging <span class="token keyword">As</span> <span class="token keyword">Boolean</span>
+
+<span class="token comment">' キャプチャを貼り付けるブック名を保持する</span>
+<span class="token keyword">Private</span> fileName <span class="token keyword">As</span> <span class="token keyword">String</span>
+
+<span class="token comment">' キャプチャを取得する</span>
+<span class="token keyword">Private</span> <span class="token keyword">Sub</span> Capture<span class="token punctuation">(</span><span class="token punctuation">)</span>
+  <span class="token keyword">On</span> <span class="token keyword">Error</span> <span class="token keyword">Goto</span> errorHandler
+  
+  <span class="token comment">' クリップボードに画像が格納されていたら貼り付ける</span>
+  <span class="token keyword">If</span> Application<span class="token punctuation">.</span>ClipboardFormats<span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">)</span> <span class="token operator">=</span> xlClipboardFormatBitmap <span class="token keyword">Then</span>
+    <span class="token keyword">Dim</span> rows <span class="token keyword">As</span> <span class="token keyword">Integer</span> <span class="token punctuation">:</span> rows <span class="token operator">=</span> <span class="token number">54</span>  <span class="token comment">' 行数</span>
+    <span class="token keyword">Dim</span> cols <span class="token keyword">As</span> <span class="token keyword">Integer</span> <span class="token punctuation">:</span> cols <span class="token operator">=</span> <span class="token number">72</span>  <span class="token comment">' 列数</span>
+    
+    <span class="token comment">' キャプチャを貼り付けるブックを選択する</span>
+    Workbooks<span class="token punctuation">(</span>fileName<span class="token punctuation">)</span><span class="token punctuation">.</span>Activate
+    
+    <span class="token comment">' 選択しているセルを基準セルとして取得する</span>
+    <span class="token keyword">Dim</span> baseCell <span class="token keyword">As</span> <span class="token keyword">Variant</span>
+    <span class="token keyword">Set</span> baseCell <span class="token operator">=</span> Selection
+    
+    <span class="token comment">' 下線を引く</span>
+    Range<span class="token punctuation">(</span>baseCell<span class="token punctuation">.</span>Offset<span class="token punctuation">(</span>rows<span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">,</span> baseCell<span class="token punctuation">.</span>Offset<span class="token punctuation">(</span>rows<span class="token punctuation">,</span> cols <span class="token operator">+</span> <span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token keyword">Select</span>
+    <span class="token keyword">With</span> Selection<span class="token punctuation">.</span>Borders<span class="token punctuation">(</span>xlEdgeBottom<span class="token punctuation">)</span>
+      <span class="token punctuation">.</span>LineStyle <span class="token operator">=</span> xlContinuous
+      <span class="token punctuation">.</span>Weight <span class="token operator">=</span> xlThin
+    <span class="token keyword">End</span> <span class="token keyword">With</span>
+    
+    <span class="token comment">' 見出し用の記号をセットする</span>
+    baseCell<span class="token punctuation">.</span>Offset<span class="token punctuation">(</span><span class="token number">2</span><span class="token punctuation">,</span> <span class="token number">2</span><span class="token punctuation">)</span><span class="token punctuation">.</span>Value <span class="token operator">=</span> <span class="token string">"■"</span>
+    
+    <span class="token comment">' キャプチャ取得日時をセットする</span>
+    <span class="token keyword">With</span> baseCell<span class="token punctuation">.</span>Offset<span class="token punctuation">(</span><span class="token number">2</span><span class="token punctuation">,</span> cols <span class="token operator">-</span> <span class="token number">1</span><span class="token punctuation">)</span>
+      <span class="token punctuation">.</span>HorizontalAlignment <span class="token operator">=</span> xlRight
+      <span class="token punctuation">.</span>Value <span class="token operator">=</span> <span class="token string">"取得日時："</span> <span class="token operator">&#x26;</span> Now
+    <span class="token keyword">End</span> <span class="token keyword">With</span>
+    
+    <span class="token comment">' クリップボードのデータを貼り付け、行数に合わせて縮小する</span>
+    baseCell<span class="token punctuation">.</span>Offset<span class="token punctuation">(</span><span class="token number">4</span><span class="token punctuation">,</span> <span class="token number">3</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token keyword">Select</span>
+    ActiveSheet<span class="token punctuation">.</span>Paste
+    <span class="token keyword">With</span> Selection<span class="token punctuation">.</span>ShapeRange
+      <span class="token punctuation">.</span>LockAspectRatio <span class="token operator">=</span> msoTrue
+      <span class="token punctuation">.</span>Height <span class="token operator">=</span> <span class="token punctuation">.</span>Height <span class="token operator">*</span> <span class="token number">0.7</span>
+    <span class="token keyword">End</span> <span class="token keyword">With</span>
+    
+    <span class="token comment">' 次の画像を貼るために基準セルを移動し、クリップボードに現在のセルの値をコピーする (先頭を Bitmap でなくすため)</span>
+    <span class="token keyword">With</span> baseCell<span class="token punctuation">.</span>Offset<span class="token punctuation">(</span>rows <span class="token operator">+</span> <span class="token number">1</span><span class="token punctuation">,</span> <span class="token number">0</span><span class="token punctuation">)</span>
+      <span class="token punctuation">.</span><span class="token keyword">Select</span>
+      <span class="token punctuation">.</span>Copy
+    <span class="token keyword">End</span> <span class="token keyword">With</span>
+    
+    <span class="token comment">' 切り取り・コピーモードを解除する</span>
+    Application<span class="token punctuation">.</span>CutCopyMode <span class="token operator">=</span> <span class="token boolean">False</span>
+    
+    <span class="token comment">' 改ページ設定をする</span>
+    ActiveSheet<span class="token punctuation">.</span>HPageBreaks<span class="token punctuation">.</span>Add Before<span class="token punctuation">:</span><span class="token operator">=</span>ActiveCell
+  <span class="token keyword">End</span> <span class="token keyword">If</span>
+  
+  <span class="token comment">' 1秒間隔で再実行するようタイマーをセットする</span>
+  Application<span class="token punctuation">.</span>OnTime Now <span class="token operator">+</span> TimeValue<span class="token punctuation">(</span><span class="token string">"00:00:01"</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token string">"Capture"</span><span class="token punctuation">,</span> <span class="token punctuation">,</span> isLogging
+  
+  <span class="token keyword">Exit</span> <span class="token keyword">Sub</span>
+
+errorHandler<span class="token punctuation">:</span>
+  isLogging <span class="token operator">=</span> <span class="token boolean">False</span>
+
+<span class="token keyword">End</span> <span class="token keyword">Sub</span>
+
+<span class="token comment">' キャプチャを開始する</span>
+<span class="token keyword">Sub</span> StartCapture<span class="token punctuation">(</span><span class="token punctuation">)</span>
+  MsgBox <span class="token string">"キャプチャの取得を開始します。終了時は Esc キーを押下してください。"</span>
+  
+  <span class="token comment">' Esc キーで停止できるようにしておく</span>
+  Application<span class="token punctuation">.</span>OnKey <span class="token string">"{ESC}"</span><span class="token punctuation">,</span> <span class="token string">"StopCapture"</span>
+  
+  <span class="token comment">' キャプチャを貼り付けるブック名を取得する</span>
+  fileName <span class="token operator">=</span> ActiveWorkbook<span class="token punctuation">.</span>Name
+  
+  <span class="token comment">' キャプチャ取得状態を設定する</span>
+  isLogging <span class="token operator">=</span> <span class="token boolean">True</span>
+  
+  <span class="token comment">' キャプチャの取得を開始する</span>
+  Capture
+<span class="token keyword">End</span> <span class="token keyword">Sub</span>
+
+<span class="token comment">' キャプチャを終了する</span>
+<span class="token keyword">Sub</span> StopCapture<span class="token punctuation">(</span><span class="token punctuation">)</span>
+  <span class="token keyword">If</span> isLogging <span class="token operator">=</span> <span class="token boolean">True</span> <span class="token keyword">Then</span>
+    <span class="token comment">' キャプチャの取得状態を解除する</span>
+    isLogging <span class="token operator">=</span> <span class="token boolean">False</span>
+    
+    <span class="token comment">' Esc キーへの登録を解除する</span>
+    Application<span class="token punctuation">.</span>OnKey <span class="token string">"{ESC}"</span><span class="token punctuation">,</span> <span class="token string">""</span>
+    
+    MsgBox <span class="token string">"キャプチャの取得を停止しました。"</span>
+  <span class="token keyword">End</span> <span class="token keyword">If</span>
+<span class="token keyword">End</span> <span class="token keyword">Sub</span>
+</code></pre>
 <p>このマクロをブックに仕込んでおき、マクロを実行すると、クリップボードの監視を始める。</p>
 <p><code>PrintScreen</code> キーでスクリーンショットを撮ると、Excel シートに整形して貼り付ける。シート上のカーソル位置も自動で動かすので、順次打鍵していくだけで OK。</p>
 <p>Excel シートは幅 20px 程度で方眼紙にしておくとキレイに貼れるかと。あまりにも <code>PrintScreen</code> キーの連打が速いと追い付かないので、1・2秒は開けて打鍵するとよろし。</p>
