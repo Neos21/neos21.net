@@ -21,7 +21,6 @@ head: |
     .table-wrapper thead th {
       white-space: nowrap;
     }
-    
   </style>
 ---
 
