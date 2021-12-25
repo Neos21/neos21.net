@@ -1,7 +1,7 @@
 ---
 title        : Blog
 created      : 2020-11-01
-last-modified: 2021-02-18
+last-modified: 2021-12-25
 path:
   - /index.html Neo's World
 head: |
@@ -13,8 +13,11 @@ head: |
     }
     
     h2[id="目次"] + ul {
+      position: sticky;
+      top: 0;
       padding-left: 0;
       font-family: var(--nn-font-family-monospace);
+      background: var(--nn-colour-background);  /* JS で半透明化させる */
       list-style: none;
     }
     
@@ -25,7 +28,67 @@ head: |
     h2[id="目次"] + ul li:not(:last-child) {
       margin-right: .25rem;
     }
+    
+    /* 記事数出力用 */
+    .articles-count {
+      color: var(--nn-colour-grey-700);
+      font-size: .86rem;
+    }
   </style>
+  <script>
+    // 年ごとの記事数・全記事数を集計し出力する
+    document.addEventListener('DOMContentLoaded', () => {
+      /**
+       * h2 要素の直後に登場する ul 要素を特定する
+       * 
+       * @param h2Element h2 要素
+       * @return ul 要素、近くに見つからなければ null
+       */
+      const findListElement = h2Element => {
+        let listElement = null;
+        let nextElement = h2Element;
+        let siblingCount = 0;
+        const maxSiblingCount = 5;  // h2 要素の5つ後にも登場しなければ中止する
+        while(listElement == null && siblingCount < maxSiblingCount) {
+          nextElement = nextElement.nextElementSibling;
+          if(nextElement.tagName.toLowerCase() === 'ul') {
+            listElement = nextElement;
+            break;
+          }
+          siblingCount++;
+        }
+        return listElement;
+      };
+      
+      // 全記事数
+      let allArticles = 0;
+      
+      // 西暦の「2」から始まる h2 要素を検索し、年ごとの記事数を出力する
+      document.querySelectorAll('h2[id^="2"]').forEach(h2 => {
+        const ul = findListElement(h2);
+        if(!ul) return console.warn('List Not Found', h2);
+        const articles = ul.children.length;
+        h2.innerHTML += `<span class="articles-count"> … ${articles}記事</span>`;
+        
+        allArticles += articles;
+        
+        // 目次にも出力する
+        const anchorElement = document.querySelector(`h2[id="目次"] + ul a[href="#${h2.id}"]`);
+        if(!anchorElement) return console.warn('Anchor Not Found', h2);
+        anchorElement.insertAdjacentHTML('afterend', `<span class="articles-count"> (${articles})`);
+      });
+      
+      // h1 要素に全記事数を出力する
+      document.getElementById('page-title').innerHTML += `<span class="articles-count"> … 全${allArticles}記事</span>`;
+      
+      // Sticky にしている目次の背景色を半透明にする (デザイン変更時もそのまま動作するようにする)
+      const indexElement = document.querySelector('h2[id="目次"] + ul');
+      if(!indexElement) return console.warn('Index Not Found');
+      const currentBackgroundColour = window.getComputedStyle(indexElement).backgroundColor;
+      if(!currentBackgroundColour.startsWith('rgb(')) return console.warn('Unexpected Colour Value', { indexElement, currentBackgroundColor });  // rgb() な書式でなければ諦める
+      indexElement.style.background = currentBackgroundColour.replace((/^rgb\((.*)\)$/u), 'rgba($1, .85)');  // 半透明化する
+    });
+  </script>
 ---
 
 ブログを購読する際は [Atom フィード](/feeds.xml) をドウゾ ([Feedly で購読する](http://feedly.com/i/subscription/feed/https://neos21.net/feeds.xml))。記事の内容に関してご意見・ご指摘などがありましたら、[GitHub Discussions](https://github.com/Neos21/Neos21/discussions) か[メール](/about/index.html#mail)にてご連絡ください。
