@@ -46,8 +46,6 @@ path:
     <p>以下は「<a href="/etc/index.html">Etc.</a>」配下のコンテンツだが、何かと参考になるかもしれない。</p>
     <ul>
       <li><a href="/etc/memo-impressed.html">タメになったメモ</a></li>
-      <li><a href="/etc/memo-words.html">言葉に関するメモ</a></li>
-      <li><a href="/etc/memo-lifehack.html">ライフハック関連メモ</a></li>
       <li><a href="/etc/what-is-the-word.html">あれ何て言うの？正式名称辞典</a></li>
     </ul>
   </dd>
