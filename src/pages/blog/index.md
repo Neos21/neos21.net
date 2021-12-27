@@ -1,13 +1,12 @@
 ---
 title        : Blog
 created      : 2020-11-01
-last-modified: 2021-12-25
+last-modified: 2021-12-28
 path:
   - /index.html Neo's World
 head: |
   <style>
     /* 「目次」を利用して年一覧を出力する */
-    
     h2[id="目次"] {
       display: none;
     }
@@ -17,7 +16,8 @@ head: |
       top: 0;
       padding-left: 0;
       font-family: var(--nn-font-family-monospace);
-      background: var(--nn-colour-background);  /* JS で半透明化させる */
+      background: var(--nn-colour-background);  /* JS でグラーデションに上書きする */
+      padding-bottom: .5rem;  /* JS でグラデーションさせる領域 */
       list-style: none;
     }
     
@@ -25,8 +25,19 @@ head: |
       display: inline-block;
     }
     
+    /* 目次の年ごとの余白 (li 間のスペースにプラスされる) */
     h2[id="目次"] + ul li:not(:last-child) {
       margin-right: .25rem;
+    }
+    
+    /* 目次の記事数の左カッコ手前 */
+    h2[id="目次"] + ul li a + .articles-count {
+      margin-left: .25rem;
+    }
+    
+    /* 西暦の「2」から始まる見出し・ハッシュ移動しても Sticky 目次が重ならないようにする (約2行折り返し分まで確保) */
+    h2[id^="2"] {
+      scroll-margin-top: 3.5rem;
     }
     
     /* 記事数出力用 */
@@ -75,18 +86,18 @@ head: |
         // 目次にも出力する
         const anchorElement = document.querySelector(`h2[id="目次"] + ul a[href="#${h2.id}"]`);
         if(!anchorElement) return console.warn('Anchor Not Found', h2);
-        anchorElement.insertAdjacentHTML('afterend', `<span class="articles-count"> (${articles})`);
+        anchorElement.insertAdjacentHTML('afterend', `<span class="articles-count">(${articles})`);
       });
       
       // h1 要素に全記事数を出力する
       document.getElementById('page-title').innerHTML += `<span class="articles-count"> … 全${allArticles}記事</span>`;
       
-      // Sticky にしている目次の背景色を半透明にする (デザイン変更時もそのまま動作するようにする)
+      // Sticky にしている目次下部の背景色を半透明にする (デザイン変更時もそのまま動作するようにする)
       const indexElement = document.querySelector('h2[id="目次"] + ul');
       if(!indexElement) return console.warn('Index Not Found');
-      const currentBackgroundColour = window.getComputedStyle(indexElement).backgroundColor;
-      if(!currentBackgroundColour.startsWith('rgb(')) return console.warn('Unexpected Colour Value', { indexElement, currentBackgroundColor });  // rgb() な書式でなければ諦める
-      indexElement.style.background = currentBackgroundColour.replace((/^rgb\((.*)\)$/u), 'rgba($1, .85)');  // 半透明化する
+      const backgroundColour = window.getComputedStyle(indexElement).backgroundColor;
+      if(!backgroundColour.startsWith('rgb(')) return console.warn('Unexpected Colour Value', { indexElement, currentBackgroundColor });  // rgb() な書式でなければ諦める
+      indexElement.style.background = `linear-gradient(to top, ${backgroundColour.replace((/^rgb\((.*)\)$/u), 'rgba($1, 0)')}, ${backgroundColour} .5rem)`;  // 下部を半透明化する
     });
   </script>
 ---
