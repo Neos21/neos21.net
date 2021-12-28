@@ -73,3 +73,11 @@ path:
     <p>知恵、テクニック。「ナレッジ」を基に、その組合せ方や選択が重要なモノについての考え方。定石、ベストプラクティスとか、発展的な Tips とか、その手のネタ。</p>
   </dd>
 </dt>
+
+
+---
+
+
+## 書こうと思ってるネタの蓄え
+
+- [UT、ITa、ITb、ST、UAT の違い](http://tooljp.com/windows/chigai/html/IT/UT-ITa-ITb-ST-UAT.html)
