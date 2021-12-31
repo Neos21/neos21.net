@@ -1,7 +1,7 @@
 ---
 title        : Blog
 created      : 2020-11-01
-last-modified: 2021-12-28
+last-modified: 2022-01-01
 path:
   - /index.html Neo's World
 head: |
@@ -19,20 +19,18 @@ head: |
       background: var(--nn-colour-background);  /* JS でグラーデションに上書きする */
       padding-bottom: .5rem;  /* JS でグラデーションさせる領域 */
       list-style: none;
+      /* 横スクロールさせる */
+      white-space: nowrap;
+      overflow-x: auto;
     }
     
     h2[id="目次"] + ul li {
       display: inline-block;
     }
     
-    /* 目次の年ごとの余白 (li 間のスペースにプラスされる) */
-    h2[id="目次"] + ul li:not(:last-child) {
-      margin-right: .25rem;
-    }
-    
     /* 目次の記事数の左カッコ手前 */
     h2[id="目次"] + ul li a + .articles-count {
-      margin-left: .25rem;
+      margin-left: .1rem;
     }
     
     /* 西暦の「2」から始まる見出し・ハッシュ移動しても Sticky 目次が重ならないようにする (約2行折り返し分まで確保) */
@@ -104,9 +102,586 @@ head: |
 
 ブログを購読する際は [Atom フィード](/feeds.xml) をドウゾ ([Feedly で購読する](http://feedly.com/i/subscription/feed/https://neos21.net/feeds.xml))。記事の内容に関してご意見・ご指摘などがありましたら、[GitHub Discussions](https://github.com/Neos21/Neos21/discussions) か[メール](/about/index.html#mail)にてご連絡ください。
 
+
 ## 目次
 
-{{ blog-list-years 2021 }}
+
+{{ blog-list-years 2022 }}
+
+
+## [2021](/blog/2021/index.html)
+
+- <time>2021-12-31</time>  
+  [2021年の振り返り](/blog/2021/12/31-01.html)
+- <time>2021-12-30</time>  
+  [Grandmother's Prophecies](/blog/2021/12/30-01.html)
+- <time>2021-12-29</time>  
+  [ドキュメントが書けていればプログラミングは省力化できる](/blog/2021/12/29-01.html)
+- <time>2021-12-28</time>  
+  [雑記](/blog/2021/12/28-01.html)
+- <time>2021-12-27</time>  
+  [JavaScript で再現性のある乱数を作る](/blog/2021/12/27-01.html)
+- <time>2021-12-26</time>  
+  [なぜブラウザのデフォルトスタイルはセリフ・フォントなのか](/blog/2021/12/26-01.html)
+- <time>2021-12-25</time>  
+  [Laravel ちょっとだけやってみた](/blog/2021/12/25-01.html)
+- <time>2021-12-24</time>  
+  [過去ネタ供養 5：Node.js CLI でユーザ入力を待機するコード片](/blog/2021/12/24-01.html)
+- <time>2021-12-23</time>  
+  [過去ネタ供養 4：Node.js の標準モジュールだけで HTTP サーバを立てるコード片](/blog/2021/12/23-01.html)
+- <time>2021-12-22</time>  
+  [過去ネタ供養 3：ページ読み込み時に必ず初期処理の関数を実行する JS コード片](/blog/2021/12/22-01.html)
+- <time>2021-12-21</time>  
+  [過去ネタ供養 2：Python (+ Docker) 環境構築手順](/blog/2021/12/21-01.html)
+- <time>2021-12-20</time>  
+  [過去ネタ供養 1：Windows バッチファイルでドラッグ・アンド・ドロップされたファイルの情報を取得する](/blog/2021/12/20-01.html)
+- <time>2021-12-19</time>  
+  [選択肢をランダムに決められると「本当にやりたかったこと」に気付く](/blog/2021/12/19-01.html)
+- <time>2021-12-17</time>  
+  [本日公開！「Matrix Resurrections マトリックス・レザレクションズ」を観てきたネタバレ感想](/blog/2021/12/17-01.html)
+- <time>2021-12-15</time>  
+  [いい加減覚えろ俺。JS で連番の配列を作る方法](/blog/2021/12/15-02.html)
+- <time>2021-12-15</time>  
+  [個人的に使うウェブサービスを整理した](/blog/2021/12/15-01.html)
+- <time>2021-12-14</time>  
+  [タブ区切りのテキストファイルをスペースでイイカンジに整形するアプリ作った](/blog/2021/12/14-01.html)
+- <time>2021-12-13</time>  
+  [ffmpeg で mkv 形式の動画を H.264 mp4 に変換してみた](/blog/2021/12/13-01.html)
+- <time>2021-12-12</time>  
+  [ギターのシールドってモノラルなの？ … TRS ケーブルとかの話を今更まとめる](/blog/2021/12/12-01.html)
+- <time>2021-12-05</time>  
+  [人は言っても治らないので諦める](/blog/2021/12/05-01.html)
+- <time>2021-12-04</time>  
+  [Excel 関数でスネーク・ケバブケースをパスカル・キャメルケースにする](/blog/2021/12/04-01.html)
+- <time>2021-12-01</time>  
+  [Node.js で同期版の API を使った方が速い時がある](/blog/2021/12/01-01.html)
+- <time>2021-11-30</time>  
+  [ムカつくことばかり過学習してしまっている](/blog/2021/11/30-01.html)
+- <time>2021-11-29</time>  
+  [サイトのスタイルを調整した](/blog/2021/11/29-01.html)
+- <time>2021-11-28</time>  
+  [ホイルンのこと](/blog/2021/11/28-01.html)
+- <time>2021-11-27</time>  
+  [オリエンタルトーイの犬のぬいぐるみの詳細キボンヌ](/blog/2021/11/27-01.html)
+- <time>2021-11-26</time>  
+  [思えば小さい頃から夢とかなかったんだけど何で？](/blog/2021/11/26-01.html)
+- <time>2021-11-25</time>  
+  [Rust で「コラッツ予想」を計算する CLI 作ってみた](/blog/2021/11/25-01.html)
+- <time>2021-11-24</time>  
+  [映画「Scarface スカーフェイス」を見た](/blog/2021/11/24-01.html)
+- <time>2021-11-23</time>  
+  [雰囲気で理解する依存症の危険性](/blog/2021/11/23-01.html)
+- <time>2021-11-22</time>  
+  [日本語 WordNet を使って文章を非可逆圧縮してみた](/blog/2021/11/22-01.html)
+- <time>2021-11-21</time>  
+  [SPA でエラー収集・送信する。TraceKit を使ってみた](/blog/2021/11/21-01.html)
+- <time>2021-11-20</time>  
+  [Open Meteo API で天気予報を取得する](/blog/2021/11/20-01.html)
+- <time>2021-11-19</time>  
+  [考えたくもないことばかり・見る世界によるけど](/blog/2021/11/19-01.html)
+- <time>2021-11-16</time>  
+  [JavaScript で文字列を圧縮できるらしいよ](/blog/2021/11/16-01.html)
+- <time>2021-11-15</time>  
+  [iframe の高さを調節できるか](/blog/2021/11/15-01.html)
+- <time>2021-11-14</time>  
+  [サイトの画像ファイルを圧縮した](/blog/2021/11/14-01.html)
+- <time>2021-11-13</time>  
+  [Bash・コマンドラインで画像ファイルの情報を取得する (ImageMagick)](/blog/2021/11/13-01.html)
+- <time>2021-11-12</time>  
+  [Bash で子ディレクトリを再帰的に検索し、ファイルサイズが大きい順にリストアップする](/blog/2021/11/12-01.html)
+- <time>2021-11-11</time>  
+  [Deno ちょっと触ってみたメモ](/blog/2021/11/11-01.html)
+- <time>2021-11-10</time>  
+  [椅子買った](/blog/2021/11/10-01.html)
+- <time>2021-11-09</time>  
+  [映画「Final Cut ファイナル・カット」を観た](/blog/2021/11/09-01.html)
+- <time>2021-11-08</time>  
+  [映画「Dante's Peak ダンテズ・ピーク」を観た](/blog/2021/11/08-01.html)
+- <time>2021-11-07</time>  
+  [口頭での会話がどのくらい非効率なのか定量的に計測する](/blog/2021/11/07-01.html)
+- <time>2021-11-03</time>  
+  [新しい技術は楽にならないし基礎知識の範囲は広がる一方](/blog/2021/11/03-01.html)
+- <time>2021-11-01</time>  
+  [子供の頃より今の方が楽しい](/blog/2021/11/01-01.html)
+- <time>2021-10-31</time>  
+  [正しいことは伝わらないしみんな自分のことは直さないし誰もより良くしようとか思ってない](/blog/2021/10/31-01.html)
+- <time>2021-10-26</time>  
+  [ホスティング先を XREA から GitHub Pages に変えた詳細](/blog/2021/10/26-01.html)
+- <time>2021-10-25</time>  
+  [ホスティング先を XREA から GitHub Pages に変えた](/blog/2021/10/25-01.html)
+- <time>2021-10-24</time>  
+  [OpenAPI Generator CLI を使ってみた](/blog/2021/10/24-01.html)
+- <time>2021-10-23</time>  
+  [Value Domain・XREA Plus を更新した](/blog/2021/10/23-01.html)
+- <time>2021-10-22</time>  
+  [Unity で 2D パズルゲーム作成を始めてみた](/blog/2021/10/22-01.html)
+- <time>2021-10-21</time>  
+  [ブレーキペダルに常に足を置いておく](/blog/2021/10/21-01.html)
+- <time>2021-10-20</time>  
+  [ネスカフェエクセラ・カロリーゼロのボトルコーヒーが美味しかった](/blog/2021/10/20-01.html)
+- <time>2021-10-19</time>  
+  [自分が避けてきたバッドノウハウをあえて使う](/blog/2021/10/19-01.html)
+- <time>2021-10-18</time>  
+  [新しいことをしたい思いと、新しいことに対する学習コストで萎える](/blog/2021/10/18-01.html)
+- <time>2021-10-16</time>  
+  [クソドメインの世界](/blog/2021/10/16-01.html)
+- <time>2021-10-15</time>  
+  [ケンコーの白いマヨネーズがめっちゃ美味い](/blog/2021/10/15-01.html)
+- <time>2021-10-14</time>  
+  [Amazon 購入とかクレカ決済とかスマホからやるの不安でパソコンからやりたくなるヤツ～ｗｗｗ](/blog/2021/10/14-01.html)
+- <time>2021-10-13</time>  
+  [ドメインとかモデルとかよく分かってない](/blog/2021/10/13-01.html)
+- <time>2021-10-12</time>  
+  [font 指定は html 要素に指定すべきか・body 要素に指定すべきか](/blog/2021/10/12-01.html)
+- <time>2021-10-11</time>  
+  [勝手に世間のために生きている人たち](/blog/2021/10/11-01.html)
+- <time>2021-10-07</time>  
+  [アジャイル・スクラムのイマイチポイントを調べた](/blog/2021/10/07-01.html)
+- <time>2021-10-06</time>  
+  [末尾に改行がないファイルを抽出する Bash スクリプト](/blog/2021/10/06-01.html)
+- <time>2021-10-03</time>  
+  [アジャイル・スクラム開発はバカには無理](/blog/2021/10/03-01.html)
+- <time>2021-09-28</time>  
+  [MongoDB Atlas の無料枠で MongoDB デビューしてみた](/blog/2021/09/28-01.html)
+- <time>2021-09-27</time>  
+  [映画「Reminiscence レミニセンス」を観た](/blog/2021/09/27-01.html)
+- <time>2021-09-26</time>  
+  [映画「Anon アノン」を見た](/blog/2021/09/26-01.html)
+- <time>2021-09-25</time>  
+  [ファイザー製コロナワクチンを2回接種し終えたので備忘](/blog/2021/09/25-01.html)
+- <time>2021-09-24</time>  
+  [トイレする時にトイレットペーパーを敷くのは、個人的な知恵かマナーか](/blog/2021/09/24-01.html)
+- <time>2021-09-23</time>  
+  [映画「Mark Felt ザ・シークレットマン」を見た](/blog/2021/09/23-01.html)
+- <time>2021-09-22</time>  
+  [映画「Next Three Days スリーデイズ」を見た](/blog/2021/09/22-01.html)
+- <time>2021-09-21</time>  
+  [ロジャー・ムーアおじさんの映画 007 作品 前半3つを見た](/blog/2021/09/21-01.html)
+- <time>2021-09-20</time>  
+  [映画「Tracers アンリミテッド」を見た](/blog/2021/09/20-01.html)
+- <time>2021-09-18</time>  
+  [見た映画の感想を管理するアプリ「FilmDeX」を作った 後編](/blog/2021/09/18-01.html)
+- <time>2021-09-17</time>  
+  [見た映画の感想を管理するアプリ「FilmDeX」を作った 前編](/blog/2021/09/17-01.html)
+- <time>2021-09-16</time>  
+  [Node.js で使えそうな軽量 NoSQL ライブラリを調べる](/blog/2021/09/16-01.html)
+- <time>2021-09-15</time>  
+  [121。カード C の思い出](/blog/2021/09/15-01.html)
+- <time>2021-09-14</time>  
+  [Always Free なはずの GCE にどうしても金がかかるから停止した](/blog/2021/09/14-01.html)
+- <time>2021-09-13</time>  
+  [「いいちこたあちこ」はどこの方言？](/blog/2021/09/13-01.html)
+- <time>2021-09-12</time>  
+  [ペプシツイストのオマケのフットバッグを手に入れた](/blog/2021/09/12-01.html)
+- <time>2021-09-11</time>  
+  [映画「Abduction ミッシング ID」を見た](/blog/2021/09/11-01.html)
+- <time>2021-09-10</time>  
+  [映画「素晴らしき哉、人生！」と「素晴らしきかな、人生」のまとめ](/blog/2021/09/10-01.html)
+- <time>2021-09-09</time>  
+  [映画「Into The Blue イントゥ・ザ・ブルー」を見た](/blog/2021/09/09-01.html)
+- <time>2021-09-08</time>  
+  [映画「Bad Boys For Life バッドボーイズ・フォー・ライフ」を見た](/blog/2021/09/08-01.html)
+- <time>2021-09-07</time>  
+  [映画「RoboCop ロボコップ」(2014年版) を見た](/blog/2021/09/07-01.html)
+- <time>2021-09-02</time>  
+  [映画「The Player ザ・プレイヤー」を観た](/blog/2021/09/02-01.html)
+- <time>2021-09-01</time>  
+  [映画「RoboCop ロボコップ 1・2・3」を見た](/blog/2021/09/01-01.html)
+- <time>2021-08-31</time>  
+  [Windows エクスプローラから Bash スクリプトを開いて実行したい](/blog/2021/08/31-01.html)
+- <time>2021-08-30</time>  
+  [ファイル名に NFD 文字を含むファイルをリストアップするワンライナー](/blog/2021/08/30-01.html)
+- <time>2021-08-29</time>  
+  [Bash でテキストファイルを結合する際に空行などを間に挿入する](/blog/2021/08/29-01.html)
+- <time>2021-08-25</time>  
+  [お前らって「会議で返事を求められても絶対に返事しない教」にでも入信してんの？](/blog/2021/08/25-01.html)
+- <time>2021-08-15</time>  
+  [VSCode でコメント行や TODO コメントの色を変える](/blog/2021/08/15-01.html)
+- <time>2021-08-14</time>  
+  [Windows と Mac で CLI から CPU 使用率を確認する](/blog/2021/08/14-01.html)
+- <time>2021-08-13</time>  
+  [自分の知識を体系的にまとめたい病](/blog/2021/08/13-01.html)
+- <time>2021-08-12</time>  
+  [江ノ島に行ってきた](/blog/2021/08/12-01.html)
+- <time>2021-08-11</time>  
+  [新しいことをしてみたくて、C++ と C#、.NET Framework や Visual Studio のことを調べた](/blog/2021/08/11-01.html)
+- <time>2021-08-10</time>  
+  [PowerShell のウィンドウを一切表示させずに実行する](/blog/2021/08/10-01.html)
+- <time>2021-08-09</time>  
+  [Dell S2721QS ディスプレイの明るさを Windows 上から変更する Dell Display Manager を使ってみる](/blog/2021/08/09-01.html)
+- <time>2021-08-08</time>  
+  [Windows10 のデスクトップ背景画像を切り替える PowerShell スクリプト](/blog/2021/08/08-01.html)
+- <time>2021-08-07</time>  
+  [郷に入って従った結果、ただのズボラになってきている、あるいはただの衰え](/blog/2021/08/07-01.html)
+- <time>2021-08-06</time>  
+  [機能単位に見積・設計・開発をするスクラムで、共通設計・全体設計はいつどうやるの？](/blog/2021/08/06-01.html)
+- <time>2021-08-05</time>  
+  [CoC が苦手な奴、認知資源が乏しいだけ説](/blog/2021/08/05-01.html)
+- <time>2021-08-04</time>  
+  [ポケモンピカチュウの実況動画を上げた](/blog/2021/08/04-01.html)
+- <time>2021-08-03</time>  
+  [ローカルにある別の npm パッケージを参照する](/blog/2021/08/03-01.html)
+- <time>2021-08-02</time>  
+  [VSCode Remote Containers は Docker Compose も使える](/blog/2021/08/02-01.html)
+- <time>2021-08-01</time>  
+  [マイクロサービス・FaaS・NoSQL・Object Storage が作り放題な Deta.sh を試してみた](/blog/2021/08/01-01.html)
+- <time>2021-07-30</time>  
+  [続・GCE 絶対無課金](/blog/2021/07/30-01.html)
+- <time>2021-07-29</time>  
+  [池袋にある手動開閉式エレベーターを見てきた](/blog/2021/07/29-01.html)
+- <time>2021-07-28</time>  
+  [DMM.com API を試してみた](/blog/2021/07/28-01.html)
+- <time>2021-07-27</time>  
+  [Gmail と Amazon アカウントに不正ログインされた](/blog/2021/07/27-01.html)
+- <time>2021-07-26</time>  
+  [OBS Studio でゲーム音声とマイク音声を別々に録音する・mkv 動画の再多重化](/blog/2021/07/26-01.html)
+- <time>2021-07-25</time>  
+  [USB ヘッドセット「Sennheiser PC 8」を買った・自分なりのノイズ調整方法](/blog/2021/07/25-01.html)
+- <time>2021-07-23</time>  
+  [Perl で簡単に円周率を出す](/blog/2021/07/23-01.html)
+- <time>2021-07-22</time>  
+  [Apache Bench (ab コマンド) でウェブサーバの性能を測定する](/blog/2021/07/22-01.html)
+- <time>2021-07-21</time>  
+  [横浜元町・中華街の山手西洋館エリアを巡ってきた](/blog/2021/07/21-01.html)
+- <time>2021-07-20</time>  
+  [WSL2 で立ち上げたサーバに LAN 内の別 PC からアクセスする](/blog/2021/07/20-01.html)
+- <time>2021-07-19</time>  
+  [画像や動画を無料でホスティング。「Cloudinary」と「ImageKit.io」](/blog/2021/07/19-01.html)
+- <time>2021-07-18</time>  
+  [Blender 始めました](/blog/2021/07/18-01.html)
+- <time>2021-07-17</time>  
+  [Cloudflare Pages と Cloudflare Workers KV を組み合わせてウェブアプリを作ってみた](/blog/2021/07/17-01.html)
+- <time>2021-07-16</time>  
+  [Cloudflare Workers による FaaS・Cloudflare Workers KV による Key-Value Store を試してみた](/blog/2021/07/16-01.html)
+- <time>2021-07-15</time>  
+  [書籍「ヘルシープログラマ」を読んだ](/blog/2021/07/15-01.html)
+- <time>2021-07-14</time>  
+  [ギターの指板にスケールを表示する CLI ツール「frettler」](/blog/2021/07/14-01.html)
+- <time>2021-07-13</time>  
+  [生年月日から入学・卒業年を計算する「Calc Resume Years」を作った](/blog/2021/07/13-01.html)
+- <time>2021-07-12</time>  
+  [RSS 配信されていないサイトの RSS フィードを作れる「Feed Creator」](/blog/2021/07/12-01.html)
+- <time>2021-07-11</time>  
+  [Bash でランダムな値を得る「shuf」コマンド](/blog/2021/07/11-01.html)
+- <time>2021-07-10</time>  
+  [Vim で Shift-JIS・CRLF のファイルを開き UTF-8・LF に変換して保存する](/blog/2021/07/10-01.html)
+- <time>2021-07-09</time>  
+  [Dell 4K モニタ S2721QS + エルゴトロン LX デスクマウントアーム + ワイドデスクでデスクトップ環境を改善した](/blog/2021/07/09-01.html)
+- <time>2021-07-08</time>  
+  [映画「Terminator Dark Fate ターミネーター・ニュー・フェイト」を見た](/blog/2021/07/08-01.html)
+- <time>2021-07-07</time>  
+  [自分を小さくした言葉](/blog/2021/07/07-01.html)
+- <time>2021-07-06</time>  
+  [Suntory Saturday Waiting Bar「AVANTI」の思い出](/blog/2021/07/06-01.html)
+- <time>2021-07-05</time>  
+  [実はよく分かっていなかった言葉を調べる](/blog/2021/07/05-01.html)
+- <time>2021-07-04</time>  
+  [HTML の属性値を囲むのはシングルクォートでもダブルクォートでも良い](/blog/2021/07/04-01.html)
+- <time>2021-07-03</time>  
+  [自分の Windows10 環境を紹介する動画を作った](/blog/2021/07/03-01.html)
+- <time>2021-07-02</time>  
+  [Reason Lite 10 で初めてオリジナル曲作ってみた](/blog/2021/07/02-01.html)
+- <time>2021-07-01</time>  
+  [家庭用レーザー脱毛器「Tria トリア 4X」を買ってみた](/blog/2021/07/01-01.html)
+- <time>2021-06-30</time>  
+  [MIDI キーボードを使ってピアノ練習：「Synthesia」「MIDIculous」](/blog/2021/06/30-01.html)
+- <time>2021-06-29</time>  
+  [インスタントに解決しないと気が済まない短気人間になっていく](/blog/2021/06/29-01.html)
+- <time>2021-06-28</time>  
+  [新生](/blog/2021/06/28-01.html)
+- <time>2021-06-15</time>  
+  [映画「Death Becomes Her 永遠に美しく…」を観た](/blog/2021/06/15-01.html)
+- <time>2021-06-14</time>  
+  [アンケートサイトで自動回答するブックマークレットを作るためのノウハウ集](/blog/2021/06/14-01.html)
+- <time>2021-06-13</time>  
+  [Neo's Normalize v2.1.0 を公開しました](/blog/2021/06/13-01.html)
+- <time>2021-06-12</time>  
+  [独自ドメイン設定の文脈で出てくる「CNAME」とか「ネイキッドドメイン」とか調べた](/blog/2021/06/12-01.html)
+- <time>2021-06-11</time>  
+  [「サーバレスがもてはやされてるけど RDS 使いたい時もあるじゃん？」について調べた](/blog/2021/06/11-01.html)
+- <time>2021-06-10</time>  
+  [「@neos21/opu」v0.0.2 を公開しました](/blog/2021/06/10-01.html)
+- <time>2021-06-05</time>  
+  [frp でセルフホスティング ngrok 風環境を作る](/blog/2021/06/05-01.html)
+- <time>2021-06-04</time>  
+  [Windows PowerShell でテキスト・トゥ・スピーチ](/blog/2021/06/04-01.html)
+- <time>2021-06-03</time>  
+  [Mac の画面上で OCR ができる「macOCR」](/blog/2021/06/03-01.html)
+- <time>2021-06-02</time>  
+  [OS 問わず Bash で一括リネームする](/blog/2021/06/02-01.html)
+- <time>2021-06-01</time>  
+  [JavaScript の使ったことない演算子を練習する](/blog/2021/06/01-01.html)
+- <time>2021-05-28</time>  
+  [iOS アプリで動画撮影する際オートフォーカスモードを指定する Swift コード](/blog/2021/05/28-01.html)
+- <time>2021-05-27</time>  
+  [iOS アプリで動画撮影する際手ブレ補正を効かせる Swift コード](/blog/2021/05/27-01.html)
+- <time>2021-05-26</time>  
+  [VSCode 拡張機能の「Activitus Bar」でウィンドウスッキリ](/blog/2021/05/26-01.html)
+- <time>2021-05-20</time>  
+  [指定の文字列を含む Kubernetes Pod を一括 Delete する](/blog/2021/05/20-01.html)
+- <time>2021-05-19</time>  
+  [映画「Virtuosity バーチュオシティ」を観た](/blog/2021/05/19-01.html)
+- <time>2021-05-18</time>  
+  [映画「Demolition Man デモリションマン」を観た](/blog/2021/05/18-01.html)
+- <time>2021-05-17</time>  
+  [カレントディレクトリの Git リポジトリをブラウザで開くシェルスクリプト](/blog/2021/05/17-01.html)
+- <time>2021-05-16</time>  
+  [映画「Hot Shots! Part Deux ホット・ショット2」を観た](/blog/2021/05/16-01.html)
+- <time>2021-05-15</time>  
+  [映画「Total Recall トータル・リコール」(1990年) を観た](/blog/2021/05/15-01.html)
+- <time>2021-05-14</time>  
+  [映画「Knives Out ナイブズ・アウト 名探偵と刃の館の秘密」を見た](/blog/2021/05/14-01.html)
+- <time>2021-05-13</time>  
+  [圧縮ファイルのダウンロードと解凍を一気に行う (wget・curl・tar)](/blog/2021/05/13-01.html)
+- <time>2021-05-12</time>  
+  [YouTube 環境を向上させるために入れている Chrome 拡張機能](/blog/2021/05/12-01.html)
+- <time>2021-05-11</time>  
+  [ime.nu もどきを作ってリンク先のファイル保存を効率化する](/blog/2021/05/11-01.html)
+- <time>2021-05-10</time>  
+  [フィルムの余りで撮った写真](/blog/2021/05/10-01.html)
+- <time>2021-05-09</time>  
+  [Windows 10 をクリーンインストールしたら HEIC 形式のファイルがプレビューできなくなったのでなんとかした](/blog/2021/05/09-01.html)
+- <time>2021-05-08</time>  
+  [カラムもユーザが定義できる CRUD アプリ「JSON DB Manager」を作った](/blog/2021/05/08-01.html)
+- <time>2021-05-02</time>  
+  [「Liminal Spaces」という概念](/blog/2021/05/02-01.html)
+- <time>2021-05-01</time>  
+  [漢字を確認するためのツールを作った](/blog/2021/05/01-01.html)
+- <time>2021-04-30</time>  
+  [辣子鶏 (ラーズーチー) という料理](/blog/2021/04/30-01.html)
+- <time>2021-04-29</time>  
+  [巨人の肩の上に立つ](/blog/2021/04/29-01.html)
+- <time>2021-04-24</time>  
+  [MacBookPro 15インチ (2017) と16インチ (2019) を比較してみた](/blog/2021/04/24-01.html)
+- <time>2021-04-23</time>  
+  [GPD Win 2 に JoyToKey を入れてマウス操作を快適にする](/blog/2021/04/23-01.html)
+- <time>2021-04-22</time>  
+  [GPD Win2 (2019年モデル) を買った](/blog/2021/04/22-01.html)
+- <time>2021-04-14</time>  
+  [Ubuntu マシンに SSH 接続した時の「Welcome to Ubuntu」を非表示にする](/blog/2021/04/14-01.html)
+- <time>2021-04-13</time>  
+  [ngrok をセルフホストできる・でも DNS が大事](/blog/2021/04/13-01.html)
+- <time>2021-04-12</time>  
+  [Kubernetes クラスタ内に一時的な Pod をデプロイして kubectl コマンドを実行したい](/blog/2021/04/12-01.html)
+- <time>2021-04-11</time>  
+  [GPT2 再挑戦して WSL で日本語文章を自動生成できた](/blog/2021/04/11-01.html)
+- <time>2021-04-09</time>  
+  [映画「Commando コマンドー」を観た](/blog/2021/04/09-01.html)
+- <time>2021-04-08</time>  
+  [映画「Junior ジュニア」を観た](/blog/2021/04/08-01.html)
+- <time>2021-04-05</time>  
+  [もう一度 3DNA で遊びたい](/blog/2021/04/05-01.html)
+- <time>2021-04-04</time>  
+  [Bash で「連想配列の配列」を扱いたい…けど jq でいいか](/blog/2021/04/04-01.html)
+- <time>2021-04-03</time>  
+  [Windows Terminal で WSL 操作時にベルサウンドが鳴るようになったので消音にする](/blog/2021/04/03-01.html)
+- <time>2021-04-02</time>  
+  [Windows Update したらエクスプローラの項目の行間が開いたのを直す](/blog/2021/04/02-01.html)
+- <time>2021-04-01</time>  
+  [onion ドメインのウェブサイトを開設してみる](/blog/2021/04/01-01.html)
+- <time>2021-03-31</time>  
+  [Oracle Cloud Infrastructure 2020 Architect Associate (1Z0-1072-20-JPN) に合格した](/blog/2021/03/31-01.html)
+- <time>2021-03-30</time>  
+  [Web Audio API でビープ音を作る・モールス信号を流してみる](/blog/2021/03/30-01.html)
+- <time>2021-03-29</time>  
+  [パスワード文字列を生成する pwgen コマンド](/blog/2021/03/29-01.html)
+- <time>2021-03-28</time>  
+  [WSL で Apache サーバを立ててみる](/blog/2021/03/28-01.html)
+- <time>2021-03-27</time>  
+  [Kubernetes の Node・Pod ごとの CPU・RAM 使用率を確認する kubectl top コマンド](/blog/2021/03/27-01.html)
+- <time>2021-03-26</time>  
+  [Node.js アプリから Heroku Postgres に接続できなくなったので SSL 通信設定を直す](/blog/2021/03/26-01.html)
+- <time>2021-03-25</time>  
+  [Ruby CGI でファイルアップロードを実装する・オレオレエクスプローラを作ってみた](/blog/2021/03/25-01.html)
+- <time>2021-03-24</time>  
+  [iOS Safari で「Login With Google」が上手く動かないのを直す](/blog/2021/03/24-01.html)
+- <time>2021-03-23</time>  
+  [映画「Mission Impossible 1 ミッション・インポッシブル」を観た](/blog/2021/03/23-01.html)
+- <time>2021-03-22</time>  
+  [映画「Passengers パッセンジャーズ」を見た](/blog/2021/03/22-01.html)
+- <time>2021-03-21</time>  
+  [映画「Fast & Furious Presents Hobbs & Shaw ワイルド・スピード スーパーコンボ」を見た](/blog/2021/03/21-01.html)
+- <time>2021-03-20</time>  
+  [映画「Daylight デイライト」を観た](/blog/2021/03/20-01.html)
+- <time>2021-03-19</time>  
+  [映画「Sixth Day 6d シックス・デイ」を観た](/blog/2021/03/19-01.html)
+- <time>2021-03-18</time>  
+  [映画「Manchurian Candidate クライシス・オブ・アメリカ」を観た](/blog/2021/03/18-01.html)
+- <time>2021-03-17</time>  
+  [Angular アプリの画面遷移を実現するブックマークレットを作る](/blog/2021/03/17-01.html)
+- <time>2021-03-16</time>  
+  [VSCode のエクスプローラペインのフォントを変える](/blog/2021/03/16-01.html)
+- <time>2021-03-15</time>  
+  [映画「Sicario Day of The Soldado ボーダーライン・ソルジャーズ・デイ」を観た](/blog/2021/03/15-01.html)
+- <time>2021-03-14</time>  
+  [tree コマンド実行時、Git 管理対象外のファイルを除外する](/blog/2021/03/14-01.html)
+- <time>2021-03-13</time>  
+  [find コマンドで拡張子を複数指定する](/blog/2021/03/13-01.html)
+- <time>2021-03-12</time>  
+  [映画「Foreigner フォーリナー 復讐者」を観た](/blog/2021/03/12-01.html)
+- <time>2021-03-11</time>  
+  [映画「Pelican Brief ペリカン文書」を観た](/blog/2021/03/11-01.html)
+- <time>2021-03-10</time>  
+  [swf2js で Flash ファイルを再生してみた](/blog/2021/03/10-01.html)
+- <time>2021-03-09</time>  
+  [Web Speech Recognition API を使ってブラウザオンリーで音声認識する](/blog/2021/03/09-01.html)
+- <time>2021-03-08</time>  
+  [映画「Sicario ボーダーライン」を観た](/blog/2021/03/08-01.html)
+- <time>2021-03-07</time>  
+  [映画「Blade 2 ブレイド2」を観た](/blog/2021/03/07-01.html)
+- <time>2021-03-06</time>  
+  [映画「Blade ブレイド」を観た](/blog/2021/03/06-01.html)
+- <time>2021-03-05</time>  
+  [Riot.js の Webpack-SPA テンプレートを GitHub Pages 上で動かせるようにする](/blog/2021/03/05-01.html)
+- <time>2021-03-04</time>  
+  [オレオレ・ウィッシュリストアプリを作った](/blog/2021/03/04-01.html)
+- <time>2021-03-03</time>  
+  [映画「Paycheck ペイチェック消された記憶」を観た](/blog/2021/03/03-01.html)
+- <time>2021-03-02</time>  
+  [映画「Last Boy Scout ラスト・ボーイスカウト」を見た](/blog/2021/03/02-01.html)
+- <time>2021-03-01</time>  
+  [親知らずを抜いた体験記](/blog/2021/03/01-01.html)
+- <time>2021-02-28</time>  
+  [映画「Godfather ゴッドファーザー Part 1・Part 2・Part 3」を見た](/blog/2021/02/28-01.html)
+- <time>2021-02-27</time>  
+  [Preact プロジェクトを GitHub Pages にデプロイした](/blog/2021/02/27-01.html)
+- <time>2021-02-26</time>  
+  [Mac + OBS Studio で録画済の動画をウェブカメラ映像として配信する](/blog/2021/02/26-01.html)
+- <time>2021-02-25</time>  
+  [はてなブックマークに登録するブックマークレット](/blog/2021/02/25-01.html)
+- <time>2021-02-24</time>  
+  [はてなブックマークに登録される自分のサイトを管理する](/blog/2021/02/24-01.html)
+- <time>2021-02-23</time>  
+  [映画「Heat ヒート」を観た](/blog/2021/02/23-01.html)
+- <time>2021-02-22</time>  
+  [映画「Spider-Man Into The Spider-Verse スパイダーマン・スパイダーバース」を観た](/blog/2021/02/22-01.html)
+- <time>2021-02-21</time>  
+  [映画「Bleeding Steel ポリス・ストーリー Reborn」を見た](/blog/2021/02/21-01.html)
+- <time>2021-02-20</time>  
+  [xargs ナニモワカラナイ](/blog/2021/02/20-01.html)
+- <time>2021-02-19</time>  
+  [GitHub Actions から Slack 通知する](/blog/2021/02/19-01.html)
+- <time>2021-02-18</time>  
+  [映画「Donnie Brasco フェイク」を観た](/blog/2021/02/18-01.html)
+- <time>2021-02-17</time>  
+  [「No Hello」：チャットで挨拶だけの投稿して返事待つな](/blog/2021/02/17-01.html)
+- <time>2021-02-16</time>  
+  [Raspberry Pi 4B の Bluetooth が切れやすい](/blog/2021/02/16-01.html)
+- <time>2021-02-15</time>  
+  [Neo's Release Notes 2021-01](/blog/2021/02/15-02.html)
+- <time>2021-02-15</time>  
+  [複数行テキストを行ごとにシャッフルする「Shuffle Lines」を作った](/blog/2021/02/15-01.html)
+- <time>2021-02-14</time>  
+  [ES2015 のタグ付きテンプレート関数を試す](/blog/2021/02/14-01.html)
+- <time>2021-02-13</time>  
+  [「ごきげんよう」でトークテーマを発表する時のジングル〜〜](/blog/2021/02/13-01.html)
+- <time>2021-02-12</time>  
+  [iPhone Safari で YouTube を PiP (ピクチャ・イン・ピクチャ) 再生する方法](/blog/2021/02/12-01.html)
+- <time>2021-02-11</time>  
+  [SNS 全入時代](/blog/2021/02/11-02.html)
+- <time>2021-02-11</time>  
+  [映画「Million Dollar Baby ミリオンダラー・ベイビー」を見た](/blog/2021/02/11-01.html)
+- <time>2021-02-10</time>  
+  [「TypeScript の型定義に凝りすぎじゃね？」の反応を眺める](/blog/2021/02/10-02.html)
+- <time>2021-02-10</time>  
+  [映画「One Hundred and One Dalmatians 101匹わんちゃん」を久々に見た](/blog/2021/02/10-01.html)
+- <time>2021-02-09</time>  
+  [TypeScript の型定義に凝りすぎじゃね？](/blog/2021/02/09-02.html)
+- <time>2021-02-09</time>  
+  [映画「In The Line of Fire ザ・シークレット・サービス」を見た](/blog/2021/02/09-01.html)
+- <time>2021-02-08</time>  
+  [自分の性格・思想・偏見](/blog/2021/02/08-02.html)
+- <time>2021-02-08</time>  
+  [Windows の謎を調べた](/blog/2021/02/08-01.html)
+- <time>2021-02-07</time>  
+  [例示用のドメイン・IP アドレス](/blog/2021/02/07-01.html)
+- <time>2021-02-06</time>  
+  [コマンド一発で圧縮ファイルを解凍しながら DL したい](/blog/2021/02/06-01.html)
+- <time>2021-02-05</time>  
+  [映画「Blood Diamond ブラッド・ダイヤモンド」を見た](/blog/2021/02/05-01.html)
+- <time>2021-02-04</time>  
+  [dig コマンドはデフォルトだと A レコードしか見ない](/blog/2021/02/04-01.html)
+- <time>2021-02-03</time>  
+  [映画「24 Hours To Live リミット・オブ・アサシン」を観た](/blog/2021/02/03-01.html)
+- <time>2021-02-02</time>  
+  [映画「記憶にございません」を見た](/blog/2021/02/02-01.html)
+- <time>2021-02-01</time>  
+  [Neo's Release Notes 忘れてた…](/blog/2021/02/01-02.html)
+- <time>2021-02-01</time>  
+  [Web Speech API 触ってみた](/blog/2021/02/01-01.html)
+- <time>2021-01-31</time>  
+  [映画「Ghostbusters 2 ゴーストバスターズ2」を見た](/blog/2021/01/31-01.html)
+- <time>2021-01-30</time>  
+  [日テレが中華料理を紹介する時に流れる曲](/blog/2021/01/30-01.html)
+- <time>2021-01-29</time>  
+  [トップスインガー](/blog/2021/01/29-01.html)
+- <time>2021-01-28</time>  
+  [映画「Ghostbusters ゴーストバスターズ」を見た](/blog/2021/01/28-01.html)
+- <time>2021-01-27</time>  
+  [映画「Parasite パラサイト半地下の家族」を観た](/blog/2021/01/27-01.html)
+- <time>2021-01-26</time>  
+  [Riot.js 試してみた](/blog/2021/01/26-01.html)
+- <time>2021-01-25</time>  
+  [Kubernetes に一時的な Pod を配備する・配備する Node を指定する](/blog/2021/01/25-01.html)
+- <time>2021-01-24</time>  
+  [Linux・WSL・Windows GitBash でクリップボードのコピー・ペーストを実現するコマンド](/blog/2021/01/24-02.html)
+- <time>2021-01-24</time>  
+  [映画「Venom ヴェノム」を観た](/blog/2021/01/24-01.html)
+- <time>2021-01-23</time>  
+  [ココナラ止めた](/blog/2021/01/23-02.html)
+- <time>2021-01-23</time>  
+  [映画「Escape From Alcatraz アルカトラズからの脱出」を見た](/blog/2021/01/23-01.html)
+- <time>2021-01-22</time>  
+  [映画「Righteous Kill ボーダー」を観た](/blog/2021/01/22-01.html)
+- <time>2021-01-21</time>  
+  [映画「American History X アメリカン・ヒストリー X」を観た](/blog/2021/01/21-01.html)
+- <time>2021-01-20</time>  
+  [MacOS Big Sur の VSCode ターミナルがプチフリーズする問題の対処法](/blog/2021/01/20-01.html)
+- <time>2021-01-19</time>  
+  [2020年の世間的なできごと・私的まとめ](/blog/2021/01/19-01.html)
+- <time>2021-01-18</time>  
+  [映画「Score スコア」を観た](/blog/2021/01/18-01.html)
+- <time>2021-01-17</time>  
+  [CoinPot が2021年1月末で閉鎖するらしい](/blog/2021/01/17-02.html)
+- <time>2021-01-17</time>  
+  [地上波放送される映画の情報を取得する「TV Films」を作った](/blog/2021/01/17-01.html)
+- <time>2021-01-16</time>  
+  [root ユーザの npm バージョンが異なるのを直す](/blog/2021/01/16-01.html)
+- <time>2021-01-15</time>  
+  [Playwright を使ってみた](/blog/2021/01/15-01.html)
+- <time>2021-01-14</time>  
+  [クロスプラットフォームで音量を変えられる @neos21/loudness を作った](/blog/2021/01/14-01.html)
+- <time>2021-01-13</time>  
+  [クロスプラットフォームで画面の明るさを変えられる @neos21/brightness を作った](/blog/2021/01/13-01.html)
+- <time>2021-01-12</time>  
+  [映画「Wonder Woman ワンダーウーマン」を見た](/blog/2021/01/12-01.html)
+- <time>2021-01-11</time>  
+  [30歳になった](/blog/2021/01/11-02.html)
+- <time>2021-01-11</time>  
+  [映画「Full Metal Jacket フルメタル・ジャケット」を観た](/blog/2021/01/11-01.html)
+- <time>2021-01-10</time>  
+  [Corredor の記事も移行した](/blog/2021/01/10-02.html)
+- <time>2021-01-10</time>  
+  [映画「Death Wish デス・ウィッシュ」を観た](/blog/2021/01/10-01.html)
+- <time>2021-01-09</time>  
+  [Kubernetes Pod にポートフォワードする](/blog/2021/01/09-01.html)
+- <time>2021-01-08</time>  
+  [Vue アプリで使われている Vue のバージョンをブラウザで知る方法](/blog/2021/01/08-01.html)
+- <time>2021-01-07</time>  
+  [oath-toolkit で Google の二段階認証をコマンドで行う](/blog/2021/01/07-01.html)
+- <time>2021-01-06</time>  
+  [映画「Firm ザ・ファーム法律事務所」を見た](/blog/2021/01/06-01.html)
+- <time>2021-01-05</time>  
+  [proxyrequire で外部ライブラリをモック化してテストする](/blog/2021/01/05-01.html)
+- <time>2021-01-04</time>  
+  [映画「I'm Still Here 容疑者、ホアキン・フェニックス」を見た](/blog/2021/01/04-01.html)
+- <time>2021-01-03</time>  
+  [映画「SkyScraper スカイスクレイパー」を観た](/blog/2021/01/03-01.html)
+- <time>2021-01-02</time>  
+  [映画「Birds of Prey ハーレイ・クインの華麗なる覚醒」を見た](/blog/2021/01/02-01.html)
+- <time>2021-01-01</time>  
+  [Vue + Axios + Express で非同期通信後にファイルダウンロードさせる](/blog/2021/01/01-01.html)
+
 
 ## [2020](/blog/2020/index.html)
 
