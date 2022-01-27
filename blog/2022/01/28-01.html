@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#0990d0">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>ffmpeg で GPU エンコードできるようにする - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2022/01/28-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="header-brand">
+          <div id="header-brand-contents">
+            <div id="site-title"><a href="/index.html">Neo's World</a></div>
+            <nav id="header-links">
+              <ul>
+                <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+                <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+                <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+                <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+              </ul>
+            </nav>
+          </div>
+        </div>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2022/index.html">2022年</a></li>
+            <li><a href="/blog/2022/01/index.html">01月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2022-01-28</time></div>
+        <h1 id="page-title">ffmpeg で GPU エンコードできるようにする</h1>
+
+<p>以前 ffmpeg を使ってコマンドラインから動画をエンコードする方法をまとめた。その際、GPU エンコードが上手くいかなかったので放置していたのだが、再トライしてみた次第。</p>
+<ul>
+  <li>過去記事：<a href="/blog/2021/12/13-01.html">ffmpeg で mkv 形式の動画を H.264 mp4 に変換してみた</a>
+    <blockquote>
+      <p><code>h264_nvenc</code> (や <code>nvenc_h264</code>) で GPU エンコードできるようだが、自分が試した ffmpeg では上手くいかなかった。何かビルドしたりしないといけないらしい。面倒なので放置</p>
+    </blockquote>
+  </li>
+</ul>
+<p>当時どう上手くいかなかったのかというと、以下のようなエラーメッセージが出て異常終了していた。</p>
+<pre><code>driver does not support the required nvenc api version. required 11.1 found 11.0
+</code></pre>
+<p>割と簡単に何とかなったので紹介する。</p>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#%E5%89%8D%E6%8F%90%E7%92%B0%E5%A2%83">前提環境</a></li>
+  <li><a href="#nvidia-%E3%83%89%E3%83%A9%E3%82%A4%E3%83%90%E3%81%A8-sdk-%E3%82%92%E3%82%A4%E3%83%B3%E3%82%B9%E3%83%88%E3%83%BC%E3%83%AB%E3%81%99%E3%82%8B">NVIDIA ドライバと SDK をインストールする</a></li>
+  <li><a href="#ffmpeg-%E3%82%92%E3%82%A4%E3%83%B3%E3%82%B9%E3%83%88%E3%83%BC%E3%83%AB%E3%81%99%E3%82%8B">ffmpeg をインストールする</a></li>
+  <li><a href="#gpu-%E3%82%A8%E3%83%B3%E3%82%B3%E3%83%BC%E3%83%89%E3%81%97%E3%81%A6%E3%81%BF%E3%82%8B">GPU エンコードしてみる</a></li>
+</ul>
+<h2 id="前提環境"><a class="header-link" href="#前提環境"><span class="header-link-mark"></span></a>前提環境</h2>
+<p>当方環境は以下のとおり。</p>
+<ul>
+  <li>OS : Windows 10 Pro</li>
+  <li>CPU : Intel Core i7-7700K</li>
+  <li>GPU : NVIDIA GeForce GTX 1080</li>
+  <li>GitBash (Git SDK) から呼び出すつもり。WSL からの呼び出しは考えない</li>
+</ul>
+<h2 id="nvidia-ドライバと-sdk-をインストールする"><a class="header-link" href="#nvidia-ドライバと-sdk-をインストールする"><span class="header-link-mark"></span></a>NVIDIA ドライバと SDK をインストールする</h2>
+<p>まずは NVIDIA のドライバと SDK の最新版をインストールしてみる。</p>
+<ul>
+  <li>参考：<a href="https://nico-lab.net/installing_cuda_with_ffmpeg/">ffmpeg に nvenc（cuda）をインストールする | ニコラボ</a></li>
+</ul>
+<p>上のページを参考に、以下2つをインストールした。</p>
+<ol>
+  <li>NVIDIA ドライバ
+    <ul>
+      <li><a href="https://www.nvidia.co.jp/Download/index.aspx?lang=jp">NVIDIAドライバダウンロード</a></li>
+      <li>↑ このページから、自分は GTX 1080 向けのドライバをダウンロードしインストール。ダウンロードタイプは安定している「Studio ドライバー (SD)」にしておいた</li>
+    </ul>
+  </li>
+  <li>CUDA Toolkit SDK
+    <ul>
+      <li><a href="https://developer.nvidia.com/cuda-downloads">CUDA Toolkit 11.6 Downloads | NVIDIA Developer</a></li>
+      <li>↑ このページから、自分は Windows 10 64bit 向けの SDK をダウンロードしインストール</li>
+    </ul>
+  </li>
+</ol>
+<p>それぞれ、インストール直後は OS を再起動すること。「GeForce Experience」という GUI ツールからも必要なアップデートが確認できたりする。</p>
+<h2 id="ffmpeg-をインストールする"><a class="header-link" href="#ffmpeg-をインストールする"><span class="header-link-mark"></span></a>ffmpeg をインストールする</h2>
+<p>コレまでは、Chocolatey 経由でインストールしていた ffmpeg をワケも分からず使っていたのだが、どうも GPU エンコードするためには本来、ffmpeg を自分でビルドしないといけないらしい。</p>
+<ul>
+  <li>参考：<a href="https://docs.nvidia.com/video-technologies/video-codec-sdk/ffmpeg-with-nvidia-gpu/">Using FFmpeg with NVIDIA GPU Hardware Acceleration :: NVIDIA Video Codec SDK Documentation</a>
+    <ul>
+      <li>NVIDIA による説明</li>
+    </ul>
+  </li>
+</ul>
+<p>手順はまとまっているものの、ビルドが面倒臭いので、ビルド済のモノを探したところ、以下にあった。</p>
+<ul>
+  <li><a href="https://www.gyan.dev/ffmpeg/builds/">Builds - CODEX FFMPEG @ gyan.dev</a></li>
+</ul>
+<p>このページは定期的にビルド済の ffmpeg を配信しているようだ。最新版の <code>ffmpeg-git-full.7z</code> をダウンロードすれば良い。自分は本稿執筆時点の最新版である <code>ffmpeg-2022-01-19-git-dd17c86aa1-full_build.7z</code> をダウンロードした。</p>
+<ul>
+  <li>参考：<a href="https://github.com/GyanD/codexffmpeg/releases">Releases · GyanD/codexffmpeg</a>
+    <ul>
+      <li>上のページの GitHub ミラー</li>
+    </ul>
+  </li>
+</ul>
+<p>7-Zip で解凍すると、中から <code>ffmpeg.exe</code> が出てくるので、コレを PATH の通ったところに配置する。Chocolatey でインストールしていたモノよりも優先して使われることを確認しておこう。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># 自分で配置した ffmpeg を確認する</span>
+$ <span class="token builtin class-name">type</span> ffmpeg
+ffmpeg は /c/Users/Neo/bin/ffmpeg です
+
+$ ffmpeg -version
+ffmpeg version <span class="token number">2022</span>-01-19-git-dd17c86aa1-full_build-www.gyan.dev Copyright <span class="token punctuation">(</span>c<span class="token punctuation">)</span> <span class="token number">2000</span>-2022 the FFmpeg developers
+built with gcc <span class="token number">11.2</span>.0 <span class="token punctuation">(</span>Rev5, Built by MSYS2 project<span class="token punctuation">)</span>
+configuration: --enable-gpl --enable-version3 --enable-static --disable-w32threads --disable-autodetect --enable-fontconfig --enable-iconv --enable-gnutls --enable-libxml2 --enable-gmp --enable-bzlib --enable-lzma --enable-libsnappy --enable-zlib --enable-librist --enable-libsrt --enable-libssh --enable-libzmq --enable-avisynth --enable-libbluray --enable-libcaca --enable-sdl2 --enable-libdav1d --enable-libdavs2 --enable-libuavs3d --enable-libzvbi --enable-librav1e --enable-libsvtav1 --enable-libwebp --enable-libx264 --enable-libx265 --enable-libxavs2 --enable-libxvid --enable-libaom --enable-libopenjpeg --enable-libvpx --enable-mediafoundation --enable-libass --enable-frei0r --enable-libfreetype --enable-libfribidi --enable-libvidstab --enable-libvmaf --enable-libzimg --enable-amf --enable-cuda-llvm --enable-cuvid --enable-ffnvcodec --enable-nvdec --enable-nvenc --enable-d3d11va --enable-dxva2 --enable-libmfx --enable-libshaderc --enable-vulkan --enable-libplacebo --enable-opencl --enable-libcdio --enable-libgme --enable-libmodplug --enable-libopenmpt --enable-libopencore-amrwb --enable-libmp3lame --enable-libshine --enable-libtheora --enable-libtwolame --enable-libvo-amrwbenc --enable-libilbc --enable-libgsm --enable-libopencore-amrnb --enable-libopus --enable-libspeex --enable-libvorbis --enable-ladspa --enable-libbs2b --enable-libflite --enable-libmysofa --enable-librubberband --enable-libsoxr --enable-chromaprint
+libavutil      <span class="token number">57</span>. <span class="token number">18.100</span> / <span class="token number">57</span>. <span class="token number">18.100</span>
+libavcodec     <span class="token number">59</span>. <span class="token number">20.100</span> / <span class="token number">59</span>. <span class="token number">20.100</span>
+libavformat    <span class="token number">59</span>. <span class="token number">17.101</span> / <span class="token number">59</span>. <span class="token number">17.101</span>
+libavdevice    <span class="token number">59</span>.  <span class="token number">5.100</span> / <span class="token number">59</span>.  <span class="token number">5.100</span>
+libavfilter     <span class="token number">8</span>. <span class="token number">26.100</span> /  <span class="token number">8</span>. <span class="token number">26.100</span>
+libswscale      <span class="token number">6</span>.  <span class="token number">5.100</span> /  <span class="token number">6</span>.  <span class="token number">5.100</span>
+libswresample   <span class="token number">4</span>.  <span class="token number">4.100</span> /  <span class="token number">4</span>.  <span class="token number">4.100</span>
+libpostproc    <span class="token number">56</span>.  <span class="token number">4.100</span> / <span class="token number">56</span>.  <span class="token number">4.100</span>
+
+<span class="token comment"># エンコーダを確認する</span>
+$ ffmpeg -encoders <span class="token operator">|</span> <span class="token function">grep</span> -i nvidia
+ V<span class="token punctuation">..</span><span class="token punctuation">..</span>D h264_nvenc           NVIDIA NVENC H.264 encoder <span class="token punctuation">(</span>codec h264<span class="token punctuation">)</span>
+ V<span class="token punctuation">..</span><span class="token punctuation">..</span>D hevc_nvenc           NVIDIA NVENC hevc encoder <span class="token punctuation">(</span>codec hevc<span class="token punctuation">)</span>
+
+<span class="token comment"># デコーダも確認する</span>
+$ ffmpeg -decoders <span class="token operator">|</span> <span class="token function">grep</span> -i nvidia
+ V<span class="token punctuation">..</span><span class="token punctuation">..</span>. av1_cuvid            Nvidia CUVID AV1 decoder <span class="token punctuation">(</span>codec av1<span class="token punctuation">)</span>
+ V<span class="token punctuation">..</span><span class="token punctuation">..</span>. h264_cuvid           Nvidia CUVID H264 decoder <span class="token punctuation">(</span>codec h264<span class="token punctuation">)</span>
+ V<span class="token punctuation">..</span><span class="token punctuation">..</span>. hevc_cuvid           Nvidia CUVID HEVC decoder <span class="token punctuation">(</span>codec hevc<span class="token punctuation">)</span>
+ V<span class="token punctuation">..</span><span class="token punctuation">..</span>. mjpeg_cuvid          Nvidia CUVID MJPEG decoder <span class="token punctuation">(</span>codec mjpeg<span class="token punctuation">)</span>
+ V<span class="token punctuation">..</span><span class="token punctuation">..</span>. mpeg1_cuvid          Nvidia CUVID MPEG1VIDEO decoder <span class="token punctuation">(</span>codec mpeg1video<span class="token punctuation">)</span>
+ V<span class="token punctuation">..</span><span class="token punctuation">..</span>. mpeg2_cuvid          Nvidia CUVID MPEG2VIDEO decoder <span class="token punctuation">(</span>codec mpeg2video<span class="token punctuation">)</span>
+ V<span class="token punctuation">..</span><span class="token punctuation">..</span>. mpeg4_cuvid          Nvidia CUVID MPEG4 decoder <span class="token punctuation">(</span>codec mpeg4<span class="token punctuation">)</span>
+ V<span class="token punctuation">..</span><span class="token punctuation">..</span>. vc1_cuvid            Nvidia CUVID VC1 decoder <span class="token punctuation">(</span>codec vc1<span class="token punctuation">)</span>
+ V<span class="token punctuation">..</span><span class="token punctuation">..</span>. vp8_cuvid            Nvidia CUVID VP8 decoder <span class="token punctuation">(</span>codec vp8<span class="token punctuation">)</span>
+ V<span class="token punctuation">..</span><span class="token punctuation">..</span>. vp9_cuvid            Nvidia CUVID VP9 decoder <span class="token punctuation">(</span>codec vp9<span class="token punctuation">)</span>
+</code></pre>
+<p>エンコーダの中で、<em>`h264</em>nvenc<code>_ が存在すれば、GPU を使った H.264 エンコードができる。</code>hevc_nvenc` の方は H.265 エンコードができるモノ。</p>
+<h2 id="gpu-エンコードしてみる"><a class="header-link" href="#gpu-エンコードしてみる"><span class="header-link-mark"></span></a>GPU エンコードしてみる</h2>
+<p>いよいよ GPU エンコードを試してみる。<code>-c:v h264_nvenc</code> と GPU エンコードを指定すれば OK。適当な AVI ファイルを H.264 mp4 に変換する簡単な例。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># コチラは CPU エンコード。GPU を使わないので遅い</span>
+$ ffmpeg -i src.avi -c:v libx264    dest.mp4
+
+<span class="token comment"># コチラが今回できるようになった GPU エンコード。速い</span>
+$ ffmpeg -i src.avi -c:v h264_nvenc dest.mp4
+</code></pre>
+<p>「タスクマネージャ」の「パフォーマンス」タブで目視しただけだが、GPU を使うようになったので処理速度はかなり向上した。GPU ってフルフル 100% で稼動するモノじゃないのね～。GPU エンコード時も CPU 使用率は 60% 台だった。CPU エンコード時はほぼ使用率 100% が続いていて遅かったので、改善できて良き良き。</p><div class="ad-rakuten">
+  <div class="ad-rakuten-image">
+    <a href="https://hb.afl.rakuten.co.jp/hgc/g00q0722.waxyc9ff.g00q0722.waxyd017/?pc=https%3A%2F%2Fitem.rakuten.co.jp%2Fbook%2F16447577%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Fbook%2Fi%2F20121877%2F">
+      <img src="https://thumbnail.image.rakuten.co.jp/@0_mall/book/cabinet/6330/9784297116330.jpg?_ex=128x128">
+    </a>
+  </div>
+  <div class="ad-rakuten-info">
+    <div class="ad-rakuten-title">
+      <a href="https://hb.afl.rakuten.co.jp/hgc/g00q0722.waxyc9ff.g00q0722.waxyd017/?pc=https%3A%2F%2Fitem.rakuten.co.jp%2Fbook%2F16447577%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Fbook%2Fi%2F20121877%2F">世界一わかりやすい Premiere Pro 動画編集の教科書 [ 阿部信行 ]</a>
+    </div>
+    <div class="ad-rakuten-shop">
+      <a href="https://hb.afl.rakuten.co.jp/hgc/g00q0722.waxyc9ff.g00q0722.waxyd017/?pc=https%3A%2F%2Fwww.rakuten.co.jp%2Fbook%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Fbook%2F">楽天ブックス</a>
+    </div>
+    <div class="ad-rakuten-price">価格 : 3608円</div>
+  </div>
+</div>
+<div class="ad-amazon">
+  <div class="ad-amazon-image">
+    <a href="https://www.amazon.co.jp/dp/B09BJD35JZ?tag=neos21-22&amp;linkCode=osi&amp;th=1&amp;psc=1">
+      <img src="https://m.media-amazon.com/images/I/41jTe+HfE-L._SL160_.jpg" width="100" height="160">
+    </a>
+  </div>
+  <div class="ad-amazon-info">
+    <div class="ad-amazon-title">
+      <a href="https://www.amazon.co.jp/dp/B09BJD35JZ?tag=neos21-22&amp;linkCode=osi&amp;th=1&amp;psc=1">これから動画編集を始める人が初めに読む本</a>
+    </div>
+  </div>
+</div>
+
+      </main>
+      <footer id="footer">
+        <div id="footer-contents">
+          <div id="date-time">
+            <dl>
+              <dt>Created</dt>
+              <dd><time>2022-01-28</time></dd>
+              <dt>Last-Modified</dt>
+              <dd><time>2022-01-28</time></dd>
+            </dl>
+          </div>
+          <nav id="footer-links">
+            <ul>
+              <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+              <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+              <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+              <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+            </ul>
+          </nav>
+          <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+        </div>
+      </footer>
+    </div>
+  </body>
+</html>
