@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#0990d0">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>Windows PC のディスプレイ電源をオフにする PowerShell スクリプト - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2022/01/31-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="header-brand">
+          <div id="header-brand-contents">
+            <div id="site-title"><a href="/index.html">Neo's World</a></div>
+            <nav id="header-links">
+              <ul>
+                <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+                <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+                <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+                <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+              </ul>
+            </nav>
+          </div>
+        </div>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2022/index.html">2022年</a></li>
+            <li><a href="/blog/2022/01/index.html">01月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2022-01-31</time></div>
+        <h1 id="page-title">Windows PC のディスプレイ電源をオフにする PowerShell スクリプト</h1>
+
+<p>Windows PC を使っていて、ディスプレイだけ電源オフにしたいことがあった。以下の記事にある PowerShell コードでできたので紹介。</p>
+<ul>
+  <li>参考：<a href="https://qiita.com/sharow/items/ef78f2f5a8053f6a7a41">ディスプレイを強制的にスリープにする - Qiita</a></li>
+</ul>
+<p>こんな感じの PowerShell コードを作れば良い。</p>
+<ul>
+  <li><code>display-off.ps1</code>
+    <ul>
+      <li>Shift-JIS・CRLF で保存する</li>
+      <li><a href="https://github.com/Neos21/dotfiles/blob/master/Windows/bin/display-off.ps1">dotfiles/display-off.ps1 at master · Neos21/dotfiles</a></li>
+    </ul>
+  </li>
+</ul>
+<pre class="language-powershell"><code class="language-powershell"><span class="token comment"># ====================================================================================================</span>
+<span class="token comment"># ディスプレイの電源をオフにする</span>
+<span class="token comment"># </span>
+<span class="token comment"># - 参考 : https://qiita.com/sharow/items/ef78f2f5a8053f6a7a41</span>
+<span class="token comment"># - Esc キー等を押下するか、マウスを操作するなどすれば再度ディスプレイがオンになる</span>
+<span class="token comment"># ====================================================================================================</span>
+
+<span class="token variable">$code</span> = @<span class="token string">'
+[return: MarshalAs(UnmanagedType.Bool)]
+[DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Auto)]
+public static extern bool PostMessage(uint hWnd, uint Msg, IntPtr wParam, IntPtr lParam);
+[DllImport("user32.dll", SetLastError = true)]
+public static extern bool LockWorkStation();
+'</span>@<span class="token punctuation">;</span>
+<span class="token variable">$powerManager</span> = <span class="token function">Add-Type</span> <span class="token operator">-</span>MemberDefinition <span class="token variable">$code</span> <span class="token operator">-</span>Name <span class="token string">'PowerManager'</span> <span class="token operator">-</span>PassThru <span class="token operator">-</span>Language CSharp<span class="token punctuation">;</span>
+
+<span class="token comment"># Display Off</span>
+<span class="token variable">$powerManager</span>::PostMessage<span class="token punctuation">(</span>0xffff<span class="token punctuation">,</span> 0x0112<span class="token punctuation">,</span> 0xf170<span class="token punctuation">,</span> 2<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment"># Lock (Win + L 相当) : https://docs.microsoft.com/ja-jp/powershell/scripting/samples/changing-computer-state?view=powershell-7.2</span>
+<span class="token comment"># $powerManager::LockWorkStation();</span>
+<span class="token comment"># ↑ ロックもしたい場合はアンコメントする</span>
+</code></pre>
+<p>過去に壁紙を変更する PowerShell を作った時と同じように、PowerShell スクリプトの中に C# のコードを埋め込んでいて、<code>Add-Type</code> で呼び出せるようにされている。</p>
+<ul>
+  <li>過去記事：<a href="/blog/2021/08/08-01.html">Windows10 のデスクトップ背景画像を切り替える PowerShell スクリプト</a></li>
+</ul>
+<p>コメントアウトしてあるが、<code>LockWorkStation()</code> を呼び出せば <code>Win + L</code> と同じロック状態にできる。</p>
+<p>後はこの <code>.ps1</code> ファイルと同名の <code>.vbs</code> ファイル <code>display-off.vbs</code> を作り、以下の記事で紹介した VBScript を使ってやれば、PowerShell のウィンドウを開くことなく PowerShell が呼び出せるショートカットの出来上がり。</p>
+<ul>
+  <li>過去記事：<a href="/blog/2021/08/10-01.html">PowerShell のウィンドウを一切表示させずに実行する</a>
+    <ul>
+      <li><a href="https://github.com/Neos21/dotfiles/blob/master/Windows/bin/display-off.vbs">dotfiles/display-off.vbs at master · Neos21/dotfiles</a></li>
+    </ul>
+  </li>
+</ul>
+<p>ショートカットを使う方法もあった。</p>
+<ul>
+  <li>参考：<a href="http://leliuria.blog.jp/archives/73163405.html">ぐだっとブログ : インストール無しで、ディスプレイの電源をOFFにするショートカット</a></li>
+</ul>
+<p>デスクトップ PC の Galleria XG に、Dell S2721QS ディスプレイで試したところ、このスクリプトを実行すると Dell のディスプレイがスリープモードに移行した。ディスプレイ内蔵のスピーカーも電源 OFF になる。</p>
+<p>復旧させる際は、マウスやキーボードをちょっと操作してやると勝手に画面が付く。マウスに少しでも触れるとディスプレイが ON に戻ってしまうので、マウスには触れないようにしておこう。ｗ</p><div class="ad-amazon">
+  <div class="ad-amazon-image">
+    <a href="https://www.amazon.co.jp/dp/4877832629?tag=neos21-22&amp;linkCode=osi&amp;th=1&amp;psc=1">
+      <img src="https://m.media-amazon.com/images/I/518TyvjFlBL._SL160_.jpg" width="125" height="160">
+    </a>
+  </div>
+  <div class="ad-amazon-info">
+    <div class="ad-amazon-title">
+      <a href="https://www.amazon.co.jp/dp/4877832629?tag=neos21-22&amp;linkCode=osi&amp;th=1&amp;psc=1">Win32/64 APIシステムプログラミング―32/64ビットの共存</a>
+    </div>
+  </div>
+</div>
+<div class="ad-rakuten">
+  <div class="ad-rakuten-image">
+    <a href="https://hb.afl.rakuten.co.jp/hgc/g00rc682.waxyceda.g00rc682.waxyd8cb/?pc=https%3A%2F%2Fitem.rakuten.co.jp%2Fbookoffonline%2F0017343514%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Fbookoffonline%2Fi%2F13768312%2F">
+      <img src="https://thumbnail.image.rakuten.co.jp/@0_mall/bookoffonline/cabinet/1169/0017343514l.jpg?_ex=128x128">
+    </a>
+  </div>
+  <div class="ad-rakuten-info">
+    <div class="ad-rakuten-title">
+      <a href="https://hb.afl.rakuten.co.jp/hgc/g00rc682.waxyceda.g00rc682.waxyd8cb/?pc=https%3A%2F%2Fitem.rakuten.co.jp%2Fbookoffonline%2F0017343514%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Fbookoffonline%2Fi%2F13768312%2F">【中古】 APIで学ぶWindowsプログラミング 日経BPパソコンベストムック／安室浩和(著者) 【中古】afb</a>
+    </div>
+    <div class="ad-rakuten-shop">
+      <a href="https://hb.afl.rakuten.co.jp/hgc/g00rc682.waxyceda.g00rc682.waxyd8cb/?pc=https%3A%2F%2Fwww.rakuten.co.jp%2Fbookoffonline%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Fbookoffonline%2F">ブックオフオンライン楽天市場店</a>
+    </div>
+    <div class="ad-rakuten-price">価格 : 2145円</div>
+  </div>
+</div>
+<div class="ad-amazon">
+  <div class="ad-amazon-image">
+    <a href="https://www.amazon.co.jp/dp/B07DJ1Q2B4?tag=neos21-22&amp;linkCode=osi&amp;th=1&amp;psc=1">
+      <img src="https://m.media-amazon.com/images/I/51-Ut2bG4jL._SL160_.jpg" width="124" height="160">
+    </a>
+  </div>
+  <div class="ad-amazon-info">
+    <div class="ad-amazon-title">
+      <a href="https://www.amazon.co.jp/dp/B07DJ1Q2B4?tag=neos21-22&amp;linkCode=osi&amp;th=1&amp;psc=1">インサイドWindows　第7版　上</a>
+    </div>
+  </div>
+</div>
+
+      </main>
+      <footer id="footer">
+        <div id="footer-contents">
+          <div id="date-time">
+            <dl>
+              <dt>Created</dt>
+              <dd><time>2022-01-31</time></dd>
+              <dt>Last-Modified</dt>
+              <dd><time>2022-01-31</time></dd>
+            </dl>
+          </div>
+          <nav id="footer-links">
+            <ul>
+              <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+              <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+              <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+              <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+            </ul>
+          </nav>
+          <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+        </div>
+      </footer>
+    </div>
+  </body>
+</html>
