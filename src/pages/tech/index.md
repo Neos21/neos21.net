@@ -1,7 +1,7 @@
 ---
 title        : Tech
 created      : 2020-11-23
-last-modified: 2021-10-13
+last-modified: 2022-02-15
 path:
   - /index.html Neo's World
 ---
@@ -38,7 +38,12 @@ path:
   </dd>
   <dt><a href="./others/index.html">その他技術情報</a></dt>
   <dd>
-    <p>どのカテゴリにも合わない単発の話題とか、このサイトの技術の話とか。</p>
+    <p>どのカテゴリにも合わない単発の話題とか、このサイトの技術の話とか。以下は主な記事。</p>
+    <ul>
+      <li><a href="./others/how-big-is-the-internet.html">クラウド・データセンタ・インターネットの規模を推定する</a></li>
+      <li><a href="./others/tech-of-this-site.html">このサイトに使われている技術</a></li>
+      <li><a href="./others/pc-environment.html">Neo の PC 環境</a></li>
+    </ul>
     <p>以下の Scrapbox にて、SE のための業務中の暇つぶしアイデアをまとめている。</p>
     <ul>
       <li><a href="https://scrapbox.io/Neos21/">Neo's Scrapbox</a></li>

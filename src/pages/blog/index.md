@@ -4918,7 +4918,7 @@ head: |
 - <time>2017-02-13</time>  
   [我が家のファミコン事情：02 … ロードランナー](/blog/2017/02/13-02.html)
 - <time>2017-02-13</time>  
-  [他人の Hapy Hacking Keyboard の音はムカつく](/blog/2017/02/13-01.html)
+  [他人の Happy Hacking Keyboard の音はムカつく](/blog/2017/02/13-01.html)
 - <time>2017-02-12</time>  
   [.bash_profile と .bashrc は何が違うの？使い分けを覚える](/blog/2017/02/12-02.html)
 - <time>2017-02-12</time>  
