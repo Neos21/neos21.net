@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#0990d0">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>Node.js と Bash で同じようにファイルパスを色々取得する - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2022/03/04-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="header-brand">
+          <div id="header-brand-contents">
+            <div id="site-title"><a href="/index.html">Neo's World</a></div>
+            <nav id="header-links">
+              <ul>
+                <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+                <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+                <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+                <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+              </ul>
+            </nav>
+          </div>
+        </div>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2022/index.html">2022年</a></li>
+            <li><a href="/blog/2022/03/index.html">03月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2022-03-04</time></div>
+        <h1 id="page-title">Node.js と Bash で同じようにファイルパスを色々取得する</h1>
+
+<p>Node.js は <code>process.cwd()</code> とか <code>path</code> モジュールとかがあって、相対パスからフルパスを取得してみたり、拡張子だけ取得したりといったことが簡単かつ直感的にできる。</p>
+<p>一方、Bash では不慣れなこともあって、どうやるんだっけーとなったので今回調べた。</p>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#%E4%BE%8B%E3%81%A8%E3%81%99%E3%82%8B%E3%83%95%E3%82%A1%E3%82%A4%E3%83%AB%E6%A7%8B%E6%88%90">例とするファイル構成</a></li>
+  <li><a href="#nodejs-%E7%89%88%E3%81%AE%E3%82%B9%E3%82%AF%E3%83%AA%E3%83%97%E3%83%88">Node.js 版のスクリプト</a></li>
+  <li><a href="#bash-%E7%89%88%E3%81%AE%E3%82%B9%E3%82%AF%E3%83%AA%E3%83%97%E3%83%88">Bash 版のスクリプト</a></li>
+  <li><a href="#%E5%AD%98%E5%9C%A8%E3%81%97%E3%81%AA%E3%81%84%E3%83%87%E3%82%A3%E3%83%AC%E3%82%AF%E3%83%88%E3%83%AA%E3%82%92%E6%8C%9F%E3%82%93%E3%81%A0%E3%83%95%E3%83%AB%E3%83%91%E3%82%B9%E6%A7%8B%E7%AF%89%E3%81%AB%E8%A6%81%E6%B3%A8%E6%84%8F">存在しないディレクトリを挟んだフルパス構築に要注意</a></li>
+  <li><a href="#processargv1-%E3%81%A8-0-%E3%81%AE%E9%81%95%E3%81%84"><code>process.argv[1]</code> と <code>$0</code> の違い</a></li>
+  <li><a href="#%E4%BB%A5%E4%B8%8A">以上</a></li>
+  <li><a href="#%E5%8F%82%E8%80%83%E6%96%87%E7%8C%AE">参考文献</a></li>
+</ul>
+<h2 id="例とするファイル構成"><a class="header-link" href="#例とするファイル構成"><span class="header-link-mark"></span></a>例とするファイル構成</h2>
+<p>例とするファイルとディレクトリの構成は次のようなモノを想定する。</p>
+<pre><code>/home/neo/parent/
+└ child/
+   ├ test.js
+   └ test.bash
+</code></pre>
+<p>ターミナルのシェルのカレントディレクトリは <code>/home/neo/parent/</code> にしておき、</p>
+<pre class="language-bash"><code class="language-bash">$ node ./child/test.js
+$ <span class="token function">bash</span> ./child/test.bash
+</code></pre>
+<p>という感じでそれぞれのスクリプトを実行し、結果を確認する。</p>
+<p>それぞれのスクリプトでは、ディレクトリパスやファイルパスなどを色々と出力させるが、Node.js 版と Bash 版とで同じ結果を得ることを目標とする。</p>
+<h2 id="nodejs-版のスクリプト"><a class="header-link" href="#nodejs-版のスクリプト"><span class="header-link-mark"></span></a>Node.js 版のスクリプト</h2>
+<p>組み込み変数の <code>__filename</code> と <code>__dirname</code>、<code>process</code> の他、<code>path</code> モジュールを使っている。</p>
+<p><code>const</code> 定数に控えた結果を <code>console.log()</code> で出力しているが、同じ結果を得られる他のイディオムをコメントアウトで記載している。</p>
+<ul>
+  <li><code>test.js</code></li>
+</ul>
+<pre class="language-javascript"><code class="language-javascript">#<span class="token operator">!</span><span class="token operator">/</span>usr<span class="token operator">/</span>bin<span class="token operator">/</span>env node
+
+<span class="token keyword">const</span> path <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'path'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// このファイルのフルパス</span>
+<span class="token keyword">const</span> filename <span class="token operator">=</span> __filename<span class="token punctuation">;</span>
+<span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">FILENAME : </span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>filename<span class="token interpolation-punctuation punctuation">}</span></span><span class="token template-punctuation string">`</span></span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token comment">//console.log( __filename );</span>
+<span class="token comment">//console.log( process.argv[1] );</span>
+
+<span class="token comment">// このファイルがあるディレクトリまでのフルパス</span>
+<span class="token keyword">const</span> dirname <span class="token operator">=</span> __dirname<span class="token punctuation">;</span>
+<span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">DIRNAME  : </span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>dirname<span class="token interpolation-punctuation punctuation">}</span></span><span class="token template-punctuation string">`</span></span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token comment">//console.log( __dirname );</span>
+<span class="token comment">//console.log( path.dirname(process.argv[1]) );</span>
+<span class="token comment">//console.log( path.parse(process.argv[1]).dir );</span>
+
+<span class="token comment">// このファイル名と拡張子</span>
+<span class="token keyword">const</span> basename <span class="token operator">=</span> path<span class="token punctuation">.</span><span class="token method function property-access">basename</span><span class="token punctuation">(</span>process<span class="token punctuation">.</span><span class="token property-access">argv</span><span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">BASENAME : </span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>basename<span class="token interpolation-punctuation punctuation">}</span></span><span class="token template-punctuation string">`</span></span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token comment">//console.log( path.basename(process.argv[1]) );</span>
+<span class="token comment">//console.log( path.parse(process.argv[1]).base );</span>
+
+<span class="token comment">// このファイル名</span>
+<span class="token keyword">const</span> name <span class="token operator">=</span> path<span class="token punctuation">.</span><span class="token method function property-access">parse</span><span class="token punctuation">(</span>process<span class="token punctuation">.</span><span class="token property-access">argv</span><span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token property-access">name</span><span class="token punctuation">;</span>
+<span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">NAME     : </span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>name<span class="token interpolation-punctuation punctuation">}</span></span><span class="token template-punctuation string">`</span></span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token comment">//console.log( path.basename(process.argv[1], path.extname(process.argv[1])) );</span>
+<span class="token comment">//console.log( path.parse(process.argv[1]).name );</span>
+
+<span class="token comment">// このファイルの拡張子</span>
+<span class="token keyword">const</span> extname <span class="token operator">=</span> path<span class="token punctuation">.</span><span class="token method function property-access">extname</span><span class="token punctuation">(</span>process<span class="token punctuation">.</span><span class="token property-access">argv</span><span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">EXTNAME  : </span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>extname<span class="token interpolation-punctuation punctuation">}</span></span><span class="token template-punctuation string">`</span></span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token comment">//console.log( path.extname(process.argv[1]) );</span>
+<span class="token comment">//console.log( path.parse(process.argv[1]).ext );</span>
+
+<span class="token comment">// このファイルを実行しているシェルのカレントディレクトリ</span>
+<span class="token keyword">const</span> cwd <span class="token operator">=</span> process<span class="token punctuation">.</span><span class="token method function property-access">cwd</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">CWD      : </span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>cwd<span class="token interpolation-punctuation punctuation">}</span></span><span class="token template-punctuation string">`</span></span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token comment">//console.log( process.cwd() );</span>
+<span class="token comment">//console.log( path.resolve() );</span>
+<span class="token comment">//console.log( path.resolve('') );</span>
+<span class="token comment">//console.log( path.resolve('.') );</span>
+</code></pre>
+<p>結果は次のとおり。</p>
+<pre class="language-bash"><code class="language-bash">$ node ./child/test.js
+FILENAME <span class="token builtin class-name">:</span> /home/neo/parent/child/test.js
+DIRNAME  <span class="token builtin class-name">:</span> /home/neo/parent/child
+BASENAME <span class="token builtin class-name">:</span> test.js
+NAME     <span class="token builtin class-name">:</span> <span class="token builtin class-name">test</span>
+EXTNAME  <span class="token builtin class-name">:</span> .js
+CWD      <span class="token builtin class-name">:</span> /home/neo/parent
+</code></pre>
+<h2 id="bash-版のスクリプト"><a class="header-link" href="#bash-版のスクリプト"><span class="header-link-mark"></span></a>Bash 版のスクリプト</h2>
+<p><code>dirname</code> と <code>basename</code> コマンドは大丈夫だと思う。拡張子をちぎるのに Bash の変数展開を利用している。他には <code>sed</code> を使ったりする方法もあるようだが今回は省略。</p>
+<ul>
+  <li><code>test.bash</code></li>
+</ul>
+<pre class="language-bash"><code class="language-bash"><span class="token shebang important">#!/bin/bash</span>
+
+<span class="token comment"># このファイルのフルパス</span>
+<span class="token assign-left variable">FILENAME</span><span class="token operator">=</span><span class="token string">"<span class="token variable"><span class="token variable">$(</span>readlink -m <span class="token string">"<span class="token variable">$0</span>"</span><span class="token variable">)</span></span>"</span>
+<span class="token builtin class-name">echo</span> <span class="token string">"FILENAME : <span class="token variable">${FILENAME}</span>"</span>
+<span class="token comment">#echo "$(realpath -s "$0")"</span>
+<span class="token comment">#echo "$(readlink -f "$0")"</span>
+
+<span class="token comment"># このファイルがあるディレクトリまでのフルパス</span>
+<span class="token assign-left variable">DIRNAME</span><span class="token operator">=</span><span class="token string">"$(cd "<span class="token variable"><span class="token variable">$(</span><span class="token function">dirname</span> <span class="token string">"<span class="token variable">$0</span>"</span><span class="token variable">)</span></span>"</span> <span class="token punctuation">;</span> <span class="token builtin class-name">pwd</span><span class="token punctuation">)</span><span class="token string">"
+echo "</span>DIRNAME  <span class="token builtin class-name">:</span> <span class="token variable">${DIRNAME}</span><span class="token string">"
+
+# このファイル名と拡張子
+BASENAME="</span><span class="token variable"><span class="token variable">$(</span><span class="token function">basename</span> <span class="token string">"<span class="token variable">${FILENAME}</span>"</span><span class="token variable">)</span></span><span class="token string">"
+echo "</span>BASENAME <span class="token builtin class-name">:</span> <span class="token variable">${BASENAME}</span><span class="token string">"
+
+# このファイル名
+NAME="</span><span class="token variable">${BASENAME<span class="token operator">%</span>.*}</span><span class="token string">"
+echo "</span>NAME     <span class="token builtin class-name">:</span> <span class="token variable">${NAME}</span><span class="token string">"
+
+# このファイルの拡張子 (Node.js の <span class="token variable"><span class="token variable">`</span>path.extname<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token variable">`</span></span> と揃えるため先頭にピリオドを付与している)
+EXTNAME="</span><span class="token builtin class-name">.</span><span class="token variable">${BASENAME<span class="token operator">##</span>*.}</span>"
+<span class="token builtin class-name">echo</span> <span class="token string">"EXTNAME  : <span class="token variable">${EXTNAME}</span>"</span>
+
+<span class="token comment"># このファイルを実行しているシェルのカレントディレクトリ</span>
+<span class="token assign-left variable">CWD</span><span class="token operator">=</span><span class="token string">"<span class="token variable"><span class="token variable">$(</span><span class="token builtin class-name">pwd</span><span class="token variable">)</span></span>"</span>
+<span class="token builtin class-name">echo</span> <span class="token string">"CWD      : <span class="token variable">${CWD}</span>"</span>
+</code></pre>
+<p>結果は次のとおり。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">bash</span> ./child/test.bash
+FILENAME <span class="token builtin class-name">:</span> /home/neo/parent/child/test.bash
+DIRNAME  <span class="token builtin class-name">:</span> /home/neo/parent/child
+BASENAME <span class="token builtin class-name">:</span> test.bash
+NAME     <span class="token builtin class-name">:</span> <span class="token builtin class-name">test</span>
+EXTNAME  <span class="token builtin class-name">:</span> .bash
+CWD      <span class="token builtin class-name">:</span> /home/neo/parent
+</code></pre>
+<p>実行ファイルの拡張子が <code>.js</code> と <code>.bash</code> で違うので、その違いだけ表れているが、Node.js 版と同じ結果が得られていることが分かるだろう。</p>
+<h2 id="存在しないディレクトリを挟んだフルパス構築に要注意"><a class="header-link" href="#存在しないディレクトリを挟んだフルパス構築に要注意"><span class="header-link-mark"></span></a>存在しないディレクトリを挟んだフルパス構築に要注意</h2>
+<p>Node.js の <code>path.resolve()</code> では、存在しないディレクトリパスが挟まっても問題ない。単純に文字列として操作しているだけで、ファイルの存在有無は関係ないのだ。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword">const</span> path <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'path'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token keyword">const</span> targetFilePath <span class="token operator">=</span> path<span class="token punctuation">.</span><span class="token method function property-access">resolve</span><span class="token punctuation">(</span>__dirname<span class="token punctuation">,</span> <span class="token string">'../not-exist-dir/hoge/fuga/foo.txt'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token comment">// → '/home/neo/not-exist-dir/hoge/fuga/foo.txt'</span>
+<span class="token comment">// (`not-exist-dir/` ディレクトリが存在しなくても大丈夫)</span>
+</code></pre>
+<p>Bash では、<em><code>readlink -m</code></em> を使えば存在しないディレクトリが挟まっても問題ないが、<code>realpath -s</code> と <code>readlink -f</code> の場合は不都合があるので注意。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token shebang important">#!/bin/bash</span>
+
+<span class="token builtin class-name">echo</span> <span class="token string">"<span class="token variable"><span class="token variable">$(</span>readlink -m <span class="token string">'../not-exist-dir/hoge/fuga/foo.txt'</span><span class="token variable">)</span></span>"</span>
+<span class="token comment"># → '/home/neo/not-exist-dir/hoge/fuga/foo.txt'</span>
+<span class="token comment"># (`not-exist-dir/` ディレクトリが存在しなくても大丈夫)</span>
+
+<span class="token builtin class-name">echo</span> <span class="token string">"<span class="token variable"><span class="token variable">$(</span>realpath -s <span class="token string">'../not-exist-dir/hoge/fuga/foo.txt'</span><span class="token variable">)</span></span>"</span>
+<span class="token comment"># realpath: ../not-exist-dir/hoge/fuga/foo.txt: そのようなファイルやディレクトリはありません</span>
+<span class="token comment"># (エラーになってしまう)</span>
+
+<span class="token builtin class-name">echo</span> <span class="token string">"<span class="token variable"><span class="token variable">$(</span>readlink -f <span class="token string">'../not-exist-dir/hoge/fuga/foo.txt'</span><span class="token variable">)</span></span>"</span>
+<span class="token comment"># 空文字になり何の結果も得られない</span>
+</code></pre>
+<p>上述のスクリプトでは「スクリプトファイル自身のフルパス」を組み立てていたので、3つのコマンドのどれでも同じ結果が得られるが、例えば「ファイルのコピー先フルパス」を作ろうとして <code>realpath -s</code> や <code>readlink -f</code> を使った時に、ディレクトリが存在しない状態ではエラーになったりパスが空文字になったりすので注意、というワケだ。</p>
+<h2 id="processargv1-と-0-の違い"><a class="header-link" href="#processargv1-と-0-の違い"><span class="header-link-mark"></span></a><code>process.argv[1]</code> と <code>$0</code> の違い</h2>
+<p>ついでに、今回の検証で確認したこと。</p>
+<p>Node.js でスクリプトファイル自身のパスを取得するのに <code>process.argv[1]</code> というイディオムを使っているが、コチラはシェル上で相対パス指定したとしても、<em>必ずフルパスの文字列</em>で取得される。逆にいうと、Node.js スクリプトの中からは</p>
+<pre class="language-bash"><code class="language-bash">$ node ./child/test.js
+</code></pre>
+<p>というように「相対パスで記載した」のかどうか区別できない、ということになる。</p>
+<p>一方、Bash の <code>$0</code> は、</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">bash</span> ./child/test.bash
+</code></pre>
+<p>のように<em>相対パスで指定した場合は相対パスのままの文字列が受け取れる</em>。ホームディレクトリを示す <code>~/</code> だけは <code>/home/…</code> と展開されるが、基本的に<strong>シェルで入力したとおりの文字列が取得できる</strong>のが <code>$0</code> である。</p>
+<h2 id="以上"><a class="header-link" href="#以上"><span class="header-link-mark"></span></a>以上</h2>
+<p>Bash で色々なパスを扱う際は、<code>dirname</code>、<code>basename</code> コマンドの他、<strong><code>readlink -m</code></strong> あたりを覚えておくと良さそうだ。</p><div class="ad-rakuten">
+  <div class="ad-rakuten-image">
+    <a href="https://hb.afl.rakuten.co.jp/hgc/g00q0722.waxyc9ff.g00q0722.waxyd017/?pc=https%3A%2F%2Fitem.rakuten.co.jp%2Fbook%2F3669596%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Fbook%2Fi%2F11540346%2F">
+      <img src="https://thumbnail.image.rakuten.co.jp/@0_mall/book/cabinet/8731/87311254.jpg?_ex=128x128">
+    </a>
+  </div>
+  <div class="ad-rakuten-info">
+    <div class="ad-rakuten-title">
+      <a href="https://hb.afl.rakuten.co.jp/hgc/g00q0722.waxyc9ff.g00q0722.waxyd017/?pc=https%3A%2F%2Fitem.rakuten.co.jp%2Fbook%2F3669596%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Fbook%2Fi%2F11540346%2F">入門bash第3版 bash　2．05b　＆　3．0対応 [ キャメロン・ニューハン ]</a>
+    </div>
+    <div class="ad-rakuten-shop">
+      <a href="https://hb.afl.rakuten.co.jp/hgc/g00q0722.waxyc9ff.g00q0722.waxyd017/?pc=https%3A%2F%2Fwww.rakuten.co.jp%2Fbook%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Fbook%2F">楽天ブックス</a>
+    </div>
+    <div class="ad-rakuten-price">価格 : 3080円</div>
+  </div>
+</div>
+<div class="ad-amazon">
+  <div class="ad-amazon-image">
+    <a href="https://www.amazon.co.jp/dp/4873112540?tag=neos21-22&amp;linkCode=osi&amp;th=1&amp;psc=1">
+      <img src="https://m.media-amazon.com/images/I/519CHDKSHWL._SL160_.jpg" width="124" height="160">
+    </a>
+  </div>
+  <div class="ad-amazon-info">
+    <div class="ad-amazon-title">
+      <a href="https://www.amazon.co.jp/dp/4873112540?tag=neos21-22&amp;linkCode=osi&amp;th=1&amp;psc=1">入門bash 第3版</a>
+    </div>
+  </div>
+</div>
+<h2 id="参考文献"><a class="header-link" href="#参考文献"><span class="header-link-mark"></span></a>参考文献</h2>
+<p>Node.js の話。</p>
+<ul>
+  <li><a href="https://gist.github.com/uupaa/da42698d6b2d2cbb3cca">node.js で絶対パスや相対パスを取得する方法 npm __dirname</a></li>
+  <li><a href="https://note.kiriukun.com/entry/20200403-get-path-in-nodejs">Node.jsで色んなパスを取得 - キリウ君が読まないノート</a></li>
+  <li><a href="http://yohshiy.blog.fc2.com/blog-entry-318.html">Node.js API (path) - ファイルパスの文字列操作 | プログラマーズ雑記帳</a></li>
+  <li><a href="https://qiita.com/oblivion/items/e9677ef4ca38643aaa14">nodejsのpathモジュールの使い方 - Qiita</a></li>
+  <li><a href="https://nodejs.org/api/process.html">Process | Node.js v17.6.0 Documentation</a></li>
+  <li><a href="https://nodejs.org/api/path.html">Path | Node.js v17.6.0 Documentation</a></li>
+</ul>
+<p>Bash の話。</p>
+<ul>
+  <li><a href="https://stackoverflow.com/questions/284662/how-do-you-normalize-a-file-path-in-bash">linux - How do you normalize a file path in Bash? - Stack Overflow</a></li>
+  <li><a href="https://qiita.com/koara-local/items/2d67c0964188bba39e29">bash 実行スクリプトの絶対パスの取得 - Qiita</a></li>
+  <li><a href="https://stackoverflow.com/questions/965053/extract-filename-and-extension-in-bash">string - Extract filename and extension in Bash - Stack Overflow</a></li>
+  <li><a href="https://qiita.com/mriho/items/b30b3a33e8d2e25e94a8">bashの変数展開によるファイル名や拡張子の取得 - Qiita</a></li>
+</ul><div class="ad-amazon">
+  <div class="ad-amazon-image">
+    <a href="https://www.amazon.co.jp/dp/B09GTV35VJ?tag=neos21-22&amp;linkCode=osi&amp;th=1&amp;psc=1">
+      <img src="https://m.media-amazon.com/images/I/51Nia2FvVkL._SL160_.jpg" width="126" height="160">
+    </a>
+  </div>
+  <div class="ad-amazon-info">
+    <div class="ad-amazon-title">
+      <a href="https://www.amazon.co.jp/dp/B09GTV35VJ?tag=neos21-22&amp;linkCode=osi&amp;th=1&amp;psc=1">1日1問、半年以内に習得　シェル・ワンライナー160本ノック Software Design plus</a>
+    </div>
+  </div>
+</div>
+
+      </main>
+      <footer id="footer">
+        <div id="footer-contents">
+          <div id="date-time">
+            <dl>
+              <dt>Created</dt>
+              <dd><time>2022-03-04</time></dd>
+              <dt>Last-Modified</dt>
+              <dd><time>2022-03-04</time></dd>
+            </dl>
+          </div>
+          <nav id="footer-links">
+            <ul>
+              <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+              <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+              <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+              <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+            </ul>
+          </nav>
+          <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+        </div>
+      </footer>
+    </div>
+  </body>
+</html>
