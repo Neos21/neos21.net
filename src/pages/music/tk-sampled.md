@@ -1,7 +1,7 @@
 ---
 title        : 角松敏生 元ネタ探し
 created      : 2022-03-10
-last-modified: 2022-03-10
+last-modified: 2022-03-11
 path:
   - /index.html Neo's World
   - /music/index.html Music
@@ -88,9 +88,12 @@ head: |
 
 | 曲名 | 収録シングル・アルバム名 | 元ネタ |
 |------|--------------------------|--------|
+| Dancing Shower | 1981 Sea Breeze<br>2016 Sea Breeze 2016 | Stuff - Foots |
 | Elena | 1981 Sea Breeze<br>2016 Sea Breeze 2016 | Airplay - Nothin' You Can Do About It |
 | Still I'm In Love With You | 1981 Sea Breeze<br>1985 T's Ballad<br>2016 Sea Breeze 2016 | Airplay - It Will Be Alright |
 | Rush Hour | 1982 Weekend Fly To The Sun<br>2012 Rebirth 1 | Doobie Brothers - What A Fool Believes |
+| Brunch | 1982 Weekend Fly To The Sun | Al Jarreau - Breakin' Away |
+| 4 A.M. | 1982 Weekend Fly To The Sun | Al Jarreau - Teach Me Tonight |
 | Crescent Aventure | 1982 Friday To Sunday<br>1985 T's Ballad<br>2020 Earplay Rebirth 2 | Nite Flyte - If You Want It |
 | Take Me Far Away | 1983 On The City Shore<br>2003 君のためにできること | High Fashion - I Want To Be Your Everything |
 | It's Hard To Say Good-Bye | 1983 Do You Wanna Dance<br>1986 T's 12 Inches | Narada Michael Walden - Never Wanna Be Without Your Love |
@@ -118,8 +121,11 @@ head: |
 | Aki - ふりむかないで Don't Look Back | 1996 ふりむかないで Don't Look Back | Love To Infinity - Keep Love Together |
 | 吉沢梨絵 - Never Gonna Miss You | 1997 Vocaland Never Gonna Miss You | Change - Say You Love Me Again |
 | Time Tunnel | 1999 Time Tunnel | Yes - Close To The Edge |
+| 心配 | 2001 心配 / Yokohama Twilight Time<br>2011 1998-2010 | David Foster - Love At Second Sight<br>David Foster - Chaka |
 | Views | 2004 Fankacoustics | Zinc - Street Level |
 
 </div>
+
+- T's 12 Inches のアルバムジャケット → Level 42 の Pursuit Of Accidents のアルバムジャケット
 
 僕はこれらの類似を、パクリ・盗作といったネガティブな捉え方はしていません。いずれも、元ネタにリスペクトを込めた意図的なオマージュであると認識しています。元ネタのミュージシャンを呼び寄せて製作している楽曲も多く、なんなら「公認」で真似ている、といえます。さらに、いずれの楽曲も「角松敏生らしさ」という唯一無二の明確なオリジナリティがあり、元ネタを超えるクオリティへと昇華させていることからも、単なる真似っこに留まらないことは一聴して分かることでしょう。
