@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#0990d0">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>ffmpeg 同梱の ffprobe で動画ファイルの詳細を確認する - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2022/03/16-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="header-brand">
+          <div id="header-brand-contents">
+            <div id="site-title"><a href="/index.html">Neo's World</a></div>
+            <nav id="header-links">
+              <ul>
+                <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+                <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+                <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+                <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+              </ul>
+            </nav>
+          </div>
+        </div>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2022/index.html">2022年</a></li>
+            <li><a href="/blog/2022/03/index.html">03月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2022-03-16</time></div>
+        <h1 id="page-title">ffmpeg 同梱の ffprobe で動画ファイルの詳細を確認する</h1>
+
+<p>以前の記事で、Windows10 + Git SDK 環境に <a href="https://www.gyan.dev/ffmpeg/builds/">CODEX FFMPEG (gyan.dev)</a> というビルド済の ffmpeg をインストールした。</p>
+<ul>
+  <li>過去記事：<a href="/blog/2022/01/28-01.html">ffmpeg で GPU エンコードできるようにする</a></li>
+</ul>
+<p>この時、アーカイブを 7-Zip で解凍したところ、<code>ffmpeg.exe</code> の他に <code>ffplay.exe</code> と <em><code>ffprobe.exe</code></em> というファイルも格納されていた。この <code>ffprobe</code> というのは、動画ファイルの詳細情報を出力するための CLI ツールだそうなので、試してみた。</p>
+<p>ffmpeg 同様、オプションがかなり豊富で、書き方や順序が難しかった。試行錯誤して、自分がよく使いそうなオプションを取り揃えたので以下に記載する。</p>
+<pre class="language-bash"><code class="language-bash">$ ffprobe -hide_banner -loglevel error <span class="token punctuation">\</span>
+    -print_format <span class="token assign-left variable">flat</span><span class="token operator">=</span>s<span class="token operator">=</span>_ <span class="token punctuation">\</span>
+    -select_streams v:0 <span class="token punctuation">\</span>
+    -show_entries <span class="token assign-left variable">format</span><span class="token operator">=</span>filename,size,duration,bit_rate:stream<span class="token operator">=</span>width,height,coded_width,coded_height,duration,bit_rate,codec_name,r_frame_rate <span class="token punctuation">\</span>
+    -sexagesimal -byte_binary_prefix -unit -prefix -pretty <span class="token punctuation">\</span>
+    <span class="token string">'./Example.mp4'</span>
+</code></pre>
+<ul>
+  <li><code>-hide_banner</code> と <code>-loglevel error</code> で余計な出力をしない</li>
+  <li><code>-print_format</code> は <code>flat=s=_</code> とすると、次に書くように <code>キー=値</code> な並びで出力できる
+    <ul>
+      <li><code>-print_format json</code> とすれば JSON 形式で出力できる。コチラも後述</li>
+    </ul>
+  </li>
+  <li><code>-show_entries</code> オプションで出力したい項目を指定するのだが、イコール <code>=</code>、カンマ <code>,</code>、コロン <code>:</code> の使い方が難解。気合</li>
+  <li><code>-sexagesimal -byte_binary_prefix -unit -prefix</code> の4つは、ファイルサイズや再生時間などの出力形式を変更するオプション
+    <ul>
+      <li>どのオプションを書く・書かないでどういう変化があるかは後で一覧表を見せる</li>
+      <li><code>-pretty</code> だけ書いておけば、この4つのオプションを指定したのと同じ効果が得られて、とりあえず人が読むには分かりやすい形式だと思う</li>
+    </ul>
+  </li>
+</ul>
+<p>Git SDK から <code>ffprobe.exe</code> コマンドを実行した時の出力結果例は次のとおり。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># オプションなし</span>
+<span class="token assign-left variable">streams_stream_0_codec_name</span><span class="token operator">=</span><span class="token string">"h264"</span>
+<span class="token assign-left variable">streams_stream_0_width</span><span class="token operator">=</span><span class="token number">1280</span>
+<span class="token assign-left variable">streams_stream_0_height</span><span class="token operator">=</span><span class="token number">720</span>
+<span class="token assign-left variable">streams_stream_0_coded_width</span><span class="token operator">=</span><span class="token number">1280</span>
+<span class="token assign-left variable">streams_stream_0_coded_height</span><span class="token operator">=</span><span class="token number">720</span>
+<span class="token assign-left variable">streams_stream_0_r_frame_rate</span><span class="token operator">=</span><span class="token string">"30/1"</span>
+<span class="token assign-left variable">streams_stream_0_duration</span><span class="token operator">=</span><span class="token string">"40.408333"</span>
+<span class="token assign-left variable">streams_stream_0_bit_rate</span><span class="token operator">=</span><span class="token string">"1665186"</span>
+<span class="token assign-left variable">format_filename</span><span class="token operator">=</span><span class="token string">"./Example.mp4"</span>
+<span class="token assign-left variable">format_duration</span><span class="token operator">=</span><span class="token string">"40.425941"</span>
+<span class="token assign-left variable">format_size</span><span class="token operator">=</span><span class="token string">"9082607"</span>
+<span class="token assign-left variable">format_bit_rate</span><span class="token operator">=</span><span class="token string">"1797381"</span>
+
+<span class="token comment"># -pretty オプション</span>
+<span class="token assign-left variable">streams_stream_0_codec_name</span><span class="token operator">=</span><span class="token string">"h264"</span>
+<span class="token assign-left variable">streams_stream_0_width</span><span class="token operator">=</span><span class="token number">1280</span>
+<span class="token assign-left variable">streams_stream_0_height</span><span class="token operator">=</span><span class="token number">720</span>
+<span class="token assign-left variable">streams_stream_0_coded_width</span><span class="token operator">=</span><span class="token number">1280</span>
+<span class="token assign-left variable">streams_stream_0_coded_height</span><span class="token operator">=</span><span class="token number">720</span>
+<span class="token assign-left variable">streams_stream_0_r_frame_rate</span><span class="token operator">=</span><span class="token string">"30/1"</span>
+<span class="token assign-left variable">streams_stream_0_duration</span><span class="token operator">=</span><span class="token string">"0:00:40.408333"</span>
+<span class="token assign-left variable">streams_stream_0_bit_rate</span><span class="token operator">=</span><span class="token string">"1.665186 Mbit/s"</span>
+<span class="token assign-left variable">format_filename</span><span class="token operator">=</span><span class="token string">"./Example.mp4"</span>
+<span class="token assign-left variable">format_duration</span><span class="token operator">=</span><span class="token string">"0:00:40.425941"</span>
+<span class="token assign-left variable">format_size</span><span class="token operator">=</span><span class="token string">"8.661849 Mibyte"</span>
+<span class="token assign-left variable">format_bit_rate</span><span class="token operator">=</span><span class="token string">"1.797381 Mbit/s"</span>
+</code></pre>
+<p>ビットレートと再生時間は <code>format</code> セクションから取得するのと <code>stream</code> から取得するのとがあって、微妙に値に違いがあるのだが、どういう差なのかはよく分かっていない。エクスプローラでファイルのプロパティを見た時も、「ビットレート」と「総ビットレート」という項目が2つ存在するので、ファイル全体と、オーディオを除いたビデオ部分とかで、何か違うのかもしれない。</p>
+<p>出力時の <code>-pretty</code> 周りのオプションは、どれがどう効くのかイマイチ分かりにくいところがあるので、4つのオプションの全組み合わせを一覧表にしてみた。やっぱりよー分からん。ｗ</p>
+<p><a href="./16-01-01.png"><img src="./16-01-01.png" alt="ffprobe オプション一覧表"></a></p>
+<ul>
+  <li><code>-sexagesimal</code> : 再生時間 (Duration) など時間系の項目にだけ作用する、表示仕様の指定</li>
+  <li><code>-unit</code> : 単位を付与するだけ。単体で使うと <code>byte</code> とか <code>s</code> とか付く</li>
+  <li><code>-prefix</code> : ビットレートとファイルサイズの後ろに SI 単位が付く。「プレフィックス」とは言うものの単位は後ろに書いてあるので実質 Suffix な気がする</li>
+  <li><code>-byte_binary_prefix</code> : ファイルサイズがバイト単位での表示になる様子</li>
+  <li>参考：<a href="https://ffmpeg.org/ffprobe.html">ffprobe Documentation</a></li>
+</ul>
+<p>自分は <code>-sexagesimal</code> だけ付けておいて、ビットレートやファイルサイズは詳細な値を出力するのが扱いやすいかな。</p>
+<p>JSON 形式での出力はこんな感じ。</p>
+<pre class="language-bash"><code class="language-bash">$ ffprobe -hide_banner -loglevel error <span class="token punctuation">\</span>
+    -print_format json <span class="token punctuation">\</span>
+    -select_streams v:0 <span class="token punctuation">\</span>
+    -show_entries <span class="token assign-left variable">format</span><span class="token operator">=</span>filename,size,duration,bit_rate:stream<span class="token operator">=</span>width,height,coded_width,coded_height,duration,bit_rate,codec_name,r_frame_rate <span class="token punctuation">\</span>
+    -sexagesimal <span class="token punctuation">\</span>
+    <span class="token string">'./Example.mp4'</span>
+
+<span class="token punctuation">{</span>
+    <span class="token string">"programs"</span><span class="token builtin class-name">:</span> <span class="token punctuation">[</span>
+
+    <span class="token punctuation">]</span>,
+    <span class="token string">"streams"</span><span class="token builtin class-name">:</span> <span class="token punctuation">[</span>
+        <span class="token punctuation">{</span>
+            <span class="token string">"codec_name"</span><span class="token builtin class-name">:</span> <span class="token string">"h264"</span>,
+            <span class="token string">"width"</span><span class="token builtin class-name">:</span> <span class="token number">1280</span>,
+            <span class="token string">"height"</span><span class="token builtin class-name">:</span> <span class="token number">720</span>,
+            <span class="token string">"coded_width"</span><span class="token builtin class-name">:</span> <span class="token number">1280</span>,
+            <span class="token string">"coded_height"</span><span class="token builtin class-name">:</span> <span class="token number">720</span>,
+            <span class="token string">"r_frame_rate"</span><span class="token builtin class-name">:</span> <span class="token string">"30/1"</span>,
+            <span class="token string">"duration"</span><span class="token builtin class-name">:</span> <span class="token string">"0:00:40.408333"</span>,
+            <span class="token string">"bit_rate"</span><span class="token builtin class-name">:</span> <span class="token string">"1665186"</span>
+        <span class="token punctuation">}</span>
+    <span class="token punctuation">]</span>,
+    <span class="token string">"format"</span><span class="token builtin class-name">:</span> <span class="token punctuation">{</span>
+        <span class="token string">"filename"</span><span class="token builtin class-name">:</span> <span class="token string">"./Example.mp4"</span>,
+        <span class="token string">"duration"</span><span class="token builtin class-name">:</span> <span class="token string">"0:00:40.425941"</span>,
+        <span class="token string">"size"</span><span class="token builtin class-name">:</span> <span class="token string">"9082607"</span>,
+        <span class="token string">"bit_rate"</span><span class="token builtin class-name">:</span> <span class="token string">"1797381"</span>
+    <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p><code>jq</code> コマンドを組み合わせてタブ区切りで出力とかしてみたら、<code>xargs</code> で複数ファイルのデータを出力させて Excel に貼っ付けて表で管理とかしやすそう。</p>
+<pre class="language-bash"><code class="language-bash">$ ffprobe -hide_banner -loglevel error <span class="token punctuation">\</span>
+    -print_format json <span class="token punctuation">\</span>
+    -select_streams v:0 <span class="token punctuation">\</span>
+    -show_entries <span class="token assign-left variable">format</span><span class="token operator">=</span>filename,size,duration,bit_rate:stream<span class="token operator">=</span>width,height,coded_width,coded_height,duration,bit_rate,codec_name,r_frame_rate <span class="token punctuation">\</span>
+    -sexagesimal <span class="token punctuation">\</span>
+    <span class="token string">'./Example.mp4'</span> <span class="token punctuation">\</span>
+  <span class="token operator">|</span> jq -r <span class="token string">'[.format.filename, .format.size, .format.duration, .format.bit_rate, .streams[0].width, .streams[0].height, .streams[0].r_frame_rate] | @tsv'</span>
+
+<span class="token comment"># ファイル名     サイズ     再生時間          bps         幅      高さ   FPS</span>
+./Example.mp4    <span class="token number">9082607</span>    <span class="token number">0</span>:00:40.425941    <span class="token number">1797381</span>     <span class="token number">1280</span>    <span class="token number">720</span>    <span class="token number">30</span>/1
+</code></pre>
+<p>よきよき。</p>
+<ul>
+  <li>参考：<a href="https://github.com/jongleberry-bot/get-video-dimensions/blob/master/index.js">get-video-dimensions/index.js at master ・ jongleberry-bot/get-video-dimensions</a>
+    <ul>
+      <li>Node.js の <code>child_process.exec()</code> を用いて <code>ffprobe</code> コマンドを実行し、動画ファイルの幅・高さを取得する npm パッケージのソースコード</li>
+    </ul>
+  </li>
+  <li>参考：<a href="https://nico-lab.net/how_to_use_ffprobe/">ffprobe の使い方 | ニコラボ</a></li>
+  <li>参考：<a href="https://qiita.com/makotok7/items/0e7d2f941e5da8cec8d1">ffprobeで動画を解析する - Qiita</a></li>
+</ul><div class="ad-amazon">
+  <div class="ad-amazon-image">
+    <a href="https://www.amazon.co.jp/dp/B08KCP3Z42?tag=neos21-22&amp;linkCode=osi&amp;th=1&amp;psc=1">
+      <img src="https://m.media-amazon.com/images/I/51D6hvOARBL._SL160_.jpg" width="113" height="160">
+    </a>
+  </div>
+  <div class="ad-amazon-info">
+    <div class="ad-amazon-title">
+      <a href="https://www.amazon.co.jp/dp/B08KCP3Z42?tag=neos21-22&amp;linkCode=osi&amp;th=1&amp;psc=1">Premiere Pro よくばり入門 CC対応（できるよくばり入門）</a>
+    </div>
+  </div>
+</div>
+<div class="ad-rakuten">
+  <div class="ad-rakuten-image">
+    <a href="https://hb.afl.rakuten.co.jp/hgc/g00q0722.waxyc9ff.g00q0722.waxyd017/?pc=https%3A%2F%2Fitem.rakuten.co.jp%2Fbook%2F16383296%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Fbook%2Fi%2F20065376%2F">
+      <img src="https://thumbnail.image.rakuten.co.jp/@0_mall/book/cabinet/9818/9784295009818.jpg?_ex=128x128">
+    </a>
+  </div>
+  <div class="ad-rakuten-info">
+    <div class="ad-rakuten-title">
+      <a href="https://hb.afl.rakuten.co.jp/hgc/g00q0722.waxyc9ff.g00q0722.waxyd017/?pc=https%3A%2F%2Fitem.rakuten.co.jp%2Fbook%2F16383296%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Fbook%2Fi%2F20065376%2F">Premiere Pro よくばり入門 CC対応 [ 金泉太一 ]</a>
+    </div>
+    <div class="ad-rakuten-shop">
+      <a href="https://hb.afl.rakuten.co.jp/hgc/g00q0722.waxyc9ff.g00q0722.waxyd017/?pc=https%3A%2F%2Fwww.rakuten.co.jp%2Fbook%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Fbook%2F">楽天ブックス</a>
+    </div>
+    <div class="ad-rakuten-price">価格 : 2948円</div>
+  </div>
+</div>
+
+      </main>
+      <footer id="footer">
+        <div id="footer-contents">
+          <div id="date-time">
+            <dl>
+              <dt>Created</dt>
+              <dd><time>2022-03-16</time></dd>
+              <dt>Last-Modified</dt>
+              <dd><time>2022-03-16</time></dd>
+            </dl>
+          </div>
+          <nav id="footer-links">
+            <ul>
+              <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+              <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+              <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+              <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+            </ul>
+          </nav>
+          <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+        </div>
+      </footer>
+    </div>
+  </body>
+</html>
