@@ -95,10 +95,32 @@ const isValidDateString = (year, month, date) => {
 };
 
 (async () => {
-  const input = process.argv[2];
+  let input = process.argv[2];
   
-  // 引数指定がない場合は明日日付で作成するか今日日付で作成するか問う
+  // 引数指定がない場合
   if(!input) {
+    // 現在月の既にある日付の翌日日付で作成するかどうか
+    const currentYear  = new Date().getFullYear();
+    const currentMonth = `0${new Date().getMonth() + 1}`.slice(-2);
+    
+    const currentMonthDirectory = `${constants.pages.src}/blog/${currentYear}/${currentMonth}`;
+    if(isExist(currentMonthDirectory)) {
+      const currentPostDates = fs.readdirSync(currentMonthDirectory, { withFileTypes: true })
+        .filter((dirent) => dirent.isFile() && dirent.name.endsWith('.md') && !dirent.name.startsWith('index'))  // 記事の Markdown ファイルのみに絞る
+        .map((dirent) => dirent.name.replace('.md', '').replace((/-[0-9]{2}/u), ''))  // `31-01.md` などのファイル名を `31` と日付部分のみ抽出する
+        .sort();  // 念のため昇順にする
+      // 最新の日付から翌日を割り出す
+      const latestDate = currentPostDates[currentPostDates.length - 1];
+      const next = new Date(Number(currentYear), Number(currentMonth) - 1, Number(latestDate));
+      next.setDate(next.getDate() + 1);  // 1日後
+      const nextYear  = String(next.getFullYear());
+      const nextMonth = `0${next.getMonth() + 1}`.slice(-2);
+      const nextDate  = `0${next.getDate()     }`.slice(-2);
+      const nextAnswer = await readText(`最新日付 ${nextYear}-${nextMonth}-${nextDate} で記事ファイルを作りますか？`);
+      if(nextAnswer === 'y') return createBlogPost(nextYear, nextMonth, nextDate);
+    }
+    
+    // 明日日付で作成するかどうか
     const jstTomorrow = new Date(Date.now() + ((new Date().getTimezoneOffset() + (9 * 60)) * 60 * 1000));
     jstTomorrow.setDate(jstTomorrow.getDate() + 1);  // 1日後
     const tomorrowYear  = String(jstTomorrow.getFullYear());
@@ -107,13 +129,13 @@ const isValidDateString = (year, month, date) => {
     const tomorrowAnswer = await readText(`明日日付 ${tomorrowYear}-${tomorrowMonth}-${tomorrowDate} で記事ファイルを作りますか？`);
     if(tomorrowAnswer === 'y') return createBlogPost(tomorrowYear, tomorrowMonth, tomorrowDate);
     
-    const todayYear  = new Date().getFullYear();
-    const todayMonth = `0${new Date().getMonth() + 1}`.slice(-2);
-    const todayDate  = `0${new Date().getDate()     }`.slice(-2);
-    const todayAnswer = await readText(`今日日付 ${todayYear}-${todayMonth}-${todayDate} で記事ファイルを作りますか？`);
-    if(todayAnswer === 'y') return createBlogPost(todayYear, todayMonth, todayDate);
+    // 今日日付で作成するかどうか
+    const currentDate  = `0${new Date().getDate()     }`.slice(-2);
+    const currentAnswer = await readText(`今日日付 ${currentYear}-${currentMonth}-${currentDate} で記事ファイルを作りますか？`);
+    if(currentAnswer === 'y') return createBlogPost(currentYear, currentMonth, currentDate);
     
-    return console.log('Please Input Date : ex. YYYY-MM-DD, YYYYMMDD, MM-DD, MMDD, DD');
+    // 引数に相当する年月日の入力を受け付ける (この `if` ブロックを抜けて後続処理につなげる)
+    input = await readText('年月日を入力してください (ex. YYYY-MM-DD, YYYYMMDD, MM-DD, MMDD, DD)');
   }
   
   // `YYYY-MM-DD` or `YYYYMMDD` : 過去日でもそのまま作成する
