@@ -21,24 +21,23 @@ const makeDirectory = require('../../lib/make-directory');
 
 // 最終更新日が今日に設定されているファイルを取得する
 const today = `${jstNow.jstCurrentYear}-${jstNow.zeroPadJstCurrentMonth}-${jstNow.zeroPadJstCurrentDate}`;
-const todaySourceHtmlMdFilePaths = listFiles(constants.pages.src)
-  .filter(sourceFilePath => ['.html', '.md'].includes(path.extname(sourceFilePath)))
-  .filter(sourceFilePath => !sourceFilePath.includes('_'))  // ファイルパスにアンダースコアを含んでいればアップロード対象にしない
-  .filter(sourceFilePath => {
+const todaySourceFilePaths = listFiles(constants.pages.src).filter(sourceFilePath => {
+  // ファイルパスにアンダースコアを含んでいればアップロード対象にしない)
+  if(sourceFilePath.includes('_')) return false;
+  
+  if(['.html', '.md'].includes(path.extname(sourceFilePath))) {
+    // HTML と Markdown : `last-modified` を確認する
     const text = fs.readFileSync(sourceFilePath, 'utf-8');
     return text.split('\n').find(line => line.match(new RegExp(`^last-modified(\\s*): ${today}`, 'u')));
-  });
-// ブログの画像ファイルなどを取得する
-const todaySourceAssetFilePaths = listFiles(constants.pages.src)
-  .filter(sourceFilePath => !['.html', '.md'].includes(path.extname(sourceFilePath)))
-  .filter(sourceFilePath => !sourceFilePath.includes('_'))  // ファイルパスにアンダースコアを含んでいればアップロード対象にしない
-  .filter(sourceFilePath => {
+  }
+  else {
+    // ブログの画像ファイルなどを取得する
     const match = sourceFilePath.match((/\/blog\/([0-9]{4})\/([0-9]{2})\/([0-9]{2})/u));
     if(!match) return false;  // マッチしなかった資材はアップロード対象にしない
     const date = `${match[1]}-${match[2]}-${match[3]}`;
     return date === today;
-  });
-const todaySourceFilePaths = [...todaySourceHtmlMdFilePaths, ...todaySourceAssetFilePaths];
+  }
+});
 
 if(!todaySourceFilePaths.length) return console.log('Maybe There Was No Assets Today. Aborted');
 console.log('Today Source Files :\n', todaySourceFilePaths);
@@ -88,7 +87,7 @@ todaySourceFilePaths.forEach(sourceFilePath => {
 const filePaths = Array.from(uploadFilesSet).sort();
 console.log('Target File Paths :\n', filePaths);
 
-// ./temp/upload.json` ファイルが存在すれば後続の GitHub Actions Step が実行されるようにしているのでファイルを書き出しておく
+// `./temp/upload.json` ファイルが存在すれば後続の GitHub Actions Step が実行されるようにしているのでファイルを書き出しておく
 makeDirectory(path.resolve(__dirname, '../../temp'));
 fs.writeFileSync(path.resolve(__dirname, '../../temp/upload.json'), JSON.stringify(filePaths, null, '  ') + '\n', 'utf-8');
 console.log('Daily Deploy : Succeeded');
