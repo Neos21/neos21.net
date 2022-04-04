@@ -1,7 +1,7 @@
 ---
 title        : Neo の PC 環境
 created      : 2020-03-01
-last-modified: 2020-03-01
+last-modified: 2022-04-04
 path:
   - /index.html Neo's World
   - /tech/index.html Tech
@@ -52,9 +52,12 @@ path:
 - MIDI キーボード : Korg microKEY Air-49
   - 他のラップトップ達と Bluetooth 接続したりもしたが、現在は Galleria XG と USB 接続して、主に Reason Lite 10 とともに使っている。
   - ブログ記事 : [MIDI キーボード「Korg microKEY Air-49」を買った](/blog/2020/02/21-02.html)
-- ギターエフェクター・オーディオインターフェース : Zoom G2.1Nu
+- オーディオインターフェース : Yamaha AG06MK2
   - ギターの録音に使用。PC と USB 接続して Reason Lite 10 で録音している。
-  - 詳細 : [Zoom G2.1Nu](/music/gears/effector-03.html#zoomg21nu)
+  - 詳細 : [Yamaha AG06MK2](/music/gears/dtm-01.html#yamahaag06mk2)
+- ギターエフェクター・オーディオインターフェース : Boss GT-1、Zoom G2.1Nu
+  - ギターの録音に使用。PC と USB 接続して Reason Lite 10 で録音している。
+  - 詳細 : [Boss GT-1](/music/gears/effector-06.html#bossgt1)、[Zoom G2.1Nu](/music/gears/effector-03.html#zoomg21nu)
 
 
 ## 持ち運び用 Windows 機 : Asus ZenBook3 UX390UA-512GP (2017-11-25 ～)
@@ -104,7 +107,7 @@ path:
 - ブログ記事 : [iPhone 11 Pro Max を買った・使えた液晶ガラスフィルム・レンズ保護フィルム・ケースの話も](/blog/2019/09/22-01.html)
 
 
-## ChromeBook : Lenovo IdeaPad Duet Chromebook
+## ChromeBook : Lenovo IdeaPad Duet Chromebook (2020-12-11 ～)
 
 - CPU : MediaTek Helio P60T (8コア)
 - GPU : CPU 内蔵 (Arm Mali-G72 MP3)
@@ -119,7 +122,7 @@ path:
 - ブログ記事 : [Lenovo IdeaPad Duet Chromebook を買った](/blog/2020/12/28-01.html)
 
 
-## Linux 専用機 : Lenovo ThinkPad X250 2号機 (2020-03 ～)
+## Linux 専用機 : Lenovo ThinkPad X250 2号機 (2020-03-15 ～)
 
 - CPU : Core i7-5600U (2.60 ～ 3.20 GHz)
 - GPU : Intel HD Graphics 5500 (Broadwell GT2)
@@ -183,7 +186,7 @@ Labists というところが出しているスターターキットでラズパ
 
 ### 手放したモノ
 
-- ラップトップ : Lenovo ThinkPad X250 (2020-02-14 ～)
+- ラップトップ : Lenovo ThinkPad X250 (2020-02-14 ～ 2020-03-15)
   - スペック
     - CPU : Core i5-5300U (2.30GHz)
     - GPU : Intel HD Graphics 5500 (Broadwell GT2)
@@ -198,7 +201,7 @@ Labists というところが出しているスターターキットでラズパ
   - しばらく使っているとキーボードの一部キーが完全に効かなくなり、修理に失敗したので手放した。
   - ブログ記事 : [ThinkPad X250 を買った](/blog/2020/02/20-02.html)
   - ブログ記事 : [ThinkPad X250 を HDD から SSD に換装する](/blog/2020/03/17-02.html)
-- キーボード : Filco Majestouch Convertible2 Tenkeyless 茶軸 (2019-02 ～)
+- キーボード : Filco Majestouch Convertible2 Tenkeyless 茶軸 (2019-02 ～ 2019-08)
   - 現在使っている Majestouch Convertible2 のテンキーレス版。テンキーレスは使いづらかった…。
 - キーボード : Apple Wireless Keyboard (A1016) M9270LL/A (2017-03 ～ 2018)
   - ブログ記事 : [Apple Wireless Keyboard (A1016) M9270LL/A を買った](/blog/2017/03/05-02.html)

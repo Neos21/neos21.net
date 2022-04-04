@@ -1,14 +1,22 @@
 ---
 title        : XREA サーバに Value-Domain で取得した独自ドメインを設定し SSL 化する
 created      : 2020-11-23
-last-modified: 2020-11-23
+last-modified: 2022-04-04
 path:
   - /index.html Neo's World
   - /tech/index.html Tech
   - /tech/others/index.html その他技術情報
 ---
 
-このサイトは [XREA サーバ](https://www.xrea.com/)でホスティングしています。XREA と同じ運営会社が提供する [Value-Domain](https://www.value-domain.com/) では、独自ドメインが取得でき、XREA サーバとの連携も簡単です。そこで今回は、当サイトが実際に Value-Domain でドメインを取得して、XREA サーバに設定した手順を紹介します。
+<ins class="ins-block">
+
+本情報は2020年当時、XREA サーバを利用していた際の記録です。2022年現在、このサイトは GitHub Pages でホスティングしており、Value-Domain で取得した独自ドメインを紐付けています。
+
+情報自体は、XREA サーバと Value-Domain の連携方法として利用できるかと思うので、「2020年当時はこのような設定手順でドメイン設定ができた」という資料としてお読みください。
+
+</ins>
+
+2020年当時、このサイトは [XREA サーバ](https://www.xrea.com/)でホスティングしていました。XREA と同じ運営会社が提供する [Value-Domain](https://www.value-domain.com/) では、独自ドメインが取得でき、XREA サーバとの連携も簡単です。そこで今回は、当サイトが実際に Value-Domain でドメインを取得して、XREA サーバに設定した手順を紹介します。
 
 作業手順はいずれも2020年11月頃に実施したものです。
 
