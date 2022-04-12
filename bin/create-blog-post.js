@@ -3,6 +3,7 @@ const fs = require('fs');
 
 const constants = require('../lib/constants');
 const isExist = require('../lib/is-exist');
+const isNotFuture = require('../lib/is-not-future');
 const makeDirectory = require('../lib/make-directory');
 
 /*!
@@ -100,7 +101,7 @@ const isValidDateString = (year, month, date) => {
   // 引数指定がない場合
   if(!input) {
     // 現在月の既にある日付の翌日日付で作成するかどうか
-    const currentYear  = new Date().getFullYear();
+    const currentYear  = String(new Date().getFullYear());
     const currentMonth = `0${new Date().getMonth() + 1}`.slice(-2);
     
     const currentMonthDirectory = `${constants.pages.src}/blog/${currentYear}/${currentMonth}`;
@@ -116,8 +117,11 @@ const isValidDateString = (year, month, date) => {
       const nextYear  = String(next.getFullYear());
       const nextMonth = `0${next.getMonth() + 1}`.slice(-2);
       const nextDate  = `0${next.getDate()     }`.slice(-2);
-      const nextAnswer = await readText(`最新日付 ${nextYear}-${nextMonth}-${nextDate} で記事ファイルを作りますか？`);
-      if(nextAnswer === 'y') return createBlogPost(nextYear, nextMonth, nextDate);
+      // 「最新の日付の翌日」が未来日であるかどうか
+      if(!isNotFuture(Number(nextYear), Number(nextMonth), Number(nextDate))) {
+        const nextAnswer = await readText(`最新日付 ${nextYear}-${nextMonth}-${nextDate} で記事ファイルを作りますか？`);
+        if(nextAnswer === 'y') return createBlogPost(nextYear, nextMonth, nextDate);
+      }
     }
     
     // 明日日付で作成するかどうか
