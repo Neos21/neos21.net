@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#0990d0">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>ゆっくりボイス：AquesTalk 1 を C# から呼び出してみる - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2022/05/18-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="header-brand">
+          <div id="header-brand-contents">
+            <div id="site-title"><a href="/index.html">Neo's World</a></div>
+            <nav id="header-links">
+              <ul>
+                <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+                <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+                <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+                <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+              </ul>
+            </nav>
+          </div>
+        </div>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2022/index.html">2022年</a></li>
+            <li><a href="/blog/2022/05/index.html">05月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2022-05-18</time></div>
+        <h1 id="page-title">ゆっくりボイス：AquesTalk 1 を C# から呼び出してみる</h1>
+
+<p>前回、<em>SofTalk</em> というフリーソフトをコマンドラインから呼び出し、<strong>ゆっくりボイス</strong>でテキストを発話させてみた。</p>
+<ul>
+  <li>過去記事：<a href="/blog/2022/05/17-01.html">ゆっくりボイスの SofTalk を CLI から使う</a></li>
+</ul>
+<p>今回は SofTalk が利用している大元の合成音声ライブラリ<strong>「AquesTalk」</strong>を利用して、<em>自作の C# のコードから発話</em>させてみようと思う。</p>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#aquestalk-%E3%81%AE%E3%81%8A%E3%81%95%E3%82%89%E3%81%84">AquesTalk のおさらい</a></li>
+  <li><a href="#%E8%A9%95%E4%BE%A1%E7%89%88%E3%81%AE%E5%88%B6%E9%99%90%E3%82%92%E5%9B%9E%E9%81%BF%E3%81%97%E3%81%9F%E3%81%84">評価版の制限を回避したい</a></li>
+  <li><a href="#aquestalkdll-%E3%82%92%E7%94%A8%E6%84%8F%E3%81%99%E3%82%8B"><code>AquesTalk.dll</code> を用意する</a></li>
+  <li><a href="#c-%E3%82%B3%E3%83%BC%E3%83%89%E3%82%92%E6%9B%B8%E3%81%8F">C# コードを書く</a></li>
+  <li><a href="#c-%E3%82%B3%E3%83%BC%E3%83%89%E3%82%92-cscexe-%E3%81%A7%E3%82%B3%E3%83%B3%E3%83%91%E3%82%A4%E3%83%AB%E3%81%99%E3%82%8B">C# コードを <code>csc.exe</code> でコンパイルする</a></li>
+  <li><a href="#%E4%BB%A5%E4%B8%8A">以上</a></li>
+  <li><a href="#%E5%8F%82%E8%80%83">参考</a></li>
+</ul>
+<h2 id="aquestalk-のおさらい"><a class="header-link" href="#aquestalk-のおさらい"><span class="header-link-mark"></span></a>AquesTalk のおさらい</h2>
+<p>合成音声ライブラリ AquesTalk は、大きく分けて 1・2・10 系という3つのバージョンがある。いずれも機能制限がある「評価版」であれば、公式サイトから無料でダウンロード、利用できる。</p>
+<ul>
+  <li><a href="https://www.a-quest.com/">超小型・最軽量 音声合成エンジン | 株式会社アクエスト</a></li>
+</ul>
+<p>いずれのバージョンも、Windows 向けには <code>.dll</code>、Linux 向けには <code>.so</code> ファイルといった<strong>「動的リンクライブラリ」</strong>を提供しているので、<em>プログラミング言語を問わず、<code>.dll</code> ファイルを呼び出すためのコードを書けば AquesTalk が利用できる</em>というワケ。</p>
+<ul>
+  <li>参考：<a href="https://qiita.com/mutsuyuki/items/d39b4b863f1e2bec29a3">OS別のライブラリ拡張子まとめ - Qiita</a></li>
+</ul>
+<p>公式サイトには C/C++ 言語のコード例が記載されている<em>「プログラミングガイド」</em>などのドキュメントがあり、どういう関数が存在し、どういう引数を指定して呼び出せばよいかなどが確認できるので、合わせてダウンロードして読んでおこう。</p>
+<p>今回はバージョン 1 系を利用したコードを組んでいく。</p>
+<h2 id="評価版の制限を回避したい"><a class="header-link" href="#評価版の制限を回避したい"><span class="header-link-mark"></span></a>評価版の制限を回避したい</h2>
+<p>前述のとおり、公式サイトでダウンロードできる「評価版」のライブラリは、機能制限がかかっている。</p>
+<blockquote>
+  <p>評価版は「ナ行、マ行」の音韻がすべて「ヌ」になる制限があります。</p>
+</blockquote>
+<p>つまり、「こん<em>に</em>ちわ」というテキストを渡すと「こん<strong>ぬ</strong>ちわ」と発話するような制限があるようだ。この制限を回避するには、ライセンスを購入する必要がある。</p>
+<p>しかし、フリーソフトの「<a href="https://w.atwiki.jp/softalk/pages/15.html">SofTalk</a>」や「<a href="https://chi.usamimi.info/Program/Application/BouyomiChan/">棒読みちゃん</a>」にはこうした制限はかかっていないのに、なぜ本家本元の AquesTalk ライブラリにはこうした制限がかかっているのだろうか？</p>
+<p>コレは AquesTalk のライセンス形態が途中で変更されたためにこのようになっているらしく、以前のライセンス形態で提供されていた AquesTalk 1 系はもっと自由に使えたようである。</p>
+<ul>
+  <li>参考：<a href="http://blog-yama.a-quest.com/?eid=970181">ゆっくり実況で収益化するときライセンス購入は必要？ | N.Yamazaki's blog</a></li>
+</ul>
+<p>そこで色々試したところ、公式サイトからダウンロードできる評価版の <code>AquesTalk.dll</code> ではなく、<strong>「SofTalk」や「棒読みちゃん」に同梱されている <code>AquesTalk.dll</code> ファイルを利用する</strong>ことで、評価版の制限を回避して発話させることに成功した。以下でもう少し詳しく解説しようと思う。</p>
+<p>ただし、当然ながら自己責任で。このプログラムは手元で遊びで利用するにとどめてもらいたい。</p>
+<h2 id="aquestalkdll-を用意する"><a class="header-link" href="#aquestalkdll-を用意する"><span class="header-link-mark"></span></a><code>AquesTalk.dll</code> を用意する</h2>
+<p>善良な市民は、公式サイトから評価版のライブラリ <code>aqtk1-win-eva_173.zip</code> をダウンロードし、Zip を解凍した中から <em><code>aqtk1-win-eva/x86/f1/AquesTalk.dll</code></em> を取得しておく。<strong>64bit 版の <code>x64/</code> ディレクトリではなく、32bit 版の <code>x86/</code> ディレクトリにある方を使用すること。</strong></p>
+<p><code>f1/</code> と同階層に他にもディレクトリがいくつかあるが、コレがそれぞれの声質になっている。今回は「<code>f1</code> 女声1」を使用する前提で話を進めるが、他のボイスを使用したい場合はそのディレクトリ配下の <code>AquesTalk.dll</code> を取得すれば良い。</p>
+<p>前述のとおり、評価版を回避してみたい人は、「<a href="https://w.atwiki.jp/softalk/pages/15.html">SofTalk</a>」や「<a href="https://chi.usamimi.info/Program/Application/BouyomiChan/">棒読みちゃん</a>」をダウンロードし、その中から <code>AquesTalk.dll</code> を取得する。</p>
+<ul>
+  <li>「SofTalk」の場合は解凍したディレクトリ配下の <code>dll/f1/AquesTalk.dll</code> を取得する
+    <ul>
+      <li><code>f1/</code> と同階層にある <code>dvd/</code> や <code>m1/</code> などが、同じ v1 系の別の声質の DLL ファイル</li>
+      <li><code>aqt2/</code> と <code>aqt10/</code> はそれぞれ v2・v10 系の DLL ファイル群があるディレクトリ</li>
+    </ul>
+  </li>
+  <li>「棒読みちゃん」の場合は解凍したディレクトリ内の <code>AquesTalk/f1/AquesTalk.dll</code> を取得する
+    <ul>
+      <li><code>f1/</code> と同階層にある <code>dvd/</code> や <code>m1/</code> などが、同じ v1 系の別の声質の DLL ファイル</li>
+    </ul>
+  </li>
+</ul>
+<p>SofTalk 同梱の DLL でも、棒読みちゃん同梱の DLL でも、どちらでも同じように利用できた。</p>
+<h2 id="c-コードを書く"><a class="header-link" href="#c-コードを書く"><span class="header-link-mark"></span></a>C# コードを書く</h2>
+<p>ということで、<code>AquesTalk.dll</code> を用意したら、以下のような C# のコードを書いていく。</p>
+<ul>
+  <li><code>atk1.cs</code></li>
+</ul>
+<pre class="language-cs"><code class="language-cs"><span class="token keyword">using</span> <span class="token namespace">System</span><span class="token punctuation">;</span>                          <span class="token comment">// Console</span>
+<span class="token keyword">using</span> <span class="token namespace">System<span class="token punctuation">.</span>IO</span><span class="token punctuation">;</span>                       <span class="token comment">// MemoryStream</span>
+<span class="token keyword">using</span> <span class="token namespace">System<span class="token punctuation">.</span>Media</span><span class="token punctuation">;</span>                    <span class="token comment">// SoundPlayer</span>
+<span class="token keyword">using</span> <span class="token namespace">System<span class="token punctuation">.</span>Runtime<span class="token punctuation">.</span>InteropServices</span><span class="token punctuation">;</span>  <span class="token comment">// Marshal</span>
+
+<span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">ATK1</span> <span class="token punctuation">{</span>
+  <span class="token comment">// DLL ファイルへのパス</span>
+  <span class="token keyword">const</span> <span class="token class-name"><span class="token keyword">string</span></span> dllPath <span class="token operator">=</span> <span class="token string">".\\AquesTalk.dll"</span><span class="token punctuation">;</span>
+  
+  <span class="token punctuation">[</span><span class="token attribute"><span class="token class-name">DllImport</span><span class="token attribute-arguments"><span class="token punctuation">(</span>dllPath<span class="token punctuation">)</span></span></span><span class="token punctuation">]</span>
+  <span class="token keyword">private</span> <span class="token keyword">static</span> <span class="token keyword">extern</span> <span class="token return-type class-name">IntPtr</span> <span class="token function">AquesTalk_Synthe</span><span class="token punctuation">(</span><span class="token class-name"><span class="token keyword">string</span></span> koe<span class="token punctuation">,</span> <span class="token class-name"><span class="token keyword">int</span></span> iSpeed<span class="token punctuation">,</span> <span class="token keyword">ref</span> <span class="token class-name"><span class="token keyword">int</span></span> size<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  
+  <span class="token punctuation">[</span><span class="token attribute"><span class="token class-name">DllImport</span><span class="token attribute-arguments"><span class="token punctuation">(</span>dllPath<span class="token punctuation">)</span></span></span><span class="token punctuation">]</span>
+  <span class="token keyword">private</span> <span class="token keyword">static</span> <span class="token keyword">extern</span> <span class="token return-type class-name"><span class="token keyword">void</span></span> <span class="token function">AquesTalk_FreeWave</span><span class="token punctuation">(</span><span class="token class-name">IntPtr</span> wavPtr<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  
+  <span class="token keyword">public</span> <span class="token keyword">static</span> <span class="token return-type class-name"><span class="token keyword">void</span></span> <span class="token function">Main</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    Console<span class="token punctuation">.</span><span class="token function">WriteLine</span><span class="token punctuation">(</span><span class="token string">"Start"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    
+    <span class="token comment">// 速度</span>
+    <span class="token keyword">const</span> <span class="token class-name"><span class="token keyword">int</span></span> iSpeed <span class="token operator">=</span> <span class="token number">100</span><span class="token punctuation">;</span>
+    <span class="token comment">// テキスト</span>
+    <span class="token keyword">const</span> <span class="token class-name"><span class="token keyword">string</span></span> koe <span class="token operator">=</span> <span class="token string">"こんにちわこんにちわ"</span><span class="token punctuation">;</span>
+    Console<span class="token punctuation">.</span><span class="token function">WriteLine</span><span class="token punctuation">(</span><span class="token string">"DLL   : {0}"</span><span class="token punctuation">,</span> dllPath<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    Console<span class="token punctuation">.</span><span class="token function">WriteLine</span><span class="token punctuation">(</span><span class="token string">"Speed : {0}"</span><span class="token punctuation">,</span> iSpeed<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    Console<span class="token punctuation">.</span><span class="token function">WriteLine</span><span class="token punctuation">(</span><span class="token string">"Text  : {0}"</span><span class="token punctuation">,</span> koe<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    
+    <span class="token comment">// 音声ファイルとしてそのまま保存可能なバイト列の先頭ポイントを取得する</span>
+    <span class="token class-name"><span class="token keyword">int</span></span> size <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span>
+    <span class="token class-name">IntPtr</span> wavPtr <span class="token operator">=</span> IntPtr<span class="token punctuation">.</span>Zero<span class="token punctuation">;</span>
+    <span class="token keyword">try</span> <span class="token punctuation">{</span>
+      wavPtr <span class="token operator">=</span> <span class="token function">AquesTalk_Synthe</span><span class="token punctuation">(</span>koe<span class="token punctuation">,</span> iSpeed<span class="token punctuation">,</span> <span class="token keyword">ref</span> size<span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment">// throws</span>
+      
+      <span class="token comment">// 失敗していれば終了する</span>
+      <span class="token keyword">if</span><span class="token punctuation">(</span>wavPtr <span class="token operator">==</span> IntPtr<span class="token punctuation">.</span>Zero<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        Console<span class="token punctuation">.</span><span class="token function">WriteLine</span><span class="token punctuation">(</span><span class="token string">"ERROR : 音声生成に失敗しました。不正な文字が使われた可能性があります。終了します"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">return</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span>
+    <span class="token keyword">catch</span><span class="token punctuation">(</span><span class="token class-name">Exception</span> exception<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      Console<span class="token punctuation">.</span><span class="token function">WriteLine</span><span class="token punctuation">(</span><span class="token string">"ERROR : 例外が発生しました"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      Console<span class="token punctuation">.</span><span class="token function">WriteLine</span><span class="token punctuation">(</span>exception<span class="token punctuation">)</span><span class="token punctuation">;</span>
+      Console<span class="token punctuation">.</span><span class="token function">WriteLine</span><span class="token punctuation">(</span><span class="token string">"終了します"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token keyword">return</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+    
+    <span class="token comment">// C# で扱えるようにマネージド側へコピーする</span>
+    <span class="token class-name"><span class="token keyword">byte</span><span class="token punctuation">[</span><span class="token punctuation">]</span></span> wav <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token constructor-invocation class-name"><span class="token keyword">byte</span></span><span class="token punctuation">[</span>size<span class="token punctuation">]</span><span class="token punctuation">;</span>
+    Marshal<span class="token punctuation">.</span><span class="token function">Copy</span><span class="token punctuation">(</span>wavPtr<span class="token punctuation">,</span> wav<span class="token punctuation">,</span> <span class="token number">0</span><span class="token punctuation">,</span> size<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    
+    <span class="token comment">// アンマネージドポインタは用がなくなった瞬間に解放する</span>
+    <span class="token function">AquesTalk_FreeWave</span><span class="token punctuation">(</span>wavPtr<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    
+    <span class="token comment">// 同期再生する</span>
+    <span class="token keyword">using</span><span class="token punctuation">(</span><span class="token class-name"><span class="token keyword">var</span></span> ms <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token constructor-invocation class-name">MemoryStream</span><span class="token punctuation">(</span>wav<span class="token punctuation">)</span><span class="token punctuation">)</span>
+    <span class="token keyword">using</span><span class="token punctuation">(</span><span class="token class-name"><span class="token keyword">var</span></span> sp <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token constructor-invocation class-name">SoundPlayer</span><span class="token punctuation">(</span>ms<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      sp<span class="token punctuation">.</span><span class="token function">PlaySync</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+    
+    Console<span class="token punctuation">.</span><span class="token function">WriteLine</span><span class="token punctuation">(</span><span class="token string">"Finished"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>公式のプログラミングガイドやブログ記事等を参考に書いてみた。</p>
+<ul>
+  <li>定数 <code>dllPath</code> で「同ディレクトリの <code>.\AquesTalk.dll</code>」を相対パス指定している
+    <ul>
+      <li>PATH が通っている場所に DLL を置いておけば、相対パスでなく <code>"AquesTalk.dll"</code> と書いても読み込めるみたい</li>
+    </ul>
+  </li>
+  <li>DLL 内の <code>AquesTalk_Synthe</code> 関数と <code>AquesTalk_FreeWave</code> 関数を呼び出せるように <code>DllImport</code> しておく
+    <ul>
+      <li>それぞれ発話とメモリ解放の関数。引数の型などは公式のプログラミングガイドに記載がある</li>
+      <li>参考：<a href="https://qiita.com/mitsu_at3/items/94807ee0b3bf34ffb6b2">【Windows/C#】なるべく丁寧にDllImportを使う - Qiita</a></li>
+    </ul>
+  </li>
+  <li>定数 <code>iSpeed</code> が読み上げ速度</li>
+  <li>定数 <code>koe</code> が読み上げるテキストの指定部分。<strong>基本的にひらがなのみ対応しており、漢字や英数字は認識できないので予めひらがなにしておくこと</strong>
+    <ul>
+      <li>「SofTalk」や「棒読みちゃん」などのツールは、この部分を IME の再変換機能だったり、MeCab のような形態素解析ライブラリなんかでひらがなに展開して読み上げ処理を行わせているようだ</li>
+      <li>漢字などを展開する処理を自前で実装することも可能だが、今回は実装していない</li>
+    </ul>
+  </li>
+  <li><code>SoundPlayer.PlaySync()</code> で音声を同期的に再生させている</li>
+  <li>それ以外はエラーハンドリングやデバッグログ出力をちまちま書いている程度</li>
+</ul>
+<h2 id="c-コードを-cscexe-でコンパイルする"><a class="header-link" href="#c-コードを-cscexe-でコンパイルする"><span class="header-link-mark"></span></a>C# コードを <code>csc.exe</code> でコンパイルする</h2>
+<p>こうして記述した C# のコードを、.NET Framework に内蔵されている <code>csc.exe</code> でコンパイルする。というのも、僕はあまり C# に明るくなく、Visual Studio で開発したりしていないので、今回はかなり簡易的に、<code>csc.exe</code> を使ってコンパイルしてしまっている。</p>
+<p>ココで、<code>AquesTalk.dll</code> との兼ね合いで 32bit 版の実行ファイルを生成する必要があるので、そのためのオプション指定 <strong><code>/platform:x86</code></strong> を忘れずにしておこう。使用する <code>csc.exe</code> も 64bit 版ではなく 32bit 版を使う方が良いだろう (ディレクトリパスが <code>Framework64\</code> ではなく <code>Framework\</code> の方を使う)。</p>
+<p><code>csc.exe</code> の所在やバージョンは環境によると思うが、自分の環境では以下のフルパスを指定してコンパイルした。</p>
+<pre class="language-batch"><code class="language-batch"><span class="token operator">@</span><span class="token command"><span class="token keyword">Rem</span> コンパイルする</span>
+<span class="token command"><span class="token keyword">C</span><span class="token label property">:\Windows\Microsoft.NET\Framework\v4.0.30319\csc.exe</span> <span class="token parameter attr-name">/nologo</span> <span class="token parameter attr-name">/platform<span class="token punctuation">:</span></span>x86 .\atk1.cs</span>
+
+<span class="token operator">@</span><span class="token command"><span class="token keyword">Rem</span> 実行する</span>
+.\atk1.exe
+</code></pre>
+<p>そしてコンパイルして生成した <code>atk1.exe</code> を実行すれば、実行時に同ディレクトリにあるであろう <code>AquesTalk.dll</code> を利用して発話できる。</p>
+<p><code>.dll</code> ファイルは「動的リンクライブラリ」と言うだけあって、コンパイル時に <code>atk1.exe</code> の中には内包されず、EXE の実行時に DLL ファイルを探しに行くモノなので、利用する際は <code>atk1.exe</code> と <code>AquesTalk.dll</code> が必ずセットで必要になる。</p>
+<p>また、今回のコードの場合でいうと、<code>AquesTalk.dll</code> を別の声質のモノと差し替えれば、<code>atk1.exe</code> の方は再コンパイルすることなく声質を変えたりもできる。</p>
+<h2 id="以上"><a class="header-link" href="#以上"><span class="header-link-mark"></span></a>以上</h2>
+<p>今回は以上とする。</p>
+<p>読み上げ速度やテキストを標準入力で受け取れるように C# コードを書ければ、CLI ツールが出来上がるだろう。</p>
+<p>また、途中でも触れたように AquesTalk ライブラリは漢字や英数字が認識できないので、テキストをひらがなに展開するような事前処理を入れてあげたりすると「SofTalk」や「棒読みちゃん」のように利用しやすくなるだろう。</p>
+<p>フリーソフトの他にも、既に似たような Python 製のコードが存在したりするものの、Twitter のタイムラインを読み上げさせたりするようなプログラムも、コレを元に組んでいけそうだ。</p>
+<ul>
+  <li><a href="https://github.com/Neos21/poc-yukkuri-cli">Neos21/poc-yukkuri-cli: AquesTalk 1 &#x26; 2 on C#</a></li>
+</ul>
+<h2 id="参考"><a class="header-link" href="#参考"><span class="header-link-mark"></span></a>参考</h2>
+<ul>
+  <li><a href="https://www.baku-dreameater.net/entry/2015/05/09/%25e3%2580%2590c%25e3%2580%2591%25e3%2582%2586%25e3%2581%25a3%25e3%2581%258f%25e3%2582%258a%25e3%2583%259c%25e3%2582%25a4%25e3%2582%25b9%25e3%2581%25ae%25e3%2583%2597%25e3%2583%25ad%25e3%2582">【C#】ゆっくりボイスのプログラミング入門【AquesTalk】 - Bakulog</a>
+    <ul>
+      <li>今回大きく参考にさせていただいた記事</li>
+    </ul>
+  </li>
+  <li><a href="https://marunaka-blog.com/c-sharp-embed-dll-file/2224/">【C#】FodyでDLLファイルをEXEファイルに埋め込む方法｜○NAKA BLOG</a></li>
+  <li><a href="https://qiita.com/krsak/items/75a257cc0866a7e8e4aa">実行ファイルとDLLを一つにまとめる - Qiita</a>
+    <ul>
+      <li>今回は未検証だが、DLL ファイルを Exe に内蔵する方法は ILMerge や Fody などがある模様</li>
+    </ul>
+  </li>
+  <li><a href="https://www.kaoriya.net/blog/2020/12/06/yukkuri-go/">Goでゆっくりしていってね! — KaoriYa</a>
+    <ul>
+      <li>Go 言語で AquesTalk 1 系の DLL ファイルを呼び出す例</li>
+    </ul>
+  </li>
+  <li><a href="https://github.com/Na-x4/AquesTalk-python">Na-x4/AquesTalk-python: Python Wrapper for AquesTalk (Old License)</a>
+    <ul>
+      <li>Python で実行する例</li>
+    </ul>
+  </li>
+</ul><div class="ad-rakuten">
+  <div class="ad-rakuten-image">
+    <a href="https://hb.afl.rakuten.co.jp/hgc/g00sjv32.waxycb1c.g00sjv32.waxyd711/?pc=https%3A%2F%2Fitem.rakuten.co.jp%2Fgaragefield%2F10000024%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Fgaragefield%2Fi%2F10000024%2F">
+      <img src="https://thumbnail.image.rakuten.co.jp/@0_mall/garagefield/cabinet/05293259/imgrc0070829268.jpg?_ex=128x128">
+    </a>
+  </div>
+  <div class="ad-rakuten-info">
+    <div class="ad-rakuten-title">
+      <a href="https://hb.afl.rakuten.co.jp/hgc/g00sjv32.waxycb1c.g00sjv32.waxyd711/?pc=https%3A%2F%2Fitem.rakuten.co.jp%2Fgaragefield%2F10000024%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Fgaragefield%2Fi%2F10000024%2F">送料無料　オリジナル　東方Project　東方 霊夢&amp;魔理沙　【ゆっくりしていってね】Tシャツ</a>
+    </div>
+    <div class="ad-rakuten-shop">
+      <a href="https://hb.afl.rakuten.co.jp/hgc/g00sjv32.waxycb1c.g00sjv32.waxyd711/?pc=https%3A%2F%2Fwww.rakuten.co.jp%2Fgaragefield%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Fgaragefield%2F">ガレージ・フィールド</a>
+    </div>
+    <div class="ad-rakuten-price">価格 : 2500円</div>
+  </div>
+</div>
+<div class="ad-amazon">
+  <div class="ad-amazon-image">
+    <a href="https://www.amazon.co.jp/dp/B09XBJNWZ4?tag=neos21-22&amp;linkCode=osi&amp;th=1&amp;psc=1">
+      <img src="https://m.media-amazon.com/images/I/31uNJOnF12L._SL160_.jpg" width="160" height="144">
+    </a>
+  </div>
+  <div class="ad-amazon-info">
+    <div class="ad-amazon-title">
+      <a href="https://www.amazon.co.jp/dp/B09XBJNWZ4?tag=neos21-22&amp;linkCode=osi&amp;th=1&amp;psc=1">東方 ゆっくりれいむ おもしろ Tシャツ 半袖 ホワイト M</a>
+    </div>
+  </div>
+</div>
+
+      </main>
+      <footer id="footer">
+        <div id="footer-contents">
+          <div id="date-time">
+            <dl>
+              <dt>Created</dt>
+              <dd><time>2022-05-18</time></dd>
+              <dt>Last-Modified</dt>
+              <dd><time>2022-05-18</time></dd>
+            </dl>
+          </div>
+          <nav id="footer-links">
+            <ul>
+              <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+              <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+              <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+              <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+            </ul>
+          </nav>
+          <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+        </div>
+      </footer>
+    </div>
+  </body>
+</html>
