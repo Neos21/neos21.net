@@ -59,6 +59,9 @@
         <h1 id="page-title">契約による設計・契約プログラミングが少しワカッタ</h1>
 
 <p>「契約による設計 Design By Contract」とか「契約プログラミング Programming By Contract」とか、単語は聞いたことあったけど何するもんなのかよく分かんねーなーと思ってた。</p>
+<ul>
+  <li>前回記事：<a href="/blog/2018/07/09-01.html">防衛的プログラミングと契約的プログラミングの違いがイマイチ分かっていない</a></li>
+</ul>
 <p>Wikipedia の記事を抜粋するとこんな感じ。</p>
 <ul>
   <li>参考：<a href="https://ja.wikipedia.org/wiki/%E5%A5%91%E7%B4%84%E3%83%97%E3%83%AD%E3%82%B0%E3%83%A9%E3%83%9F%E3%83%B3%E3%82%B0">契約プログラミング - Wikipedia</a></li>
@@ -100,7 +103,7 @@
       <li>関数を呼ぶ側が、呼ぶ直前に設定する引数をチェックするような実装もアリみたい。このやり方の注意点は、呼び出す関数の仕様が変わった時に、許容しているはずの引数のパターンをアサーションエラーにしてしまうような「修正漏れ」が起きそうなところ。</li>
     </ul>
   </li>
-  <li>事後条件 (Postcondition) : <em><code>return</code> する値の仕様チェック。</em>
+  <li>事後条件 (Postcondition) : <em><code>return</code> する戻り値の仕様チェック。</em>
     <ul>
       <li>「この関数では計算結果が負数になることはない」とか「データがない場合は空の配列を返す、<code>null</code> は返さない」みたいなことが決まっていれば、それを <em><code>return</code> の直前</em>で <code>assert()</code> しておく。</li>
       <li>アサーションで実装し、単体テストと結合テストが済んでいれば十分だとは思うが、別に例外をスローするような実装にしても問題はなさそう。</li>
@@ -121,6 +124,7 @@
 <p>なーんだ、コレってほとんど普段から俺がやってることじゃん。と思った。アサーションは言語によっては使わないけど、関数の頭で引数チェックしてるし、関数の最後で戻り値のチェックしてるし、Setter 系の処理の所では引数チェックと同じノリでチェックしてるし。コレが契約プログラミングだったのか。</p>
 <ul>
   <li>参考：<a href="https://docs.oracle.com/cd/E19683-01/816-3973/assert-13/index.html">事前条件、事後条件、およびクラスの不変条件 (Java 2 SDK 開発ガイド (Solaris 編))</a></li>
+  <li>参考：<a href="https://teratail.com/questions/243129">契約プログラミングについて事後条件と不変条件がよくわかりません。</a></li>
 </ul>
 <h2 id="防衛的プログラミングとの違い"><a class="header-link" href="#防衛的プログラミングとの違い"><span class="header-link-mark"></span></a>防衛的プログラミングとの違い</h2>
 <p>似たような言葉で、<em>防衛的プログラミング</em>という考え方もある。コチラは以下の記事で要領を掴めた。</p>
@@ -130,6 +134,131 @@
 <p>起こりそうな例外を予めチェックしておき、例外を発生させないというプログラミング手法だ。</p>
 <p>関数の引数チェックでは、<code>null</code> などの異常値を空文字に変換して処理を続行させたり。処理中の例外は <code>catch</code> して、何らかの初期値に差し替えて処理を終了させたり。</p>
 <p>このようなコーディングもよくやってる。JavaScript の場合は <code>null</code> や <code>undefined</code> のような Falsy な値のチェックと変換が必要になることが多いので、そういう癖がついたと思う。</p>
+<h2 id="擬似コードで例示"><a class="header-link" href="#擬似コードで例示"><span class="header-link-mark"></span></a>擬似コードで例示</h2>
+<p>それぞれを擬似コードで例示してみる。TypeScript 風に書くが、素の JavaScript や Java っぽい感じでも汲み取ってもらえればと。</p>
+<p>TypeScript の場合、「その型宣言なら <code>null</code> はチェックせずとも弾けるのでは？」といった指摘はありうるが、<em>実行時に TypeScript での型チェックが働くワケではない</em>ので、API から取得したデータを元に動的に処理したりしているような場面で意図した型で動作しない場合もある。あくまで擬似コードとして、言語別の個別の指摘は無視する。ココでは「何をすることが事前条件と言われるのか」といったことを押さえるために見て欲しい。</p>
+<pre class="language-typescript"><code class="language-typescript"><span class="token comment">// ↓ 「不変条件」に焦点を当てた例</span>
+
+<span class="token doc-comment comment">/** 人物を表すクラス */</span>
+<span class="token keyword">class</span> <span class="token class-name"><span class="token maybe-class-name">Person</span></span> <span class="token punctuation">{</span>
+  <span class="token doc-comment comment">/** 氏名 : 空文字は許容しない */</span>
+  <span class="token keyword">private</span> name<span class="token operator">:</span> <span class="token builtin">string</span><span class="token punctuation">;</span>
+  <span class="token doc-comment comment">/** 年齢 : 0 以上の整数のみとする */</span>
+  <span class="token keyword">private</span> age<span class="token operator">:</span> <span class="token builtin">number</span><span class="token punctuation">;</span>
+  
+  <span class="token doc-comment comment">/** 氏名を設定する */</span>
+  <span class="token keyword">public</span> <span class="token function">setName</span><span class="token punctuation">(</span>name<span class="token operator">:</span> <span class="token builtin">string</span><span class="token punctuation">)</span><span class="token operator">:</span> <span class="token keyword">void</span> <span class="token punctuation">{</span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">name</span> <span class="token operator">=</span> name<span class="token punctuation">;</span>  <span class="token comment">// 契約的プログラミングにおける「不変条件」(空文字を許容しない) のチェックをしていない</span>
+  <span class="token punctuation">}</span>
+  
+  <span class="token doc-comment comment">/**
+   * 年齢を設定する
+   * 
+   * <span class="token keyword">@param</span> <span class="token parameter">age</span> 年齢。0 以上の整数のみとする
+   */</span>
+  <span class="token keyword">public</span> <span class="token function">setAge</span><span class="token punctuation">(</span>age<span class="token operator">:</span> <span class="token builtin">number</span><span class="token punctuation">)</span><span class="token operator">:</span> <span class="token keyword">void</span> <span class="token punctuation">{</span>
+    <span class="token comment">// 契約的プログラミングにおける「事前条件」のチェック : 引数チェック</span>
+    <span class="token keyword">if</span><span class="token punctuation">(</span>age <span class="token operator">==</span> <span class="token keyword">null</span><span class="token punctuation">)</span> <span class="token keyword">throw</span> <span class="token keyword">new</span> <span class="token class-name"><span class="token maybe-class-name">IllegalPreConditionException</span></span><span class="token punctuation">(</span><span class="token string">'引数 age が null か undefined です'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token operator">!</span><span class="token known-class-name class-name">Number</span><span class="token punctuation">.</span><span class="token method function property-access">isInteger</span><span class="token punctuation">(</span>age<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token keyword">throw</span> <span class="token keyword">new</span> <span class="token class-name"><span class="token maybe-class-name">IllegalPreConditionException</span></span><span class="token punctuation">(</span><span class="token string">'引数 age が小数です'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">if</span><span class="token punctuation">(</span>age <span class="token operator">&#x3C;</span> <span class="token number">0</span><span class="token punctuation">)</span> <span class="token keyword">throw</span> <span class="token keyword">new</span> <span class="token class-name"><span class="token maybe-class-name">IllegalPreConditionException</span></span><span class="token punctuation">(</span><span class="token string">'引数 age が負数です'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token comment">// 契約的プログラミングにおける「不変条件」の事前チェック : フィールドの変更前の値をチェックする・ココでは assert ではなく例外スローとしている</span>
+    <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">age</span> <span class="token operator">==</span> <span class="token keyword">null</span><span class="token punctuation">)</span> <span class="token keyword">throw</span> <span class="token keyword">new</span> <span class="token class-name"><span class="token maybe-class-name">IllegalInvariantConditionException</span></span><span class="token punctuation">(</span><span class="token string">'処理前のフィールド age が null か undefined です'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token operator">!</span><span class="token known-class-name class-name">Number</span><span class="token punctuation">.</span><span class="token method function property-access">isInteger</span><span class="token punctuation">(</span><span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">age</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token keyword">throw</span> <span class="token keyword">new</span> <span class="token class-name"><span class="token maybe-class-name">IllegalInvariantConditionException</span></span><span class="token punctuation">(</span><span class="token string">'処理前のフィールド age が小数です'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">age</span> <span class="token operator">&#x3C;</span> <span class="token number">0</span><span class="token punctuation">)</span> <span class="token keyword">throw</span> <span class="token keyword">new</span> <span class="token class-name"><span class="token maybe-class-name">IllegalInvariantConditionException</span></span><span class="token punctuation">(</span><span class="token string">'処理前のフィールド age が負数です'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    
+    <span class="token comment">// 実処理 : フィールドに値を設定する</span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">age</span> <span class="token operator">=</span> age<span class="token punctuation">;</span>
+    
+    <span class="token comment">// 契約的プログラミングにおける「不変条件」の事後チェック : フィールドの変更後の値をチェックする・ココでは assert ではなく例外スローとしている</span>
+    <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">age</span> <span class="token operator">==</span> <span class="token keyword">null</span><span class="token punctuation">)</span> <span class="token keyword">throw</span> <span class="token keyword">new</span> <span class="token class-name"><span class="token maybe-class-name">IllegalInvariantConditionException</span></span><span class="token punctuation">(</span><span class="token string">'処理後のフィールド age が null か undefined です'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token operator">!</span><span class="token known-class-name class-name">Number</span><span class="token punctuation">.</span><span class="token method function property-access">isInteger</span><span class="token punctuation">(</span><span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">age</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token keyword">throw</span> <span class="token keyword">new</span> <span class="token class-name"><span class="token maybe-class-name">IllegalInvariantConditionException</span></span><span class="token punctuation">(</span><span class="token string">'処理後のフィールド age が小数です'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token keyword">this</span><span class="token punctuation">.</span><span class="token property-access">age</span> <span class="token operator">&#x3C;</span> <span class="token number">0</span><span class="token punctuation">)</span> <span class="token keyword">throw</span> <span class="token keyword">new</span> <span class="token class-name"><span class="token maybe-class-name">IllegalInvariantConditionException</span></span><span class="token punctuation">(</span><span class="token string">'処理後のフィールド age が負数です'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+
+
+<span class="token comment">// ↓ 「事前条件」「事後条件」に焦点を当てた例</span>
+
+<span class="token doc-comment comment">/**
+ * 引数の2つの値を加算する関数
+ * 
+ * <span class="token keyword">@param</span> <span class="token parameter">numberA</span> 数値1。整数のみとし、負数は受け取らないものとする
+ * <span class="token keyword">@param</span> <span class="token parameter">numberB</span> 数値2。整数のみとし、負数は受け取らないものとする
+ * <span class="token keyword">@return</span> 引数の2つの値を加算した合計値。合計値は整数のみとし、負数にはならないものとする
+ * <span class="token keyword">@throws</span> 引数もしくは合計値が異常値 (小数、負数、null、undefined のいずれか) である場合
+ */</span>
+<span class="token keyword">function</span> <span class="token function">add</span><span class="token punctuation">(</span>numberA<span class="token operator">:</span> <span class="token builtin">number</span><span class="token punctuation">,</span> numberB<span class="token operator">:</span> <span class="token builtin">number</span><span class="token punctuation">)</span><span class="token operator">:</span> <span class="token builtin">number</span> <span class="token punctuation">{</span>
+  <span class="token comment">// 契約的プログラミングにおける「事前条件」のチェック : 引数チェック</span>
+  <span class="token keyword">if</span><span class="token punctuation">(</span>numberA <span class="token operator">==</span> <span class="token keyword">null</span><span class="token punctuation">)</span> <span class="token keyword">throw</span> <span class="token keyword">new</span> <span class="token class-name"><span class="token maybe-class-name">IllegalPreConditionException</span></span><span class="token punctuation">(</span><span class="token string">'引数 numberA が null か undefined です'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">if</span><span class="token punctuation">(</span>numberB <span class="token operator">==</span> <span class="token keyword">null</span><span class="token punctuation">)</span> <span class="token keyword">throw</span> <span class="token keyword">new</span> <span class="token class-name"><span class="token maybe-class-name">IllegalPreConditionException</span></span><span class="token punctuation">(</span><span class="token string">'引数 numberB が null か undefined です'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token operator">!</span><span class="token known-class-name class-name">Number</span><span class="token punctuation">.</span><span class="token method function property-access">isInteger</span><span class="token punctuation">(</span>numberA<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token keyword">throw</span> <span class="token keyword">new</span> <span class="token class-name"><span class="token maybe-class-name">IllegalPreConditionException</span></span><span class="token punctuation">(</span><span class="token string">'引数 numberA が小数です'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token operator">!</span><span class="token known-class-name class-name">Number</span><span class="token punctuation">.</span><span class="token method function property-access">isInteger</span><span class="token punctuation">(</span>numberB<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token keyword">throw</span> <span class="token keyword">new</span> <span class="token class-name"><span class="token maybe-class-name">IllegalPreConditionException</span></span><span class="token punctuation">(</span><span class="token string">'引数 numberB が小数です'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">if</span><span class="token punctuation">(</span>numberA <span class="token operator">&#x3C;</span> <span class="token number">0</span><span class="token punctuation">)</span> <span class="token keyword">throw</span> <span class="token keyword">new</span> <span class="token class-name"><span class="token maybe-class-name">IllegalPreConditionException</span></span><span class="token punctuation">(</span><span class="token string">'引数 numberA が負数です'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">if</span><span class="token punctuation">(</span>numberB <span class="token operator">&#x3C;</span> <span class="token number">0</span><span class="token punctuation">)</span> <span class="token keyword">throw</span> <span class="token keyword">new</span> <span class="token class-name"><span class="token maybe-class-name">IllegalPreConditionException</span></span><span class="token punctuation">(</span><span class="token string">'引数 numberB が負数です'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token comment">// 契約的プログラミングにおける「不変条件」がある場合は、その事前チェックをここで行う</span>
+  
+  <span class="token comment">// 実処理 : 引数の2つの値を加算する</span>
+  <span class="token keyword">const</span> result <span class="token operator">=</span> numberA <span class="token operator">+</span> numberB<span class="token punctuation">;</span>
+  
+  <span class="token comment">// 契約的プログラミングにおける「事後条件」のチェック : 戻り値のチェック・ココでは assert ではなく例外スローとしている</span>
+  <span class="token keyword">if</span><span class="token punctuation">(</span>result <span class="token operator">==</span> <span class="token keyword">null</span><span class="token punctuation">)</span> <span class="token keyword">throw</span> <span class="token keyword">new</span> <span class="token class-name"><span class="token maybe-class-name">IllegalPostConditionException</span></span><span class="token punctuation">(</span><span class="token string">'戻り値 result が null か undefined です'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token operator">!</span><span class="token known-class-name class-name">Number</span><span class="token punctuation">.</span><span class="token method function property-access">isInteger</span><span class="token punctuation">(</span>result<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token keyword">throw</span> <span class="token keyword">new</span> <span class="token class-name"><span class="token maybe-class-name">IllegalPostConditionException</span></span><span class="token punctuation">(</span><span class="token string">'戻り値 result が小数です'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">if</span><span class="token punctuation">(</span>result <span class="token operator">&#x3C;</span> <span class="token number">0</span><span class="token punctuation">)</span> <span class="token keyword">throw</span> <span class="token keyword">new</span> <span class="token class-name"><span class="token maybe-class-name">IllegalPostConditionException</span></span><span class="token punctuation">(</span><span class="token string">'戻り値 result が負数です'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token comment">// 契約的プログラミングにおける「不変条件」がある場合は、その事後チェックをここで行う</span>
+  
+  <span class="token comment">// 終了する</span>
+  <span class="token keyword">return</span> result<span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+
+
+<span class="token comment">// ↓ 呼び出し方の違いによる「防衛的プログラミング」の例</span>
+
+<span class="token comment">// メイン処理</span>
+<span class="token keyword">function</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token comment">// 「契約的プログラミング」では呼び出し元の呼び出し方については触れていない</span>
+  <span class="token comment">// なので、引数に与える値の妥当性を呼び出し元ではチェックしないでいる</span>
+  <span class="token keyword">const</span> resultA <span class="token operator">=</span> <span class="token function">add</span><span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">,</span> <span class="token number">2</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">const</span> resultB <span class="token operator">=</span> <span class="token function">add</span><span class="token punctuation">(</span><span class="token number">3</span><span class="token punctuation">,</span> <span class="token number">4.5</span><span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment">// ← 関数内の「事前条件」違反で例外がスローされることになる</span>
+  
+  
+  <span class="token comment">// 一方「防衛的プログラミング」は、原則的に想定される例外は絶対に発生させないようにする</span>
+  <span class="token comment">// 例えば「計算に失敗した場合は -1 を出力する」といった例外ハンドリング処理を設計に組み込んでおく</span>
+  <span class="token keyword">try</span> <span class="token punctuation">{</span>
+    <span class="token comment">// 実際は API 等から値を取得するテイで…</span>
+    <span class="token keyword">const</span> numberA <span class="token operator">=</span> <span class="token number">6</span><span class="token punctuation">;</span>
+    <span class="token keyword">const</span> numberB <span class="token operator">=</span> <span class="token number">7.8</span><span class="token punctuation">;</span>
+    
+    <span class="token comment">// 関数を呼び出す前に、呼び出し元で例外が発生しないように処理する : ココでは catch 句に移動させるため例外をスローしている</span>
+    <span class="token keyword">if</span><span class="token punctuation">(</span>numberA <span class="token operator">==</span> <span class="token keyword">null</span> <span class="token operator">||</span> <span class="token operator">!</span><span class="token known-class-name class-name">Number</span><span class="token punctuation">.</span><span class="token method function property-access">isInteger</span><span class="token punctuation">(</span>numberA<span class="token punctuation">)</span> <span class="token operator">||</span> numberA <span class="token operator">&#x3C;</span> <span class="token number">0</span><span class="token punctuation">)</span> <span class="token keyword">throw</span> <span class="token keyword">new</span> <span class="token class-name"><span class="token maybe-class-name">IllegalParameterException</span></span><span class="token punctuation">(</span><span class="token string">'変数 numberA が不正値のため計算を開始できません'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">if</span><span class="token punctuation">(</span>numberB <span class="token operator">==</span> <span class="token keyword">null</span> <span class="token operator">||</span> <span class="token operator">!</span><span class="token known-class-name class-name">Number</span><span class="token punctuation">.</span><span class="token method function property-access">isInteger</span><span class="token punctuation">(</span>numberB<span class="token punctuation">)</span> <span class="token operator">||</span> numberB <span class="token operator">&#x3C;</span> <span class="token number">0</span><span class="token punctuation">)</span> <span class="token keyword">throw</span> <span class="token keyword">new</span> <span class="token class-name"><span class="token maybe-class-name">IllegalParameterException</span></span><span class="token punctuation">(</span><span class="token string">'変数 numberB が不正値のため計算を開始できません'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    
+    <span class="token comment">// 安全に add() 関数を呼び出せることが分かったら実行する</span>
+    <span class="token keyword">const</span> result <span class="token operator">=</span> <span class="token function">add</span><span class="token punctuation">(</span>numberA<span class="token punctuation">,</span> numberB<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    
+    <span class="token comment">// コンソール出力して終了する</span>
+    <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span>result<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  <span class="token keyword">catch</span><span class="token punctuation">(</span>error<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token comment">// 事前に設計した例外ハンドリング時の処理どおり、計算に失敗した場合は -1 を出力する</span>
+    <span class="token keyword">if</span><span class="token punctuation">(</span>error <span class="token keyword">instanceof</span> <span class="token class-name"><span class="token maybe-class-name">IllegalParameterException</span></span>    <span class="token operator">||</span>
+       error <span class="token keyword">instanceof</span> <span class="token class-name"><span class="token maybe-class-name">IllegalPreConditionException</span></span> <span class="token operator">||</span>
+       error <span class="token keyword">instanceof</span> <span class="token class-name"><span class="token maybe-class-name">IllegalPostConditionException</span></span><span class="token punctuation">)</span>
+      <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token keyword">return</span><span class="token punctuation">;</span>  <span class="token comment">// コンソール出力して終了する</span>
+    <span class="token punctuation">}</span>
+    
+    <span class="token comment">// 万が一、設計時に想定できていないエラーが発生した場合のためのスロー文</span>
+    <span class="token keyword">throw</span> error<span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>愚直に実装しようとすると、まぁメンドクサイなと思う気持ちは分からんでもない。ただ、</p>
+<ul>
+  <li>別ファイルに分かれたテストコードではなく、実際に動くコードの中に条件や仕様が明記されるので分かりやすい</li>
+  <li>コンパイル時までの型チェックではなく、実行時に実際の値でチェックされるので、より安全に処理を実行できる</li>
+  <li>異常値によるエラーが発生した場合にログ出力処理などを組み込みやすく、本番環境で発生したバグの調査がしやすくなったりする</li>
+</ul>
+<p>…といったメリットが考えられるので、僕は割と自然にこういう感じのコードは書いてきた。</p>
 <h2 id="言われなくてもやってたわ"><a class="header-link" href="#言われなくてもやってたわ"><span class="header-link-mark"></span></a>言われなくてもやってたわ</h2>
 <p>こんなの「契約プログラミング」だの「防衛プログラミング」だの、大層な名前を付けずとも当たり前にやってることだろ、と思ったんだけど、違うのかしら。「概念を知らないと意識できない」とは思うが、僕はこれらの手法の概念を理解していなかったのに、「こうやれば色々防げるでしょ」って思い付いていた。ということは誰でも思い付く程度のことだろう、と思うんだけど、違うのかしらねぇ。</p><div class="ad-amazon">
   <div class="ad-amazon-image">
