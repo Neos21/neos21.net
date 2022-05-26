@@ -1,13 +1,14 @@
 ---
 title        : Scripts Comparison
 created      : 2020-11-21
-last-modified: 2020-11-21
+last-modified: 2022-05-26
 path:
   - /index.html Neo's World
   - /tech/index.html Tech
   - /tech/programming/index.html プログラミング
 head : |
   <style>
+    /* div */
     .codes {
       display: grid;
       grid-template-columns: repeat(8, 30rem);
@@ -21,13 +22,13 @@ head : |
       overflow-x: scroll;
     }
     
+    /* 言語名 */
     .codes > pre::before {
       display: block;
       margin-bottom: var(--nn-space-tiny);
       border-bottom: 1px solid #fff;
       padding-bottom: var(--nn-space-tiny);
     }
-    
     .codes > pre:nth-child(1)::before { content: "Windows Batch"; }
     .codes > pre:nth-child(2)::before { content: "PowerShell"   ; }
     .codes > pre:nth-child(3)::before { content: "Bash"         ; }
@@ -50,43 +51,68 @@ head : |
 Windows Batch から各スクリプトを呼び出す方法。
 
 <div class="codes">
-  <pre class="language-batch language-batch"><code class="language-batch">Rem 同プロセスで呼ぶ
+
+```batch
+Rem 同プロセスで呼ぶ
 Call "script.bat"
 
 Rem 別プロセスで呼ぶ
-Start "script.bat"</code></pre>
-  <pre class="language-batch language-batch"><code class="language-batch">Rem PowerShell を呼び出す
-PowerShell.exe -ExecutionPolicy RemoteSigned -F "script.ps1"</code></pre>
-  <pre class="language-batch language-batch"><code class="language-batch">Rem Msys Bash を呼び出す場合
-"C:\msys\bin\sh.exe" --login -i "script.sh"</code></pre>
-  <pre class="language-batch language-batch"><code class="language-batch">Rem VBScript を呼び出す場合
-CScript //NoLogo //E:VBScript "script.vbs"</code></pre>
-  <pre class="language-batch language-batch"><code class="language-batch">Rem JScript を呼び出す場合
-CScript //NoLogo //E:JScript "script.js"</code></pre>
-  <pre class="language-batch language-batch"><code class="language-batch">Rem コンパイルした exe ファイルが存在していたら削除する
+Start "script.bat"
+```
+
+```batch
+Rem PowerShell を呼び出す
+PowerShell.exe -ExecutionPolicy RemoteSigned -F "script.ps1"
+```
+
+```batch
+Rem Msys Bash を呼び出す場合
+"C:\msys\bin\sh.exe" --login -i "script.sh"
+```
+
+```batch
+Rem VBScript を呼び出す場合
+CScript //NoLogo //E:VBScript "script.vbs"
+```
+
+```batch
+Rem JScript を呼び出す場合
+CScript //NoLogo //E:JScript "script.js"
+```
+
+```batch
+Rem コンパイルした exe ファイルが存在していたら削除する
 If Exist "script.exe" ( Del "script.exe" )
 
 Rem コンパイラでコンパイルする
 "C:\Windows\Microsoft.NET\Framework\v4.0.30319\vbc.exe" "script.vb"
 
 Rem コンパイルできたら実行する
-If "%ERRORLEVEL%" == "0" ( "script.exe" )</code></pre>
-  <pre class="language-batch language-batch"><code class="language-batch">Rem コンパイルした exe ファイルが存在していたら削除する
+If "%ERRORLEVEL%" == "0" ( "script.exe" )
+```
+
+```batch
+Rem コンパイルした exe ファイルが存在していたら削除する
 If Exist "script.exe" ( Del "script.exe" )
 
 Rem コンパイラでコンパイルする
 "C:\Windows\Microsoft.NET\Framework\v4.0.30319\jsc.exe" "script.js"
 
 Rem コンパイルできたら実行する
-If "%ERRORLEVEL%" == "0" ( "script.exe" )</code></pre>
-  <pre class="language-batch language-batch"><code class="language-batch">Rem コンパイルした exe ファイルが存在していたら削除する
+If "%ERRORLEVEL%" == "0" ( "script.exe" )
+```
+
+```batch
+Rem コンパイルした exe ファイルが存在していたら削除する
 If Exist "script.exe" ( Del "script.exe" )
 
 Rem コンパイラでコンパイルする
 "C:\Windows\Microsoft.NET\Framework\v4.0.30319\csc.exe" "script.cs"
 
 Rem コンパイルできたら実行する
-If "%ERRORLEVEL%" == "0" ( "script.exe" )</code></pre>
+If "%ERRORLEVEL%" == "0" ( "script.exe" )
+```
+
 </div>
 
 
@@ -95,35 +121,52 @@ If "%ERRORLEVEL%" == "0" ( "script.exe" )</code></pre>
 オレオレテンプレート。
 
 <div class="codes">
-  <pre class="language-batch language-batch"><code class="language-batch">@Echo Off
+
+```batch
+@Echo Off
 
 Rem ココにコード
 
 Pause
-Exit /b</code></pre>
-  <pre class="language-powershell language-powershell"><code class="language-powershell"># ココにコード
+Exit /b
+```
+
+```powershell
+# ココにコード
 
 Read-Host Please Enter key to continue...
-Exit</code></pre>
-  <pre class="language-bash language-bash"><code class="language-bash">#!/bin/bash
+Exit
+```
+
+```bash
+#!/bin/bash
 
 # ココにコード
 
 read -p "Please any key to continue... " -n 1
-exit</code></pre>
-  <pre class="language-vb language-vb"><code class="language-vb">Option Explicit
+exit
+```
+
+```vb
+Option Explicit
 
 ' ココにコード
 
 WScript.Echo("Please Enter key to continue...")
 WScript.StdIn.ReadLine()
-WScript.Quit()</code></pre>
-  <pre class="language-js language-js"><code class="language-js">// ココにコード
+WScript.Quit()
+```
+
+```javascript
+// ココにコード
 
 WScript.Echo("Please Enter key to continue...");
 WScript.StdIn.ReadLine();
-WScript.Quit();</code></pre>
-  <pre class="language-vb language-vb"><code class="language-vb">Imports System
+WScript.Quit();
+```
+
+```vb
+Imports System
 
 Module Module1
   Sub Main()
@@ -133,8 +176,11 @@ Module Module1
     Console.ReadKey()
     Environment.Exit(0)
   End Sub
-End Module</code></pre>
-  <pre class="language-js language-js"><code class="language-js">import System;
+End Module
+```
+
+```javascript
+import System;
 
 // 即時関数は必須ではないけど…
 (function() {
@@ -143,8 +189,11 @@ End Module</code></pre>
   Console.WriteLine("Please Enter key to continue...");
   Console.ReadKey();
   Environment.Exit(0);
-})();</code></pre>
-  <pre class="language-cs language-cs"><code class="language-cs">using System;
+})();
+```
+
+```csharp
+using System;
 
 class CSharp {
   public static void Main() {
@@ -154,7 +203,9 @@ class CSharp {
     Console.ReadKey();
     Environment.Exit(0);
   }
-}</code></pre>
+}
+```
+
 </div>
 
 
@@ -163,32 +214,57 @@ class CSharp {
 コンソールに文字列を出力する。
 
 <div class="codes">
-  <pre class="language-batch language-batch"><code class="language-batch">Echo FooBar
-Echo ほげピヨ</code></pre>
-  <pre class="language-powershell language-powershell"><code class="language-powershell">Write-Output FooBar
-Write-Host ほげピヨ</code></pre>
-  <pre class="language-bash language-bash"><code class="language-bash">echo FooBar
-echo ほげピヨ</code></pre>
-  <pre class="language-vb language-vb"><code class="language-vb">WScript.Echo("FooBar")
+
+```batch
+Echo FooBar
+Echo ほげピヨ
+```
+
+```powershell
+Write-Output FooBar
+Write-Host ほげピヨ
+```
+
+```bash
+echo FooBar
+echo ほげピヨ
+```
+
+```vb
+WScript.Echo("FooBar")
 Wscript.StdOut.Write("ほげピヨ")
 
 ' カッコがなくても OK
 WScript.Echo "FooBar"
-Wscript.StdOut.Write "ほげピヨ"</code></pre>
-  <pre class="language-js language-js"><code class="language-js">WScript.Echo("FooBar");
-Wscript.StdOut.Write("ほげピヨ");</code></pre>
-  <pre class="language-vb language-vb"><code class="language-vb">Imports System
+Wscript.StdOut.Write "ほげピヨ"
+```
+
+```javascript
+WScript.Echo("FooBar");
+Wscript.StdOut.Write("ほげピヨ");
+```
+
+```vb
+Imports System
 
 Console.WriteLine("FooBar")
-Console.WriteLine("ほげピヨ")</code></pre>
-  <pre class="language-js language-js"><code class="language-js">import System;
+Console.WriteLine("ほげピヨ")
+```
+
+```javascript
+import System;
 
 print("FooBar");
-Console.WriteLine("ほげピヨ");</code></pre>
-  <pre class="language-cs language-cs"><code class="language-cs">using System;
+Console.WriteLine("ほげピヨ");
+```
+
+```csharp
+using System;
 
 Console.WriteLine("FooBar");
-Console.WriteLine("ほげピヨ");</code></pre>
+Console.WriteLine("ほげピヨ");
+```
+
 </div>
 
 
@@ -197,24 +273,49 @@ Console.WriteLine("ほげピヨ");</code></pre>
 指定時間処理を一時停止する。3秒停止させるサンプル。
 
 <div class="codes">
-  <pre class="language-batch language-batch"><code class="language-batch">Ping localhost -n 4
+
+```batch
+Ping localhost -n 4
 Timeout 3
 
 Rem sleep.exe を持っていれば
-Sleep 3</code></pre>
-  <pre class="language-powershell language-powershell"><code class="language-powershell">Start-Sleep -s 3</code></pre>
-  <pre class="language-bash language-bash"><code class="language-bash">sleep 3</code></pre>
-  <pre class="language-vb language-vb"><code class="language-vb">WScript.Sleep(3000)</code></pre>
-  <pre class="language-js language-js"><code class="language-js">WScript.Sleep(3000);</code></pre>
-  <pre class="language-vb language-vb"><code class="language-vb">Imports System
+Sleep 3
+```
 
-System.Threading.Thread.Sleep(3000)</code></pre>
-  <pre class="language-js language-js"><code class="language-js">import System;
+```powershell
+Start-Sleep -s 3
+```
 
-System.Threading.Thread.Sleep(3000);</code></pre>
-  <pre class="language-cs language-cs"><code class="language-cs">using System;
+```bash
+sleep 3
+```
 
-System.Threading.Thread.Sleep(3000);</code></pre>
+```vb
+WScript.Sleep(3000)
+```
+
+```javascript
+WScript.Sleep(3000);
+```
+
+```vb
+Imports System
+
+System.Threading.Thread.Sleep(3000)
+```
+
+```javascript
+import System;
+
+System.Threading.Thread.Sleep(3000);
+```
+
+```csharp
+using System;
+
+System.Threading.Thread.Sleep(3000);
+```
+
 </div>
 
 
@@ -223,26 +324,51 @@ System.Threading.Thread.Sleep(3000);</code></pre>
 ユーザからのキー入力を待つ。
 
 <div class="codes">
-  <pre class="language-batch language-batch"><code class="language-batch">Pause
-Rem => 続行するには何かキーを押してください . . .</code></pre>
-  <pre class="language-powershell language-powershell"><code class="language-powershell">Read-Host "続行するには Enter キーを押してください。"</code></pre>
-  <pre class="language-bash language-bash"><code class="language-bash">read -p "続行するには何かキーを押してください。" -n 1</code></pre>
-  <pre class="language-vb language-vb"><code class="language-vb">WScript.Echo "続行するには Enter キーを押してください。"
-WScript.StdIn.ReadLine</code></pre>
-  <pre class="language-js language-js"><code class="language-js">WScript.Echo("続行するには Enter キーを押してください。");
-WScript.StdIn.ReadLine();</code></pre>
-  <pre class="language-vb language-vb"><code class="language-vb">Imports System
+
+```batch
+Pause
+Rem => 続行するには何かキーを押してください . . .
+```
+
+```powershell
+Read-Host "続行するには Enter キーを押してください。"
+```
+
+```bash
+read -p "続行するには何かキーを押してください。" -n 1
+```
+
+```vb
+WScript.Echo "続行するには Enter キーを押してください。"
+WScript.StdIn.ReadLine
+```
+
+```javascript
+WScript.Echo("続行するには Enter キーを押してください。");
+WScript.StdIn.ReadLine();
+```
+
+```vb
+Imports System
 
 Console.WriteLine("続行するには Enter キーを押してください。")
-Console.ReadLine()</code></pre>
-  <pre class="language-js language-js"><code class="language-js">import System;
+Console.ReadLine()
+```
+
+```javascript
+import System;
 
 Console.WriteLine("続行するには Enter キーを押してください。");
-Console.ReadLine();</code></pre>
-  <pre class="language-cs language-cs"><code class="language-cs">using System;
+Console.ReadLine();
+```
+
+```csharp
+using System;
 
 Console.WriteLine("続行するには Enter キーを押してください。");
-Console.ReadLine();</code></pre>
+Console.ReadLine();
+```
+
 </div>
 
 
@@ -251,32 +377,57 @@ Console.ReadLine();</code></pre>
 スクリプト内でのコメント。
 
 <div class="codes">
-  <pre class="language-batch language-batch"><code class="language-batch">Rem コメント
 
-:: コロン「:」はラベルを表すのでコメント代わりに使える</code></pre>
-  <pre class="language-powershell language-powershell"><code class="language-powershell"># 1行コメント
+```batch
+Rem コメント
 
-&#x3C;# 複数行コメント
-終わり #></code></pre>
-  <pre class="language-powershell language-powershell"><code class="language-powershell"># コメント</code></pre>
-  <pre class="language-vb language-vb"><code class="language-vb">' シングルクォートでコメント</code></pre>
-  <pre class="language-js language-js"><code class="language-js">// 1行コメント
+:: コロン「:」はラベルを表すのでコメント代わりに使える
+```
+
+```powershell
+# 1行コメント
+
+<# 複数行コメント
+終わり #>
+```
+
+```powershell
+# コメント
+```
+
+```vb
+' シングルクォートでコメント
+```
+
+```javascript
+// 1行コメント
 
 /* 複数行コメント
-終わり */</code></pre>
-  <pre class="language-vb language-vb"><code class="language-vb">' シングルクォートでコメント
+終わり */
+```
 
-''' ドキュメントコメント</code></pre>
-  <pre class="language-js language-js"><code class="language-js">// 1行コメント
+```vb
+' シングルクォートでコメント
+
+''' ドキュメントコメント
+```
+
+```javascript
+// 1行コメント
 
 /* 複数行コメント
 終わり */
 
-/// ドキュメントコメント</code></pre>
-  <pre class="language-cs language-cs"><code class="language-cs">// 1行コメント
+/// ドキュメントコメント
+```
+
+```csharp
+// 1行コメント
 
 /* 複数行コメント
 終わり */
 
-/// ドキュメントコメント</code></pre>
+/// ドキュメントコメント
+```
+
 </div>
