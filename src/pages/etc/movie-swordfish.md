@@ -17,7 +17,7 @@ path:
 
 スタンリーの元にジンジャーが現れるシーンでの会話。
 
-> Ginger Knowles : -I'm Ginger.  
+> Ginger Knowles : I'm Ginger.  
 > Stanley Jobson : Ginger, huh? __Where's Gilligan?__
 > 
 > ジンジャー・ノウルズ : ジンジャーよ (私、ジンジャー)  
