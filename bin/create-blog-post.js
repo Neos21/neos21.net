@@ -100,7 +100,7 @@ const isValidDateString = (year, month, date) => {
   
   // 引数指定がない場合
   if(!input) {
-    // 現在月の既にある日付の翌日日付で作成するかどうか
+    // 現在月の既にある日付の翌日日付で作成するかどうか (翌月の2日以降の日付は割り出せないので非対応)
     const currentYear  = String(new Date().getFullYear());
     const currentMonth = `0${new Date().getMonth() + 1}`.slice(-2);
     
