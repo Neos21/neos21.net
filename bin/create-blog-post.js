@@ -4,6 +4,8 @@ const fs = require('fs');
 const constants = require('../lib/constants');
 const isExist = require('../lib/is-exist');
 const isNotFuture = require('../lib/is-not-future');
+const jstNow = require('../lib/jst-now');
+const listFiles = require('../lib/list-files');
 const makeDirectory = require('../lib/make-directory');
 
 /*!
@@ -100,33 +102,33 @@ const isValidDateString = (year, month, date) => {
   
   // 引数指定がない場合
   if(!input) {
-    // 現在月の既にある日付の翌日日付で作成するかどうか (翌月の2日以降の日付は割り出せないので非対応)
-    const currentYear  = String(new Date().getFullYear());
-    const currentMonth = `0${new Date().getMonth() + 1}`.slice(-2);
+    // 最新記事の年月日を確認する
+    const blogDirectory = `${constants.pages.src}/blog`;
+    const latestPost = listFiles(blogDirectory)  // ブログディレクトリのファイルパスを取得する
+      .filter((filePath) => filePath.endsWith('.md') && !filePath.endsWith('index.md'))  // 記事 Markdown ファイルのみに絞り込む
+      .reverse()[0]  // 最新日付から順にソートして最初の1件目 = 最新日付の記事ファイルパスを取得する
+      .replace(`${blogDirectory}/`, '')  // 最新記事のファイルパスの接頭辞を削る
+      .replace((/-[0-9]{2}\.md/u), '')   // 最新記事のファイルパスの接尾辞となる `31-01.md` などの `-01.md` 部分を削り日付のみにする
+      .split('/');  // パス区切り文字である `/` で区切ることで年月日の情報を得る
+    const latestYear  = latestPost[0];
+    const latestMonth = latestPost[1];
+    const latestDate  = latestPost[2];
+    console.log(`現在の最新記事 : [${latestYear}-${latestMonth}-${latestDate}]`);
     
-    const currentMonthDirectory = `${constants.pages.src}/blog/${currentYear}/${currentMonth}`;
-    if(isExist(currentMonthDirectory)) {
-      const currentPostDates = fs.readdirSync(currentMonthDirectory, { withFileTypes: true })
-        .filter((dirent) => dirent.isFile() && dirent.name.endsWith('.md') && !dirent.name.startsWith('index'))  // 記事の Markdown ファイルのみに絞る
-        .map((dirent) => dirent.name.replace('.md', '').replace((/-[0-9]{2}/u), ''))  // `31-01.md` などのファイル名を `31` と日付部分のみ抽出する
-        .sort();  // 念のため昇順にする
-      // 最新の日付から翌日を割り出す
-      const latestDate = currentPostDates[currentPostDates.length - 1];
-      const next = new Date(Number(currentYear), Number(currentMonth) - 1, Number(latestDate));
-      next.setDate(next.getDate() + 1);  // 1日後
+    // 最新記事の日付が現在日よりも未来日であれば、その翌日日付の記事ファイルを作るかどうか問う
+    if(!isNotFuture(Number(latestYear), Number(latestMonth), Number(latestDate))) {
+      const next = new Date(Number(latestYear), Number(latestMonth) - 1, Number(latestDate));
+      next.setDate(next.getDate() + 1);  // 1日後 (月・年またぎにも対応)
       const nextYear  = String(next.getFullYear());
       const nextMonth = `0${next.getMonth() + 1}`.slice(-2);
       const nextDate  = `0${next.getDate()     }`.slice(-2);
-      // 「最新の日付の翌日」が未来日であるかどうか
-      if(!isNotFuture(Number(nextYear), Number(nextMonth), Number(nextDate))) {
-        const nextAnswer = await readText(`最新日付 ${nextYear}-${nextMonth}-${nextDate} で記事ファイルを作りますか？`);
-        if(nextAnswer === 'y') return createBlogPost(nextYear, nextMonth, nextDate);
-      }
+      const nextAnswer = await readText(`最新日付 ${nextYear}-${nextMonth}-${nextDate} で記事ファイルを作りますか？`);
+      if(nextAnswer === 'y') return createBlogPost(nextYear, nextMonth, nextDate);
     }
     
-    // 明日日付で作成するかどうか
-    const jstTomorrow = new Date(Date.now() + ((new Date().getTimezoneOffset() + (9 * 60)) * 60 * 1000));
-    jstTomorrow.setDate(jstTomorrow.getDate() + 1);  // 1日後
+    // (最新記事の日付が現在日を含む過去日であれば) 明日日付で作成するかどうか
+    const jstTomorrow = new Date(jstNow.jstNow);  // 元のオブジェクトを変更しないようにする
+    jstTomorrow.setDate(jstTomorrow.getDate() + 1);  // 1日後 (月・年またぎにも対応)
     const tomorrowYear  = String(jstTomorrow.getFullYear());
     const tomorrowMonth = `0${jstTomorrow.getMonth() + 1}`.slice(-2);
     const tomorrowDate  = `0${jstTomorrow.getDate()     }`.slice(-2);
@@ -134,9 +136,8 @@ const isValidDateString = (year, month, date) => {
     if(tomorrowAnswer === 'y') return createBlogPost(tomorrowYear, tomorrowMonth, tomorrowDate);
     
     // 今日日付で作成するかどうか
-    const currentDate  = `0${new Date().getDate()     }`.slice(-2);
-    const currentAnswer = await readText(`今日日付 ${currentYear}-${currentMonth}-${currentDate} で記事ファイルを作りますか？`);
-    if(currentAnswer === 'y') return createBlogPost(currentYear, currentMonth, currentDate);
+    const todayAnswer = await readText(`今日日付 ${jstNow.jstCurrentYear}-${jstNow.zeroPadJstCurrentMonth}-${jstNow.zeroPadJstCurrentDate} で記事ファイルを作りますか？`);
+    if(todayAnswer === 'y') return createBlogPost(jstNow.jstCurrentYear, jstNow.zeroPadJstCurrentMonth, jstNow.zeroPadJstCurrentDate);
     
     // 引数に相当する年月日の入力を受け付ける (この `if` ブロックを抜けて後続処理につなげる)
     input = await readText('年月日を入力してください (ex. YYYY-MM-DD, YYYYMMDD, MM-DD, MMDD, DD)');
