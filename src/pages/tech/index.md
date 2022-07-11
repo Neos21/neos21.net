@@ -86,3 +86,11 @@ path:
 ## 書こうと思ってるネタの蓄え
 
 - [UT、ITa、ITb、ST、UAT の違い](http://tooljp.com/windows/chigai/html/IT/UT-ITa-ITb-ST-UAT.html)
+
+
+## 有用な文献へのリンク
+
+分類を決めあぐねています。
+
+- [yutkat/katapedia: この書は常に未完成である。内容の正誤に保証はない。 ITエンジニアとして役になったTips、よく忘れることを記す。 ブログに記載してもよかったが、水平方向の情報を見つけやすい本の形式をとることにした](https://github.com/yutkat/katapedia)
+- [reverse-interview/JAPANESE.md at master · viraptor/reverse-interview](https://github.com/viraptor/reverse-interview/blob/master/translations/JAPANESE.md)

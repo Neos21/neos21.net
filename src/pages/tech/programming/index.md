@@ -69,6 +69,9 @@ path:
 
 トピックにまとめられそうになったらまとめます。
 
+- PIE : Program Intently and Expressively 意図を表現してプログラミングせよ
+- SLAP : Single Level of Abstraction Principle 抽象化レベルの統一
+- [ファイル書き込みをするプログラムで気をつけた方がよいこと | IIJ Engineers Blog](https://eng-blog.iij.ad.jp/archives/13937)
 - [ブログ: 業界6年目で考えが変わったソフトウェア開発のトピック](https://okuranagaimo.blogspot.com/2021/01/6.html)
   - 様々な経験レベルを持つ人がいるチームで仕事をする場合は、型付き言語の方が適している
   - Javaはそれほどひどい言語ではない
