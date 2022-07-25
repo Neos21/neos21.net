@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#0990d0">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>GnuPG でファイルの暗号化・復号をやってみた - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2022/07/26-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="header-brand">
+          <div id="header-brand-contents">
+            <div id="site-title"><a href="/index.html">Neo's World</a></div>
+            <nav id="header-links">
+              <ul>
+                <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+                <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+                <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+                <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+              </ul>
+            </nav>
+          </div>
+        </div>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2022/index.html">2022年</a></li>
+            <li><a href="/blog/2022/07/index.html">07月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2022-07-26</time></div>
+        <h1 id="page-title">GnuPG でファイルの暗号化・復号をやってみた</h1>
+
+<p>GnuPG、Gnu Privacy Guard、GPG というツールを試してみた。SSH Key とか SSL 証明書みたいな感じで、公開鍵と秘密鍵のペアを作って、データを暗号化したり署名を付けたりできるツールだ。元の仕様は OpenPGP というモノで、Pretty Good Privacy (PGP) というツールの別実装という位置付け。</p>
+<p>エドワード・スノーデンが NSA の情報を暴露する際に、ジャーナリストに資料を送る時に GnuPG で暗号化したらしい。ｗ</p>
+<ul>
+  <li><a href="https://gnupg.org/">The GNU Privacy Guard</a></li>
+</ul>
+<p>今回は Mac 上で試してみた。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># MacOS の Homebrew でインストールした</span>
+$ brew <span class="token function">install</span> gnupg pinentry-mac
+
+$ gpg --version
+gpg <span class="token punctuation">(</span>GnuPG<span class="token punctuation">)</span> <span class="token number">2.3</span>.7
+libgcrypt <span class="token number">1.10</span>.1
+Copyright <span class="token punctuation">(</span>C<span class="token punctuation">)</span> <span class="token number">2021</span> Free Software Foundation, Inc.
+License GNU GPL-3.0-or-later <span class="token operator">&#x3C;</span>https://gnu.org/licenses/gpl.html<span class="token operator">></span>
+This is <span class="token function">free</span> software: you are <span class="token function">free</span> to change and redistribute it.
+There is NO WARRANTY, to the extent permitted by law.
+
+Home: /Users/Neo/.gnupg
+サポートしているアルゴリズム:
+公開鍵: RSA, ELG, DSA, ECDH, ECDSA, EDDSA
+暗号方式: IDEA, 3DES, CAST5, BLOWFISH, AES, AES192, AES256,
+      TWOFISH, CAMELLIA128, CAMELLIA192, CAMELLIA256
+AEAD: EAX, OCB
+ハッシュ: SHA1, RIPEMD160, SHA256, SHA384, SHA512, SHA224
+圧縮: 無圧縮, ZIP, ZLIB, BZIP2
+</code></pre>
+<p>Homebrew の Forumula 名については、<code>gpg2</code> などもエイリアスになっていることが公式ページで確認できる。</p>
+<ul>
+  <li><a href="https://formulae.brew.sh/formula/gnupg">gnupg — Homebrew Formulae</a></li>
+</ul>
+<p>また、古い文献を参照すると <code>gpg-agent</code> というパッケージもインストールするような説明になっていたりするが、<code>gpg-agent</code> という Brew Formula は削除されている。<em>現在は <code>gnupg</code> パッケージだけ導入すれば、最新版の <code>gnupg</code> には <code>gpg-agent</code> 相当のプログラムも同梱されているようだ。</em></p>
+<ul>
+  <li><a href="https://stackoverflow.com/questions/52435650/gpg-agent-not-found-for-homebrew">gpg-agent not found for homebrew - Stack Overflow</a></li>
+</ul>
+<p>それでは鍵ペアを作ってみよう。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># 鍵を作る</span>
+$ gpg --gen-key
+gpg <span class="token punctuation">(</span>GnuPG<span class="token punctuation">)</span> <span class="token number">2.3</span>.7<span class="token punctuation">;</span> Copyright <span class="token punctuation">(</span>C<span class="token punctuation">)</span> <span class="token number">2021</span> Free Software Foundation, Inc.
+This is <span class="token function">free</span> software: you are <span class="token function">free</span> to change and redistribute it.
+There is NO WARRANTY, to the extent permitted by law.
+
+注意: 全機能の鍵生成には <span class="token string">"gpg --full-generate-key"</span> を使います。
+
+GnuPGはあなたの鍵を識別するためにユーザIDを構成する必要があります。
+
+本名: Neos21  <span class="token comment"># 名前を入力する</span>
+電子メール・アドレス: neos21@gmail.com  <span class="token comment"># メールアドレスを入力する</span>
+次のユーザIDを選択しました:
+    <span class="token string">"Neos21 &#x3C;neos21@gmail.com>"</span>
+
+名前<span class="token punctuation">(</span>N<span class="token punctuation">)</span>、電子メール<span class="token punctuation">(</span>E<span class="token punctuation">)</span>の変更、またはOK<span class="token punctuation">(</span>O<span class="token punctuation">)</span>か終了<span class="token punctuation">(</span>Q<span class="token punctuation">)</span>? O  <span class="token comment"># O を入力</span>
+たくさんのランダム・バイトの生成が必要です。キーボードを打つ、マウスを動か
+す、ディスクにアクセスするなどの他の操作を素数生成の間に行うことで、乱数生
+成器に十分なエントロピーを供給する機会を与えることができます。
+
+<span class="token comment"># ココで TUI が起動し、パスフレーズを入力せよと出てくる</span>
+<span class="token comment"># そこそこの桁数で複雑なパスフレーズを入力しないと、同じ画面が何度も出てくる。警告メッセージなどがないので分かりにくい</span>
+<span class="token comment"># パスフレーズが通るともう一度入力を求められる</span>
+
+たくさんのランダム・バイトの生成が必要です。キーボードを打つ、マウスを動か
+す、ディスクにアクセスするなどの他の操作を素数生成の間に行うことで、乱数生
+成器に十分なエントロピーを供給する機会を与えることができます。
+gpg: /Users/Neo/.gnupg/trustdb.gpg: 信用データベースができました
+gpg: ディレクトリ<span class="token string">'/Users/Neo/.gnupg/openpgp-revocs.d'</span>が作成されました
+gpg: 失効証明書を <span class="token string">'/Users/Neo/.gnupg/openpgp-revocs.d/XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX.rev'</span> に保管しました。
+公開鍵と秘密鍵を作成し、署名しました。
+
+pub   ed25519 <span class="token number">2022</span>-07-21 <span class="token punctuation">[</span>SC<span class="token punctuation">]</span> <span class="token punctuation">[</span>有効期限: <span class="token number">2024</span>-07-20<span class="token punctuation">]</span>
+      XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+uid                      Neos21 <span class="token operator">&#x3C;</span>neos21@gmail.com<span class="token operator">></span>
+sub   cv25519 <span class="token number">2022</span>-07-21 <span class="token punctuation">[</span>E<span class="token punctuation">]</span> <span class="token punctuation">[</span>有効期限: <span class="token number">2024</span>-07-20<span class="token punctuation">]</span>
+</code></pre>
+<p>マシン内にある公開鍵・秘密鍵は <code>-k</code>・<code>-K</code> オプションで確認できる。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># 公開鍵一覧を確認する・-k オプションでも同じ</span>
+$ gpg --list-keys
+/Users/Neo/.gnupg/pubring.kbx
+-----------------------------------
+pub   ed25519 <span class="token number">2022</span>-07-21 <span class="token punctuation">[</span>SC<span class="token punctuation">]</span> <span class="token punctuation">[</span>有効期限: <span class="token number">2024</span>-07-20<span class="token punctuation">]</span>
+      XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+uid           <span class="token punctuation">[</span>  究極  <span class="token punctuation">]</span> Neos21 <span class="token operator">&#x3C;</span>neos21@gmail.com<span class="token operator">></span>
+sub   cv25519 <span class="token number">2022</span>-07-21 <span class="token punctuation">[</span>E<span class="token punctuation">]</span> <span class="token punctuation">[</span>有効期限: <span class="token number">2024</span>-07-20<span class="token punctuation">]</span>
+
+<span class="token comment"># 秘密鍵は --list-secret-keys・-K で一覧表示できる</span>
+$ gpg --list-secret-keys
+/Users/Neo/.gnupg/pubring.kbx
+-----------------------------------
+sec   ed25519 <span class="token number">2022</span>-07-21 <span class="token punctuation">[</span>SC<span class="token punctuation">]</span> <span class="token punctuation">[</span>有効期限: <span class="token number">2024</span>-07-20<span class="token punctuation">]</span>
+      XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+uid           <span class="token punctuation">[</span>  究極  <span class="token punctuation">]</span> Neos21 <span class="token operator">&#x3C;</span>neos21@gmail.com<span class="token operator">></span>
+ssb   cv25519 <span class="token number">2022</span>-07-21 <span class="token punctuation">[</span>E<span class="token punctuation">]</span> <span class="token punctuation">[</span>有効期限: <span class="token number">2024</span>-07-20<span class="token punctuation">]</span>
+<span class="token comment"># `pub` と `sec` の部分が異なる</span>
+</code></pre>
+<p>続いて、GPG の公開鍵を出力する。<code>$ gpg -a --export 【名前】 > gpg-public-key.asc</code> という感じでテキストファイルに書き出して扱えば良い。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># 公開鍵を出力する。コレを `Neos21.asc` などのファイル名で保存し公開すれば良い</span>
+<span class="token comment"># --armor = -a</span>
+$ gpg --armor --export Neos21
+-----BEGIN PGP PUBLIC KEY BLOCK-----
+
+mDMEYtkLmRYJKwYBBAHaRw8BAQdA6abWqx/JF79lKP3o7pgcnffhHLBQ4GAa0MZp
+<span class="token punctuation">..</span>. <span class="token punctuation">(</span>中略<span class="token punctuation">)</span> <span class="token punctuation">..</span>.
+XvfjAP0d096x7K9/RBQJHplw+kyaRhJ7OQhYnJcStg+jEi12CQ<span class="token operator">==</span>
+<span class="token operator">=</span>EI1G
+-----END PGP PUBLIC KEY BLOCK-----
+</code></pre>
+<p>いわゆる「公開鍵認証」方式なので、暗号化ファイルをやり取りする際は、</p>
+<ol>
+  <li>他人からもらった公開鍵を利用して暗号化し、</li>
+  <li>暗号化したファイルを相手に提供したら、</li>
+  <li>相手は「自分の秘密鍵」で復号する</li>
+</ol>
+<p>という手順になるので、実際は暗号化を行う前に<em>他人の公開鍵をインポートする</em>作業が必要になる。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># 他人の公開鍵をインポートする</span>
+$ gpg --import ./someone-public-key.asc
+<span class="token comment"># 秘密鍵も同コマンドでインポートでき、秘密鍵の場合は公開鍵も同時にインポートされる</span>
+</code></pre>
+<p>今回はお試しなので、先程作った自分の公開鍵を使って、<code>example.jpg</code> という画像ファイルを暗号化してみる。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># ファイルを暗号化する : --recipient = -r ・ --encrypt = -e</span>
+$ gpg --recipient Neos21 --encrypt --armor ./example.jpg
+
+  <span class="token comment"># インポートした公開鍵で暗号化する際、「信用 (trust)」確認が必要な場合がある</span>
+  $ gpg --edit-key 【公開鍵名】
+  <span class="token comment"># → trust と入力し決定していく</span>
+
+<span class="token comment"># 暗号化したファイルは「元ファイル名.asc」で出力されている</span>
+$ <span class="token function">cat</span> ./example.jpg.asc
+-----BEGIN PGP MESSAGE-----
+
+hF4D8VZ2zYfN3B0SAQdAFTUkmIs82b69XujyDj72Rml2JHRGBaP1SJBRx09tC3Qw
+/1z9wtqqQZGgMAJEegY2iZx/jlVQT7ZRHGogue7ZWvGqNm4NXY6EWG9atMeB5QPU
+<span class="token punctuation">..</span>. <span class="token punctuation">(</span>中略<span class="token punctuation">)</span> <span class="token punctuation">..</span>.
+<span class="token assign-left variable">vRwpvzNKT7otZFEOSFaT344Arz8xZQwnq83yWqc</span><span class="token operator">=</span>
+<span class="token operator">=</span>3Hme
+-----END PGP MESSAGE-----
+</code></pre>
+<p>出力された <code>example.jpg.asc</code> というファイルは暗号化されており、一応テキストエディタで開ける。この辺は SSH Key や SSL 証明書なんかと同じような感じ。</p>
+<p>こうして暗号化した <code>example.jpg.asc</code> ファイルに対し、正しい秘密鍵を当てることで、ファイルを復号して閲覧できるように戻してやる。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># 暗号化ファイルを復号する : --output = -o ・ --decrypt = -d</span>
+$ gpg --output ./example-out.jpg --decrypt ./example.asc
+gpg: cv25519鍵, ID F15676CD87CDDC1D, 日付2022-07-21に暗号化されました
+      <span class="token string">"Neos21 &#x3C;neos21@gmail.com>"</span>
+
+<span class="token comment"># 「OpenPGPの秘密鍵のロックを解除するためにパスフレーズを入力してください」という TUI が出てくる</span>
+<span class="token comment"># 秘密鍵を作った時に入力したパスフレーズを入力する</span>
+<span class="token comment"># 復号されたファイル `./example-out.jpg` が出力されている</span>
+</code></pre>
+<p>こうして復号に成功すると <code>example-out.jpg</code> という画像ファイルが取り出せて、その内容は元の <code>example.jpg</code> と同一であることが確認できるであろう。</p>
+<p>とりあえず以上。</p>
+<ul>
+  <li><a href="https://vinelinux.org/docs/vine6/developers-guide/gpg-gen-key.html">GnuPG鍵対の生成</a></li>
+  <li><a href="https://qiita.com/spiegel-im-spiegel/items/079d69282166281eb946">GnuPG チートシート（簡易版） - Qiita</a></li>
+  <li><a href="https://laboradian.com/encrypt-with-gpg/">GnuPGでファイルを暗号化・復号する手順 – ラボラジアン</a></li>
+  <li><a href="https://gigazine.net/news/20150206-world-email-encryption-one-guy/">世界のメールの暗号化はたった一人の男に依存しており、開発資金はゼロになってしまっているという衝撃の事実が判明 - GIGAZINE</a>
+    <ul>
+      <li>GnuPG の開発者はたった一人で、開発資金に困窮しながら継続していたとのこと…。お疲れ様です…</li>
+    </ul>
+  </li>
+</ul><div class="ad-amazon">
+  <div class="ad-amazon-image">
+    <a href="https://www.amazon.co.jp/dp/4900900028?tag=neos21-22&amp;linkCode=osi&amp;th=1&amp;psc=1">
+      <img src="https://m.media-amazon.com/images/I/5132396FFQL._SL160_.jpg" width="123" height="160">
+    </a>
+  </div>
+  <div class="ad-amazon-info">
+    <div class="ad-amazon-title">
+      <a href="https://www.amazon.co.jp/dp/4900900028?tag=neos21-22&amp;linkCode=osi&amp;th=1&amp;psc=1">PGP―暗号メールと電子署名</a>
+    </div>
+  </div>
+</div>
+<div class="ad-rakuten">
+  <div class="ad-rakuten-image">
+    <a href="https://hb.afl.rakuten.co.jp/hgc/g00rakq2.waxyc16c.g00rakq2.waxydc7c/?pc=https%3A%2F%2Fitem.rakuten.co.jp%2Fvaboo%2Fsvox220527-0283%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Fvaboo%2Fi%2F19497866%2F">
+      <img src="https://thumbnail.image.rakuten.co.jp/@0_mall/vaboo/cabinet/noimage.jpg?_ex=128x128">
+    </a>
+  </div>
+  <div class="ad-rakuten-info">
+    <div class="ad-rakuten-title">
+      <a href="https://hb.afl.rakuten.co.jp/hgc/g00rakq2.waxyc16c.g00rakq2.waxydc7c/?pc=https%3A%2F%2Fitem.rakuten.co.jp%2Fvaboo%2Fsvox220527-0283%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Fvaboo%2Fi%2F19497866%2F">【中古】PGP 暗号メ-ルと電子署名 /オライリ-・ジャパン/シムソン・ガ-フィンケル（単行本）</a>
+    </div>
+    <div class="ad-rakuten-shop">
+      <a href="https://hb.afl.rakuten.co.jp/hgc/g00rakq2.waxyc16c.g00rakq2.waxydc7c/?pc=https%3A%2F%2Fwww.rakuten.co.jp%2Fvaboo%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Fvaboo%2F">VALUE BOOKS</a>
+    </div>
+    <div class="ad-rakuten-price">価格 : 6346円</div>
+  </div>
+</div>
+<div class="ad-amazon">
+  <div class="ad-amazon-image">
+    <a href="https://www.amazon.co.jp/dp/B00H372H18?tag=neos21-22&amp;linkCode=osi&amp;th=1&amp;psc=1">
+      <img src="https://m.media-amazon.com/images/I/51njmeGhpKL._SL160_.jpg" width="125" height="160">
+    </a>
+  </div>
+  <div class="ad-amazon-info">
+    <div class="ad-amazon-title">
+      <a href="https://www.amazon.co.jp/dp/B00H372H18?tag=neos21-22&amp;linkCode=osi&amp;th=1&amp;psc=1">新版暗号技術入門　秘密の国のアリス</a>
+    </div>
+  </div>
+</div>
+
+      </main>
+      <footer id="footer">
+        <div id="footer-contents">
+          <div id="date-time">
+            <dl>
+              <dt>Created</dt>
+              <dd><time>2022-07-26</time></dd>
+              <dt>Last-Modified</dt>
+              <dd><time>2022-07-26</time></dd>
+            </dl>
+          </div>
+          <nav id="footer-links">
+            <ul>
+              <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+              <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+              <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+              <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+            </ul>
+          </nav>
+          <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+        </div>
+      </footer>
+    </div>
+  </body>
+</html>
