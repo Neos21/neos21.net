@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#0990d0">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>Neo's Monaco Note … オレオレ Monaco Editor を作ってみた - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2022/07/27-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="header-brand">
+          <div id="header-brand-contents">
+            <div id="site-title"><a href="/index.html">Neo's World</a></div>
+            <nav id="header-links">
+              <ul>
+                <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+                <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+                <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+                <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+              </ul>
+            </nav>
+          </div>
+        </div>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2022/index.html">2022年</a></li>
+            <li><a href="/blog/2022/07/index.html">07月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2022-07-27</time></div>
+        <h1 id="page-title">Neo's Monaco Note … オレオレ Monaco Editor を作ってみた</h1>
+
+<p>以前、<em>Neo's Python Note</em> という Python CGI 製のノートアプリを作った。</p>
+<ul>
+  <li><a href="https://github.com/Neos21/neos-python-note">Neos21/neos-python-note: Python 製のオレオレノート</a></li>
+</ul>
+<p>コチラは CGI としてデプロイし、クエリ文字列によって簡易パスワード認証がかけられる。個人的にはコレを Always Free な OCI サーバに配置して利用してきたのだが、最近エディタ部分に不満が出てきた。</p>
+<p>エディタ部分は単純な <code>textarea</code> で実装しているのだが、Markdown を書いたりする時にインデントの<strong>スペース記号を可視化したい</strong>と思うようになった。VSCode とか CotEditor とか NotePad++ とかで設定できるような、スペース部分が点々「・」で表示されるアレだ。自分は Markdown を書く時に一切プレビューを見ないので、シンタックスハイライトなんかは効かなくても別に構わないのだが、コードブロック内のコードインデントとかも、スペース記号は見えてると分かりやすいよなーなんて思った次第。</p>
+<p>最初は VSCode Online (<code>vscode.dev</code>) で良いんじゃないかと思ったのだが、コチラはブラウザオンリーで動作する代わりに、ファイルの永続化ができない。一応 GitHub 連携すればコミット・Push することは出来るが、ちょっとメンドい。</p>
+<ul>
+  <li><em>複数の端末で Markdown を執筆したい</em></li>
+  <li>各端末に VSCode をインストールして記事は Git 同期、というのは面倒臭い</li>
+  <li>Dropbox や Google Drive でファイル同期するのもログインが必要だし、ローカルファイルの同期にはソフトのインストールが必要になるのがダルい</li>
+  <li>Evernote・Notion・Google Keep・Google Docs のようなブラウザで動作するオンラインエディタ機能つき同期サービスは、<strong>スペース記号の可視化が出来るモノが全然ない</strong></li>
+  <li>さらにエディタがさるサービスは、変に WYSIWYG だったりしてプレーンテキストのコピペで Markdown を扱えない場合もあってダルい</li>
+</ul>
+<p>…そんな不満が溜まってきたので、業を煮やして (？) VSCode のエディタ部分を担う <em>Monaco Editor</em> を自分でカスタマイズして、オレオレ Monaco Editor をでっち上げ、CGI を組み合わせて自分のサーバにテキストファイルを永続化することにした。そうして出来上がったのが <strong>Neo's Monaco Note</strong> である。</p>
+<ul>
+  <li><a href="https://github.com/Neos21/neos-monaco-note">Neos21/neos-monaco-note: Neo's Monaco Note</a></li>
+</ul>
+<hr>
+<p>Monaco Editor は AMD 形式でも配信されており、コレを利用すれば Vanilla JS でも作り込めるので、Webpack も SPA もイジりたくない自分は AMD 形式を使うことにした。見事なモノで、TypeScript などの言語を指定すればシンタックスハイライトや型不正エラーなどがちゃんと表示される。</p>
+<p>柔軟にカスタマイズはできるものの、公式ページには Playground と TypeDoc で出力されたドキュメンテーションしかなくて、やりたい機能の実装方法を探すのが大変だった。今回は以下あたりを参考にした。</p>
+<ul>
+  <li><a href="https://microsoft.github.io/monaco-editor/playground.html#customizing-the-appearence-exposed-colors">Monaco Editor Playground</a>
+    <ul>
+      <li>テーマを自作する公式デモ</li>
+    </ul>
+  </li>
+  <li><a href="https://github.com/brijeshb42/monaco-themes/blob/master/themes/Monokai.json">monaco-themes/Monokai.json at master · brijeshb42/monaco-themes</a>
+    <ul>
+      <li>Monokai テーマのベースはコレを利用し、イタリック体などを使用しないように調整した</li>
+      <li>テーマの細かな部分は、拙作の <a href="https://marketplace.visualstudio.com/items?itemName=Neos21.non-italic-monokai">VSCode Theme non-italic-monokai</a> に近付けている</li>
+    </ul>
+  </li>
+  <li><a href="https://microsoft.github.io/monaco-editor/api/interfaces/monaco.editor.IStandaloneEditorConstructionOptions.html">IStandaloneEditorConstructionOptions | Monaco Editor API</a>
+    <ul>
+      <li>Monaco Editor の細かい仕様はこの不親切な API リファレンスを読み解くしかない</li>
+    </ul>
+  </li>
+  <li><a href="https://qiita.com/lumis/items/311b8c39d61312957195">Monaco Editor 使い方事始め - Qiita</a>
+    <ul>
+      <li><code>F1</code> で開くコマンドパレットを日本語化する方法</li>
+    </ul>
+  </li>
+  <li><a href="https://stackoverflow.com/questions/56840298/how-to-change-display-language-on-monaco-editor">javascript - How to change display language on monaco editor - Stack Overflow</a>
+    <ul>
+      <li>動的に表示言語を切り替える API</li>
+    </ul>
+  </li>
+</ul>
+<p>あとは前作の Neo's Python Note を作った時のノウハウやコードも組み合わせて、テキストファイルとしての永続化と簡易パスワード認証ができるようにした。</p>
+<ul>
+  <li>Ruby CGI を使った簡易パスワード認証
+    <ul>
+      <li>過去記事：<a href="/blog/2020/06/11-01.html">簡易パスワード認証で HTML ファイルを表示する Ruby 製 CGI</a></li>
+    </ul>
+  </li>
+  <li>Node.js CGI を使ったテキストファイルの読み込み・保存を行う API
+    <ul>
+      <li>過去記事：<a href="/blog/2021/03/25-01.html">Ruby CGI でファイルアップロードを実装する・オレオレエクスプローラを作ってみた</a></li>
+      <li>過去記事：<a href="/blog/2020/09/11-01.html">Node.js スクリプトを CGI として動かしてみる</a></li>
+    </ul>
+  </li>
+</ul>
+<p>個人の Apache サーバにデプロイして、永続化もちゃんと出来るようになったのでよしよし～。</p>
+<hr>
+<p>…と思ったのだけど、せっかく AMD・Vanilla JS で実装したエディタなので、データ永続化を諦めたら GitHub Pages のようなクライアントサイドオンリーで動かせるじゃないか？と思って、<strong>データ保存を LocalStorage で行うバージョンも作った。</strong>以下は GitHub Pages 上で公開している LocalStorage 版。データはブラウザの LocalStorage に保存され、サーバサイドへの送信等はしていないので、どなたでも安心してご利用ください。</p>
+<ul>
+  <li><a href="https://neos21.github.io/neos-monaco-note/">Neo's Monaco Note (LocalStorage Version)</a></li>
+</ul>
+<p>個人的に必要な機能だけに絞って作ったので、エディタ部分が広く取れて満足。</p>
+<p>難点といえば iOS 対応か。Monaco Editor は iOS Safari + Simeji キーボードの組み合わせだとカーソル移動ができなかったりするし、ソフトウェアキーボードの表示に合わせてウェブページの高さを調整できなかったりするので、iPhone では閲覧専用で扱うしかないかなー。まぁ iPhone で Markdown をゴリゴリ執筆する機会はほぼないので、気にしない。ｗ</p>
+<p>今回初めて Monaco Editor をカスタマイズしたけど、最初からコマンドパレットが実装されていたりしてデフォルト状態から VSCode ちっくに使えるし、実装はちょっとダルいけど何とか Vanilla JS でもココまで作り込めちゃうぐらい、柔軟な作りになっていて素晴らしい。コレまでも StackBlitz や VSCode Online があったので実現可能なのは分かっていたけど、AMD 形式で扱えたりするのもホントにシンプルに作れてメッチャ良かった。</p>
+<p>CGI 部分が Ruby だったり Node.js だったりしてスゲーチグハグなんだけど、CGI ってどんな言語を使っても同じように作れるし動いてくれるから、とにかく早く機能を実現するために過去記事からのコピペで済ませる方式ででっち上げた。段々几帳面さが失われていく。ｗ</p><div class="ad-amazon">
+  <div class="ad-amazon-image">
+    <a href="https://www.amazon.co.jp/dp/B09TDNXKL4?tag=neos21-22&amp;linkCode=osi&amp;th=1&amp;psc=1">
+      <img src="https://m.media-amazon.com/images/I/512efZlVCaL._SL160_.jpg" width="112" height="160">
+    </a>
+  </div>
+  <div class="ad-amazon-info">
+    <div class="ad-amazon-title">
+      <a href="https://www.amazon.co.jp/dp/B09TDNXKL4?tag=neos21-22&amp;linkCode=osi&amp;th=1&amp;psc=1">Visual Studio Code完全入門　Webクリエイター&amp;エンジニアの作業がはかどる新世代エディターの操り方</a>
+    </div>
+  </div>
+</div>
+<div class="ad-amazon">
+  <div class="ad-amazon-image">
+    <a href="https://www.amazon.co.jp/dp/B0B316HNW4?tag=neos21-22&amp;linkCode=osi&amp;th=1&amp;psc=1">
+      <img src="https://m.media-amazon.com/images/I/41HtILGUBEL._SL160_.jpg" width="113" height="160">
+    </a>
+  </div>
+  <div class="ad-amazon-info">
+    <div class="ad-amazon-title">
+      <a href="https://www.amazon.co.jp/dp/B0B316HNW4?tag=neos21-22&amp;linkCode=osi&amp;th=1&amp;psc=1">Visual Studio Code API入門　初めてのシンタックスハイライトとスニペットづくり (技術の泉シリーズ（NextPublishing）)</a>
+    </div>
+  </div>
+</div>
+<div class="ad-amazon">
+  <div class="ad-amazon-image">
+    <a href="https://www.amazon.co.jp/dp/B09Y1HMBGK?tag=neos21-22&amp;linkCode=osi&amp;th=1&amp;psc=1">
+      <img src="https://m.media-amazon.com/images/I/51Ea7UTL1oL._SL160_.jpg" width="123" height="160">
+    </a>
+  </div>
+  <div class="ad-amazon-info">
+    <div class="ad-amazon-title">
+      <a href="https://www.amazon.co.jp/dp/B09Y1HMBGK?tag=neos21-22&amp;linkCode=osi&amp;th=1&amp;psc=1">Visual Studio Code実践入門！～ソフトウェア開発の強力手段～</a>
+    </div>
+  </div>
+</div>
+
+      </main>
+      <footer id="footer">
+        <div id="footer-contents">
+          <div id="date-time">
+            <dl>
+              <dt>Created</dt>
+              <dd><time>2022-07-27</time></dd>
+              <dt>Last-Modified</dt>
+              <dd><time>2022-07-27</time></dd>
+            </dl>
+          </div>
+          <nav id="footer-links">
+            <ul>
+              <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+              <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+              <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+              <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+            </ul>
+          </nav>
+          <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+        </div>
+      </footer>
+    </div>
+  </body>
+</html>
