@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#0990d0">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>Service Worker と Push API でブラウザタブを閉じていても通知を受け取る - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2022/08/05-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="header-brand">
+          <div id="header-brand-contents">
+            <div id="site-title"><a href="/index.html">Neo's World</a></div>
+            <nav id="header-links">
+              <ul>
+                <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+                <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+                <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+                <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+              </ul>
+            </nav>
+          </div>
+        </div>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2022/index.html">2022年</a></li>
+            <li><a href="/blog/2022/08/index.html">08月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2022-08-05</time></div>
+        <h1 id="page-title">Service Worker と Push API でブラウザタブを閉じていても通知を受け取る</h1>
+
+<p>今更ながら Service Worker とやらを触ってみた。Web Worker の一種で、通常 HTML 内から呼び出される JavaScript とは別に、バックグラウンドで処理ができる JS の世界のこと。</p>
+<p>先日、<code>new Notification()</code> で発火させられる通知バナーの話をしたが、Service Worker と Push API を組合せると、<strong>ブラウザタブを閉じていても Service Worker がバックグランドで起動しているので、サーバから送信した通知をクライアントのブラウザで受け取れる</strong>のである。</p>
+<p>この辺、最初は関係性を理解するのが大変だが、動作するサンプルプロジェクトも作ったので、それも使いながら整理していく。</p>
+<p>Service Worker 周りは <em>API 仕様がちょこちょこ変わっていたりして、ネット上の文献がそのまま参考にならない場合があって</em>調べるのが大変だった。実装中は TypeScript のように「型」の情報が欲しくなるなぁーと思った。型をよく確認しておこう。</p>
+<ul>
+  <li><a href="https://github.com/Neos21/practice-service-worker-notification">Neos21/practice-service-worker-notification: Practice Service Worker Notification</a></li>
+</ul>
+<p>↑ コチラがサンプルプロジェクト。<code>git clone</code> したら <code>npm install</code> して動作確認してみてほしい。</p>
+<h2 id="service-worker-をインストールする"><a class="header-link" href="#service-worker-をインストールする"><span class="header-link-mark"></span></a>Service Worker をインストールする</h2>
+<p>まず、サーバサイドの話は抜きにして、「ブラウザに Service Worker をインストールする」部分を整理する。</p>
+<p>登場人物は次のとおり。</p>
+<ul>
+  <li>HTML … ブラウザが表示するページ
+    <ul>
+      <li>クライアント JS コード … HTML 内にインラインで書いても、別ファイルに避けても良い。Service Worker の登録処理を行う</li>
+      <li>サンプルプロジェクトの場合、このファイル … <a href="https://github.com/Neos21/practice-service-worker-notification/blob/master/client/index.html">practice-service-worker-notification/index.html</a></li>
+    </ul>
+  </li>
+  <li>Service Worker 用の JS ファイル
+    <ul>
+      <li>サンプルプロジェクトの場合、このファイルのこと … <a href="https://github.com/Neos21/practice-service-worker-notification/blob/master/client/service-worker.js">practice-service-worker-notification/service-worker.js</a></li>
+    </ul>
+  </li>
+</ul>
+<p>最初は、HTML 内の JS コードにて Service Worker 用の JS ファイルをインストール (登録) する。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token doc-comment comment">/** <span class="token keyword">@type</span> <span class="token class-name"><span class="token punctuation">{</span>ServiceWorkerRegistration<span class="token punctuation">}</span></span> 登録した Service Worker */</span>
+<span class="token keyword">const</span> serviceWorkerRegistration <span class="token operator">=</span> <span class="token keyword control-flow">await</span> <span class="token dom variable">window</span><span class="token punctuation">.</span><span class="token property-access">navigator</span><span class="token punctuation">.</span><span class="token property-access">serviceWorker</span><span class="token punctuation">.</span><span class="token method function property-access">register</span><span class="token punctuation">(</span><span class="token string">'./service-worker.js'</span><span class="token punctuation">,</span> <span class="token punctuation">{</span> scope<span class="token operator">:</span> <span class="token string">'/'</span> <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token keyword control-flow">if</span><span class="token punctuation">(</span>serviceWorkerRegistration<span class="token punctuation">.</span><span class="token property-access">installing</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'  Service Worker を初回登録しています…'</span><span class="token punctuation">,</span> serviceWorkerRegistration<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token doc-comment comment">/** <span class="token keyword">@type</span> <span class="token class-name"><span class="token punctuation">{</span>ServiceWorker<span class="token punctuation">}</span></span> インストール中の Service Worker */</span>
+  <span class="token keyword">const</span> installingServiceWorker <span class="token operator">=</span> serviceWorkerRegistration<span class="token punctuation">.</span><span class="token property-access">installing</span><span class="token punctuation">;</span>
+  installingServiceWorker<span class="token punctuation">.</span><span class="token method function property-access">addEventListener</span><span class="token punctuation">(</span><span class="token string">'statechange'</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token parameter">event</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+    <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'  Service Worker の初回インストール状況 : '</span><span class="token punctuation">,</span> installingServiceWorker<span class="token punctuation">.</span><span class="token property-access">state</span><span class="token punctuation">,</span> event<span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment">// (installing) → installed → activating → activated</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+<span class="token keyword control-flow">else</span> <span class="token punctuation">{</span>
+  <span class="token comment">// 2回目以降は `serviceWorkerRegistration.installing` は `null` になっており `active` プロパティの方に ServiceWorker が格納されている模様</span>
+  <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'  Service Worker はインストール済のようです'</span><span class="token punctuation">,</span> serviceWorkerRegistration<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+
+<span class="token keyword control-flow">await</span> <span class="token dom variable">navigator</span><span class="token punctuation">.</span><span class="token property-access">serviceWorker</span><span class="token punctuation">.</span><span class="token property-access">ready</span><span class="token punctuation">;</span>  <span class="token comment">// Service Worker の準備を待機する : 戻り値は `serviceWorkerRegistration` と同一なのでココでは再取得しなくて良い</span>
+</code></pre>
+<p>1行目の <code>navigator.serviceWorker.register()</code> がそれ。相対パスで Service Worker の JS ファイルを指定し、Service Worker を有効にするスコープを第2引数で指定する。Service Worker のファイルがある階層より上の階層はスコープとして指定できなかったりして制約がある。</p>
+<p><code>register()</code> メソッド自体は特にユーザに見えるような反応はないが、裏で JS ファイルを読み込んでバックグラウンドプロセスとして起動したりするので、ちょっとだけ時間がかかる。</p>
+<p>Service Worker が使えるようになったかどうかを確認するには、<code>await navigator.serviceWorker.ready</code> で待機すれば良い。ちなみにこの戻り値は <code>serviceWorkerRegistration</code> そのモノなので、以降はコレを利用して <code>ServiceWorkerRegistration</code> を取得することで処理ができる。Service Worker を控えるグローバル変数は用意しなくてもなんとかなりそう。</p>
+<h2 id="service-worker-のコード"><a class="header-link" href="#service-worker-のコード"><span class="header-link-mark"></span></a>Service Worker のコード</h2>
+<p>今回用意した Service Worker のコートはとてもシンプル。実際 Push 通知に必要なのは <code>push</code> イベントの部分のみ。</p>
+<ul>
+  <li>コード：<a href="https://github.com/Neos21/practice-service-worker-notification/blob/master/client/service-worker.js">practice-service-worker-notification/service-worker.js</a></li>
+</ul>
+<pre class="language-javascript"><code class="language-javascript">self<span class="token punctuation">.</span><span class="token method function property-access">addEventListener</span><span class="token punctuation">(</span><span class="token string">'install'</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token parameter">event</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'【SW】Install : Service Worker のインストールが開始された'</span><span class="token punctuation">,</span> event<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token comment">// `navigator.serviceWorker.register()` の時に呼ばれる</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+self<span class="token punctuation">.</span><span class="token method function property-access">addEventListener</span><span class="token punctuation">(</span><span class="token string">'push'</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token parameter">event</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'【SW】Push : メッセージを受信した'</span><span class="token punctuation">,</span> event<span class="token punctuation">,</span> event<span class="token punctuation">.</span><span class="token property-access">data</span><span class="token punctuation">.</span><span class="token method function property-access">json</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  event<span class="token punctuation">.</span><span class="token method function property-access">waitUntil</span><span class="token punctuation">(</span>self<span class="token punctuation">.</span><span class="token property-access">registration</span><span class="token punctuation">.</span><span class="token method function property-access">showNotification</span><span class="token punctuation">(</span><span class="token string">'Message From Service Worker'</span><span class="token punctuation">,</span> <span class="token punctuation">{</span>
+    body<span class="token operator">:</span> <span class="token string">'Service Worker からのメッセージです'</span><span class="token punctuation">,</span>
+    requireInteraction<span class="token operator">:</span> <span class="token boolean">true</span><span class="token punctuation">,</span>  <span class="token comment">// ユーザが操作するまで閉じなくなる</span>
+    actions<span class="token operator">:</span> <span class="token punctuation">[</span>  <span class="token comment">// 選択肢を表示する。Mac Chrome の場合、「オプション」の中に格納されている</span>
+      <span class="token punctuation">{</span> action<span class="token operator">:</span> <span class="token string">'Action 1'</span><span class="token punctuation">,</span> title<span class="token operator">:</span> <span class="token string">'Action Title 1'</span> <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span> action<span class="token operator">:</span> <span class="token string">'Action 2'</span><span class="token punctuation">,</span> title<span class="token operator">:</span> <span class="token string">'Action Title 2'</span> <span class="token punctuation">}</span>
+    <span class="token punctuation">]</span><span class="token punctuation">,</span>
+    data<span class="token operator">:</span> event<span class="token punctuation">.</span><span class="token property-access">data</span><span class="token punctuation">.</span><span class="token method function property-access">json</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+self<span class="token punctuation">.</span><span class="token method function property-access">addEventListener</span><span class="token punctuation">(</span><span class="token string">'notificationclick'</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token parameter">event</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'【SW】Notification Click : 通知がクリックされた'</span><span class="token punctuation">,</span> event<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token comment">// `event.action` プロパティに `actions[].action` の値が設定されている。選択肢以外のバナー領域をクリックした場合は空文字で発火する</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+self<span class="token punctuation">.</span><span class="token method function property-access">addEventListener</span><span class="token punctuation">(</span><span class="token string">'fetch'</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token parameter">event</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'【SW】Fetch'</span><span class="token punctuation">,</span> event<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>Service Worker 自身を指定するのは <code>self</code> というグローバル変数。ブラウザ側でいう <code>window</code> 相当な感じ。<code>push</code> イベントの部分は後でまた説明するとして、とりあえずこういうファイルを用意しておけば、Service Worker のインストールができる。</p>
+<h2 id="push-通知先をサーバに知らせる"><a class="header-link" href="#push-通知先をサーバに知らせる"><span class="header-link-mark"></span></a>Push 通知先をサーバに知らせる</h2>
+<p>続いて、Service Worker が Push 通知を行うことをユーザに許可してもらい、サーバサイドにクライアントの情報を知らせる。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token comment">// Service Worker を取得する</span>
+<span class="token keyword">const</span> serviceWorkerRegistration <span class="token operator">=</span> <span class="token keyword control-flow">await</span> <span class="token dom variable">navigator</span><span class="token punctuation">.</span><span class="token property-access">serviceWorker</span><span class="token punctuation">.</span><span class="token property-access">ready</span><span class="token punctuation">;</span>
+
+<span class="token comment">// 公開鍵の文字列 : 別途用意しておく</span>
+<span class="token keyword">const</span> applicationServerPublicKey <span class="token operator">=</span> <span class="token string">'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'</span><span class="token punctuation">;</span>
+
+<span class="token doc-comment comment">/** <span class="token keyword">@type</span> <span class="token class-name"><span class="token punctuation">{</span>PushSubscription<span class="token punctuation">}</span></span> Push サービスを開始する : ココで Push 通知の許可ウィンドウが表示される */</span>
+<span class="token keyword">const</span> pushSubscription <span class="token operator">=</span> <span class="token keyword control-flow">await</span> serviceWorkerRegistration<span class="token punctuation">.</span><span class="token property-access">pushManager</span><span class="token punctuation">.</span><span class="token method function property-access">subscribe</span><span class="token punctuation">(</span><span class="token punctuation">{</span>
+  userVisibleOnly<span class="token operator">:</span> <span class="token boolean">true</span><span class="token punctuation">,</span>
+  applicationServerKey<span class="token operator">:</span> <span class="token function">urlBase64ToUint8Array</span><span class="token punctuation">(</span>applicationServerPublicKey<span class="token punctuation">)</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// サーバに PushSubscription 情報を送信する</span>
+<span class="token keyword">const</span> response <span class="token operator">=</span> <span class="token keyword control-flow">await</span> <span class="token dom variable">window</span><span class="token punctuation">.</span><span class="token method function property-access">fetch</span><span class="token punctuation">(</span><span class="token string">'/subscribe'</span><span class="token punctuation">,</span> <span class="token punctuation">{</span>
+  method<span class="token operator">:</span> <span class="token string">'POST'</span><span class="token punctuation">,</span>
+  headers<span class="token operator">:</span> <span class="token punctuation">{</span> <span class="token string">'Content-Type'</span><span class="token operator">:</span> <span class="token string">'application/json'</span> <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  body<span class="token operator">:</span> <span class="token known-class-name class-name">JSON</span><span class="token punctuation">.</span><span class="token method function property-access">stringify</span><span class="token punctuation">(</span>pushSubscription<span class="token punctuation">.</span><span class="token method function property-access">toJSON</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p><code>serviceWorkerRegistration.pushManager.subscribe()</code> の部分で、初回はブラウザ上に通知を許可するかどうかのダイアログが表示される。</p>
+<p>ココで <code>applicationServerPublicKey</code> という文字列を何やら変換して指定しているのだが、ココはもうお決まりのパターンで実装するみたい。変換用の関数は以下を参考にした。</p>
+<ul>
+  <li><a href="https://github.com/GoogleChromeLabs/web-push-codelab/blob/master/app/scripts/main.js#L31-L44">web-push-codelab/main.js at master · GoogleChromeLabs/web-push-codelab</a></li>
+</ul>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword">function</span> <span class="token function">urlBase64ToUint8Array</span><span class="token punctuation">(</span><span class="token parameter">base64String</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token keyword">const</span> padding <span class="token operator">=</span> <span class="token string">'='</span><span class="token punctuation">.</span><span class="token method function property-access">repeat</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token number">4</span> <span class="token operator">-</span> base64String<span class="token punctuation">.</span><span class="token property-access">length</span> <span class="token operator">%</span> <span class="token number">4</span><span class="token punctuation">)</span> <span class="token operator">%</span> <span class="token number">4</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">const</span> base64 <span class="token operator">=</span> <span class="token punctuation">(</span>base64String <span class="token operator">+</span> padding<span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">replace</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token regex"><span class="token regex-delimiter">/</span><span class="token regex-source language-regex">\-</span><span class="token regex-delimiter">/</span><span class="token regex-flags">g</span></span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token string">'+'</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">replace</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token regex"><span class="token regex-delimiter">/</span><span class="token regex-source language-regex">_</span><span class="token regex-delimiter">/</span><span class="token regex-flags">g</span></span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token string">'/'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">const</span> rawData <span class="token operator">=</span> <span class="token dom variable">window</span><span class="token punctuation">.</span><span class="token method function property-access">atob</span><span class="token punctuation">(</span>base64<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">const</span> outputArray <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">Uint8Array</span><span class="token punctuation">(</span>rawData<span class="token punctuation">.</span><span class="token property-access">length</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword control-flow">for</span><span class="token punctuation">(</span><span class="token keyword">let</span> i <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span> i <span class="token operator">&#x3C;</span> rawData<span class="token punctuation">.</span><span class="token property-access">length</span><span class="token punctuation">;</span> <span class="token operator">++</span>i<span class="token punctuation">)</span> outputArray<span class="token punctuation">[</span>i<span class="token punctuation">]</span> <span class="token operator">=</span> rawData<span class="token punctuation">.</span><span class="token method function property-access">charCodeAt</span><span class="token punctuation">(</span>i<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword control-flow">return</span> outputArray<span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>そして、<code>pushManager.subscribe()</code> の戻り値である <code>PushNotification</code> の情報をサーバサイドに送っている。コレで Service Worker の情報をサーバサイドが把握できたので、</p>
+<ul>
+  <li>通知用のサーバ (自分で用意する・詳細は後述)</li>
+</ul>
+<p>から</p>
+<ul>
+  <li>クライアントのブラウザにインストールされた Service Worker (先程 <code>register()</code> したコード)</li>
+</ul>
+<p>へとプッシュ通知が送れるようになり、</p>
+<ul>
+  <li>Service Worker がバナー通知を表示する</li>
+  <li>→ クライアントのデスクトップにバナー通知が表示される</li>
+</ul>
+<p>というワケである。</p>
+<p>ブラウザの HTML と JS コード、そして Service Worker のコードとしてはココまで。</p>
+<h2 id="プッシュ通知するサーバを用意する"><a class="header-link" href="#プッシュ通知するサーバを用意する"><span class="header-link-mark"></span></a>プッシュ通知するサーバを用意する</h2>
+<p>サンプルプロジェクトでプッシュ通知を実現するためには、<a href="https://github.com/web-push-libs/web-push">web-push</a> という npm パッケージを利用している。サンプルプロジェクトのインストール時に、プッシュ通知に必要な鍵ペアを生成するようにしてある。</p>
+<p>サーバ自体は Express で作ったが、ココは何で作っても良い。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword">const</span> path <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'path'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">const</span> express <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'express'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">const</span> webPush <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'web-push'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// Push 通知に使用する鍵ペアを読み込んでおく</span>
+<span class="token keyword">const</span> applicationServerKeys <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'./application-server-keys.json'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+webPush<span class="token punctuation">.</span><span class="token method function property-access">setVapidDetails</span><span class="token punctuation">(</span><span class="token string">'mailto:example@example.com'</span><span class="token punctuation">,</span> applicationServerKeys<span class="token punctuation">.</span><span class="token property-access">publicKey</span><span class="token punctuation">,</span> applicationServerKeys<span class="token punctuation">.</span><span class="token property-access">privateKey</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// サーバ準備</span>
+<span class="token keyword">const</span> app <span class="token operator">=</span> <span class="token function">express</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+app<span class="token punctuation">.</span><span class="token method function property-access">use</span><span class="token punctuation">(</span>express<span class="token punctuation">.</span><span class="token method function property-access">urlencoded</span><span class="token punctuation">(</span><span class="token punctuation">{</span> extended<span class="token operator">:</span> <span class="token boolean">false</span> <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+app<span class="token punctuation">.</span><span class="token method function property-access">use</span><span class="token punctuation">(</span>express<span class="token punctuation">.</span><span class="token method function property-access">json</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+app<span class="token punctuation">.</span><span class="token method function property-access">use</span><span class="token punctuation">(</span><span class="token string">'/'</span><span class="token punctuation">,</span> express<span class="token punctuation">.</span><span class="token method function property-access">static</span><span class="token punctuation">(</span>path<span class="token punctuation">.</span><span class="token method function property-access">resolve</span><span class="token punctuation">(</span>__dirname<span class="token punctuation">,</span> <span class="token string">'../client'</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment">// 静的ファイル</span>
+
+<span class="token doc-comment comment">/** <span class="token keyword">@type</span> <span class="token class-name"><span class="token punctuation">{</span>Array<span class="token punctuation">&#x3C;</span>PushSubscription<span class="token punctuation">></span><span class="token punctuation">}</span></span> 通知の送信先情報を控えておく */</span>
+<span class="token keyword">const</span> pushSubscriptions <span class="token operator">=</span> <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token punctuation">;</span>
+
+<span class="token comment">// Subscribe : 通知の送信先情報を控える</span>
+app<span class="token punctuation">.</span><span class="token method function property-access">post</span><span class="token punctuation">(</span><span class="token string">'/subscribe'</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token parameter">req<span class="token punctuation">,</span> res</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token doc-comment comment">/** <span class="token keyword">@type</span> <span class="token class-name"><span class="token punctuation">{</span>PushSubscription<span class="token punctuation">}</span></span> `webPush.PushSubscription` インターフェースとも同型 */</span>
+  <span class="token keyword">const</span> pushSubscription <span class="token operator">=</span> req<span class="token punctuation">.</span><span class="token property-access">body</span><span class="token punctuation">;</span>
+  pushSubscriptions<span class="token punctuation">.</span><span class="token method function property-access">push</span><span class="token punctuation">(</span>pushSubscription<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  
+  res<span class="token punctuation">.</span><span class="token method function property-access">json</span><span class="token punctuation">(</span><span class="token punctuation">{</span> result<span class="token operator">:</span> <span class="token string">'登録しました！'</span> <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// Push : 控えておいた通知先に一斉送信する</span>
+app<span class="token punctuation">.</span><span class="token method function property-access">get</span><span class="token punctuation">(</span><span class="token string">'/push'</span><span class="token punctuation">,</span> <span class="token keyword">async</span> <span class="token punctuation">(</span><span class="token parameter">_req<span class="token punctuation">,</span> res</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token comment">// Payload はテキトーに用意しておく</span>
+  <span class="token keyword">const</span> payload <span class="token operator">=</span> <span class="token known-class-name class-name">JSON</span><span class="token punctuation">.</span><span class="token method function property-access">stringify</span><span class="token punctuation">(</span><span class="token punctuation">{</span>
+    title<span class="token operator">:</span> <span class="token string">'Message From Server'</span><span class="token punctuation">,</span>
+    body<span class="token operator">:</span> <span class="token string">'サーバからの通知メッセージです。Service Worker が受け取ってくれるはず'</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  
+  <span class="token doc-comment comment">/** <span class="token keyword">@type</span> <span class="token class-name"><span class="token punctuation">{</span>Array<span class="token punctuation">&#x3C;</span>webPush<span class="token punctuation">.</span>SendResult<span class="token punctuation">></span><span class="token punctuation">}</span></span> Push 送信の結果 */</span>
+  <span class="token keyword">const</span> sendResults <span class="token operator">=</span> <span class="token keyword control-flow">await</span> <span class="token known-class-name class-name">Promise</span><span class="token punctuation">.</span><span class="token method function property-access">all</span><span class="token punctuation">(</span>pushSubscriptions<span class="token punctuation">.</span><span class="token method function property-access">map</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token parameter">pushSubscription</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> webPush<span class="token punctuation">.</span><span class="token method function property-access">sendNotification</span><span class="token punctuation">(</span>pushSubscription<span class="token punctuation">,</span> payload<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  
+  res<span class="token punctuation">.</span><span class="token method function property-access">json</span><span class="token punctuation">(</span><span class="token punctuation">{</span> result<span class="token operator">:</span> <span class="token string">'一斉通知しました！'</span><span class="token punctuation">,</span> sendResults <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>重要なのは <code>webPush.setVapidDetails()</code> で事前準備をしておくこと。</p>
+<p>クライアントから呼び出した <code>/subscribe</code> という API パスでは、<code>pushSubscriptions.push(pushSubscription);</code> だけしか行っていない。コレは単純に、インメモリの配列 <code>pushSubscriptions</code> に情報を控えているだけ。なのでサーバを停止させたらクライアント情報は消失してしまう。二重登録なども制御していないので、クライアントから複数回 <code>/subscribe</code> を叩いてしまうと、後で通知する際にバナー通知が連続で出力されてしまったりする。この辺の制御は実際はもっと丁寧にやってもらいたい。ｗ</p>
+<p>で、<code>/push</code> というエンドポイントでは、こうして控えた配列 <code>pushSubscriptions</code> の情報を利用して、<code>webPush.sendNotification()</code> を実行している。裏では FCM (Firebase Cloud Messaging) が勝手に用意されており、コレを介してサーバからクライアントの Service Worker へと通知が送られているようだ。</p>
+<h2 id="service-worker-からバナー通知を表示する"><a class="header-link" href="#service-worker-からバナー通知を表示する"><span class="header-link-mark"></span></a>Service Worker からバナー通知を表示する</h2>
+<p>サンプルページに用意した「Push」ボタンや、<code>$ curl http://localhost:8080/push</code> などの方法で <code>/push</code> エンドポイントを叩くと、クライアントの Service Worker に対してプッシュ通知が届く。ココでもう一度、Service Worker のコードを再掲する。</p>
+<pre class="language-javascript"><code class="language-javascript">self<span class="token punctuation">.</span><span class="token method function property-access">addEventListener</span><span class="token punctuation">(</span><span class="token string">'push'</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token parameter">event</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'【SW】Push : メッセージを受信した'</span><span class="token punctuation">,</span> event<span class="token punctuation">,</span> event<span class="token punctuation">.</span><span class="token property-access">data</span><span class="token punctuation">.</span><span class="token method function property-access">json</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  event<span class="token punctuation">.</span><span class="token method function property-access">waitUntil</span><span class="token punctuation">(</span>self<span class="token punctuation">.</span><span class="token property-access">registration</span><span class="token punctuation">.</span><span class="token method function property-access">showNotification</span><span class="token punctuation">(</span><span class="token string">'Message From Service Worker'</span><span class="token punctuation">,</span> <span class="token punctuation">{</span>
+    body<span class="token operator">:</span> <span class="token string">'Service Worker からのメッセージです'</span><span class="token punctuation">,</span>
+    requireInteraction<span class="token operator">:</span> <span class="token boolean">true</span><span class="token punctuation">,</span>  <span class="token comment">// ユーザが操作するまで閉じなくなる</span>
+    actions<span class="token operator">:</span> <span class="token punctuation">[</span>  <span class="token comment">// 選択肢を表示する。Mac Chrome の場合、「オプション」の中に格納されている</span>
+      <span class="token punctuation">{</span> action<span class="token operator">:</span> <span class="token string">'Action 1'</span><span class="token punctuation">,</span> title<span class="token operator">:</span> <span class="token string">'Action Title 1'</span> <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{</span> action<span class="token operator">:</span> <span class="token string">'Action 2'</span><span class="token punctuation">,</span> title<span class="token operator">:</span> <span class="token string">'Action Title 2'</span> <span class="token punctuation">}</span>
+    <span class="token punctuation">]</span><span class="token punctuation">,</span>
+    data<span class="token operator">:</span> event<span class="token punctuation">.</span><span class="token property-access">data</span><span class="token punctuation">.</span><span class="token method function property-access">json</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p><code>event.data.json()</code> の中身が、サーバから送った <code>payload</code> の内容になっている。つまりサーバサイドの Payload をそのまま通知バナーに表示したいのであれば、このオブジェクトを利用すれば良いワケだ。ココでは <code>event.data.json()</code> の値は特に利用せず、固定値でバナー通知を表示している。</p>
+<p>バナー通知の表示は <code>new Notification()</code> ではなく、<em><code>self.registration.showNotification()</code></em> という別のメソッドを利用している。そしてその処理を待機するために <code>event.waitUntil()</code> でラップしているが、このラップはしなくても大丈夫そうだ。</p>
+<p>また、サンプルとして <code>actions</code> を実装したが、コレはバナー通知に選択肢が表示されるモノ。ただ通知を出すだけなら必須ではない。</p>
+<h2 id="タブを閉じても通知が受け取れる"><a class="header-link" href="#タブを閉じても通知が受け取れる"><span class="header-link-mark"></span></a>タブを閉じても通知が受け取れる</h2>
+<p>さて、</p>
+<ul>
+  <li>ユーザが、ブラウザに Service Worker を登録する (登録を許可する) (<code>navigator.serviceWorker.register()</code>)
+    <ul>
+      <li>Service Worker はこの時点で、表示中のブラウザタブとは別に、バックグランドプロセスで起動する</li>
+    </ul>
+  </li>
+  <li>Service Worker が Push 通知を受け取れるように Subscribe する (<code>serviceWorkerRegistration.pushManager.subscribe()</code>)</li>
+  <li>Subscribe した内容をサーバサイドに知らせておく (サンプルでは <code>/subscribe</code> エンドポイントへの POST)</li>
+  <li>サーバサイドは取得したクライアント情報に対して Push 通知を送る (サンプルでは <code>/push</code> エンドポイント、<code>webPush.sendNotification()</code>)</li>
+  <li>Service Worker がバックグラウンドでサーバサイドからの Push 通知を受け取る (<code>self.addEventListener('push')</code>)</li>
+  <li>Service Worker が受け取った通知を利用して、バナー通知をデスクトップに表示する (`self.registration.showNotification()``)</li>
+</ul>
+<p>…このような流れで Service Worker の通知から、バックグラウンドでの通知受信、そしてバナー表示までが実装できた。</p>
+<p>繰り返しになるが、Service Worker は開いているブラウザタブなどとは別に、ブラウザが管理するバックグラウンドプロセスとして動作している。そこで、<code>http://localhost:8080/index.html</code> を開いているブラウザタブを閉じてから、<code>$ curl http://localhost:8080/push</code> をコールして動作確認してみよう。ココまでの処理がうまくいっていれば、<code>new Notification()</code> と同様のバナー通知が表示されるはずだ。</p>
+<p>「ブラウザを閉じた際にバックグラウンドアプリの処理を続行する」というブラウザ設定を On にしていれば、ブラウザタブを全て閉じた状態でも通知が表示される。そうでない場合、Windows だとウィンドウを全て閉じてタスクバーからブラウザアプリが消えたら通知は受信できなくなる。Mac の場合は、全てのタブを閉じても Dock 内に中黒「・」が表示されていればそのブラウザアプリのプロセスが落ちてはいないので、バナー通知が受け取れるはずだ。<code>Cmd + Q</code> でプロセスを終了してしまうと、バナー通知が受信できなくなる。</p>
+<p>やはりデスクトップアプリとはワケが違うので、親元であるブラウザプロセス自体が終了してしまうとリアルタイムな通知は受け取れなくなるが、最近は基本的に何かしらのブラウザタブは開いた状態で生活していることだろう。「Gmail を開いて置いておくタブ」とか「Google カレンダーを開いて置いておくタブ」みたいなのを用意せずとも、Service Worker に任せればブラウザタブは開かなくとも、必要な時にバナー通知が受け取れるということなので、使いどころによっては便利な感じがする。</p>
+<p>今回は localhost で作業したので簡単に動作したように見えたが、実際は HTTPS じゃないと実行できないとか、最近のブラウザはデフォルトで通知や Service Worker を無効化しているような設定があったりして、実際の利用というか、サービスプロバイダとして通知機能を提供する方法として Service Worker と Push API を採用するのはなかなか面倒臭そうではある。Push 通知のためにサーバの準備が必要なのがダルいか。ｗ</p>
+<p>まぁとりあえず、今回は Service Worker なるものを初めて触って、Push 通知も動作確認できたのでコレにて終了。</p><div class="ad-amazon">
+  <div class="ad-amazon-image">
+    <a href="https://www.amazon.co.jp/dp/B0728K5JZV?tag=neos21-22&amp;linkCode=osi&amp;th=1&amp;psc=1">
+      <img src="https://m.media-amazon.com/images/I/51Xdg77GAhL._SL160_.jpg" width="112" height="160">
+    </a>
+  </div>
+  <div class="ad-amazon-info">
+    <div class="ad-amazon-title">
+      <a href="https://www.amazon.co.jp/dp/B0728K5JZV?tag=neos21-22&amp;linkCode=osi&amp;th=1&amp;psc=1">Webフロントエンド ハイパフォーマンス チューニング</a>
+    </div>
+  </div>
+</div>
+<div class="ad-rakuten">
+  <div class="ad-rakuten-image">
+    <a href="https://hb.afl.rakuten.co.jp/hgc/g00reb42.waxycf23.g00reb42.waxyd080/?pc=https%3A%2F%2Fitem.rakuten.co.jp%2Frakutenkobo-ebooks%2Ffdff57477e0f3ad0984537ffcafae3af%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Frakutenkobo-ebooks%2Fi%2F16455278%2F">
+      <img src="https://thumbnail.image.rakuten.co.jp/@0_mall/rakutenkobo-ebooks/cabinet/2320/2000005172320.jpg?_ex=128x128">
+    </a>
+  </div>
+  <div class="ad-rakuten-info">
+    <div class="ad-rakuten-title">
+      <a href="https://hb.afl.rakuten.co.jp/hgc/g00reb42.waxycf23.g00reb42.waxyd080/?pc=https%3A%2F%2Fitem.rakuten.co.jp%2Frakutenkobo-ebooks%2Ffdff57477e0f3ad0984537ffcafae3af%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Frakutenkobo-ebooks%2Fi%2F16455278%2F">Webフロントエンド ハイパフォーマンス チューニング【電子書籍】[ 久保田光則 ]</a>
+    </div>
+    <div class="ad-rakuten-shop">
+      <a href="https://hb.afl.rakuten.co.jp/hgc/g00reb42.waxycf23.g00reb42.waxyd080/?pc=https%3A%2F%2Fwww.rakuten.co.jp%2Frakutenkobo-ebooks%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Frakutenkobo-ebooks%2F">楽天Kobo電子書籍ストア</a>
+    </div>
+    <div class="ad-rakuten-price">価格 : 2948円</div>
+  </div>
+</div>
+
+      </main>
+      <footer id="footer">
+        <div id="footer-contents">
+          <div id="date-time">
+            <dl>
+              <dt>Created</dt>
+              <dd><time>2022-08-05</time></dd>
+              <dt>Last-Modified</dt>
+              <dd><time>2022-08-05</time></dd>
+            </dl>
+          </div>
+          <nav id="footer-links">
+            <ul>
+              <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+              <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+              <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+              <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+            </ul>
+          </nav>
+          <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+        </div>
+      </footer>
+    </div>
+  </body>
+</html>
