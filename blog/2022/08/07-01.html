@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#0990d0">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>JavaScript・Node.js で実行速度を計測する方法まとめ - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2022/08/07-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="header-brand">
+          <div id="header-brand-contents">
+            <div id="site-title"><a href="/index.html">Neo's World</a></div>
+            <nav id="header-links">
+              <ul>
+                <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+                <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+                <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+                <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+              </ul>
+            </nav>
+          </div>
+        </div>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2022/index.html">2022年</a></li>
+            <li><a href="/blog/2022/08/index.html">08月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2022-08-07</time></div>
+        <h1 id="page-title">JavaScript・Node.js で実行速度を計測する方法まとめ</h1>
+
+<p>ブラウザ JavaScript や Node.js 上で実行速度を計測する方法を改めてまとめる。<code>new Date()</code> の差分で確認する方法は省略。</p>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#sleep-%E9%96%A2%E6%95%B0%E3%82%82%E3%81%8A%E3%81%95%E3%82%89%E3%81%84">Sleep 関数もおさらい</a></li>
+  <li><a href="#%E3%83%96%E3%83%A9%E3%82%A6%E3%82%B6nodejs-%E4%B8%A1%E6%96%B9--performancenow">ブラウザ・Node.js 両方 : <code>performance.now()</code></a></li>
+  <li><a href="#nodejs-%E5%B0%82%E7%94%A8--processhrtime">Node.js 専用 : <code>process.hrtime()</code></a></li>
+  <li><a href="#%E3%83%96%E3%83%A9%E3%82%A6%E3%82%B6nodejs-%E4%B8%A1%E6%96%B9--consoletime">ブラウザ・Node.js 両方 : <code>console.time()</code></a></li>
+  <li><a href="#nodejs-%E5%B0%82%E7%94%A8--processuptime">Node.js 専用 : <code>process.uptime()</code></a></li>
+</ul>
+<h2 id="sleep-関数もおさらい"><a class="header-link" href="#sleep-関数もおさらい"><span class="header-link-mark"></span></a>Sleep 関数もおさらい</h2>
+<p>JS の世界で Wait・Sleep 相当の処理を行うには <code>setTimeout</code> で遅延させるのを <code>await</code> で待つのが良い。今回、Node.js v16 から使えるようになった <em><code>timers/promises.setTimeout</code></em> という関数も試してみた。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token comment">// Node.js ではコレで Sleep が使える</span>
+<span class="token keyword">const</span> wait <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'timers/promises'</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token property-access">setTimeout</span><span class="token punctuation">;</span>
+
+<span class="token comment">// ブラウザでも Node.js でも使えるポリフィル的な Sleep</span>
+<span class="token keyword">const</span> <span class="token function-variable function">wait</span> <span class="token operator">=</span> <span class="token parameter">ms</span> <span class="token arrow operator">=></span> <span class="token keyword">new</span> <span class="token class-name">Promise</span><span class="token punctuation">(</span><span class="token parameter">r</span> <span class="token arrow operator">=></span> <span class="token function">setTimeout</span><span class="token punctuation">(</span>r<span class="token punctuation">,</span> ms<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// どちらの関数も次のように使える</span>
+<span class="token punctuation">(</span><span class="token keyword">async</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'Start'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword control-flow">await</span> <span class="token function">wait</span><span class="token punctuation">(</span><span class="token number">1000</span><span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment">// 1秒待機</span>
+  <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'End'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>以下のコードではこの <code>wait</code> 関数を使って待機処理を再現している。</p>
+<h2 id="ブラウザnodejs-両方--performancenow"><a class="header-link" href="#ブラウザnodejs-両方--performancenow"><span class="header-link-mark"></span></a>ブラウザ・Node.js 両方 : <code>performance.now()</code></h2>
+<p><code>performance.now()</code> は、ブラウザでも Node.js でも使える。現状、Node.js では <code>perf_hooks</code> からの <code>require()</code> が必要。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token comment">// Node.js の場合のみ、次のように require() する</span>
+<span class="token keyword">const</span> <span class="token punctuation">{</span> <span class="token dom variable">performance</span> <span class="token punctuation">}</span> <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'perf_hooks'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token keyword">const</span> <span class="token function-variable function">performanceNow</span> <span class="token operator">=</span> <span class="token keyword">async</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'performance.now() : Start'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">const</span> start <span class="token operator">=</span> <span class="token dom variable">performance</span><span class="token punctuation">.</span><span class="token method function property-access">now</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword control-flow">await</span> <span class="token function">wait</span><span class="token punctuation">(</span><span class="token number">1000</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">const</span> end <span class="token operator">=</span> <span class="token dom variable">performance</span><span class="token punctuation">.</span><span class="token method function property-access">now</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">const</span> result <span class="token operator">=</span> <span class="token punctuation">{</span> start<span class="token punctuation">,</span> end<span class="token punctuation">,</span> time<span class="token operator">:</span> end <span class="token operator">-</span> start <span class="token punctuation">}</span><span class="token punctuation">;</span>
+  <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'performance.now() : End'</span><span class="token punctuation">,</span> result<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword control-flow">return</span> result<span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+
+<span class="token comment">// 実行結果例 : 単位はミリ秒</span>
+<span class="token comment">// performance.now() : Start</span>
+<span class="token comment">// performance.now() : End {</span>
+<span class="token comment">//   start: 57.258082032203674,</span>
+<span class="token comment">//   end: 1059.7935930490494,</span>
+<span class="token comment">//   time: 1002.5355110168457</span>
+<span class="token comment">// }</span>
+</code></pre>
+<h2 id="nodejs-専用--processhrtime"><a class="header-link" href="#nodejs-専用--processhrtime"><span class="header-link-mark"></span></a>Node.js 専用 : <code>process.hrtime()</code></h2>
+<p>Node.js 専用だが、<code>process.hrtime()</code> を使うとナノ秒の精度で計測できる。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword">const</span> <span class="token function-variable function">processHrtime</span> <span class="token operator">=</span> <span class="token keyword">async</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'process.hrtime() : Start'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">const</span> start <span class="token operator">=</span> process<span class="token punctuation">.</span><span class="token method function property-access">hrtime</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword control-flow">await</span> <span class="token function">wait</span><span class="token punctuation">(</span><span class="token number">1000</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">const</span> end <span class="token operator">=</span> process<span class="token punctuation">.</span><span class="token method function property-access">hrtime</span><span class="token punctuation">(</span>start<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">const</span> result <span class="token operator">=</span> <span class="token punctuation">{</span> start<span class="token punctuation">,</span> end <span class="token punctuation">}</span><span class="token punctuation">;</span>
+  <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'process.hrtime() : End'</span><span class="token punctuation">,</span> result<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword control-flow">return</span> result<span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+
+<span class="token comment">// 実行結果例 : 秒・ナノ秒の配列なので足し合わせる</span>
+<span class="token comment">//   end: [ 1, 679661 ] → 1.000679661 秒 = 1000.679661 ミリ秒</span>
+<span class="token comment">// process.hrtime() : Start</span>
+<span class="token comment">// process.hrtime() : End { start: [ 1036330, 270832676 ], end: [ 1, 679661 ] }</span>
+</code></pre>
+<p>戻り値が <code>[秒, ナノ秒]</code> という配列になっているので、足し合わせることで実際の経過時間が分かる。<code>process.hrtime()</code> の引数に、事前に取得しておいた <code>process.hrtime()</code> の配列を入れることで、自動的に差分を計算してくれる。</p>
+<h2 id="ブラウザnodejs-両方--consoletime"><a class="header-link" href="#ブラウザnodejs-両方--consoletime"><span class="header-link-mark"></span></a>ブラウザ・Node.js 両方 : <code>console.time()</code></h2>
+<p>次は <code>console.time()</code> と <code>console.timeEnd()</code> のペアで計測する方法。引数にタイマー名を適当に指定する。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword">const</span> <span class="token function-variable function">consoleTime</span> <span class="token operator">=</span> <span class="token keyword">async</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'console.time() : Start'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">const</span> start <span class="token operator">=</span> <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">time</span><span class="token punctuation">(</span><span class="token string">'my-timer'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword control-flow">await</span> <span class="token function">wait</span><span class="token punctuation">(</span><span class="token number">1000</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">const</span> end <span class="token operator">=</span> <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">timeEnd</span><span class="token punctuation">(</span><span class="token string">'my-timer'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">const</span> result <span class="token operator">=</span> <span class="token punctuation">{</span> start<span class="token punctuation">,</span> end <span class="token punctuation">}</span><span class="token punctuation">;</span>
+  <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'console.time() : End'</span><span class="token punctuation">,</span> result<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword control-flow">return</span> result<span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+
+<span class="token comment">// 実行結果例 : 各関数自体に戻り値はない・console.timeEnd() の時点で自動的に出力される</span>
+<span class="token comment">// console.time() : Start</span>
+<span class="token comment">// my-timer: 1.002s  // Node.js の場合の出力例</span>
+<span class="token comment">// my-timer: 1000.2431640625 ms  // ブラウザの場合の出力例</span>
+<span class="token comment">// console.time() : End { start: undefined, end: undefined }</span>
+</code></pre>
+<p>他の <code>console</code> 系の関数と同様、関数の戻り値はなし。<code>console.timeEnd()</code> の時点でコンソール出力されるのだが、Node.js で実行した場合は <code>s</code> (秒単位) で、ブラウザで実行した場合は <code>ms</code> (ミリ秒) で出力されていた。</p>
+<h2 id="nodejs-専用--processuptime"><a class="header-link" href="#nodejs-専用--processuptime"><span class="header-link-mark"></span></a>Node.js 専用 : <code>process.uptime()</code></h2>
+<p>なんかちょっと昔はコレぐらいしか計測に使える方法がなかった記憶があるんだけど、変わりましたね。ｗ</p>
+<p>本来 <code>process.uptime()</code> は Node.js プロセスの起動からの時間を出力するモノだが、その差分を取ることで確認できる。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword">const</span> <span class="token function-variable function">processUptime</span> <span class="token operator">=</span> <span class="token keyword">async</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'process.uptime() : Start'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">const</span> start <span class="token operator">=</span> process<span class="token punctuation">.</span><span class="token method function property-access">uptime</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword control-flow">await</span> <span class="token function">wait</span><span class="token punctuation">(</span><span class="token number">1000</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">const</span> end <span class="token operator">=</span> process<span class="token punctuation">.</span><span class="token method function property-access">uptime</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">const</span> result <span class="token operator">=</span> <span class="token punctuation">{</span> start<span class="token punctuation">,</span> end<span class="token punctuation">,</span> time<span class="token operator">:</span> end <span class="token operator">-</span> start <span class="token punctuation">}</span><span class="token punctuation">;</span>
+  <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'process.uptime() : End'</span><span class="token punctuation">,</span> result<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword control-flow">return</span> result<span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+
+<span class="token comment">// 実行結果例 : 単位は秒単位</span>
+<span class="token comment">// process.uptime() : Start</span>
+<span class="token comment">// process.uptime() : End { start: 3.059283585, end: 4.06004901, time: 1.000765425 }</span>
+</code></pre>
+<p>他の関数がミリ秒やナノ秒での出力だったのに対して、コレだけ秒単位。</p>
+<p>以上。</p>
+<ul>
+  <li>参考：<a href="https://stackoverflow.com/questions/23003252/window-performance-now-equivalent-in-nodejs">javascript - window.performance.now() equivalent in nodejs? - Stack Overflow</a></li>
+  <li>参考：<a href="https://tech.fusic.co.jp/posts/2021-09-09-2021-09-09-node16-sleep/">Node.js16 で Sleep 機能がサポートされたらしい - Fusic Tech Blog</a></li>
+</ul>
+
+      </main>
+      <footer id="footer">
+        <div id="footer-contents">
+          <div id="date-time">
+            <dl>
+              <dt>Created</dt>
+              <dd><time>2022-08-07</time></dd>
+              <dt>Last-Modified</dt>
+              <dd><time>2022-08-07</time></dd>
+            </dl>
+          </div>
+          <nav id="footer-links">
+            <ul>
+              <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+              <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+              <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+              <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+            </ul>
+          </nav>
+          <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+        </div>
+      </footer>
+    </div>
+  </body>
+</html>
