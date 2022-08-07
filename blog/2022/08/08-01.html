@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#0990d0">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>配列から文字列を作る際のパフォーマンス比較 - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2022/08/08-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="header-brand">
+          <div id="header-brand-contents">
+            <div id="site-title"><a href="/index.html">Neo's World</a></div>
+            <nav id="header-links">
+              <ul>
+                <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+                <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+                <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+                <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+              </ul>
+            </nav>
+          </div>
+        </div>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2022/index.html">2022年</a></li>
+            <li><a href="/blog/2022/08/index.html">08月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2022-08-08</time></div>
+        <h1 id="page-title">配列から文字列を作る際のパフォーマンス比較</h1>
+
+<p>オブジェクトの配列を利用して HTML 文字列を組み立てて <code>innerHTML</code> で挿入、みたいなことを時々やる。昔ながらの平易な書き方をすると、こんな感じのコード。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token comment">// 何らかオブジェクトの配列がある</span>
+<span class="token keyword">const</span> items <span class="token operator">=</span> <span class="token punctuation">[</span>
+  <span class="token punctuation">{</span> name<span class="token operator">:</span> <span class="token string">'商品名 1'</span><span class="token punctuation">,</span> price<span class="token operator">:</span> <span class="token number">100</span> <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span> name<span class="token operator">:</span> <span class="token string">'商品名 2'</span><span class="token punctuation">,</span> price<span class="token operator">:</span> <span class="token number">500</span> <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token spread operator">...</span>
+<span class="token punctuation">]</span><span class="token punctuation">;</span>
+
+<span class="token comment">// HTML 文字列を組み立てる : ココではリストだが、テーブルを作ったりだとか…</span>
+<span class="token keyword">let</span> html <span class="token operator">=</span> <span class="token string">'&#x3C;ul>'</span><span class="token punctuation">;</span>
+<span class="token keyword control-flow">for</span><span class="token punctuation">(</span><span class="token keyword">let</span> i <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span> i <span class="token operator">&#x3C;</span> items<span class="token punctuation">.</span><span class="token property-access">length</span><span class="token punctuation">;</span> i<span class="token operator">++</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token keyword">const</span> item <span class="token operator">=</span> items<span class="token punctuation">[</span>i<span class="token punctuation">]</span><span class="token punctuation">;</span>
+  html <span class="token operator">+=</span> <span class="token string">'&#x3C;li>'</span> <span class="token operator">+</span> item<span class="token punctuation">.</span><span class="token property-access">name</span> <span class="token operator">+</span> <span class="token string">' … '</span> <span class="token operator">+</span> item<span class="token punctuation">.</span><span class="token property-access">price</span> <span class="token operator">+</span> <span class="token string">'円&#x3C;/li>'</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+html <span class="token operator">+=</span> <span class="token string">'&#x3C;/ul>'</span><span class="token punctuation">;</span>
+
+<span class="token comment">// 組み立て終わったら挿入する、みたいなコード</span>
+<span class="token dom variable">document</span><span class="token punctuation">.</span><span class="token property-access">body</span><span class="token punctuation">.</span><span class="token property-access">innerHTML</span> <span class="token operator">=</span> html<span class="token punctuation">;</span>
+</code></pre>
+<p>最近はこんな風に純粋な <code>for</code> ループを描いたり、<code>let html</code> に <code>+=</code> で代入、みたいなことはあんまりやらなくなってきたものの、自分の中で2種類のやり方があるなーと思った。</p>
+<p>一つは <code>Array.reduce()</code> を使って、上述のループ処理に似たような書き方をする方法だ。</p>
+<p>もう一つは、<code>Array.map()</code> で要素ごとに HTML を組み立て、最後に <code>Array.join()</code> で文字列になるように結合する、という方法。</p>
+<p>この2つのどちらの手法の方が、パフォーマンス的に高速なのか、気になったので調べてみた。</p>
+<h2 id="テストコード"><a class="header-link" href="#テストコード"><span class="header-link-mark"></span></a>テストコード</h2>
+<p>次のようなコードを作って、Node.js やブラウザで実行して実行速度を確認してみた。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token comment">// Node.js の場合は performance.now() を使うためにこの require() が必要</span>
+<span class="token keyword">const</span> <span class="token punctuation">{</span> <span class="token dom variable">performance</span> <span class="token punctuation">}</span> <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'perf_hooks'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// 指定の要素数の配列を作る関数</span>
+<span class="token keyword">const</span> <span class="token function-variable function">createArray</span> <span class="token operator">=</span> <span class="token parameter">loop</span> <span class="token arrow operator">=></span> <span class="token punctuation">[</span><span class="token spread operator">...</span><span class="token known-class-name class-name">Array</span><span class="token punctuation">(</span>loop<span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">keys</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">]</span><span class="token punctuation">;</span>
+
+<span class="token comment">// Array.reduce() で HTML を組み立てる関数</span>
+<span class="token keyword">const</span> <span class="token function-variable function">reduce</span> <span class="token operator">=</span> <span class="token parameter">array</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token keyword">const</span> start <span class="token operator">=</span> <span class="token dom variable">performance</span><span class="token punctuation">.</span><span class="token method function property-access">now</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">const</span> result <span class="token operator">=</span> array<span class="token punctuation">.</span><span class="token method function property-access">reduce</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token parameter">html<span class="token punctuation">,</span> i</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token template-string"><span class="token template-punctuation string">`</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>html<span class="token interpolation-punctuation punctuation">}</span></span><span class="token string">&#x3C;div></span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>i<span class="token interpolation-punctuation punctuation">}</span></span><span class="token string">&#x3C;/div>\n</span><span class="token template-punctuation string">`</span></span><span class="token punctuation">,</span> <span class="token string">''</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">const</span> end <span class="token operator">=</span> <span class="token dom variable">performance</span><span class="token punctuation">.</span><span class="token method function property-access">now</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'Reduce'</span><span class="token punctuation">,</span> <span class="token punctuation">{</span> start<span class="token punctuation">,</span> end<span class="token punctuation">,</span> time<span class="token operator">:</span> end <span class="token operator">-</span> start <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword control-flow">return</span> result<span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+
+<span class="token comment">// Array.map() と Array.join() で HTML を組み立てる関数</span>
+<span class="token keyword">const</span> <span class="token function-variable function">mapJoin</span> <span class="token operator">=</span> <span class="token parameter">array</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token keyword">const</span> start <span class="token operator">=</span> <span class="token dom variable">performance</span><span class="token punctuation">.</span><span class="token method function property-access">now</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">const</span> result <span class="token operator">=</span> array<span class="token punctuation">.</span><span class="token method function property-access">map</span><span class="token punctuation">(</span><span class="token parameter">i</span> <span class="token arrow operator">=></span> <span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">&#x3C;div></span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>i<span class="token interpolation-punctuation punctuation">}</span></span><span class="token string">&#x3C;/div>\n</span><span class="token template-punctuation string">`</span></span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">join</span><span class="token punctuation">(</span><span class="token string">''</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">const</span> end <span class="token operator">=</span> <span class="token dom variable">performance</span><span class="token punctuation">.</span><span class="token method function property-access">now</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'Map Join'</span><span class="token punctuation">,</span> <span class="token punctuation">{</span> start<span class="token punctuation">,</span> end<span class="token punctuation">,</span> time<span class="token operator">:</span> end <span class="token operator">-</span> start <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword control-flow">return</span> result<span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+
+<span class="token comment">// 負荷をかけるためループ回数を大きめに指定する</span>
+<span class="token keyword">const</span> loop <span class="token operator">=</span> <span class="token number">10_000_000</span><span class="token punctuation">;</span>
+<span class="token keyword">const</span> array <span class="token operator">=</span> <span class="token function">createArray</span><span class="token punctuation">(</span>loop<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// 実際はいずれかの関数を交互に、時間を置いて複数回実行している</span>
+<span class="token function">reduce</span><span class="token punctuation">(</span>array<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token function">mapJoin</span><span class="token punctuation">(</span>array<span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>テキトーな配列を作って、<code>&#x3C;div></code> で囲んで結合する、みたいな感じの簡単なコード。それぞれの関数を、時間を開けて複数回実行してみて、大体の平均値を確認した。</p>
+<h2 id="実行結果は"><a class="header-link" href="#実行結果は"><span class="header-link-mark"></span></a>実行結果は…</h2>
+<p>手元の環境で確認したところ、次のようになった。</p>
+<ul>
+  <li><code>Array.reduce()</code> を使う方法</li>
+</ul>
+<pre><code>ループ回数 … 実行時間  (ミリ秒)
+ 1_000_000 …  422.0333820581436
+ 5_000_000 … 2092.5528020858765
+10_000_000 … 4118.7338089942930
+</code></pre>
+<p>100万回のループで 400 ミリ秒程度。あとは大体コレの掛け算という感じだった。</p>
+<ul>
+  <li><code>Array.map()</code> と <code>Array.join()</code> を使う方法</li>
+</ul>
+<pre><code>ループ回数 … 実行時間  (ミリ秒)
+ 1_000_000 …  274.9353690147400
+ 5_000_000 … 1233.8456059694290
+10_000_000 … 2640.0585910081863
+</code></pre>
+<p>さて、コチラは100万回のループの時点から大きな差が見られる。100万回で 270 ミリ秒程度と、2倍まではいかないが<strong>1.5倍近い速さ</strong>で完了している。</p>
+<p>…というワケで、やる前からなんとなく予想はついていたが、<strong><code>Array.map()</code> と <code>Array.join()</code> を使う方法</strong>の方が、<em><code>Array.reduce()</code> を使う方法</em>よりも1.5倍近く高速である、という結果になった。</p>
+<p>「予想はついていた」というのは、<code>Array.reduce()</code> 内部に出来る一時変数に無駄があるからである。<code>Array.reduce()</code> は直前の処理結果を、内部の仮引数 <code>html</code> に蓄えており、コレに都度都度文字列結合していたので、そこの処理が余計だったと思われる。<code>Array.reduce()</code> は本来、それぞれの計算結果を返していくモノなので、このような「文字列結合」に利用するのは、「仕様的に可能」ではあっても、関数の元々の意味的にはあまりそぐわないように思う。</p>
+<p>一方、<code>Array.map()</code> で下処理をして、その配列をただ <code>Array.join('')</code> で結合して文字列に変換するだけなら、ネイティブな部分に文字列結合処理を任せられるし、ループのたびに一時変数が出来るようなこともないので高速だったのだろう。それぞれの関数の意味合い的にも、「配列の形を変換する」「配列を結合して文字列にする」ということで読み取りやすい。</p>
+<p>今まで、つい <code>Array.reduce()</code> を使っている場面があったのだが、パフォーマンス的にも、コードの可読性的にも、関数の元々の意味的にも、<code>Array.map()</code> + <code>Array.join()</code> を使う方が良いことが分かった。</p><div class="ad-amazon">
+  <div class="ad-amazon-image">
+    <a href="https://www.amazon.co.jp/dp/B01LYO6C1N?tag=neos21-22&amp;linkCode=osi&amp;th=1&amp;psc=1">
+      <img src="https://m.media-amazon.com/images/I/51tDpXBLD7L._SL160_.jpg" width="126" height="160">
+    </a>
+  </div>
+  <div class="ad-amazon-info">
+    <div class="ad-amazon-title">
+      <a href="https://www.amazon.co.jp/dp/B01LYO6C1N?tag=neos21-22&amp;linkCode=osi&amp;th=1&amp;psc=1">改訂新版JavaScript本格入門 ～モダンスタイルによる基礎から現場での応用まで</a>
+    </div>
+  </div>
+</div>
+<div class="ad-rakuten">
+  <div class="ad-rakuten-image">
+    <a href="https://hb.afl.rakuten.co.jp/hgc/g00q0722.waxyc9ff.g00q0722.waxyd017/?pc=https%3A%2F%2Fitem.rakuten.co.jp%2Fbook%2F14433718%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Fbook%2Fi%2F18177978%2F">
+      <img src="https://thumbnail.image.rakuten.co.jp/@0_mall/book/cabinet/4111/9784774184111.jpg?_ex=128x128">
+    </a>
+  </div>
+  <div class="ad-rakuten-info">
+    <div class="ad-rakuten-title">
+      <a href="https://hb.afl.rakuten.co.jp/hgc/g00q0722.waxyc9ff.g00q0722.waxyd017/?pc=https%3A%2F%2Fitem.rakuten.co.jp%2Fbook%2F14433718%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Fbook%2Fi%2F18177978%2F">JavaScript本格入門改訂新版 モダンスタイルによる基礎から現場での応用まで [ 山田祥寛 ]</a>
+    </div>
+    <div class="ad-rakuten-shop">
+      <a href="https://hb.afl.rakuten.co.jp/hgc/g00q0722.waxyc9ff.g00q0722.waxyd017/?pc=https%3A%2F%2Fwww.rakuten.co.jp%2Fbook%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Fbook%2F">楽天ブックス</a>
+    </div>
+    <div class="ad-rakuten-price">価格 : 3278円</div>
+  </div>
+</div>
+
+      </main>
+      <footer id="footer">
+        <div id="footer-contents">
+          <div id="date-time">
+            <dl>
+              <dt>Created</dt>
+              <dd><time>2022-08-08</time></dd>
+              <dt>Last-Modified</dt>
+              <dd><time>2022-08-08</time></dd>
+            </dl>
+          </div>
+          <nav id="footer-links">
+            <ul>
+              <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+              <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+              <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+              <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+            </ul>
+          </nav>
+          <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+        </div>
+      </footer>
+    </div>
+  </body>
+</html>
