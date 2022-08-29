@@ -203,7 +203,7 @@ DEK-Info: AES-256-CBC,xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
 ```bash
 # 秘密鍵の内容を確認する
-$ openssl rsa -text -noout -in ./ca-key.pem 
+$ openssl rsa -text -noout -in ./ca-key.pem
 Enter pass phrase for ./ca-key.pem:  # パスフレーズを入力する
 Private-Key: (2048 bit)
 modulus:
@@ -231,7 +231,7 @@ writing RSA key
 xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx
 
 # 証明書発行要求 (CSR) の内容を確認する
-$ openssl req -text -noout -in ./ca-cert.csr 
+$ openssl req -text -noout -in ./ca-cert.csr
 Certificate Request:
     Data:
         Version: 0 (0x0)
@@ -258,7 +258,7 @@ $ openssl req -pubkey -noout -in ./ca-cert.csr | openssl md5 -c
 xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx
 
 # サーバ証明書の内容を確認する
-$ openssl x509 -text -fingerprint -noout -in ca-cert.pem 
+$ openssl x509 -text -fingerprint -noout -in ca-cert.pem
 Certificate:
     Data:
         Version: 1 (0x0)
@@ -280,7 +280,7 @@ Certificate:
 SHA1 Fingerprint=xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx
 
 # サーバ証明書の公開鍵を表示する (証明書発行要求 (CSR) の公開鍵と一致する)
-$ openssl x509 -pubkey -noout -in ./ca-cert.pem 
+$ openssl x509 -pubkey -noout -in ./ca-cert.pem
 -----BEGIN PUBLIC KEY-----
 ……中略……
 -----END PUBLIC KEY-----
