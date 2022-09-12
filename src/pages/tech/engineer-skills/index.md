@@ -43,6 +43,10 @@ path:
 
 トピックにまとめられそうになったらまとめます。
 
+- Negative Capability ネガティブ・ケイパビリティ
+  - 積極的な問題解決能力 (Positive Capability ポジティブ・ケイパビリティ) の逆で、分からないこと、不確実なモノを受け入れ、その状況下に留まれる能力のこと。解決を諦めているワケではないが、「答えは一つではない」「すぐに解決するモノではない」ということを認識して余裕を持った姿勢でいることを表す
+  - [マネージャーとNegative Capability - scrapbox - hotchemi](https://scrapbox.io/hotchemi/%E3%83%9E%E3%83%8D%E3%83%BC%E3%82%B8%E3%83%A3%E3%83%BC%E3%81%A8Negative_Capability)
+  - [ネガティブ・ケイパビリティ - Wikipedia](https://ja.wikipedia.org/wiki/%E3%83%8D%E3%82%AC%E3%83%86%E3%82%A3%E3%83%96%E3%83%BB%E3%82%B1%E3%82%A4%E3%83%91%E3%83%93%E3%83%AA%E3%83%86%E3%82%A3)
 - コマンド打つのは誰でもできるんですが、打ったコマンドに責任持って最悪元に戻せるスキルと経験にお金を払うのがIT業界における作業費の意味なんです
 - フルスタックになった人間は信頼できる同僚を持てなかった寂しい人間
 - [賢い質問のしかた](https://www.ranvis.com/articles/smart-questions.ja.html)

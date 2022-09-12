@@ -69,6 +69,9 @@ path:
 
 トピックにまとめられそうになったらまとめます。
 
+- [ヨーヨー問題](https://ja.wikipedia.org/wiki/%E3%83%A8%E3%83%BC%E3%83%A8%E3%83%BC%E5%95%8F%E9%A1%8C)
+  - 継承関係が深すぎたり複雑過ぎたりするプログラムを読む時に、多くのクラスを行ったり来たりしないと読めない状況のこと
+  - 過剰なオブジェクト指向プログラミングなどで発生しやすく、複数の情報源を頭に入れておかないといけないシステムは作りが良くない
 - PIE : Program Intently and Expressively 意図を表現してプログラミングせよ
 - SLAP : Single Level of Abstraction Principle 抽象化レベルの統一
 - [ファイル書き込みをするプログラムで気をつけた方がよいこと | IIJ Engineers Blog](https://eng-blog.iij.ad.jp/archives/13937)
