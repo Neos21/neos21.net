@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#0990d0">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>package.json を避けて Node.js スクリプトを起動する Bash スクリプト - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2022/10/11-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="header-brand">
+          <div id="header-brand-contents">
+            <div id="site-title"><a href="/index.html">Neo's World</a></div>
+            <nav id="header-links">
+              <ul>
+                <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+                <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+                <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+                <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+              </ul>
+            </nav>
+          </div>
+        </div>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2022/index.html">2022年</a></li>
+            <li><a href="/blog/2022/10/index.html">10月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2022-10-11</time></div>
+        <h1 id="page-title">package.json を避けて Node.js スクリプトを起動する Bash スクリプト</h1>
+
+<p>ちょっと何言ってるのか分からないタイトルだけど、特殊な状況で変なことをやろうとしている記事。</p>
+<p>以下のように、<strong>構文エラーとなる <code>package.json</code> が存在するディレクトリ配下で、その <code>package.json</code> に依存しない Node.js スクリプトを実行したい</strong>、というのが今回の状況。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># 構文エラーとなる `package.json` が存在する</span>
+$ <span class="token function">cat</span> ./package.json
+<span class="token punctuation">{</span>
+  <span class="token string">"name"</span><span class="token builtin class-name">:</span> example,
+  // この package.json には構文エラーになる記述が含まれています
+<span class="token punctuation">}</span>
+
+<span class="token comment"># Node.js スクリプトは何も `require()` していない、`package.json` を必要としない内容</span>
+$ <span class="token function">cat</span> ./test.js
+<span class="token comment">#!/usr/bin/env node</span>
+console.log<span class="token punctuation">(</span><span class="token string">'Hello World'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment"># 実行しようとするとエラーになる</span>
+$ node ./test.js
+internal/modules/cjs/loader.js:285
+    throw e<span class="token punctuation">;</span>
+    ^
+
+SyntaxError: Error parsing /home/neo/test-directory/package.json: Unexpected token e <span class="token keyword">in</span> JSON at position <span class="token number">12</span>
+    at parse <span class="token punctuation">(</span><span class="token operator">&#x3C;</span>anonymous<span class="token operator">></span><span class="token punctuation">)</span>
+    at readPackage <span class="token punctuation">(</span>internal/modules/cjs/loader.js:272:20<span class="token punctuation">)</span>
+    at readPackageScope <span class="token punctuation">(</span>internal/modules/cjs/loader.js:297:19<span class="token punctuation">)</span>
+    at shouldUseESMLoader <span class="token punctuation">(</span>internal/modules/run_main.js:42:15<span class="token punctuation">)</span>
+    at Function.executeUserEntryPoint <span class="token punctuation">[</span>as runMain<span class="token punctuation">]</span> <span class="token punctuation">(</span>internal/modules/run_main.js:70:24<span class="token punctuation">)</span>
+    at internal/main/run_main_module.js:17:47 <span class="token punctuation">{</span>
+  path: <span class="token string">'/home/neo/test-directory/package.json'</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>このように、参照しなくて良い <code>package.json</code> なのだが、どうしてもコレを先にロードしようとして JSON パースできずに異常終了してしまう。</p>
+<p><code>package.json</code> をリネームしたり、<code>test.js</code> から見て子ディレクトリにでも移しておけば問題は起こらなくなるのだが、今回はこのような <code>package.json</code> と <code>test.js</code> が同ディレクトリにある状態で、何とか <em><code>package.json</code> の存在を無視して <code>test.js</code> を動かす方法はないか</em>と考えてみた。</p>
+<p>こういう時は、以前 Windows バッチでやったような、「あるシェルスクリプトの中に別言語のコードを埋め込んで実行する」方法を応用して考えてみる。</p>
+<ul>
+  <li>過去記事：<a href="/blog/2016/10/28-01.html">Windows バッチに JScript・VBScript・Oracle SQL スクリプトを混在させてバッチ処理の中で実行する</a></li>
+  <li>過去記事：<a href="/blog/2017/02/03-03.html">Bash 上で直接実行できる Windows バッチファイルを作る</a></li>
+  <li>過去記事：<a href="/blog/2017/07/02-02.html">Windows バッチファイルに JScript を混ぜ込む他のやり方</a></li>
+</ul>
+<p>今回は MacOS や WSL (Linux) 上で動けば良かったので、<strong>「自身を Node.js スクリプトとして動かす Bash スクリプト」</strong>を書いてやることにした。コード全量は以下のとおり。</p>
+<ul>
+  <li><code>bash-to-node.js</code>
+    <ul>
+      <li><a href="https://github.com/Neos21/shell-scripts/blob/master/node-js/examples/bash-to-node.js">shell-scripts/bash-to-node.js at master · Neos21/shell-scripts</a> … GitHub リポジトリに同様のコードを置いている</li>
+    </ul>
+  </li>
+</ul>
+<pre class="language-bash"><code class="language-bash"><span class="token shebang important">#!/usr/bin/env bash</span>
+<span class="token comment"># Bash ココカラ</span>
+<span class="token assign-left variable">temp_file_path</span><span class="token operator">=</span><span class="token string">"<span class="token variable"><span class="token variable">$(</span>mktemp<span class="token variable">)</span></span>---<span class="token variable"><span class="token variable">$(</span><span class="token function">basename</span> $0<span class="token variable">)</span></span>"</span>
+<span class="token assign-left variable">start_line_number</span><span class="token operator">=</span><span class="token string">"<span class="token variable"><span class="token variable">$(</span><span class="token function">awk</span> <span class="token string">'/^#!\/usr\/bin\/env node$/ { print FNR }'</span> <span class="token string">"<span class="token variable">$0</span>"</span><span class="token variable">)</span></span>"</span>
+<span class="token function">tail</span> --lines <span class="token string">"+<span class="token variable">${start_line_number}</span>"</span> <span class="token string">"<span class="token variable">$0</span>"</span> <span class="token operator">></span> <span class="token string">"<span class="token variable">${temp_file_path}</span>"</span>
+node <span class="token string">"<span class="token variable">${temp_file_path}</span>"</span>
+<span class="token function">rm</span> -f <span class="token string">"<span class="token variable">${temp_file_path}</span>"</span>
+<span class="token builtin class-name">exit</span> <span class="token number">0</span>
+<span class="token comment"># Bash ココマデ</span>
+
+<span class="token comment">#!/usr/bin/env node</span>
+// ココカラ Node.js スクリプトを自由に書いて OK
+console.log<span class="token punctuation">(</span><span class="token punctuation">[</span><span class="token string">'Hello World'</span>, process.cwd<span class="token punctuation">(</span><span class="token punctuation">)</span>, __dirname, __filename, <span class="token string">'End'</span><span class="token punctuation">]</span>.join<span class="token punctuation">(</span><span class="token string">'<span class="token entity" title="\n">\n</span>'</span><span class="token punctuation">))</span><span class="token punctuation">;</span>
+</code></pre>
+<p>拡張子は <code>.js</code> としているが、1行目から9行目までは Bash スクリプトであり、1行目の Shebang は Bash なので、<code>$ ./bash-to-node.js</code> と実行するとまずは Bash スクリプトとして実行される。</p>
+<p>Node.js スクリプトは11行目の <code>#!/usr/bin/env node</code> という Shebang 以降であり、この下には任意の Node.js スクリプトを書けば良い。<code>require()</code> できるのは Node.js の組み込みモジュールのみである。</p>
+<p><code>node</code> コマンドで JS ファイルを実行すると、そのファイルがあるディレクトリの <code>package.json</code> が先に読み込まれてしまうので、1～9行目の Bash スクリプト自身で、<em>自身の Node.js コード部分のみを Temp ディレクトリ配下にコピーしてから実行</em>している。</p>
+<p>もう少し Bash 部分のコードを細かく見てみよう。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token shebang important">#!/usr/bin/env bash</span>
+
+<span class="token comment"># Bash ココカラ</span>
+
+<span class="token comment"># `mktemp` コマンドを使い、一時ディレクトリ配下にファイルを安全に作成する</span>
+<span class="token assign-left variable">temp_file_path</span><span class="token operator">=</span><span class="token string">"<span class="token variable"><span class="token variable">$(</span>mktemp<span class="token variable">)</span></span>---<span class="token variable"><span class="token variable">$(</span><span class="token function">basename</span> $0<span class="token variable">)</span></span>"</span>
+
+<span class="token comment"># `awk` を駆使して自ファイル内から `#!/usr/bin/env node` という Shebang の行を探し出す</span>
+<span class="token assign-left variable">start_line_number</span><span class="token operator">=</span><span class="token string">"<span class="token variable"><span class="token variable">$(</span><span class="token function">awk</span> <span class="token string">'/^#!\/usr\/bin\/env node$/ { print FNR }'</span> <span class="token string">"<span class="token variable">$0</span>"</span><span class="token variable">)</span></span>"</span>
+
+<span class="token comment"># `tail` で Shebang の行以降を出力し、一時ファイルに書き込む</span>
+<span class="token function">tail</span> --lines <span class="token string">"+<span class="token variable">${start_line_number}</span>"</span> <span class="token string">"<span class="token variable">$0</span>"</span> <span class="token operator">></span> <span class="token string">"<span class="token variable">${temp_file_path}</span>"</span>
+
+<span class="token comment"># `node` コマンドで一時ファイルを実行する・一時ディレクトリの方には `package.json` が存在しないので上手く動くというワケ</span>
+node <span class="token string">"<span class="token variable">${temp_file_path}</span>"</span>
+
+<span class="token comment"># `node` コマンドの実行後、一時ファイルを削除する</span>
+<span class="token function">rm</span> -f <span class="token string">"<span class="token variable">${temp_file_path}</span>"</span>
+
+<span class="token comment"># Bash としての処理を終了し、以降の Node.js スクリプト部分が実行されないようにする</span>
+<span class="token builtin class-name">exit</span> <span class="token number">0</span>
+
+<span class="token comment"># Bash ココマデ</span>
+</code></pre>
+<p>こういう仕組み。<code>mktemp</code> コマンドと、<code>tail</code> の <code>--lines +11</code> という <strong><code>+</code> を使った指定方法</strong>がミソである。</p>
+<p><code>mktemp</code> コマンドで一時ディレクトリ配下にコピーを作ってから実行しているので、<code>__dirname</code> と <code>__filename</code> のパスが一時ディレクトリになることに留意。<code>process.cwd()</code> ならカレントディレクトリがズレずに取得できるので、カレントディレクトリを参照する処理があるならコチラを使うと良いかと。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token builtin class-name">pwd</span>
+/home/neo/test-directory
+
+$ <span class="token function">ls</span>
+bash-to-node.js*  package.json
+
+<span class="token comment"># 実行時の一例</span>
+$ ./bash-to-node.js
+process.cwd<span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token builtin class-name">:</span> /home/neo/test-directory
+__dirname     <span class="token builtin class-name">:</span> /tmp
+__filename    <span class="token builtin class-name">:</span> /tmp/tmp.pDIlNEmpgl---bash-to-node.js
+</code></pre>
+<p>結局のところ、このファイルは最初に Bash として実行され、11行目以降の処理はどんなプログラミング言語であっても良いので、他の言語にも転用できる。…まぁ、こんなことやる必要がないだろうが。ｗ</p><div class="ad-amazon">
+  <div class="ad-amazon-image">
+    <a href="https://www.amazon.co.jp/dp/B09NKMKJ8S?tag=neos21-22&amp;linkCode=osi&amp;th=1&amp;psc=1">
+      <img src="https://m.media-amazon.com/images/I/41+KBZZVwLL._SL160_.jpg" width="123" height="160">
+    </a>
+  </div>
+  <div class="ad-amazon-info">
+    <div class="ad-amazon-title">
+      <a href="https://www.amazon.co.jp/dp/B09NKMKJ8S?tag=neos21-22&amp;linkCode=osi&amp;th=1&amp;psc=1">React Angular Vueをスムーズに修得するための最新フロントエンド技術入門</a>
+    </div>
+  </div>
+</div>
+<div class="ad-rakuten">
+  <div class="ad-rakuten-image">
+    <a href="https://hb.afl.rakuten.co.jp/hgc/g00reb42.waxycf23.g00reb42.waxyd080/?pc=https%3A%2F%2Fitem.rakuten.co.jp%2Frakutenkobo-ebooks%2Fcd01eece8d213cdca60be7c05a41ca88%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Frakutenkobo-ebooks%2Fi%2F20680744%2F">
+      <img src="https://thumbnail.image.rakuten.co.jp/@0_mall/rakutenkobo-ebooks/cabinet/1100/2000010661100.jpg?_ex=128x128">
+    </a>
+  </div>
+  <div class="ad-rakuten-info">
+    <div class="ad-rakuten-title">
+      <a href="https://hb.afl.rakuten.co.jp/hgc/g00reb42.waxycf23.g00reb42.waxyd080/?pc=https%3A%2F%2Fitem.rakuten.co.jp%2Frakutenkobo-ebooks%2Fcd01eece8d213cdca60be7c05a41ca88%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Frakutenkobo-ebooks%2Fi%2F20680744%2F">React Angular Vueをスムーズに修得するための最新フロントエンド技術入門【電子書籍】[ 末次 章 ]</a>
+    </div>
+    <div class="ad-rakuten-shop">
+      <a href="https://hb.afl.rakuten.co.jp/hgc/g00reb42.waxycf23.g00reb42.waxyd080/?pc=https%3A%2F%2Fwww.rakuten.co.jp%2Frakutenkobo-ebooks%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Frakutenkobo-ebooks%2F">楽天Kobo電子書籍ストア</a>
+    </div>
+    <div class="ad-rakuten-price">価格 : 3080円</div>
+  </div>
+</div>
+
+      </main>
+      <footer id="footer">
+        <div id="footer-contents">
+          <div id="date-time">
+            <dl>
+              <dt>Created</dt>
+              <dd><time>2022-10-11</time></dd>
+              <dt>Last-Modified</dt>
+              <dd><time>2022-10-11</time></dd>
+            </dl>
+          </div>
+          <nav id="footer-links">
+            <ul>
+              <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+              <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+              <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+              <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+            </ul>
+          </nav>
+          <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+        </div>
+      </footer>
+    </div>
+  </body>
+</html>
