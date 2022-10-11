@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#0990d0">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>タスクトレイに常駐する PowerShell スクリプト「Task Tray App」を作った - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2022/10/12-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="header-brand">
+          <div id="header-brand-contents">
+            <div id="site-title"><a href="/index.html">Neo's World</a></div>
+            <nav id="header-links">
+              <ul>
+                <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+                <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+                <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+                <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+              </ul>
+            </nav>
+          </div>
+        </div>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2022/index.html">2022年</a></li>
+            <li><a href="/blog/2022/10/index.html">10月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2022-10-12</time></div>
+        <h1 id="page-title">タスクトレイに常駐する PowerShell スクリプト「Task Tray App」を作った</h1>
+
+<p>ふと思い立って、タスクトレイに常駐する PowerShell スクリプトを作ってみた。GitHub でソースコード公開中。</p>
+<ul>
+  <li><a href="https://github.com/Neos21/task-tray-app">Neos21/task-tray-app: Task Tray App : 何とは言いませんが、タスクトレイに常駐する PowerShell 製のアプリです。</a></li>
+</ul>
+<p>この PowerShell スクリプトを起動すると、<strong>何のためかは分からないが</strong>、<em>3分おきに <code>F15</code> キーを押下する定期処理が実行される。</em><code>F15</code> キーというのは、一応定義はされているが通常は特に何の役割も与えられていないので、特に何も起こらない。しかしコレにより、実際にキーボードを押下したのと同じ動作が起こるので、<strong>しばらく無操作でもスリープ状態にならない</strong>ことになる。<em>まぁ、何のためにそんな定期処理を行うのかは分からないけど。</em>(しらばっくれ)</p>
+<p>PowerShell って Windows API や .NET API、そして C# のコードを混ぜ込んだ悪魔合体的なスクリプトになってしまうので、なかなかどうして、やりたいことを実現するのにこんなコードになってしまうのか、みたいなのが整理しづらいんだが、今回は割とその辺を理解して落とし込めたと思う。以降、トピックごとにメモ書きしていこうと思う。</p>
+<hr>
+<p>今回書いたスクリプトは .NET Framework の <code>System.Windows.Forms</code> 名前空間にある API を多用するので、始めにこのアセンブリをロードしている。ロード後のコードでは <code>System.</code> という名前空間部分は記述を省略しても良い。</p>
+<pre class="language-powershell"><code class="language-powershell"><span class="token function">Add-Type</span> <span class="token operator">-</span>AssemblyName System<span class="token punctuation">.</span>Windows<span class="token punctuation">.</span>Forms<span class="token punctuation">;</span>
+</code></pre>
+<p>次に、<code>System.Threading.Mutex</code> (Mutual Exclusion) を使い、排他制御を実現する。コレにより、同じスクリプトを多重起動しないように制御できる。</p>
+<pre class="language-powershell"><code class="language-powershell"><span class="token variable">$mutex</span> = <span class="token function">New-Object</span> Threading<span class="token punctuation">.</span>Mutex<span class="token punctuation">(</span><span class="token boolean">$False</span><span class="token punctuation">,</span> <span class="token string">'Global\mutex-task-tray-app'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment"># 第2引数でテキトーな名前をつけておく</span>
+<span class="token keyword">if</span><span class="token punctuation">(</span><span class="token operator">!</span><span class="token punctuation">(</span><span class="token variable">$mutex</span><span class="token punctuation">.</span>WaitOne<span class="token punctuation">(</span>0<span class="token punctuation">,</span> <span class="token boolean">$False</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>  <span class="token comment"># 後から多重起動されたと判定した場合は終了する</span>
+  <span class="token variable">$mutex</span><span class="token punctuation">.</span>Close<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">Exit</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+<span class="token comment"># ↓以下に実際のコードを書いていく</span>
+</code></pre>
+<p>通常の起動時は、スクリプトの終了時に確実に変数 <code>$mutex</code> を解放してやる必要がある。解放漏れがあると、二重起動のつもりでなくても裏にスレッドが残っていて二重起動扱いになってしまうからだ。確実に解放させるには、<code>try / (catch) / finally</code> を使うと良い。</p>
+<pre class="language-powershell"><code class="language-powershell"><span class="token variable">$mutex</span> = <span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">;</span>  <span class="token comment"># ← 先程のコード</span>
+
+<span class="token keyword">try</span> <span class="token punctuation">{</span>
+  <span class="token comment"># 通常時の全ての処理をココに書く…</span>
+<span class="token punctuation">}</span>
+<span class="token keyword">catch</span> <span class="token punctuation">{</span>
+  <span class="token comment"># エラー時</span>
+<span class="token punctuation">}</span>
+<span class="token keyword">finally</span> <span class="token punctuation">{</span>
+  <span class="token comment"># 確実に Mutex を解放して終了する</span>
+  <span class="token variable">$mutex</span><span class="token punctuation">.</span>ReleaseMutex<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token variable">$mutex</span><span class="token punctuation">.</span>Close<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>PowerShell における「スコープ」の感覚がよく分からなかったのだが、後述する「○○をクリックした時のイベントハンドラ」みたいな処理中で書き換えたいグローバル変数を定義する際は、<code>$script:hoge</code> という風に変数名を指定すれば良いようだ。<code>$script</code> 以外にもいくつかスコープを明示する予約語があるみたい。</p>
+<pre class="language-powershell"><code class="language-powershell"><span class="token variable">$script</span>:isTerminalWindowClosed = <span class="token boolean">$True</span><span class="token punctuation">;</span>  <span class="token comment"># `script` スコープを明示した変数</span>
+<span class="token variable">$example</span> = <span class="token boolean">$True</span><span class="token punctuation">;</span>  <span class="token comment"># ← コチラは普通の変数宣言 ★</span>
+
+<span class="token comment"># イベントハンドラ内でそれぞれの変数を「上書き」しようとしてみる</span>
+<span class="token variable">$notifyIcon</span><span class="token punctuation">.</span>add_Click<span class="token punctuation">(</span><span class="token punctuation">{</span>
+  <span class="token variable">$script</span>:isTerminalWindowClosed = <span class="token boolean">$False</span><span class="token punctuation">;</span>
+  <span class="token variable">$example</span> = <span class="token boolean">$False</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment"># ↑ しかし実際は、親スコープの `$example` (★) は `$False` に上書きされない</span>
+<span class="token comment"># イベントハンドラ内で、親スコープと同じ名前のローカル変数を宣言して消滅した、という扱いになっている</span>
+</code></pre>
+<p>PowerShell のターミナルウィンドウを非表示にするためのコードは次のとおり。</p>
+<pre class="language-powershell"><code class="language-powershell"><span class="token variable">$terminalWindow</span> = <span class="token function">Add-Type</span> <span class="token operator">-</span>MemberDefinition <span class="token string">'[DllImport("user32.dll")] public static extern bool ShowWindowAsync(IntPtr hWnd, int nCmdShow);'</span> <span class="token operator">-</span>Name Win32Functions <span class="token operator">-</span>PassThru<span class="token punctuation">;</span>
+<span class="token variable">$windowHandle</span>   = <span class="token punctuation">(</span><span class="token function">Get-Process</span> <span class="token operator">-</span>PID <span class="token variable">$Pid</span><span class="token punctuation">)</span><span class="token punctuation">.</span>MainWindowHandle<span class="token punctuation">;</span>  <span class="token comment"># 後で同じハンドルを指定するために変数に控えておく</span>
+<span class="token namespace">[void]</span><span class="token variable">$terminalWindow</span>::ShowWindowAsync<span class="token punctuation">(</span><span class="token variable">$windowHandle</span><span class="token punctuation">,</span> 0<span class="token punctuation">)</span><span class="token punctuation">;</span>    <span class="token comment"># `0` で非表示・`1` や `9` などを指定すればウィンドウが表示される</span>
+</code></pre>
+<p><em>Win32 API の <code>ShowWindowAsync</code> 関数</em>をロードするために、<code>Add-Type</code> を使い C# コードを混ぜ込んでいる。詳しくは <code>ShowWindowAsync</code> 関数の API をググッてもらえば分かると思うが、第2引数に <code>0</code> を与えると、ウィンドウ自体が非表示になり、タスクバーにも表示されなくなる。</p>
+<p>存在がタスクバーから消されてしまったので、続いてタスクトレイに自身のアイコンを配置するコードを置く。<code>ExtractAssociatedIcon</code> という関数を使うと、指定した <code>.exe</code> ファイルからアイコンを取り出してくれるので、この仕組みを利用して「起動した自プロセス = PowerShell のアイコン」を取得しているのが以下の例。実際のコードでは「コマンドプロンプト」のアイコンとトグル切替できるようにしている。</p>
+<pre class="language-powershell"><code class="language-powershell"><span class="token variable">$notifyIcon</span>         = <span class="token function">New-Object</span> Windows<span class="token punctuation">.</span>Forms<span class="token punctuation">.</span>NotifyIcon<span class="token punctuation">;</span>
+<span class="token variable">$notifyIcon</span><span class="token punctuation">.</span>Icon    = <span class="token namespace">[Drawing.Icon]</span>::ExtractAssociatedIcon<span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token function">Get-Process</span> <span class="token operator">-</span>id <span class="token variable">$Pid</span> <span class="token punctuation">|</span> <span class="token function">Select-Object</span> <span class="token operator">-</span>ExpandProperty Path<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token variable">$notifyIcon</span><span class="token punctuation">.</span>Visible = <span class="token boolean">$True</span><span class="token punctuation">;</span>  <span class="token comment"># 終了時は `Visible` に `$False` を渡すことでタスクトレイアイコンを非表示にできる</span>
+</code></pre>
+<p>タスクトレイにアイコンを置いたあと、明示的に終了させるまではタスクトレイに常駐してほしいので、<code>ApplicationContext</code> という仕組みを使って「メッセージループ」を実行する。</p>
+<pre class="language-powershell"><code class="language-powershell"><span class="token variable">$applicationContext</span> = <span class="token function">New-Object</span> Windows<span class="token punctuation">.</span>Forms<span class="token punctuation">.</span>ApplicationContext<span class="token punctuation">;</span>
+
+<span class="token namespace">[void]</span><span class="token namespace">[Windows.Forms.Application]</span>::Run<span class="token punctuation">(</span><span class="token variable">$applicationContext</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token comment"># ↑ この行に到達すると、コレ以下のコードは実行されず常駐状態になる</span>
+</code></pre>
+<p>コレでタスクトレイにアイコンが常駐してくれたので、セットで終了させるための処理を書いておく。<em>タスクトレイアイコンを右クリックしたら「Exit」というコンテキストメニューが表示され、それを押下することで PowerShell を終了できる</em>ようにする。</p>
+<pre class="language-powershell"><code class="language-powershell"><span class="token variable">$applicationContext</span> = <span class="token function">New-Object</span> Windows<span class="token punctuation">.</span>Forms<span class="token punctuation">.</span>ApplicationContext<span class="token punctuation">;</span>
+
+<span class="token comment"># アプリ終了メニューを定義する</span>
+<span class="token variable">$menuItemExit</span>      = <span class="token function">New-Object</span> Windows<span class="token punctuation">.</span>Forms<span class="token punctuation">.</span>MenuItem<span class="token punctuation">;</span>
+<span class="token variable">$menuItemExit</span><span class="token punctuation">.</span>Text = <span class="token string">'Exit'</span><span class="token punctuation">;</span>
+<span class="token comment"># アプリ終了メニューをクリックされたら Application Context を終了させる</span>
+<span class="token variable">$menuItemExit</span><span class="token punctuation">.</span>add_Click<span class="token punctuation">(</span><span class="token punctuation">{</span>
+  <span class="token variable">$applicationContext</span><span class="token punctuation">.</span>ExitThread<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment"># コンテキストメニューとして定義する</span>
+<span class="token variable">$notifyIcon</span><span class="token punctuation">.</span>ContextMenu = <span class="token function">New-Object</span> Windows<span class="token punctuation">.</span>Forms<span class="token punctuation">.</span>ContextMenu<span class="token punctuation">;</span>
+<span class="token variable">$notifyIcon</span><span class="token punctuation">.</span>contextMenu<span class="token punctuation">.</span>MenuItems<span class="token punctuation">.</span>AddRange<span class="token punctuation">(</span><span class="token variable">$menuItemExit</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token namespace">[void]</span><span class="token namespace">[Windows.Forms.Application]</span>::Run<span class="token punctuation">(</span><span class="token variable">$applicationContext</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>ココまでで、</p>
+<ul>
+  <li>多重起動を防ぎ、</li>
+  <li>PowerShell ウィンドウを非表示にし、</li>
+  <li>タスクトレイにアイコンを常駐させ、</li>
+  <li>コンテキストメニューからスクリプトを終了させる</li>
+</ul>
+<p>というところまでが出来た。</p>
+<hr>
+<p>次に、タスクトレイアイコンをクリックした時のイベントハンドラを書く。実際のコードではココで、後述するタイマー処理の On・Off を切り替える処理を書いている。</p>
+<pre class="language-powershell"><code class="language-powershell"><span class="token comment"># 先程定義したタスクトレイアイコンをクリックした時のイベントハンドラ</span>
+<span class="token variable">$notifyIcon</span><span class="token punctuation">.</span>add_Click<span class="token punctuation">(</span><span class="token punctuation">{</span>
+  <span class="token comment"># 左クリックでなければ何もしない (アイコンを右クリックした場合など)</span>
+  <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token operator">!</span><span class="token punctuation">(</span><span class="token variable">$_</span><span class="token punctuation">.</span>Button <span class="token operator">-eq</span> <span class="token namespace">[Windows.Forms.MouseButtons]</span>::Left<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">{</span> <span class="token keyword">return</span><span class="token punctuation">;</span> <span class="token punctuation">}</span>
+  
+  <span class="token comment"># タスクトレイアイコンを左クリックされた時に行いたい処理を実装する…</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>タイマー処理は <code>Windows.Forms.Timer</code> で実現できる。</p>
+<pre class="language-powershell"><code class="language-powershell"><span class="token comment"># タイマーを定義する</span>
+<span class="token variable">$timer</span> = <span class="token function">New-Object</span> Windows<span class="token punctuation">.</span>Forms<span class="token punctuation">.</span>Timer<span class="token punctuation">;</span>
+
+<span class="token comment"># `$timer.Start()` が呼び出された時に実行される処理</span>
+<span class="token variable">$timer</span><span class="token punctuation">.</span>Add_Tick<span class="token punctuation">(</span><span class="token punctuation">{</span>
+  <span class="token variable">$timer</span><span class="token punctuation">.</span>Stop<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment"># 先にタイマーを一時停止する</span>
+  
+  <span class="token comment"># F15 キーを押下する処理</span>
+  <span class="token namespace">[Windows.Forms.SendKeys]</span>::SendWait<span class="token punctuation">(</span><span class="token string">'{F15}'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  
+  <span class="token comment"># インターバルを再設定してタイマーを再開する</span>
+  <span class="token variable">$timer</span><span class="token punctuation">.</span>Interval = 1000 <span class="token operator">*</span> 10<span class="token punctuation">;</span>  <span class="token comment"># ← 単位はミリ秒なのでコレで「10秒後に再実行」となる</span>
+  <span class="token variable">$timer</span><span class="token punctuation">.</span><span class="token function">Start</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment"># 即時実行するには次のようにする</span>
+<span class="token variable">$timer</span><span class="token punctuation">.</span>Interval = 1<span class="token punctuation">;</span>
+<span class="token variable">$timer</span><span class="token punctuation">.</span><span class="token function">Start</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>大まかな骨組みはコレで以上。あとはコレまでに挙げたコードを組み合わせて、「タスクトレイアイコンをクリックされた時に、フラグ変数を反転させて、アイコンを切り替えたり、タイマーを止めたり再開したり」みたいな感じで実装している。全体で150行程度のシングル PowerShell スクリプトとして完結できたので、タスクトレイに常駐するアプリの雛形的にも参考にしてもらえるかもしれない。</p>
+<hr>
+<p>最初に <code>ShowWindowAsync</code> 関数を使って PowerShell のウィンドウを非表示にしようとしているものの、PowerShell スクリプトの起動直後に一瞬だけ PowerShell のウィンドウがチラ見えしてしまうのが気になる。そこでいつものように WSH (VBScript) も用意した。</p>
+<pre class="language-vb"><code class="language-vb"><span class="token keyword">Option</span> Explicit
+
+CreateObject<span class="token punctuation">(</span><span class="token string">"WScript.Shell"</span><span class="token punctuation">)</span><span class="token punctuation">.</span>Run <span class="token string">"powershell -NoLogo -NoProfile -ExecutionPolicy Unrestricted -File .\task-tray-app.ps1"</span><span class="token punctuation">,</span> <span class="token number">7</span>
+</code></pre>
+<p>いつもの <code>WScript.Shell.Run</code> なのだが、第2引数は <code>0</code> (ウィンドウ完全非表示) ではなく <em><code>7</code> (最小化状態で起動)</em> をオススメする。ココで <code>0</code> を指定して起動してしまうと、確かに PowerShell ウィンドウは完全非表示のまま、タスクトレイ常駐を始めるのだが、後から <code>ShowWindowAsync</code> 関数でウィンドウを再表示しようとしても再表示できなくなってしまう。</p>
+<p>コレを防ぐためには、「ウィ野津最小化状態で起動する」オプション (<code>7</code>) を指定し、<em>タスクバーに一瞬だけ PowerShell が表示されることは許容する</em>というのが、その後で扱いやすいかと思う。<code>ShowWindowAsync</code> で後からターミナルウィンドウを再表示できるようにしておけばデバッグログも確認しやすいのでオススメ。</p>
+<hr>
+<p>あと細かいモノとしては、バルーンチップを表示するモノ。</p>
+<pre class="language-powershell"><code class="language-powershell"><span class="token variable">$notifyIcon</span><span class="token punctuation">.</span>BalloonTipIcon  = <span class="token namespace">[Windows.Forms.ToolTipIcon]</span>::Info<span class="token punctuation">;</span>
+<span class="token variable">$notifyIcon</span><span class="token punctuation">.</span>BalloonTipTitle = <span class="token string">'タイトル'</span><span class="token punctuation">;</span>
+<span class="token variable">$notifyIcon</span><span class="token punctuation">.</span>BalloonTipText  = <span class="token string">'本文'</span><span class="token punctuation">;</span>
+<span class="token variable">$notifyIcon</span><span class="token punctuation">.</span>ShowBalloonTip<span class="token punctuation">(</span>1000<span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment"># 1秒間表示する</span>
+</code></pre>
+<p>VBScript の <code>MsgBox</code> みたいな感じで GUI 上にメッセージボックスを表示させるモノ。ついでに、PowerShell は比較的最近「三項演算子」が実装されたらしく、それ以前は <code>if</code> 文と <code>Write-Output</code> で代替できるようなので、そのサンプルも。</p>
+<pre class="language-powershell"><code class="language-powershell"><span class="token variable">$text</span> = <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token variable">$script</span>:isEnabled<span class="token punctuation">)</span> <span class="token punctuation">{</span> <span class="token function">Write-Output</span> <span class="token string">'有効です'</span><span class="token punctuation">;</span> <span class="token punctuation">}</span> <span class="token keyword">else</span> <span class="token punctuation">{</span> <span class="token function">Write-Output</span> <span class="token string">'無効です'</span><span class="token punctuation">;</span> <span class="token punctuation">}</span><span class="token punctuation">;</span>
+
+<span class="token namespace">[Windows.Forms.MessageBox]</span>::Show<span class="token punctuation">(</span><span class="token string">"本文 : ${text}"</span><span class="token punctuation">,</span> <span class="token string">'タイトル'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>この辺は汎用性高そう～。</p>
+<hr>
+<p>以上。お仕事サボりたくなったら使ってみてください。(爆</p><div class="ad-amazon">
+  <div class="ad-amazon-image">
+    <a href="https://www.amazon.co.jp/dp/B0797MH8B7?tag=neos21-22&amp;linkCode=osi&amp;th=1&amp;psc=1">
+      <img src="https://m.media-amazon.com/images/I/51rUe1rp+9L._SL160_.jpg" width="124" height="160">
+    </a>
+  </div>
+  <div class="ad-amazon-info">
+    <div class="ad-amazon-title">
+      <a href="https://www.amazon.co.jp/dp/B0797MH8B7?tag=neos21-22&amp;linkCode=osi&amp;th=1&amp;psc=1">Windows PowerShell実践システム管理ガイド　第3版 マイクロソフト関連書</a>
+    </div>
+  </div>
+</div>
+<div class="ad-rakuten">
+  <div class="ad-rakuten-image">
+    <a href="https://hb.afl.rakuten.co.jp/hgc/g00q0722.waxyc9ff.g00q0722.waxyd017/?pc=https%3A%2F%2Fitem.rakuten.co.jp%2Fbook%2F15183528%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Fbook%2Fi%2F18830195%2F">
+      <img src="https://thumbnail.image.rakuten.co.jp/@0_mall/book/cabinet/3615/9784822253615.jpg?_ex=128x128">
+    </a>
+  </div>
+  <div class="ad-rakuten-info">
+    <div class="ad-rakuten-title">
+      <a href="https://hb.afl.rakuten.co.jp/hgc/g00q0722.waxyc9ff.g00q0722.waxyd017/?pc=https%3A%2F%2Fitem.rakuten.co.jp%2Fbook%2F15183528%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Fbook%2Fi%2F18830195%2F">Windows PowerShell実践システム管理ガイド　第3版 自動化・効率化に役立つPowerShell活用法 [ 横田 秀之 ]</a>
+    </div>
+    <div class="ad-rakuten-shop">
+      <a href="https://hb.afl.rakuten.co.jp/hgc/g00q0722.waxyc9ff.g00q0722.waxyd017/?pc=https%3A%2F%2Fwww.rakuten.co.jp%2Fbook%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Fbook%2F">楽天ブックス</a>
+    </div>
+    <div class="ad-rakuten-price">価格 : 4180円</div>
+  </div>
+</div>
+
+      </main>
+      <footer id="footer">
+        <div id="footer-contents">
+          <div id="date-time">
+            <dl>
+              <dt>Created</dt>
+              <dd><time>2022-10-12</time></dd>
+              <dt>Last-Modified</dt>
+              <dd><time>2022-10-12</time></dd>
+            </dl>
+          </div>
+          <nav id="footer-links">
+            <ul>
+              <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+              <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+              <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+              <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+            </ul>
+          </nav>
+          <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+        </div>
+      </footer>
+    </div>
+  </body>
+</html>
