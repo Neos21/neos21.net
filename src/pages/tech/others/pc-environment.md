@@ -159,6 +159,26 @@ Labists というところが出しているスターターキットでラズパ
 - ブログ記事 : [Raspberry Pi 4 と mjpg-streamer でウェブカメラ配信する](/blog/2020/12/29-02.html)
 
 
+## GPD Win2 (2021-03-29 ～)
+
+何となく UMPC が欲しくて、キレイな US 配列を持つ UMPC を探していて購入。2019年モデル。
+
+- CPU : Core m3-8100Y Amber Lake 1.1GHz ～ 3.4GHz
+- GPU : Intel UHD Graphics 615
+- RAM : 8GB LPDDR3-1866
+- SSD : 256GB M.2 2242
+- 液晶 : 6インチ・タッチパネル・1280x720px
+- 重量 : 460g
+- サイズ : 幅162mm × 奥行99mm × 高さ25mm
+- キー配列 : US 配列
+- インターフェイス : USB-A 3.0・USB-C 3.0・microSD・Micro HDMI・LAN・3.5mm イヤホンジャック
+
+サイズを考えると動作はかなり快適な方だが、CPU ファンが常に全開でなかなかうるさい。JoyToKey というフリーソフトを入れると、この本体が持つ左右のスティックや LR ボタンなどをより柔軟に設定変更できるのでオススメ。
+
+- ブログ記事 : [GPD Win2 (2019年モデル) を買った](/blog/2021/04/22-01.html)
+- ブログ記事 : [GPD Win2 に JoyToKey を入れてマウス操作を快適にする](/blog/2021/04/23-01.html)
+
+
 ## Microsoft Surface Pro 4 (2022-07-08 ～)
 
 ゴロ寝で使うタブレットとして、どうしても ChromeBook は使いづらく、Surface Pro 4 の中古品を20,800円で購入。
