@@ -8,17 +8,12 @@ path:
   - /tech/programming/index.html プログラミング
 head: |
   <style>
-    .commands-table-wrapper {
-      overflow-x: auto;
-    }
-    
-    .commands-table-wrapper table {
-      margin: 0;
+    .table-wrapper table {
       min-width: 100%;
       white-space: nowrap;
     }
     
-    .commands-table-wrapper tbody td:not(:first-child) {
+    .table-wrapper td:not(:first-child) {
       min-width: 15rem;
       font-size: .86rem;
     }
@@ -39,7 +34,7 @@ Bash コマンド名と、それを Windows で再現する方法をまとめた
 
 Windows コマンドプロンプトと、Windows GitBash までをベース環境とし、それ以外の統合環境 (Cygwin や MSYS・MinGW など) は、依存するモノを減らすためなるべく利用しないようにします。
 
-<div class="commands-table-wrapper monospace">
+<div class="table-wrapper monospace">
   <table>
     <thead>
       <tr>

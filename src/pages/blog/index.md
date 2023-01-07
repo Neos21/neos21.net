@@ -6,20 +6,14 @@ path:
   - /index.html Neo's World
 head: |
   <style>
-    /* 「目次」を利用して年一覧を出力する */
-    h2[id="目次"] {
+    h2[id="目次"] {  /* 「目次」を利用して年一覧を出力する */
       display: none;
     }
     
     h2[id="目次"] + ul {
-      position: sticky;
-      top: 0;
       padding-left: 0;
       font-family: var(--nn-font-family-monospace);
-      background: var(--nn-colour-background);  /* JS でグラーデションに上書きする */
-      padding-bottom: .5rem;  /* JS でグラデーションさせる領域 */
       list-style: none;
-      /* 横スクロールさせる */
       white-space: nowrap;
       overflow-x: auto;
     }
@@ -27,36 +21,15 @@ head: |
     h2[id="目次"] + ul li {
       display: inline-block;
     }
-    
-    /* 目次の記事数の左カッコ手前 */
-    h2[id="目次"] + ul li a + .articles-count {
+    h2[id="目次"] + ul li a + .articles-count {  /* 目次の記事数の左カッコ手前 */
       margin-left: .1rem;
     }
     
-    /* 西暦の「2」から始まる見出し・ハッシュ移動しても Sticky 目次が重ならないようにする (約2行折り返し分まで確保) */
-    h2[id^="2"] {
-      scroll-margin-top: 3.5rem;
-    }
-    
-    /* 記事数出力用 */
-    .articles-count {
-      color: var(--nn-colour-grey-700);
+    .articles-count {  /* 記事数出力用 */
       font-size: .86rem;
     }
-    
-    #search-within-page {
-      display: block;
-      width: 100%;
-    }
-    
-    /* ページ内インクリメンタル検索用 : 非表示 */
-    .search-within-page-hide {
-      display: none !important;
-    }
-    
-    /* ページ内インクリメンタル検索用 : ハイライト */
-    .search-within-page-highlight {
-      background: #ff0; !important;
+    h2 .articles-count {
+      color: var(--nn-colour-grey-700);
     }
   </style>
   <script>
@@ -84,76 +57,23 @@ head: |
       };
       
       // 年ごとの記事数・全記事数を集計し出力する
-      (() => {
-        // 全記事数
-        let allArticles = 0;
-        // 西暦の「2」から始まる h2 要素を検索し、年ごとの記事数を出力する
-        document.querySelectorAll('h2[id^="2"]').forEach(h2 => {
-          const ul = findListElement(h2);
-          if(!ul) return console.warn('List Not Found', h2);
-          const articles = ul.children.length;
-          h2.innerHTML += `<span class="articles-count"> … ${articles}記事</span>`;
-          // 集計する
-          allArticles += articles;
-          // 目次にも出力する
-          const anchorElement = document.querySelector(`h2[id="目次"] + ul a[href="#${h2.id}"]`);
-          if(!anchorElement) return console.warn('Anchor Not Found', h2);
-          anchorElement.insertAdjacentHTML('afterend', `<span class="articles-count">(${articles})`);
-        });
-        // h1 要素に全記事数を出力する
-        document.getElementById('page-title').innerHTML += `<span class="articles-count"> … 全${allArticles}記事</span>`;
-        
-        // Sticky にしている目次下部の背景色を半透明にする (デザイン変更時もそのまま動作するようにする)
-        const indexElement = document.querySelector('h2[id="目次"] + ul');
-        if(!indexElement) return console.warn('Index Not Found');
-        const backgroundColour = window.getComputedStyle(indexElement).backgroundColor;
-        if(!backgroundColour.startsWith('rgb(')) return console.warn('Unexpected Colour Value', { indexElement, currentBackgroundColor });  // rgb() な書式でなければ諦める
-        indexElement.style.background = `linear-gradient(to top, ${backgroundColour.replace((/^rgb\((.*)\)$/u), 'rgba($1, 0)')}, ${backgroundColour} .5rem)`;  // 下部を半透明化する
-      })();
-      
-      // ページ内インクリメンタル検索
-      (() => {
-        // 記事タイトルを含む li 要素を抽出する
-        const articleLiElements = (() => {
-          let liElements = [];
-          document.querySelectorAll('h2[id^="2"]').forEach(h2 => {
-            const ul = findListElement(h2);
-            if(!ul) return console.warn('List Not Found', h2);
-            liElements.push(...ul.children);
-          });
-          return liElements;
-        })();
-        
-        const searchWithinPageElement = document.getElementById('search-within-page')
-        searchWithinPageElement.addEventListener('input', () => {
-          // リセットする
-          document.querySelectorAll('.search-within-page-hide').forEach(hideElement => {
-            hideElement.classList.remove('search-within-page-hide');
-          });
-          document.querySelectorAll('.search-within-page-highlight').forEach(highlightElement => {
-            highlightElement.outerHTML = highlightElement.textContent;
-          });
-          
-          // 検索キーワード
-          const searchWord = searchWithinPageElement.value.trim();
-          if(searchWord === '') return;
-          
-          // 日付を除いて記事タイトル部分で検索する
-          const regExpSearchWord = new RegExp(searchWord.replace((/[\\^$.*+?()[\]{}|]/g), '\\$&'), 'gi');  // 正規表現記号のエスケープ → ケースインセンシティブ
-          articleLiElements.forEach(articleLiElement => {
-            const articleAnchorElement = articleLiElement.querySelector('a');  // li 要素配下の a 要素
-            if(articleAnchorElement.textContent.match(regExpSearchWord)) {
-              // キーワードが合致した部分に span 要素を挿入する
-              articleAnchorElement.innerHTML = articleAnchorElement.innerHTML.replace(regExpSearchWord, match => match.replace(regExpSearchWord, `<span class="search-within-page-highlight">${match}</span>`));
-            }
-            else {
-              // キーワードが合致しなければ li 要素に CSS クラスを付与する
-              articleLiElement.classList.add('search-within-page-hide');
-            }
-          });
-          // TODO : ヒットした件数を表示させたりしたい
-        });
-      })();
+      // 全記事数
+      let allArticles = 0;
+      // 西暦の「2」から始まる h2 要素を検索し、年ごとの記事数を出力する
+      document.querySelectorAll('h2[id^="2"]').forEach(h2 => {
+        const ul = findListElement(h2);
+        if(!ul) return console.warn('List Not Found', h2);
+        const articles = ul.children.length;
+        h2.innerHTML += `<span class="articles-count"> … ${articles}記事</span>`;
+        // 集計する
+        allArticles += articles;
+        // 目次にも出力する
+        const anchorElement = document.querySelector(`h2[id="目次"] + ul a[href="#${h2.id}"]`);
+        if(!anchorElement) return console.warn('Anchor Not Found', h2);
+        anchorElement.insertAdjacentHTML('afterend', `<span class="articles-count">(${articles})`);
+      });
+      // h1 要素に全記事数を出力する
+      document.getElementById('page-title').innerHTML += `<span class="articles-count"> … 全${allArticles}記事</span>`;
     });
   </script>
 ---
@@ -161,9 +81,6 @@ head: |
 - ブログを購読する際は [Atom フィード](/feeds.xml) をドウゾ ([Feedly で購読する場合はコチラ](http://feedly.com/i/subscription/feed/https://neos21.net/feeds.xml))
 - 記事の内容に関してご意見・ご指摘などがありましたら、[GitHub Discussions](https://github.com/Neos21/Neos21/discussions) か[メール](/about/index.html#mail)にてご連絡ください
 - カテゴリ分類などはありませんが、記事タイトルになるべくキーワードを散りばめるようにしていますので、ブラウザのページ内検索機能か、[サイト内検索](/about/search.html)をご利用ください
-  - 以下にインクリメンタルサーチができる検索ボックスを作ってみました
-
-<input type="text" id="search-within-page" value="" placeholder="ページ内検索">
 
 
 ## 目次

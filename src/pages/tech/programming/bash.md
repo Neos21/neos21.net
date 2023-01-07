@@ -8,15 +8,6 @@ path:
   - /tech/programming/index.html プログラミング
 head: |
   <style>
-    .table-wrapper {
-      overflow-x: auto;
-    }
-    
-    .table-wrapper table {
-      margin-top: 0;
-      margin-bottom: 0;
-    }
-    
     .table-wrapper th,
     .table-wrapper td {
       white-space: nowrap;

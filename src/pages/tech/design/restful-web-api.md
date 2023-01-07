@@ -8,13 +8,7 @@ path:
   - /tech/design/index.html 設計
 head: |
   <style>
-    .table-wrapper {
-      overflow-x: auto;
-    }
-    
     .table-wrapper table {
-      margin-top: 0;
-      margin-bottom: 0;
       font-size: var(--font-size-default);
     }
     

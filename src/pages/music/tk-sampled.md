@@ -7,12 +7,7 @@ path:
   - /music/index.html Music
 head: |
   <style>
-    .table-wrapper {
-      overflow-x: auto;
-    }
-    
     .table-wrapper table {
-      margin: 0;
       min-width: 100%;
       white-space: nowrap;
     }
