@@ -1,7 +1,7 @@
 ---
 title        : Area Swordfish
 created      : 2022-06-21
-last-modified: 2022-06-21
+last-modified: 2023-01-09
 path:
   - /index.html Neo's World
   - /etc/index.html Etc.
@@ -11,6 +11,20 @@ path:
 
 
 ## 目次
+
+
+## セリフ集
+
+- [Swordfish Scripts](/documents/movie/swordfish/scripts.html)
+  - ガブリエルの手下1 : ウィリアム・メイポーザー
+  - ガブリエルの手下2 : ショーン・ウッズ
+  - ガブリエルの手下3 : イリア・ヴォロック
+  - ガブリエルの手下4 : ジョナサン・フレイザー
+  - ガブリエルの手下5 : レオ・リー
+  - 捜査官1 : ティム・ディケイ
+  - ギーク - スコット・バークホルダー
+  - オタク - マーク・ソーパー
+  - ダークスーツ : ニック・ローレン
 
 
 ## 「ギリガン君は？」とは
