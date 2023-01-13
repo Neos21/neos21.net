@@ -223,15 +223,15 @@ Labists というところが出しているスターターキットでラズパ
 
 - ラップトップ : Lenovo ThinkPad X250 (2020-02-14 ～ 2020-03-15)
   - スペック
-    - CPU : Core i5-5300U (2.30GHz)
-    - GPU : Intel HD Graphics 5500 (Broadwell GT2)
-    - RAM : 8GB DDR3 1600MHz
-    - HDD : 500GB → SSD 240GB に換装
-    - Screen : 1366x768 (16:9)
-    - Keyboard : US キーボード
-    - OS : Windows10 Pro 64bit → SSD に換装後 Ubuntu 18.04 をインストール
-    - Weight : 1.45kg
-    - 購入価格 : 約20,000円
+      - CPU : Core i5-5300U (2.30GHz)
+      - GPU : Intel HD Graphics 5500 (Broadwell GT2)
+      - RAM : 8GB DDR3 1600MHz
+      - HDD : 500GB → SSD 240GB に換装
+      - Screen : 1366x768 (16:9)
+      - Keyboard : US キーボード
+      - OS : Windows10 Pro 64bit → SSD に換装後 Ubuntu 18.04 をインストール
+      - Weight : 1.45kg
+      - 購入価格 : 約20,000円
   - 中古で格安の ThinkPad を買い、SSD に換装して Ubuntu 専用機として使っている。1kg 未満の ZenBook や MacBook と比べて若干重さはあるものの、購入価格がいくらもしないので、雑に持ち運べて良い感じだった。
   - しばらく使っているとキーボードの一部キーが完全に効かなくなり、修理に失敗したので手放した。
   - ブログ記事 : [ThinkPad X250 を買った](/blog/2020/02/20-02.html)
