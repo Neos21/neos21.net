@@ -20,7 +20,7 @@ OK、Cancel ボタンを左右どちらに配置するべきか。各種文献�
 
 - iOS Human Interface Guidelines
   - iOS 9 以前は「最も自然なアクション」が「非破壊的なら右側」「破壊的なら左側」としていた
-  - iOS 10 以降は__「常に最も自然なアクションが右側」「常にキャンセルボタンが左側」__となった (MacOS も同じ)
+  - iOS 10 以降は**「常に最も自然なアクションが右側」「常にキャンセルボタンが左側」**となった (MacOS も同じ)
 - Material Design (Google Android) Guidelines
   - 「肯定的なアクションは右側」「否定的なアクションは左側」とされており、MacOS や iOS 10 以降と同じ
 - Windows User Experience Guidelines
@@ -31,12 +31,12 @@ OK、Cancel ボタンを左右どちらに配置するべきか。各種文献�
 ### 参考文献
 
 - 参考：[Alerts - Views - iOS - Human Interface Guidelines - Apple Developer](https://developer.apple.com/design/human-interface-guidelines/ios/views/alerts/)
-  - > Place buttons where people expect them. In general, _buttons people are most likely to tap should be on the right_. __Cancel buttons should always be on the left.__
+  - > Place buttons where people expect them. In general, _buttons people are most likely to tap should be on the right_. **Cancel buttons should always be on the left.**
 - 参考：[Dialogs - Material Design](https://material.io/components/dialogs)
   - > Confirming actions  
     > To resolve what triggered the dialog, confirming actions confirm a proposed action. These actions can involve removing something, such as “Delete” or “Remove,” if it suits the context. They are placed on _the right side of the screen._
   - > Dismissive actions  
-    > Dismissive actions dismiss a proposed action, and return the user to the originating screen or step. They are placed directly to __the left of a confirming action.__
+    > Dismissive actions dismiss a proposed action, and return the user to the originating screen or step. They are placed directly to **the left of a confirming action.**
 - 参考：[ボタン - Windows apps | Microsoft Docs](https://docs.microsoft.com/ja-jp/windows/apps/design/controls/buttons#recommendations)
   - > 同じ意思決定に対して複数のボタンが存在する場合 (確認のダイアログなど)、コミット ボタンは次の順番で提示します。この `"[実行する]"` と `"[実行しない]"` は、主要な指示への具体的な応答になります。
     > 

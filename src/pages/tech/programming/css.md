@@ -15,7 +15,7 @@ path:
 
 `word-break` などのプロパティ、どれを使えば良いのか。
 
-結論：_普段は `word-wrap: break-word`_ を使う。どんな場合でも意地でも折り返したい時は __`word-break: break-all`__ を使う。
+結論：_普段は `word-wrap: break-word`_ を使う。どんな場合でも意地でも折り返したい時は **`word-break: break-all`** を使う。
 
 - `word-wrap`
   - `normal`・`break-word`
@@ -27,4 +27,4 @@ path:
 - `word-break`
   - `normal`・`break-all`・`keep-all`
   - `keep-all` は CJK (日本語など) のみ改行させない
-  - __一切の禁則処理を解除する__ので、好ましくない位置でも折り返しうる
+  - **一切の禁則処理を解除する**ので、好ましくない位置でも折り返しうる

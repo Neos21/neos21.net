@@ -53,7 +53,7 @@ path:
 
 ## プログラミングノウハウ
 
-- __[プログラミングに関する著名な原理・原則の一覧](./principles.html)__
+- **[プログラミングに関する著名な原理・原則の一覧](./principles.html)**
 - [コードのネストを深くしない](./dont-write-deep-nested-code.html)
 - [命名ベストプラクティス](./naming-best-practices.html)
 - [命名アンチパターン](./naming-anti-patterns.html)
@@ -105,7 +105,7 @@ path:
   - コードの共通化は3回同じコード片が登場してから
   - [Sebastian Aaltonen氏のプログラミング観 - Qiita](https://qiita.com/ktnyt/items/0605b5b867f970057939)
 - [コードを書く際の指針として見返すサイトまとめ - Qiita](https://qiita.com/kenichi_cc/items/c3ecca7b7d5fc5c6bf2e)
-- [JavaScriptの非同期処理をキャッシュする場合の注意点 - Qiita](https://qiita.com/YSRKEN/items/f808ef7597b95bdc5879) … __セマフォ__
+- [JavaScriptの非同期処理をキャッシュする場合の注意点 - Qiita](https://qiita.com/YSRKEN/items/f808ef7597b95bdc5879) … **セマフォ**
 - [型変換用メソッドは受け取り側クラスに作る | まくまくいろいろノート](https://maku77.github.io/memo/api-convert-type.html)
 - [単位を明確にする | まくまくいろいろノート](https://maku77.github.io/memo/clarify-unit.html) … コメントではなくてシンボル名から単位を読み取れるのが理想
 - [肯定形で表現する | まくまくいろいろノート](https://maku77.github.io/memo/prefer-positive-sentence.html)
