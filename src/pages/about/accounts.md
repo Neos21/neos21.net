@@ -1,7 +1,7 @@
 ---
 title        : アカウント一覧
 created      : 2020-11-16
-last-modified: 2021-01-23
+last-modified: 2023-01-13
 path:
   - /index.html Neo's World
   - /about/index.html About
@@ -27,7 +27,6 @@ SNS やその他アカウント一覧。
 - [MDN](https://developer.mozilla.org/ja/profiles/Neos21)
 - [Mixi](https://mixi.jp/show_profile.pl?id=21893730)
 - [Niconico](https://www.nicovideo.jp/user/28802876)
-- [Patreon](https://www.patreon.com/Neos21)
 - [Photozou](http://photozou.jp/user/top/174246)
 - [Pinterest](https://www.pinterest.jp/Neos21Pinterest/)
 - [Pixiv](https://www.pixiv.net/users/25482529)
@@ -41,12 +40,14 @@ SNS やその他アカウント一覧。
   - [Reblog Images](https://mg380s.tumblr.com/)
   - [Neo's Dream](https://neos21dream.tumblr.com/)
 - [YouTube](https://www.youtube.com/Neos21)
+  - [Neo's Channel](https://www.youtube.com/@Neos21Channel)
 - [Vercel](https://vercel.com/neos21)
 - [Vimeo](https://vimeo.com/neos21)
 - [VisualStudio.com](https://neos21.visualstudio.com/)
 
 ## 過去情報
 
+- ~~[Coconala](https://profile.coconala.com/users/1578422)~~ : 2021-01-23 退会
+- ~~[Patreon](https://www.patreon.com/Neos21)~~ : 退会
 - Qrunch (`https://neos21.qrunch.io/`) : サービス停止
 - [Zeit](https://zeit.co/neos21) : 現在の Vercel
-- ~~[Coconala](https://profile.coconala.com/users/1578422)~~ : 2021-01-23 退会
