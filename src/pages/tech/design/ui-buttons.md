@@ -26,7 +26,7 @@ OK、Cancel ボタンを左右どちらに配置するべきか。各種文献�
 - Windows User Experience Guidelines
   - 「『実行する』が左側」「『実行しない』が右側」(iOS・MacOS・Android と逆)
 
-ということで、Windows ネイティブなアプリケーションを作るのでなければ、一般的な Web アプリなどでは_「右側に OK」「左側に Cancel」で統一するのが自然_だろう。
+ということで、Windows ネイティブなアプリケーションを作るのでなければ、一般的な Web アプリなどでは*「右側に OK」「左側に Cancel」で統一するのが自然*だろう。
 
 ### 参考文献
 
@@ -34,7 +34,7 @@ OK、Cancel ボタンを左右どちらに配置するべきか。各種文献�
   - > Place buttons where people expect them. In general, _buttons people are most likely to tap should be on the right_. **Cancel buttons should always be on the left.**
 - 参考：[Dialogs - Material Design](https://material.io/components/dialogs)
   - > Confirming actions  
-    > To resolve what triggered the dialog, confirming actions confirm a proposed action. These actions can involve removing something, such as “Delete” or “Remove,” if it suits the context. They are placed on _the right side of the screen._
+    > To resolve what triggered the dialog, confirming actions confirm a proposed action. These actions can involve removing something, such as “Delete” or “Remove,” if it suits the context. They are placed on *the right side of the screen.*
   - > Dismissive actions  
     > Dismissive actions dismiss a proposed action, and return the user to the originating screen or step. They are placed directly to **the left of a confirming action.**
 - 参考：[ボタン - Windows apps | Microsoft Docs](https://docs.microsoft.com/ja-jp/windows/apps/design/controls/buttons#recommendations)

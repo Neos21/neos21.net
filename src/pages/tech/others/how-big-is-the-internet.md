@@ -95,12 +95,12 @@ YouTube はどれほどの動画を保管しているのか。どれだけのサ
 
 - [YouTubeは何故あんなに世界中の大量の動画を保存していられるのですか？どのくらい巨大なサーバーを持っているのですか？に対するOba Hideyukiさんの回答 - Quora](https://jp.quora.com/YouTube%E3%81%AF%E4%BD%95%E6%95%85%E3%81%82%E3%82%93%E3%81%AA%E3%81%AB%E4%B8%96%E7%95%8C%E4%B8%AD%E3%81%AE%E5%A4%A7%E9%87%8F%E3%81%AE%E5%8B%95%E7%94%BB%E3%82%92%E4%BF%9D%E5%AD%98%E3%81%97%E3%81%A6%E3%81%84%E3%82%89/answers/202205933)
   - YouTube がどのようなサーバラックを持っていそうかの推定
-  - 2020年当時、3.5インチ HDD は_1台で 16TB_ のモデルが存在する
-  - Dell EMC ストレージアレイ (エンクロージャ) を例にすると、1台 (5U) で3.5インチ _HDD が84台_搭載できる → 16TB × 84台 = **1,344TB (1.34PB) / 1エンクロージャ**
+  - 2020年当時、3.5インチ HDD は*1台で 16TB* のモデルが存在する
+  - Dell EMC ストレージアレイ (エンクロージャ) を例にすると、1台 (5U) で3.5インチ *HDD が84台*搭載できる → 16TB × 84台 = **1,344TB (1.34PB) / 1エンクロージャ**
       - 1U = Unit … 横幅19インチのサーバラックの、高さを定める単位。1U は 1.75インチ = 44.45mm
       - 参考 : [1Uサーバーの「U」って何を示すの？ | 日経クロステック（xTECH）](https://xtech.nikkei.com/it/article/COLUMN/20110630/361883/)
-  - サーバラック_1棚は 42U_ が標準 → 1棚にストレージアレイが_最大8台_載せられる **(1棚あたり 16TB HDD が672台)** → 1,344TB × 8台 = **10,752TB (10.75PB) / サーバラック1棚**
-  - サーバラックを連ねる一区画は、14棚程度で一束にする。_バスケットボールコート1面分でラックが200棚程度置ける_ → 10,752TB × 200棚 = 2,150,400TB (2,150PB = 2.1EB)
+  - サーバラック*1棚は 42U* が標準 → 1棚にストレージアレイが*最大8台*載せられる **(1棚あたり 16TB HDD が672台)** → 1,344TB × 8台 = **10,752TB (10.75PB) / サーバラック1棚**
+  - サーバラックを連ねる一区画は、14棚程度で一束にする。*バスケットボールコート1面分でラックが200棚程度置ける* → 10,752TB × 200棚 = 2,150,400TB (2,150PB = 2.1EB)
       - 簡単にすると、**サーバラック100棚で 1EB (= 1,000PB = 100万 TB) 保存できる、と思っておくと色々と推定しやすい**
   - テレビ録画用 BD-R 50GB で、6時間録画できることを例にすると…
       - 1エンクロージャ (1,344TB) で… → 1,344,000GB ÷ 50GB × 6時間 = **161,280時間 → 6,720日 分の動画が保存できる**
@@ -109,21 +109,21 @@ YouTube はどれほどの動画を保管しているのか。どれだけのサ
   - 2019年より何年も前に、「YouTube はサーバ代が1日1億円かかっている」という噂があったらしい
 - [YouTubeの全サーバーを合わせた容量はどの程度ですか？ - Quora](https://jp.quora.com/YouTube-no-zen-sa-ba-wo-awa-se-ta-youryou-ha-dono-teido-desu-ka)
   - 2020年よりかなり以前に、「Google のサーバは 5ZB」という噂があったらしい
-  - _2012年2月時点で、200,000,000時間 (2億時間 = 22,831年分) の動画が存在している_
+  - *2012年2月時点で、200,000,000時間 (2億時間 = 22,831年分) の動画が存在している*
       - [YouTubeの動画は99%が見られてないらしい | ライフハッカー［日本版］](https://www.lifehacker.jp/article/160521youtube_99/)
         > 2016年第1四半期（1～3月期）の時点で、YouTubeには18億3000万から21億5000万の動画がアップされている
-  - 2020年2月時点で、_1分あたり500時間分_ = 1時間あたり30,000時間 = _1日あたり720,000時間 (82年分)_ の動画がアップロードされている
+  - 2020年2月時点で、*1分あたり500時間分* = 1時間あたり30,000時間 = *1日あたり720,000時間 (82年分)* の動画がアップロードされている
       - [• YouTube: hours of video uploaded every minute 2020 | Statista](https://www.statista.com/statistics/259477/hours-of-video-uploaded-to-youtube-every-minute/)
         > As of February 2020, more than 500 hours of video were uploaded to YouTube every minute. This equates to approximately 30,000 hours of newly uploaded content per hour.
   - これらの情報から推定
       - 2020年時点で、存在する動画時間の合計は → **1,251,200,000時間 (12.512億時間) = 142,831年 (14.2万年)**
       - そのデータ量は (1時間あたり 4.5GB 程度のファイルサイズと仮定) → 12.512億時間 × 4.5GB = **5.63EB**
       - データを RAID10 で冗長化しているとすると、2倍の **11.26EB 程度のデータを保存していると推定**できる
-  - → 前述の推定を利用すると、_バスケットボールコート6面分くらいの規模で、サーバラックを1,200棚くらい用意することで、2020年までに YouTube にアップロードされた動画を保持していると推測_できる
+  - → 前述の推定を利用すると、*バスケットボールコート6面分くらいの規模で、サーバラックを1,200棚くらい用意することで、2020年までに YouTube にアップロードされた動画を保持していると推測*できる
 - [What is the total size (storage capacity) of YouTube, and at what rate is it increasing? How is Google keeping up with the increasing demands of Youtube’s capacity, given that thousands of videos are uploaded every day? - Quora](https://www.quora.com/What-is-the-total-size-storage-capacity-of-YouTube-and-at-what-rate-is-it-increasing-How-is-Google-keeping-up-with-the-increasing-demands-of-Youtube%E2%80%99s-capacity-given-that-thousands-of-videos-are-uploaded-every-day)
   - 2017年時点の試算
   - 1分あたり100時間分の動画がアップロードされている
-  - 全ての動画を 720p 画質と仮定すると、_毎分 191GB_、**1年で 93PB** もの動画がアップロードされていると推定できる
+  - 全ての動画を 720p 画質と仮定すると、*毎分 191GB*、**1年で 93PB** もの動画がアップロードされていると推定できる
   - 2017年時点までにアップロードされているデータの総量は、約10万の HDD に保存され、10EB に達すると推定している (上述の「11.26EB」という試算と近い)
 - [YouTuber が頻繁に動画をアップロードする場合、YouTube のストレージ容量を完全に確保できない](https://voi.id/ja/teknologi/28159/read) … 2021-01-21 の記事
   - 1分あたり300時間分もの動画がアップロードされているらしい (後述の公式発表によると「1分あたり約100時間」なので多いか？)

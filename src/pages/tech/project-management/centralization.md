@@ -40,4 +40,4 @@ path:
 - 何度も登場する情報は変数化する (マジックナンバー、ハードコーディングを避ける)
 - 何度も行う処理はメソッド化する (コピペプログラミングを避ける)
 
-など、つまり <abbr title="Don't Repeat Yourself">DRY</abbr>、_繰り返しを避けること_にも繋がる。
+など、つまり <abbr title="Don't Repeat Yourself">DRY</abbr>、*繰り返しを避けること*にも繋がる。
