@@ -1,10 +1,10 @@
-const fs = require('fs');
-const path = require('path');
+import fs from 'node:fs';
+import path from 'node:path';
 
-const constants = require('../lib/constants');
-const isNotFuture = require('../lib/is-not-future');
-const listFiles = require('../lib/list-files');
-const makeDirectory = require('../lib/make-directory');
+import { constants } from '../lib/constants.js';
+import { isNotFuture } from '../lib/is-not-future.js';
+import { listFiles } from '../lib/list-files.js';
+import { makeDirectory } from '../lib/make-directory.js';
 
 /*!
  * `src/pages/` 配下のファイルを見てサイトマップを生成する (`src/documents/` は対象外)

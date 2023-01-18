@@ -1,20 +1,74 @@
-const fs = require('fs');
-const path = require('path');
+import fs from 'node:fs';
+import path from 'node:path';
 
-const browserSync = require('browser-sync').create();
+import browserSync from 'browser-sync';
 
-const buildCss = require('../lib/build-css');
-const buildHtml = require('../lib/build-html');
-const buildMarkdown = require('../lib/build-markdown');
-const constants = require('../lib/constants');
-const copyFile = require('../lib/copy-file');
-const isExist = require('../lib/is-exist');
+import { buildCss } from '../lib/build-css.js';
+import { buildHtml } from '../lib/build-html.js';
+import { buildMarkdown } from '../lib/build-markdown.js';
+import { constants } from '../lib/constants.js';
+import { copyFile } from '../lib/copy-file.js';
+import { isExist } from '../lib/is-exist.js';
 
 /*!
  * 開発サーバを起動する
  */
 
-browserSync.init({
+/**
+ * ファイルを削除する
+ * 
+ * @param {string} sourceFilePath 変更があったファイルパス
+ */
+const unlinkFunc = (sourceFilePath) => {
+  const distFilePath = sourceFilePath.replace(constants.pages.src, constants.pages.dist).replace('.md', '.html');
+  try {
+    fs.unlinkSync(distFilePath);
+    console.log(`Remove File : [${distFilePath}]`);
+  }
+  catch(error) {
+    console.warn(`Failed To Remove File [${distFilePath}]`, error);
+  }
+}
+
+/**
+ * ディレクトリを削除する
+ * 
+ * @param {string} sourceFilePath 変更があったディレクトリパス
+ */
+const unlinkDirFunc = (sourceFilePath) => {
+  const distDirectoryPath = sourceFilePath.replace(constants.pages.src, constants.pages.dist);
+  try {
+    fs.rmdirSync(distDirectoryPath, { recursive: true });
+    console.log(`Remove Directory : [${distDirectoryPath}]`);
+  }
+  catch(error) {
+    console.warn(`Failed To Remove Directory [${distDirectoryPath}]`, error);
+  }
+};
+
+/**
+ * `/blog/YYYY/MM/DD-00.md` ファイルの更新時は `index.md` も更新する
+ * 
+ * @param {string} sourceFilePath 変更があったファイルパス
+ */
+const buildForBlog = (sourceFilePath) => {
+  const match = sourceFilePath.match((/\/blog\/([0-9]{4})\/([0-9]{2})\/[0-9]{2}-[0-9]{2}\.md/u));
+  if(!match) return;
+  
+  console.log(`Build Index Pages For Blog`);
+  const year  = match[1];
+  const month = match[2];
+  buildMarkdown(`${constants.pages.src}/blog/${year}/${month}/index.md`);
+  buildMarkdown(`${constants.pages.src}/blog/${year}/index.md`);
+  buildMarkdown(`${constants.pages.src}/blog/index.md`);
+  buildHtml(`${constants.pages.src}/index.html`);
+};
+
+// Main
+// ================================================================================
+
+const browserSyncInstance = browserSync.create();
+browserSyncInstance.init({
   server: constants.dist,
   port: 3000,
   watch: true,  // `dist/` ディレクトリの変更時に自動リロードする
@@ -76,57 +130,3 @@ browserSync.init({
     }
   ]
 });
-
-
-// ================================================================================
-
-
-/**
- * ファイルを削除する
- * 
- * @param {string} sourceFilePath 変更があったファイルパス
- */
-function unlinkFunc(sourceFilePath) {
-  const distFilePath = sourceFilePath.replace(constants.pages.src, constants.pages.dist).replace('.md', '.html');
-  try {
-    fs.unlinkSync(distFilePath);
-    console.log(`Remove File : [${distFilePath}]`);
-  }
-  catch(error) {
-    console.warn(`Failed To Remove File [${distFilePath}]`, error);
-  }
-}
-
-/**
- * ディレクトリを削除する
- * 
- * @param {string} sourceFilePath 変更があったディレクトリパス
- */
-function unlinkDirFunc(sourceFilePath) {
-  const distDirectoryPath = sourceFilePath.replace(constants.pages.src, constants.pages.dist);
-  try {
-    fs.rmdirSync(distDirectoryPath, { recursive: true });
-    console.log(`Remove Directory : [${distDirectoryPath}]`);
-  }
-  catch(error) {
-    console.warn(`Failed To Remove Directory [${distDirectoryPath}]`, error);
-  }
-}
-
-/**
- * `/blog/YYYY/MM/DD-00.md` ファイルの更新時は `index.md` も更新する
- * 
- * @param {string} sourceFilePath 変更があったファイルパス
- */
-function buildForBlog(sourceFilePath) {
-  const match = sourceFilePath.match((/\/blog\/([0-9]{4})\/([0-9]{2})\/[0-9]{2}-[0-9]{2}\.md/u));
-  if(!match) return;
-  
-  console.log(`Build Index Pages For Blog`);
-  const year  = match[1];
-  const month = match[2];
-  buildMarkdown(`${constants.pages.src}/blog/${year}/${month}/index.md`);
-  buildMarkdown(`${constants.pages.src}/blog/${year}/index.md`);
-  buildMarkdown(`${constants.pages.src}/blog/index.md`);
-  buildHtml(`${constants.pages.src}/index.html`);
-}

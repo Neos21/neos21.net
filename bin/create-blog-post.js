@@ -1,12 +1,12 @@
-const childProcess = require('child_process');
-const fs = require('fs');
+import childProcess from 'node:child_process';
+import fs from 'node:fs';
 
-const constants = require('../lib/constants');
-const isExist = require('../lib/is-exist');
-const isNotFuture = require('../lib/is-not-future');
-const jstNow = require('../lib/jst-now');
-const listFiles = require('../lib/list-files');
-const makeDirectory = require('../lib/make-directory');
+import { constants } from '../lib/constants.js';
+import { isExist } from '../lib/is-exist.js';
+import { isNotFuture } from '../lib/is-not-future.js';
+import { jstNow, jstCurrentYear, zeroPadJstCurrentMonth, zeroPadJstCurrentDate } from '../lib/jst-now.js';
+import { listFiles } from '../lib/list-files.js';
+import { makeDirectory } from '../lib/make-directory.js';
 
 /*!
  * 指定日付のブログ記事の雛形ファイルを配置する
@@ -127,7 +127,7 @@ const isValidDateString = (year, month, date) => {
     }
     
     // (最新記事の日付が現在日を含む過去日であれば) 明日日付で作成するかどうか
-    const jstTomorrow = new Date(jstNow.jstNow);  // 元のオブジェクトを変更しないようにする
+    const jstTomorrow = new Date(jstNow);  // 元のオブジェクトを変更しないようにする
     jstTomorrow.setDate(jstTomorrow.getDate() + 1);  // 1日後 (月・年またぎにも対応)
     const tomorrowYear  = String(jstTomorrow.getFullYear());
     const tomorrowMonth = `0${jstTomorrow.getMonth() + 1}`.slice(-2);
@@ -136,8 +136,8 @@ const isValidDateString = (year, month, date) => {
     if(tomorrowAnswer === 'y') return createBlogPost(tomorrowYear, tomorrowMonth, tomorrowDate);
     
     // 今日日付で作成するかどうか
-    const todayAnswer = await readText(`今日日付 ${jstNow.jstCurrentYear}-${jstNow.zeroPadJstCurrentMonth}-${jstNow.zeroPadJstCurrentDate} で記事ファイルを作りますか？`);
-    if(todayAnswer === 'y') return createBlogPost(jstNow.jstCurrentYear, jstNow.zeroPadJstCurrentMonth, jstNow.zeroPadJstCurrentDate);
+    const todayAnswer = await readText(`今日日付 ${jstCurrentYear}-${zeroPadJstCurrentMonth}-${zeroPadJstCurrentDate} で記事ファイルを作りますか？`);
+    if(todayAnswer === 'y') return createBlogPost(jstCurrentYear, zeroPadJstCurrentMonth, zeroPadJstCurrentDate);
     
     // 引数に相当する年月日の入力を受け付ける (この `if` ブロックを抜けて後続処理につなげる)
     input = await readText('年月日を入力してください (ex. YYYY-MM-DD, YYYYMMDD, MM-DD, MMDD, DD)');
