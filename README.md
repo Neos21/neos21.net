@@ -118,7 +118,7 @@ $ cd ./dist
 
 ### Daily Deploy
 
-日本時間の毎朝8時に `./.github/workflows/daily-deploy.yaml` が動作する。ブログ等の予約投稿処理用。
+日本時間の毎朝7時に `./.github/workflows/daily-deploy.yaml` が動作する。ブログ等の予約投稿処理用。
 
 - `./src/pages/` 配下の HTML・Markdown ファイル内の `last-modified` が当日日付のファイルを抽出し `./dist/` 配下にビルドする
 - `./src/pages/blog/` 配下の画像ファイル等について、ファイル名が当日日付のファイルを抽出し `./dist/` 配下にコピーする
