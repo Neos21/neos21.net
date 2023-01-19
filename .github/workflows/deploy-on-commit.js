@@ -21,9 +21,9 @@ const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
   // 前 Step で JSON ファイルに書き出しておいた変更ファイル一覧を取得する
   // ファイルパスは `'src/pages/index.html'` のようにプロジェクトルートからの表記になっている
   // 対象ファイルが一つもない場合は空配列 `[]` が記載されている。必ず3ファイルとも存在しないとこのスクリプトは動作しない
-  const addedModified = JSON.parse(fs.readFileSync('../../temp/added_modified.json', 'utf8-'));
-  const renamed       = JSON.parse(fs.readFileSync('../../temp/renamed.json'       , 'utf8-'));
-  const removed       = JSON.parse(fs.readFileSync('../../temp/removed.json'       , 'utf8-'));  // 削除されたファイルがあるかどうかの確認だけ
+  const addedModified = JSON.parse(fs.readFileSync('../../temp/added_modified.json', 'utf-8'));
+  const renamed       = JSON.parse(fs.readFileSync('../../temp/renamed.json'       , 'utf-8'));
+  const removed       = JSON.parse(fs.readFileSync('../../temp/removed.json'       , 'utf-8'));  // 削除されたファイルがあるかどうかの確認だけ
   if(removed.length) console.log('Removed Files Exist. Please Remove Manually');
   
   // `src/` 配下の変更ファイルのみ扱う
