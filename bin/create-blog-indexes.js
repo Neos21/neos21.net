@@ -1,9 +1,9 @@
-const fs = require('fs');
-const path = require('path');
+import fs from 'node:fs';
+import path from 'node:path';
 
-const constants = require('../lib/constants');
-const isExist = require('../lib/is-exist');
-const listDirectories = require('../lib/list-directories');
+import { constants } from '../lib/constants.js';
+import { isExist } from '../lib/is-exist.js';
+import { listDirectories } from '../lib/list-directories.js';
 
 /*!
  * `src/pages/blog/` 配下に年月のディレクトリがあるのに `index.md` がなければ作る

@@ -1,7 +1,7 @@
-const childProcess = require('child_process');
-const fs = require('fs');
+import childProcess from 'node:child_process';
+import fs from 'node:fs';
 
-const constants = require('../lib/constants');
+import { constants } from '../lib/constants.js';
 
 /*!
  * Git の差分ファイル一覧を表示する

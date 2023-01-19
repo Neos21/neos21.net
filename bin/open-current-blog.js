@@ -1,14 +1,14 @@
-const childProcess = require('child_process');
+import childProcess from 'node:child_process';
 
-const constants = require('../lib/constants');
-const jstNow = require('../lib/jst-now');
+import { constants } from '../lib/constants.js';
+import { jstCurrentYear, zeroPadJstCurrentMonth } from '../lib/jst-now.js';
 
 /*!
  * VSCode で現在月のディレクトリを開く
  */
 
 try {
-  const currentBlogIndexPath = `${constants.pages.src}/blog/${jstNow.jstCurrentYear}/${jstNow.zeroPadJstCurrentMonth}/index.md`;
+  const currentBlogIndexPath = `${constants.pages.src}/blog/${jstCurrentYear}/${zeroPadJstCurrentMonth}/index.md`;
   childProcess.execFileSync('code', ['-a', currentBlogIndexPath]);
 }
 catch(error) {

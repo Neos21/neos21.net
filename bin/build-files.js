@@ -1,12 +1,12 @@
-const fs = require('fs');
+import fs from 'node:fs';
 
-const buildCss = require('../lib/build-css');
-const buildHtml = require('../lib/build-html');
-const buildMarkdown = require('../lib/build-markdown');
-const constants = require('../lib/constants');
-const copyFile = require('../lib/copy-file');
-const jstNow = require('../lib/jst-now');
-const listFiles = require('../lib/list-files');
+import { buildCss } from '../lib/build-css.js';
+import { buildHtml } from '../lib/build-html.js';
+import { buildMarkdown } from '../lib/build-markdown.js';
+import { constants } from '../lib/constants.js';
+import { copyFile } from '../lib/copy-file.js';
+import { jstCurrentYear, zeroPadJstCurrentMonth } from '../lib/jst-now.js';
+import { listFiles } from '../lib/list-files.js';
 
 /*!
  * 引数で指定されたファイル (1つ以上) をビルド処理する
@@ -16,7 +16,10 @@ const listFiles = require('../lib/list-files');
  */
 
 const argFilePaths = process.argv.slice(2);
-if(!argFilePaths.length) return console.log('Please Select Source File(s)');
+if(!argFilePaths.length) {
+  console.log('Please Select Source File(s)');
+  process.exit();
+}
 
 // 重複を除外するために Set を使う
 const sourceFilePathsSet = new Set(argFilePaths);
@@ -26,8 +29,8 @@ sourceFilePathsSet.add(`${constants.pages.src}/index.html`);
 sourceFilePathsSet.add(`${constants.pages.src}/about/new.html`);
 sourceFilePathsSet.add(`${constants.pages.src}/about/sitemap.md`);
 sourceFilePathsSet.add(`${constants.pages.src}/blog/index.md`);
-sourceFilePathsSet.add(`${constants.pages.src}/blog/${jstNow.jstCurrentYear}/index.md`);
-sourceFilePathsSet.add(`${constants.pages.src}/blog/${jstNow.jstCurrentYear}/${jstNow.zeroPadJstCurrentMonth}/index.md`);
+sourceFilePathsSet.add(`${constants.pages.src}/blog/${jstCurrentYear}/index.md`);
+sourceFilePathsSet.add(`${constants.pages.src}/blog/${jstCurrentYear}/${zeroPadJstCurrentMonth}/index.md`);
 
 // ディレクトリが指定されていた時に配下のファイルを追加する (ディレクトリ指定時は末尾スラッシュなし)
 const beforeSourceFilePaths = Array.from(sourceFilePathsSet);

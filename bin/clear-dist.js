@@ -1,8 +1,8 @@
-const fs = require('fs');
+import fs from 'node:fs';
 
-const constants = require('../lib/constants');
-const listDirectories = require('../lib/list-directories');
-const makeDirectory = require('../lib/make-directory');
+import { constants } from '../lib/constants.js';
+import { listDirectories } from '../lib/list-directories.js';
+import { makeDirectory } from '../lib/make-directory.js';
 
 /*!
  * `dist/` ディレクトリを削除して配下に空ディレクトリを作成する
@@ -11,7 +11,10 @@ const makeDirectory = require('../lib/make-directory');
  */
 
 // `dist/` ディレクトリを削除して再作成する
-fs.rmdirSync(constants.dist, { recursive: true });
+try {
+  fs.rmSync(constants.dist, { recursive: true });
+}
+catch(_error) { /* Do Nothing */ }
 makeDirectory(constants.dist, false);
 
 // `src/pages/` 配下のサブディレクトリパスを抽出し、空ディレクトリを作成したい `dist/` 配下のフルパスに変換する
