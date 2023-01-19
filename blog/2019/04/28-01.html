@@ -110,14 +110,14 @@
 2019-01-01 00:00:11 [TRACE] main() 呼び出し終了・結果 = []
 </code></pre>
 <p><code>exec()</code> 関数内の <code>catch</code> 句が例外をキャッチし、エラーコードをログ出力した上で、空の文字列を返却する。<code>main()</code> 関数から見るとエラーは握り潰されているので、正常な結果ということで、空の文字列を受け取って終了するはずだたｔ.</p>
-<p><strong>が、実際は次のようなログが出力された。</strong></p>
+<p><strong>が、実際は次のようなログが出力された</strong>。</p>
 <pre><code>2019-01-01 00:00:00 [TRACE] main() 開始
 2019-01-01 00:00:01 [TRACE] main() 実処理呼び出し
 2019-01-01 00:00:02 [TRACE] exec() 開始
 2019-01-01 00:00:12 [ERROR] main() 例外を検知・異常終了
 </code></pre>
 <p>今回は「一見しただけでは見つけにくかったバグを紹介する」と前置きして、順に説明しているので、原因になりそうなコード行がもうお分かりかと思う。</p>
-<p>しかし、いきなりこのログの並びだけを見ると、<strong>「<code>exec()</code> 関数は <code>try / catch</code> で囲んでいるのに、どうして <code>catch</code> 句をすり抜けて <code>main()</code> 関数に戻ってるの？！」</strong>と思うワケだ。また実際のコードはもっと処理 (行数) が多いので、何が起こっているのか余計に分かりにくくなるのだ。</p>
+<p>しかし、いきなりこのログの並びだけを見ると、「<strong><code>exec()</code> 関数は <code>try / catch</code> で囲んでいるのに、どうして <code>catch</code> 句をすり抜けて <code>main()</code> 関数に戻ってるの？！</strong>」と思うワケだ。また実際のコードはもっと処理 (行数) が多いので、何が起こっているのか余計に分かりにくくなるのだ。</p>
 <h2 id="catch-句の中で例外が発生している"><a class="header-link" href="#catch-句の中で例外が発生している"><span class="header-link-mark"></span></a><code>catch</code> 句の中で例外が発生している</h2>
 <p>さて、このような奇妙なログの並び方をする理由は、<code>exec()</code> 関数の <code>catch</code> 句内にある、以下のコードが原因だ。</p>
 <pre class="language-javascript"><code class="language-javascript"><span class="token keyword control-flow">catch</span><span class="token punctuation">(</span>error<span class="token punctuation">)</span> <span class="token punctuation">{</span>
@@ -128,7 +128,7 @@
 <p>しかし、<code>myStorage.getData()</code> 関数がスローした <code>error</code> オブジェクトが <strong><code>details</code> オブジェクトを持っていなかった場合</strong>は、以下のような例外が発生する。</p>
 <pre><code>TypeError: Cannot read property 'statusCode' of undefined
 </code></pre>
-<p><strong><code>catch</code> 句の中で発生した例外は、呼び出し元に伝搬する。</strong>エラーログを出力するためのこの行で例外が発生した場合は、「<code>exec() 例外を検知</code>」というエラーログが出力されないまま、呼び出し元である <code>main()</code> 関数の <code>catch</code> 句が例外を拾い、突然「<code>main() 例外を検知・異常終了</code>」と出力されたように見える、というワケだ。</p>
+<p><strong><code>catch</code> 句の中で発生した例外は、呼び出し元に伝搬する</strong>。エラーログを出力するためのこの行で例外が発生した場合は、「<code>exec() 例外を検知</code>」というエラーログが出力されないまま、呼び出し元である <code>main()</code> 関数の <code>catch</code> 句が例外を拾い、突然「<code>main() 例外を検知・異常終了</code>」と出力されたように見える、というワケだ。</p>
 <p>例外を捕捉するための <code>catch</code> 句の中で例外が発生している、という可能性は、最初はなかなか思い当たらないだろう。しかし、おかしな動きをしている時は、「ココでキャッチしている<strong>はず</strong>だから…」といった思い込みを捨て、<em><code>catch</code> 句の中に問題はないか</em>と調べる癖を付けたい。</p>
 <h2 id="ログ出力処理そのものが悪影響を及ぼす"><a class="header-link" href="#ログ出力処理そのものが悪影響を及ぼす"><span class="header-link-mark"></span></a>「ログ出力処理」そのものが悪影響を及ぼす</h2>
 <p>また、この例で厄介なのは、<em>エラーの内容を把握するために仕込んだはずのログ出力処理自体に問題</em>があって、エラーの詳細が表に現れなかったところだ。</p>
@@ -158,7 +158,7 @@
   <span class="token punctuation">}</span>
 <span class="token punctuation">}</span>
 </code></pre>
-<p>JavaScript の場合であれば、ログ出力したい値を直接ロガーに渡すのではなく、<em>ログ出力したい値を返す「関数」</em>を渡すようなラッパーを実装すれば、ロギングによる例外発生を防げるだろう。</p>
+<p>JavaScript の場合であれば、ログ出力したい値を直接ロガーに渡すのではなく、<em>ログ出力したい値を返す「関数」を渡す</em>ようなラッパーを実装すれば、ロギングによる例外発生を防げるだろう。</p>
 <pre class="language-javascript"><code class="language-javascript"><span class="token comment">// INFO ログを出力するロガーのラッパー関数</span>
 <span class="token keyword">function</span> <span class="token function">infoLogWrap</span><span class="token punctuation">(</span><span class="token parameter">fn</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
   <span class="token keyword control-flow">try</span> <span class="token punctuation">{</span>

@@ -58,13 +58,13 @@
         <div id="header-date"><time>2019-02-28</time></div>
         <h1 id="page-title">LINE Messaging API : Reply API におけるリプライトークンの有効期限は30秒 (独自調べ)</h1>
 
-<p>前回、<em>LINE Messaging API</em> を利用してユーザにオウム返しするチャットボットを作成したが、その際<strong>「Reply API」</strong>という API を利用してユーザへの返信を行った。</p>
+<p>前回、<em>LINE Messaging API</em> を利用してユーザにオウム返しするチャットボットを作成したが、その際「<strong>Reply API</strong>」という API を利用してユーザへの返信を行った。</p>
 <ul>
   <li><a href="/blog/2019/02/27-01.html">LINE Messaging API を使ってオウム返しする Node.js 製チャットボットを作ってみる</a></li>
 </ul>
 <p>今回は、この Reply API に関する仕様について。</p>
 <h2 id="reply-api-とは"><a class="header-link" href="#reply-api-とは"><span class="header-link-mark"></span></a>Reply API とは</h2>
-<p>Reply API は、リクエストに付与されている<em>「リプライトークン」</em>というモノをキーにして返信処理が行える仕組みだ。開発者はユーザ ID などを知らなくても返信ができ、Messaging API において最も利用される API であろう。</p>
+<p>Reply API は、リクエストに付与されている「<em>リプライトークン</em>」というモノをキーにして返信処理が行える仕組みだ。開発者はユーザ ID などを知らなくても返信ができ、Messaging API において最も利用される API であろう。</p>
 <h2 id="リプライトークンに有効期限がある"><a class="header-link" href="#リプライトークンに有効期限がある"><span class="header-link-mark"></span></a>リプライトークンに有効期限がある</h2>
 <p>この「リプライトークン」には有効期限があるので、メッセージを受信したらできるだけ素早く返信しないといけない。</p>
 <blockquote>
@@ -73,13 +73,13 @@
     <li>参考：<a href="https://developers.line.biz/ja/reference/messaging-api/#send-reply-message">Messaging APIリファレンス</a></li>
   </ul>
 </blockquote>
-<p>このとおり、公式の API リファレンスでも<strong>「一定の期間」</strong>と記載があるのは分かったが、具体的にどのくらい経過すると無効になるのかが分からなかった。</p>
+<p>このとおり、公式の API リファレンスでも「<strong>一定の期間</strong>」と記載があるのは分かったが、具体的にどのくらい経過すると無効になるのかが分からなかった。</p>
 <p>たまたまコネがあって、LINE の人に直接問い合わせたことがあったのだが、<em>リプライトークンの有効期限は公表していない</em>、というのが回答だった (LINE はわりかしサポートが不親切な印象)。</p>
 <h2 id="自分で調べてみた"><a class="header-link" href="#自分で調べてみた"><span class="header-link-mark"></span></a>自分で調べてみた</h2>
 <p>そこで、自分で検証することにした。</p>
 <p>前回のオウム返し Bot のソースコードをちょっと加工して、「ユーザが発言した秒数だけレスポンスを待つ」というコードを作った。<code>event.message.text</code> を数値に変換して、<code>setTimeout()</code> の第2引数に与えるようにしただけ。こうすれば、ソースコードの変更は1回こっきりで、Reply API のコールを遅延させるタイミングを自在に変えられる。あとはリクエストの受信直後と、Reply API のコール前後で時刻を出力し、経過時間をチェックできるようにした。</p>
 <p>それで色々検証した結果、Webhook サーバがメッセージを受信してから<strong>30秒以内</strong>に Reply API をコールしないと <code>400 Bad Request</code> が返ってきてしまい、返信できなかった。ユーザからのメッセージを LINE API サーバが受信し、<em>LINE API サーバがリプライトークンを生成した時点から30秒間以内</em>、というのが、恐らくは正確な秒数だろうか。</p>
-<p>ネット上で調べた感じでも、「数十秒」とか「30秒」と表現している人が何名かいたので、現時点では<strong>「30秒以内に返信しないとダメ」</strong>というのが、リプライトークンの仕様だといえるだろう。</p>
+<p>ネット上で調べた感じでも、「数十秒」とか「30秒」と表現している人が何名かいたので、現時点では「<strong>30秒以内に返信しないとダメ</strong>」というのが、リプライトークンの仕様だといえるだろう。</p>
 <ul>
   <li>参考：<a href="https://uzulla.hateblo.jp/entry/2016/10/06/230309">LINEのMessaging APIを使うメモ：事前知識と登録編 - uzullaがブログ</a>
     <ul>
@@ -116,7 +116,7 @@
 <p>Push API は、「Developer Trial」プランか、有償プランでないと利用できない。チャネル作成時に「フリー」プランを選んでしまった場合は残念ながら利用できないので、チャネルから作り直しだ。</p>
 <h2 id="line-api-サーバへのレスポンスは1分以内に"><a class="header-link" href="#line-api-サーバへのレスポンスは1分以内に"><span class="header-link-mark"></span></a>LINE API サーバへのレスポンスは1分以内に</h2>
 <p>ちなみにだが、<code>/callback</code> パスで LINE API サーバからのリクエストを受け取った時に、このリクエストに対するレスポンスは何秒以内に行えば良いのか。</p>
-<p>コチラは、LINE 公式から<em>「1分以内を推奨」</em>と云われた。レスポンスにそれ以上かかると、Webhook サーバとの通信エラーとみなされるようだ (だからといって特にペナルティ等はなさそう)。</p>
+<p>コチラは、LINE 公式から「<em>1分以内を推奨</em>」と云われた。レスポンスにそれ以上かかると、Webhook サーバとの通信エラーとみなされるようだ (だからといって特にペナルティ等はなさそう)。</p>
 <p>もっと大量のリクエストを処理するようなチャネルに成長した場合は、<em><code>/callback</code> パスでリクエストを分解して Reply API をコールして、その結果を待ってからレスポンスする</em>、といった作りは、時間がかかりすぎるので NG だ。</p>
 <ul>
   <li>参考：<a href="https://qiita.com/yoichiro6642/items/6d4c7309210af20a5c8f">大量メッセージが来ても安心なLINE BOTサーバのアーキテクチャ - Qiita</a> … この記事に書かれている「多くの人がやっちゃう間違い」にドンズバ当てはまる実装をしていた</li>
