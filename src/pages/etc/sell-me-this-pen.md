@@ -23,7 +23,7 @@ path:
 
 よって、「単一の正解」があるワケではないことは分かっているが、そうはいってもどういう模範解答が考えられるかは何となく知っておきたいと思い、このページでそれをまとめてみることにした。
 
-- 参考：[Sell Me This Pen - 3 Best Answers For Your Sales Interview - YouTube](https://www.youtube.com/watch?v=4V2rGGSfcfk)
+- 参考 : [Sell Me This Pen - 3 Best Answers For Your Sales Interview - YouTube](https://www.youtube.com/watch?v=4V2rGGSfcfk)
   - 面接官が見ているポイント
       - どのように顧客の感情を揺さぶり、掴もうとしているか
       - (いきなりペンのプレゼンを始めたりするのではなく) 相手がどうしてペンを欲しがっているのかなど、面接官から情報を聞き取ろうとする「情報収集能力」を見極められている
@@ -41,7 +41,7 @@ path:
 > 面接官「ブルース・リーかな」  
 > 回答者「ふむ…。このペンは、ブルース・リーが著書を書いた時に使ったペンです。あなたは『ブルース・リーの歴史の一部』が欲しくないですか？」
 
-- 参考：[Sell Me This Pen - 3 Best Answers For Your Sales Interview - YouTube](https://www.youtube.com/watch?v=4V2rGGSfcfk)
+- 参考 : [Sell Me This Pen - 3 Best Answers For Your Sales Interview - YouTube](https://www.youtube.com/watch?v=4V2rGGSfcfk)
 
 相手が欲しいと思うようなポイントを作るために、面接官に質問をし、面接官の感情を揺さぶる設定を盛り込む。他ではないその商品に対する「思い入れ」を持たせる。
 
@@ -69,7 +69,7 @@ path:
 > 面接官「分からないですが、多分、20ドルくらいじゃないでしょうか。」  
 > 回答者「商談成立ですね」
 
-- 参考：[「オレにこのペンを売ってみろ」面接でこの質問をされたらどう答える？ | ライフハッカー［日本版］](https://www.lifehacker.jp/article/160901sell_me_this/)
+- 参考 : [「オレにこのペンを売ってみろ」面接でこの質問をされたらどう答える？ | ライフハッカー［日本版］](https://www.lifehacker.jp/article/160901sell_me_this/)
 
 ジグ・ジグラーという人のデモンストレーションより、ペンではなく灰皿で実演しているが、ポイントは同じ。
 
@@ -81,7 +81,7 @@ path:
 > 面接官「このペンを1万円で私に売ってください」  
 > 回答者「はい、では1万円支払ってください」
 
-- 参考：[【速報】面接官「このボールペンを1万円で私に売ってください」←ついに通過者現る：キニ速](http://blog.livedoor.jp/kinisoku/archives/5346720.html)
+- 参考 : [【速報】面接官「このボールペンを1万円で私に売ってください」←ついに通過者現る : キニ速](http://blog.livedoor.jp/kinisoku/archives/5346720.html)
 
 「私に向かって売り込んでみてください」という意図だったはずの「売ってください」という言葉を、「**どうか私に買わせてください！**」と頼み込んできた、という風に解釈した*ネタ回答。*「売ってくれって言うなら、売ってやるけど？はいどうぞ」という。
 

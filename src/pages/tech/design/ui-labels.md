@@ -33,7 +33,7 @@ path:
 
 ココは潔く、*「古い記事」*、**「新しい記事」**、というリンクラベルにするのはどうだろうか。文字数は揃わないが、Prev・Next に近い時系列的な概念を伝えられるし、「前後・後先」のような紛らわしい語を使わないことで、分かりやすさを優先している。自分が以前運営していたはてなブログでは、自分でカスタマイズしてこのように表現を調整していた。
 
-- 参考：[ブログの“前の記事”と“次の記事”ってわかりにくいよね : tidestar](http://tidestar.jp/2015/07/26/blog-prev-next-article.html)
-- 参考：[from area BOOT4: nextの反対はprevかbackか?](https://areaboot4.blogspot.com/2007/09/nextprevback.html)
+- 参考 : [ブログの“前の記事”と“次の記事”ってわかりにくいよね : tidestar](http://tidestar.jp/2015/07/26/blog-prev-next-article.html)
+- 参考 : [from area BOOT4: nextの反対はprevかbackか?](https://areaboot4.blogspot.com/2007/09/nextprevback.html)
   - `next` ⇔ `prev`。`go` ⇔ `back`
-- 参考：[Next and Previous Links « WordPress Codex](https://codex.wordpress.org/Next_and_Previous_Links)
+- 参考 : [Next and Previous Links « WordPress Codex](https://codex.wordpress.org/Next_and_Previous_Links)

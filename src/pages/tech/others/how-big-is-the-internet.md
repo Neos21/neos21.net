@@ -65,7 +65,7 @@ path:
 
 ## Microsoft Azure の規模
 
-- [ASCII.jp：偽名で運用 !? Azureデータセンターの「トリビア」を集めてみた](https://ascii.jp/elem/000/001/474/1474081/)
+- [ASCII.jp : 偽名で運用 !? Azureデータセンターの「トリビア」を集めてみた](https://ascii.jp/elem/000/001/474/1474081/)
   - データセンタを管理する組織 <abbr title="Microsoft Cloud Infrastructure and Operations">MCIO</abbr> は MS 社内でも秘密の存在
   - Azure のデータセンタは一部の人が見学可能
 - [We Live in the Cloud | Microsoft Story Labs](https://news.microsoft.com/stories/microsoft-datacenter-tour/)

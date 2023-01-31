@@ -59,7 +59,7 @@ $ git tag -a release/v1.1.0 -m 'release/v1.1.0' cfsae229
 $ git push origin release/v1.1.0
 ```
 
-- 参考：[git tagの使い方まとめ - Qiita](https://qiita.com/growsic/items/ed67e03fda5ab7ef9d08)
+- 参考 : [git tagの使い方まとめ - Qiita](https://qiita.com/growsic/items/ed67e03fda5ab7ef9d08)
 
 
 ## CI・CD 用に一時ブランチを Push する

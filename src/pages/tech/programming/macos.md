@@ -242,4 +242,4 @@ $ brew install toilet
 $ brew install --cask cool-retro-term
 ```
 
-- 参考：[Top homebrew packages](https://gist.github.com/pmkay/e09034971b6f23214fd9f95a3e6d1c44)
+- 参考 : [Top homebrew packages](https://gist.github.com/pmkay/e09034971b6f23214fd9f95a3e6d1c44)

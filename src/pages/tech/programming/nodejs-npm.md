@@ -22,8 +22,8 @@ npm パッケージのバージョンには慣例的に SemVer (Semantic Version
   - Major : 後方互換性のない変更 (メジャーバージョンアップ)
   - Minor : 後方互換性のある機能追加 (マイナーバージョンアップ)
   - Patch : 後方互換性のあるバグ修正 (パッチバージョンアップ)
-- 参考：[semverとnpm - tohashi's blog](http://64.hateblo.jp/entry/2014/04/25/045940)
-- 参考：[npm semantic version calculator](https://semver.npmjs.com/)
+- 参考 : [semverとnpm - tohashi's blog](http://64.hateblo.jp/entry/2014/04/25/045940)
+- 参考 : [npm semantic version calculator](https://semver.npmjs.com/)
 
 `package.json` のチルダ `~` とキャレット `^` の見方まとめ。
 

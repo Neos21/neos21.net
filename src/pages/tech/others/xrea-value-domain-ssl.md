@@ -52,9 +52,9 @@ GMO ID は作っても作らなくても良いです。ドメイン購入用の�
 
 Value-Domain と連携して作成できるレンタルスペースサービスには3種類あります。
 
-- **[XREA](https://www.xrea.com/)**：広告が付くが無料で作成できる・CGI・SSL にも対応・有料プランにすれば広告を外せる
-- [Value-Server](https://www.value-domain.com/rental-server/vs/)：格安で始められるレンタルサーバ
-- [Core-Server](https://www.value-domain.com/rental-server/core/)：法人でも使える高性能レンタルサーバ
+- **[XREA](https://www.xrea.com/)** : 広告が付くが無料で作成できる・CGI・SSL にも対応・有料プランにすれば広告を外せる
+- [Value-Server](https://www.value-domain.com/rental-server/vs/) : 格安で始められるレンタルサーバ
+- [Core-Server](https://www.value-domain.com/rental-server/core/) : 法人でも使える高性能レンタルサーバ
 
 このページでは、私が XREA サーバのアカウントを既に持っていたので、XREA を前提に話しますが、より高性能なサーバが必要な場合は Value-Server や Core-Server を検討すると良いでしょう。Value-Domain で取得した独自ドメインは他のウェブスペース等とも紐付けできますが、同じ GMO 内のサーバと連携する場合は設定がより容易です。
 

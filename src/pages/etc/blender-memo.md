@@ -28,7 +28,7 @@ path:
 
 ### 水のシミュレーション
 
-- 2021-07-11 : [【blender2.9】え！CG？流体シミュレーション　Byタピオカミルクティー - YouTube](https://www.youtube.com/watch?v=j-7y37e0sHA)
+- 2021-07-11 : [【blender2.9】え！CG？流体シミュレーション Byタピオカミルクティー - YouTube](https://www.youtube.com/watch?v=j-7y37e0sHA)
 - 2021-07-11 : [ゆっくりのBlender解説第6回 流体シミュレーション - YouTube](https://www.youtube.com/watch?v=IBi6CXz6zoM)
 - 2021-07-11 : [2.80 Blender Tutorial: Water Simulation in EEVEE, Nearly Real-Time - YouTube](https://www.youtube.com/watch?v=IOtZdysaJEA)
 - 2021-07-11 : [Blender 2.9 フロー 流体シミュレーション - ほろほろりドットコム](https://horohorori.com/blender-note/physics-simulations/about-fluid-simulation-flow/)
@@ -47,7 +47,7 @@ path:
   - クイックエフェクト → クイック煙で簡単にドメインとフローが作れる
   - レンダリング時に炎や煙を表示するには、「Shading」で「Blackbody Intensity」を 0.0 から 1.0 にする
   - > 「ブラックボディーインテンシティ」（日本語のBlenderでは「黒体の強度」）の値をクリックして数値入力で30くらいにするとそれっぽくなりましたよ  
-    > 後その下の「温度」を調節すると低い値なら赤っぽく　高い値なら白っぽくなっていきます。  
+    > 後その下の「温度」を調節すると低い値なら赤っぽく 高い値なら白っぽくなっていきます。  
     > ちなみに上から三番目の「密度」の値で煙の濃さが設定できます。  
     > 一番上のカラーで煙の色。
 - 2021-10-03 : [Blender 2.9で煙と炎の物理シミュレーションを実行する - MRが楽しい](https://bluebirdofoz.hatenablog.com/entry/2020/11/24/231808)

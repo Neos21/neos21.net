@@ -54,7 +54,7 @@ UTF-8・UTF-16 以外にも、様々な「符号化形式」が存在する.
 - 俗に JIS コードと呼ばれる ISO-2022-JP という文字コード規格を移動変更 (シフト) したから Shift-JIS という名称になっている
 - 「Shift-JIS」は基本的に変換方式のことを指すが、Unicode とは違う符号化文字集合 (コードポイントと文字の対応表) を持っている
 - 「外字領域」と呼ばれる、自由に使える文字コードの領域がある。ココを各社が独自に拡張して、亜流な Shift-JIS 規格が生まれている。最も有名なのは *MS932* という Windows で使われる規格
-  - 参考：[JIS X 0208 - Wikipedia](https://ja.wikipedia.org/wiki/JIS_X_0208) … MS932 以外の実装
+  - 参考 : [JIS X 0208 - Wikipedia](https://ja.wikipedia.org/wiki/JIS_X_0208) … MS932 以外の実装
 
 ### EUC-JP とは
 

@@ -27,4 +27,4 @@ iPhone や iPad を対象にした開発で参考になりそうな情報。
   - 拡大 : 375x667 ポイント = 1125x2001 ピクセル
 - iPad 3・4、Air 1・2、Pro 9.7
   - 9.7 インチ = 768x1024 ポイント = 1536x2048 ピクセル
-- 参考：[iPhone/iPad/Apple Watch解像度(画面サイズ)早見表 - Qiita](https://qiita.com/tomohisaota/items/f8857d01f328e34fb551)
+- 参考 : [iPhone/iPad/Apple Watch解像度(画面サイズ)早見表 - Qiita](https://qiita.com/tomohisaota/items/f8857d01f328e34fb551)

@@ -38,8 +38,8 @@ BASIC 認証のテストに使えるサイトを紹介する。
   - `username:password` 形式の文字列を Base64 エンコードし、先頭に `Basic` を付け `Basic dXNlcm5hbWU6cGFzc3dvcmQK` のように組み立てる
   - ex. `Authorization:Basic dXNlcm5hbWU6cGFzc3dvcmQK`
   - プロキシサーバがある場合は `Proxy-Authorization` ヘッダを使う
-  - 参考：[Authorization - HTTP | MDN](https://developer.mozilla.org/ja/docs/Web/HTTP/Headers/Authorization)
-  - 参考：[Proxy-Authorization - HTTP | MDN](https://developer.mozilla.org/ja/docs/Web/HTTP/Headers/Proxy-Authorization)
+  - 参考 : [Authorization - HTTP | MDN](https://developer.mozilla.org/ja/docs/Web/HTTP/Headers/Authorization)
+  - 参考 : [Proxy-Authorization - HTTP | MDN](https://developer.mozilla.org/ja/docs/Web/HTTP/Headers/Proxy-Authorization)
 
 
 ## BASIC 認証付きリクエストのコードサンプル
@@ -63,8 +63,8 @@ $ wget 'https://username:password@example.com/'
 
 - JavaScript … `window.fetch()` Fetch API の場合
   - Base64 エンコードに `btoa()` を使用している
-  - 参考：[Fetch の使用 - Web API | MDN](https://developer.mozilla.org/ja/docs/Web/API/Fetch_API/Using_Fetch)
-  - 参考：[WindowOrWorkerGlobalScope.btoa() - Web API | MDN](https://developer.mozilla.org/ja/docs/Web/API/btoa)
+  - 参考 : [Fetch の使用 - Web API | MDN](https://developer.mozilla.org/ja/docs/Web/API/Fetch_API/Using_Fetch)
+  - 参考 : [WindowOrWorkerGlobalScope.btoa() - Web API | MDN](https://developer.mozilla.org/ja/docs/Web/API/btoa)
 
 ```javascript
 const response = await window.fetch('https://example.com/', {

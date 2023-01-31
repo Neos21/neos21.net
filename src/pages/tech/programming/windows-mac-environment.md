@@ -89,7 +89,7 @@ Windows のみ、Mac のみに対応しているソフトで、どうしても�
 
 見出しのソフト名は、Windows 用・Mac 用の順で記している。
 
-### メモ帳：NotePad++・CotEditor
+### メモ帳 : NotePad++・CotEditor
 
 サッと何か文章を書きたい時に使う、シンプルなメモ帳。自分は以下を使っている。
 
@@ -106,7 +106,7 @@ Windows では[メモ帳++](http://hp.vector.co.jp/authors/VA017405/soft.html)�
 
 CotEditor は Mac App Store からインストール可能。
 
-### FTP クライアント：FFFTP・FileZilla
+### FTP クライアント : FFFTP・FileZilla
 
 FileZilla は Windows・Linux 用も提供されているので、全ての OS で FileZilla を使用しても良いのだが、FFFTP は馴染みが深いので、ついつい…。ちなみに元々自分は「ホームページビルダー」に付属の「FTP ツール」から使い始めました…。
 
@@ -117,7 +117,7 @@ FileZilla は Windows・Linux 用も提供されているので、全ての OS �
 
 ちなみに Mac App Store 内にも FileZilla があるが、コチラは有料版なので注意。無料版は FileZilla の公式サイトからダウンロードする。
 
-### ターミナル：Windows Terminal・ターミナル.app
+### ターミナル : Windows Terminal・ターミナル.app
 
 ターミナルソフトは、最近ようやく OS 公式のソフトが定まったと思う。
 
@@ -137,7 +137,7 @@ Windows は、長らく GitBash (Msys ベース) を使ってきたが、MS 謹�
 
 ココからは、Windows と Mac とで同じアプリをインストールすれば良いモノを紹介する。
 
-### ブラウザ：Chrome・Firefox・Edge
+### ブラウザ : Chrome・Firefox・Edge
 
 Chrome・Firefox・Chromium Edge ブラウザはクロスプラットフォームで利用できる。それぞれアカウントを用意すれば複数デバイスで設定を同期できるので、とても助かる。
 
@@ -145,13 +145,13 @@ Chrome・Firefox・Chromium Edge ブラウザはクロスプラットフォー�
 
 OS 固有なブラウザというと、Windows ではサポートが切れかかっている IE と Legacy Edge、Mac では Safari ブラウザぐらい。Mac Safari は iOS Safari と同様の路線なので、なかなか無視しづらいのが難点…。Safari さえ除けば、基本的には Chrome にさえ対応すれば良い時代になったので、とても楽になった…。
 
-### エディタ：VSCode
+### エディタ : VSCode
 
 開発エディタ・IDE は [VSCode](https://code.visualstudio.com/) 一択。一時期は Atom や Sublime Text なども人気だったが、MS がバックについている強みは凄い。統合ターミナルがどのエディタよりも軽量・高速に動作するし、多数の拡張機能がサクッと使える。Docker や WSL、SSH 接続先のサーバとの統合も簡単に行える。Linux 版もあるので、VSCode を選ばない手はないだろう。
 
 ターミナルなどは OS ごとに異なる設定を保持できる。設定は「Settings Sync」拡張機能で同期するようにしておけば、どの OS でも同じ設定・拡張機能を持ち込める。
 
-### オフィススイート：Microsoft Office
+### オフィススイート : Microsoft Office
 
 オフィススイートは最近、色々と互換性があるのでどれを選んでも問題ない。自分は MS Office (Word・Excel・PowerPoint) を Mac にも入れている。やはり Windows 版 Office でキーボードショートカットを多用しての文書作成が捗りまくるので、キーボードショートカットがほとんど使えない Mac 版の不便を選んでも、MS Office を選んでしまう。
 
@@ -164,7 +164,7 @@ OS 固有なブラウザというと、Windows ではサポートが切れかか
 - iWork (Pages・Numbers・Keynote)
   - Mac App Store からすぐ入れられる。MS Office をインストールしていないマシンでとりあえず閲覧する時に
 
-### 画像・動画編集：Adobe CC
+### 画像・動画編集 : Adobe CC
 
 - Adobe Photoshop
 - Adobe Lightroom
@@ -177,7 +177,7 @@ OS 固有なブラウザというと、Windows ではサポートが切れかか
 
 このあたりの Adobe CC 製品は Win・Mac 両方に入れている。特に Photoshop と Premiere Pro は必須。
 
-### 日本語入力システム (IME)：Google 日本語入力
+### 日本語入力システム (IME) : Google 日本語入力
 
 自分は「MS-IME」や「ことえり」は使っていない。[Google 日本語入力](https://www.google.co.jp/ime/) が一番使いやすい。
 
@@ -187,7 +187,7 @@ Windows の場合は [AutoHotKey](https://sites.google.com/site/autohotkeyjp/) �
 
 ちなみに Ubuntu の場合は Google 日本語入力のオープンソース版である Mozc (fcitx-mozc) を用いると同じ感覚で変換できる。Alt キーの空打ちによる IME 切り替えは Fcitx で実現できる。
 
-### フォント：Noto Sans Mono CJK JP
+### フォント : Noto Sans Mono CJK JP
 
 Windows と Mac には游ゴシックフォントが標準搭載されているが、搭載されているウェイトに違いがあったりして、厳密には同じように表示できなかったりする。
 
@@ -279,7 +279,7 @@ if -b 'command -v clip.exe > /dev/null 2>&1'  'bind-key -T copy-mode-vi Enter se
 ```
 
 
-## 最後に：各 OS の良いところはそれぞれそのまま使う
+## 最後に : 各 OS の良いところはそれぞれそのまま使う
 
 コレまで、OS の差異を減らすための Tips を紹介してきたが、**無理に合わせすぎないこと**も大事にして欲しい。それぞれの OS にはそれぞれの設計思想があるので、それを捻じ曲げるようなカスタマイズは、標準から逸脱してかえって使いづらくなってしまう。
 

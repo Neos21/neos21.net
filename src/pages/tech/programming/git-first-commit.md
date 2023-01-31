@@ -20,4 +20,4 @@ $ git commit --allow-empty -m 'Init'
 
 最初のコミットを Rebase したくなった時にやりづらくなるのを避ける狙いと、ブランチ作成地点が後で探しやすくなるため、オススメである。
 
-- 参考：[Gitの最初のコミットは空コミットにしよう - Qiita](https://qiita.com/NorsteinBekkler/items/b2418cd5e14a52189d19)
+- 参考 : [Gitの最初のコミットは空コミットにしよう - Qiita](https://qiita.com/NorsteinBekkler/items/b2418cd5e14a52189d19)

@@ -72,7 +72,7 @@ $ tail -f ./apache/logs/catalina.out | nkf -u -w
 - `command > /dev/null 2>&1`
   - 標準エラー出力の結果を標準出力にマージし、標準出力を捨てる
   - 全て握りつぶすにはこうする
-- 参考：[いい加減覚えよう。command > /dev/null 2>&1 の意味 - Qiita](https://qiita.com/ritukiii/items/b3d91e97b71ecd41d4ea)
+- 参考 : [いい加減覚えよう。command > /dev/null 2>&1 の意味 - Qiita](https://qiita.com/ritukiii/items/b3d91e97b71ecd41d4ea)
 
 
 ## `tar` コマンドのオプション

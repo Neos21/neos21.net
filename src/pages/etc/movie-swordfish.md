@@ -47,7 +47,7 @@ path:
 
 ちなみにこの「ギリガン君 SOS」は、「ギリガン・カット」と呼ばれるフリ・オチを2カットで表現する映像編集技法を指す言葉にも繋がったりしていて、方方に影響を与えた作品のようだ。
 
-- 参考：[ギリガン・カットとは何か？ - 大匙屋](http://sajiya.blog89.fc2.com/blog-entry-717.html) … 平たくいえば「即堕ち2コマ」的な。
+- 参考 : [ギリガン・カットとは何か？ - 大匙屋](http://sajiya.blog89.fc2.com/blog-entry-717.html) … 平たくいえば「即堕ち2コマ」的な。
 
 
 ## Final Password : `vernam`
@@ -58,7 +58,7 @@ path:
 
 コレは当時、ワーナーの公式キャンペーンサイト上でこのパスワード `vernam` を入力するとゲームが遊べたそうだ。
 
-- 参考：[Sôdofisshu (2001) - Trivia - IMDb](https://www.imdb.com/title/tt0244244/trivia) … その他本作に関するトリビアも豊富
+- 参考 : [Sôdofisshu (2001) - Trivia - IMDb](https://www.imdb.com/title/tt0244244/trivia) … その他本作に関するトリビアも豊富
 
 
 ## 登場する Dell PC
@@ -74,14 +74,14 @@ path:
   - このシーンで、サーバ機器に接続されている各種ケーブルがプラスチックの結束バンドで束ねられているが、プラスチックの結束バンドではケーブルを強く締めすぎて痛める恐れがあるので、本来はもっと柔らかい素材で結束することが多い
 - Panasonic Toughbook CF-27
   - サム・シェパード演じるジェームズ・ライスマン上院議員がデスクで使用しているノート PC
-- 参考：[Starring the Computer - Swordfish](https://www.starringthecomputer.com/feature.html?f=1131)
+- 参考 : [Starring the Computer - Swordfish](https://www.starringthecomputer.com/feature.html?f=1131)
 
 
 ## ハル・ベリーのヌードシーン
 
 ハル・ベリー演じるジンジャーの役は、当初ブリジット・モイナハンという別の女優が演じる予定もあったという。しかし、ジンジャーがヌードになるシーンがあると分かり、ブリジットは辞退、代わりにヌードシーンに挑戦する意欲があったハル・ベリーがこの役を勝ち取ったそうだ。
 
-- 参考：['Blue Bloods': Bridget Moynahan Turned Down a Role That Halle Berry Got](https://outsider.com/entertainment/blue-bloods-star-bridget-moynahan-once-turned-down-major-film-role-went-halle-berry/)
+- 参考 : ['Blue Bloods': Bridget Moynahan Turned Down a Role That Halle Berry Got](https://outsider.com/entertainment/blue-bloods-star-bridget-moynahan-once-turned-down-major-film-role-went-halle-berry/)
 
 ハル・ベリーは本作と同年の2001年公開作品「Monster's Ball チョコレート」でもヌードシーンを披露している。
 
@@ -95,7 +95,7 @@ path:
 - ヘルガによる「やる気を出させる」シーンの構成が異なる (実際の映像等は未確認だが、ドミニク・セナ監督によるオーディオコメンタリーで「テレビ放送用に別カットも撮影していた」と発言アリ)
 - ハル・ベリーのヌードシーンがビキニ着用シーンになっている (実際の映像等未確認)
 - 吊るされたジンジャーを救うためスタンリーが PC 操作をするシーンで、スタンリーのセリフが「Shut the **fuck** up!」から「Shut the **freak** up!」に差し替えられている
-  - 参考：[Swordfish - TV Movie Edit - YouTube](https://www.youtube.com/watch?v=b-bpNX8qPro) … 実際の映像
+  - 参考 : [Swordfish - TV Movie Edit - YouTube](https://www.youtube.com/watch?v=b-bpNX8qPro) … 実際の映像
 
 
 ## その他リンク

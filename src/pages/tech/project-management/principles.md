@@ -30,7 +30,7 @@ path:
 - **パーキンソンの法則 : Parkinson's law**
   - *意味 :* 「仕事の量は、完成のために与えられた時間をすべて満たすまで膨張する」「支出の額は、収入の額に達するまで膨張する」
   - *例示 :* 「データ量は与えられた記憶装置のスペースを満たすまで膨張する」「ある資源に対する需要は、その資源が入手可能な量まで膨張する」「どんなに大きな冷蔵庫を買っても、必ず満杯になる」
-  - *出自 :* 1958年、イギリスの歴史学者・政治学者シリル・ノースコート・パーキンソンが著作「パーキンソンの法則：進歩の追求」で提唱
+  - *出自 :* 1958年、イギリスの歴史学者・政治学者シリル・ノースコート・パーキンソンが著作「パーキンソンの法則 : 進歩の追求」で提唱
   - *参考 :* [Wikipedia - パーキンソンの法則](https://ja.wikipedia.org/wiki/%E3%83%91%E3%83%BC%E3%82%AD%E3%83%B3%E3%82%BD%E3%83%B3%E3%81%AE%E6%B3%95%E5%89%87)
 - **マーフィーの法則 : Murphy's law**
   - *意味 :* 「不都合を生じる可能性があるものは、いずれ必ず不都合を生じる」など、経験則に基づく教訓集
@@ -61,8 +61,8 @@ path:
   - *出自 :* 1982年の Katz, Ralph, and Thomas J. Allen の論文「Investigating the Not Invented Here (NIH) syndrome: A look at the performance, tenure, and communication patterns of 50 R & D Project Groups」が出典？
   - *参考 :*
       - [Wikipedia - NIH 症候群](https://ja.wikipedia.org/wiki/NIH%E7%97%87%E5%80%99%E7%BE%A4)
-      - [Not Invented Here 症候群 ： お前のアイディアがそんなに優れているはずがない](http://edx.hatenablog.com/entry/not-invented-here)
-      - 拙記事：[「NIH 症候群」は誰も得しない](/blog/2017/01/31-01.html)
+      - [Not Invented Here 症候群 : お前のアイディアがそんなに優れているはずがない](http://edx.hatenablog.com/entry/not-invented-here)
+      - 拙記事 : [「NIH 症候群」は誰も得しない](/blog/2017/01/31-01.html)
 - **ピーターの法則 : Peter Principle**
   - *意味 :*
       1. 人間は能力の極限まで出世する。したがって、有能だったヒラ社員は、無能な中間管理職になる。

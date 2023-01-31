@@ -38,8 +38,8 @@ path:
 
 のシングルを MD にコピーして所有していて、それを自宅の CD・MD・カセットコンポを使って、カセットテープにダビングさせてもらったのを覚えている。
 
-- 参考：[コンパクトカセット - Wikipedia](https://ja.wikipedia.org/wiki/%E3%82%B3%E3%83%B3%E3%83%91%E3%82%AF%E3%83%88%E3%82%AB%E3%82%BB%E3%83%83%E3%83%88)
-- 参考：[ミニディスク - Wikipedia](https://ja.wikipedia.org/wiki/%E3%83%9F%E3%83%8B%E3%83%87%E3%82%A3%E3%82%B9%E3%82%AF)
+- 参考 : [コンパクトカセット - Wikipedia](https://ja.wikipedia.org/wiki/%E3%82%B3%E3%83%B3%E3%83%91%E3%82%AF%E3%83%88%E3%82%AB%E3%82%BB%E3%83%83%E3%83%88)
+- 参考 : [ミニディスク - Wikipedia](https://ja.wikipedia.org/wiki/%E3%83%9F%E3%83%8B%E3%83%87%E3%82%A3%E3%82%B9%E3%82%AF)
 
 2002年、小6の時に、運動会だかのダンスイベントで
 
@@ -120,7 +120,7 @@ path:
   - Techno・Trans・House・DnB
   - 横浜を懐かしみ Jimsaku や Casiopea を聞く
   - ちょっとだけギター触ってた (Dick Dale - Misirlou)
-  - クリスマス以降：洋楽を漁るように
+  - クリスマス以降 : 洋楽を漁るように
 - 2005
   - R&B・Hip Hop → Mash Up
 
@@ -130,7 +130,7 @@ path:
 (詳細執筆予定・以下メモ)
 
 - 2006
-  - 軽音楽部でギターを始める：Off Spring・Yellow Card…
+  - 軽音楽部でギターを始める : Off Spring・Yellow Card…
   - Team E・Team Inversion の動画の影響でエモ系にハマる → Fall of Troy・Mars Volta など
 - 2007
   - Jackass・CKY にハマる → HM 系

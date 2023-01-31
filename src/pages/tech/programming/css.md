@@ -15,7 +15,7 @@ path:
 
 `word-break` などのプロパティ、どれを使えば良いのか。
 
-結論：*普段は `word-wrap: break-word`* を使う。どんな場合でも意地でも折り返したい時は **`word-break: break-all`** を使う。
+結論 : *普段は `word-wrap: break-word`* を使う。どんな場合でも意地でも折り返したい時は **`word-break: break-all`** を使う。
 
 - `word-wrap`
   - `normal`・`break-word`

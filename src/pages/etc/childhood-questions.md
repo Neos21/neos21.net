@@ -16,21 +16,21 @@ path:
 
 放射性物質が放射能を出す時の原子の変化を観察する「放射年代測定法」を用いて、アリゾナに落ちたディアブロ隕石を測定したら46億年前に作られたものと判明。性格には太陽系ができた年代としかいえないが、これより古い観測結果がないので、コレを太陽や地球ができた年代としている。
 
-- 参考：[【ゆっくり解説】なぜ地球が46億歳とわかるのか - YouTube](https://www.youtube.com/watch?v=HZfz6oIqxdQ)
+- 参考 : [【ゆっくり解説】なぜ地球が46億歳とわかるのか - YouTube](https://www.youtube.com/watch?v=HZfz6oIqxdQ)
 
 
 ## なぜ宇宙人に会わないのか？
 
 いるかもしれないがまだ会えていない説がある。隣の恒星まででも平均3光年かかる。今の人類の技術では光速に達する伝達手段がなく、電波でやり取りしようとしても何千年・何万年とかかる。人間の人生100年そこらじゃ何も分からん。
 
-- 参考：[【ゆっくり解説】なぜ宇宙人に出会えないのか？科学者たちの宇宙人探しの歴史 - YouTube](https://www.youtube.com/watch?v=OgJSj7yQ0rA)
+- 参考 : [【ゆっくり解説】なぜ宇宙人に出会えないのか？科学者たちの宇宙人探しの歴史 - YouTube](https://www.youtube.com/watch?v=OgJSj7yQ0rA)
 
 
 ## 宇宙の広さはどのくらい？
 
 地球から理論上観測できるのは半径450億光年の範囲。
 
-- 参考：[宇宙 - Wikipedia](https://ja.wikipedia.org/wiki/%E5%AE%87%E5%AE%99)
+- 参考 : [宇宙 - Wikipedia](https://ja.wikipedia.org/wiki/%E5%AE%87%E5%AE%99)
 
 
 ## 1日・1週間・1ヶ月・1年はどうやって決まったか？
@@ -49,9 +49,9 @@ path:
 - 1年
   - 1ヶ月を12回繰り返すと季節が一巡すると気付いたから
   - 地球の「公転」周期
-- 参考：[【ゆっくり解説】1秒の長さってどうやって決めた？　～高精度な時計を目指して～【宇宙】【化学】 - YouTube](https://www.youtube.com/watch?v=rmwrulYhMDI)
-- 参考：[時間はどうやって決められたの | 身近なふしぎ | 科学なぜなぜ110番 | 科学 | 学研キッズネット](https://kids.gakken.co.jp/kagaku/kagaku110/science0528/)
-- 参考：[時計の誕生 | THE SEIKO MUSEUM GINZA セイコーミュージアム 銀座](https://museum.seiko.co.jp/knowledge/relation_01/)
+- 参考 : [【ゆっくり解説】1秒の長さってどうやって決めた？ ～高精度な時計を目指して～【宇宙】【化学】 - YouTube](https://www.youtube.com/watch?v=rmwrulYhMDI)
+- 参考 : [時間はどうやって決められたの | 身近なふしぎ | 科学なぜなぜ110番 | 科学 | 学研キッズネット](https://kids.gakken.co.jp/kagaku/kagaku110/science0528/)
+- 参考 : [時計の誕生 | THE SEIKO MUSEUM GINZA セイコーミュージアム 銀座](https://museum.seiko.co.jp/knowledge/relation_01/)
 
 
 ## 手の先から肘までの長さを「キュビット」という
@@ -60,7 +60,7 @@ path:
 
 大人になると大体 45cm 程度で長さが変わらなくなるので、自分の「キュビット」の長さを知っておくと簡易的なメジャーになる。
 
-- 参考：[キュービットとは - コトバンク](https://kotobank.jp/word/%E3%82%AD%E3%83%A5%E3%83%BC%E3%83%93%E3%83%83%E3%83%88-477320)
+- 参考 : [キュービットとは - コトバンク](https://kotobank.jp/word/%E3%82%AD%E3%83%A5%E3%83%BC%E3%83%93%E3%83%83%E3%83%88-477320)
 
 
 ## 1メートルはどうやって決まったか？
@@ -71,21 +71,21 @@ path:
 
 センチメートル (cm) は 1m の100分の1、ミリメートル (mm) は 1m の1,000分の1、として定められた。
 
-- 参考：[【ゆっくり解説】1mの長さはどのようにして決められたのか？ -メートルの歴史- - YouTube](https://www.youtube.com/watch?v=lr0v0xEyvk8)
+- 参考 : [【ゆっくり解説】1mの長さはどのようにして決められたのか？ -メートルの歴史- - YouTube](https://www.youtube.com/watch?v=lr0v0xEyvk8)
 
 
 ## 光とは何か？
 
 電磁波の一種。電子レンジのマイクロ波、携帯電話の電波などと同じで、目に見える電磁波を光と呼んでいる。光子と呼ばれる素粒子が、波打って伝わっている。
 
-- 参考：[光ってなんだろう？｜教えて！かんでん｜関西電力](https://www.kepco.co.jp/brand/for_kids/teach/2017_08/detail1.html)
-- 参考：[光 - Wikipedia](https://ja.wikipedia.org/wiki/%E5%85%89)
+- 参考 : [光ってなんだろう？｜教えて！かんでん｜関西電力](https://www.kepco.co.jp/brand/for_kids/teach/2017_08/detail1.html)
+- 参考 : [光 - Wikipedia](https://ja.wikipedia.org/wiki/%E5%85%89)
 
 ### 光の速度は？
 
 秒速・約30万km。1秒間に地球 (一周約4万km) を7周半回れる速さ。
 
-- 参考：[光速 - Wikipedia](https://ja.wikipedia.org/wiki/%E5%85%89%E9%80%9F)
+- 参考 : [光速 - Wikipedia](https://ja.wikipedia.org/wiki/%E5%85%89%E9%80%9F)
 
 ### ライトの光はどうしてどこまでも届かないのか
 
@@ -97,8 +97,8 @@ path:
 
 ちなみに、光は直進するので、「地球を7周半する速さ」は持っていても地球を周回はしないので、光が地球を1周して戻ってくることはない。
 
-- 参考：[光が届く距離と光源が見える距離の違い -ライトなどの光が物を照らせる- 物理学 | 教えて!goo](https://oshiete.goo.ne.jp/qa/9231670.html)
-- 参考：[光の届く距離に限界があるとして、そのギリギリの所では光といえど減速するのでしょうか？ - Quora](https://jp.quora.com/hikari-no-todoku-kyori-ni-genkai-ga-aru-toshite-sono-girigiri-no-tokoro-deha-hikari-to-ie-do-gensoku-suru-node-shou-ka)
+- 参考 : [光が届く距離と光源が見える距離の違い -ライトなどの光が物を照らせる- 物理学 | 教えて!goo](https://oshiete.goo.ne.jp/qa/9231670.html)
+- 参考 : [光の届く距離に限界があるとして、そのギリギリの所では光といえど減速するのでしょうか？ - Quora](https://jp.quora.com/hikari-no-todoku-kyori-ni-genkai-ga-aru-toshite-sono-girigiri-no-tokoro-deha-hikari-to-ie-do-gensoku-suru-node-shou-ka)
 
 
 ## 震度とマグニチュードとは何か？
@@ -107,5 +107,5 @@ path:
 
 震度5強という尺度は1995年1月17日に発生した「阪神淡路大震災」の時に作られた。これまでも「震度」の尺度は時代によってまちまちだったので、これ以降は「地震のエネルギーの規模」を定量的に示す「マグニチュード」という単位の数字を併記するようになった。
 
-- 参考：[震度 - Wikipedia](https://ja.wikipedia.org/wiki/%E9%9C%87%E5%BA%A6#%E9%9C%87%E5%BA%A6%E9%9A%8E%E7%B4%9A)
-- 参考：[【ゆっくり解説】震度５強はなぜ震度６と言わないのか？ - YouTube](https://www.youtube.com/watch?v=X1WvAgUdf40)
+- 参考 : [震度 - Wikipedia](https://ja.wikipedia.org/wiki/%E9%9C%87%E5%BA%A6#%E9%9C%87%E5%BA%A6%E9%9A%8E%E7%B4%9A)
+- 参考 : [【ゆっくり解説】震度５強はなぜ震度６と言わないのか？ - YouTube](https://www.youtube.com/watch?v=X1WvAgUdf40)
