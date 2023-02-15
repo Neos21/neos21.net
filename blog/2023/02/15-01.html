@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#0990d0">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>Amazon S3 の署名付き URL を使ってファイルをダウンロードする Node.js コード - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2023/02/15-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="header-brand">
+          <div id="header-brand-contents">
+            <div id="site-title"><a href="/index.html">Neo's World</a></div>
+            <nav id="header-links">
+              <ul>
+                <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+                <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+                <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+                <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+              </ul>
+            </nav>
+          </div>
+        </div>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2023/index.html">2023年</a></li>
+            <li><a href="/blog/2023/02/index.html">02月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2023-02-15</time></div>
+        <h1 id="page-title">Amazon S3 の署名付き URL を使ってファイルをダウンロードする Node.js コード</h1>
+
+<p>Amazon S3 の、既に出尽くしている話。非公開の S3 バケットでも、<strong>署名付き URL</strong> というのを作ってやれば、URL の生成から15分間限定で対象のオブジェクトをインターネット経由で普通にダウンロードできる。</p>
+<p>サーバサイド (Node.js) のコードは次のとおり。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># バージョン 2.1295.0 で検証</span>
+$ <span class="token function">npm</span> <span class="token function">install</span> --save aws-sdk
+</code></pre>
+<p><code>@aws-sdk/client-s3</code> という別のクライアントライブラリもあるのだが、今回は <code>aws-sdk</code> パッケージを使用している。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword">const</span> <span class="token constant">AWS</span> <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'aws-sdk'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token constant">AWS</span><span class="token punctuation">.</span><span class="token property-access">config</span><span class="token punctuation">.</span><span class="token method function property-access">update</span><span class="token punctuation">(</span><span class="token punctuation">{</span>
+  accessKeyId<span class="token operator">:</span> <span class="token string">'【アクセスキーID】'</span><span class="token punctuation">,</span>
+  secretAccessKey<span class="token operator">:</span> <span class="token string">'【シークレットアクセスキー】'</span><span class="token punctuation">,</span>
+  region<span class="token operator">:</span> <span class="token string">'ap-northeast-1'</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token keyword">const</span> <span class="token function-variable function">getSignedUrl</span> <span class="token operator">=</span> <span class="token keyword">async</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token keyword">const</span> s3 <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">AWS<span class="token punctuation">.</span>S3</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">const</span> params <span class="token operator">=</span> <span class="token punctuation">{</span> <span class="token maybe-class-name">Bucket</span><span class="token operator">:</span> <span class="token string">'【バケット名】'</span><span class="token punctuation">,</span> <span class="token maybe-class-name">Key</span><span class="token operator">:</span> <span class="token string">'【オブジェクト名】.txt'</span> <span class="token punctuation">}</span><span class="token punctuation">;</span>
+  
+  <span class="token keyword control-flow">try</span> <span class="token punctuation">{</span>
+    <span class="token keyword control-flow">await</span> s3<span class="token punctuation">.</span><span class="token method function property-access">headObject</span><span class="token punctuation">(</span>params<span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">promise</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  <span class="token keyword control-flow">catch</span><span class="token punctuation">(</span>error<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token keyword control-flow">if</span><span class="token punctuation">(</span>error<span class="token punctuation">.</span><span class="token property-access">code</span> <span class="token operator">===</span> <span class="token string">'NotFound'</span><span class="token punctuation">)</span> <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'そんなファイルないよ'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword control-flow">return</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  
+  <span class="token comment">// `params` で `Expires` (秒) プロパティを未指定だと15分間の制限となる</span>
+  <span class="token keyword control-flow">try</span> <span class="token punctuation">{</span>
+    <span class="token keyword">const</span> url <span class="token operator">=</span> <span class="token keyword control-flow">await</span> <span class="token keyword">new</span> <span class="token class-name">Promise</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token parameter">resolve<span class="token punctuation">,</span> reject</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+      s3<span class="token punctuation">.</span><span class="token method function property-access">getSignedUrl</span><span class="token punctuation">(</span><span class="token string">'getObject'</span><span class="token punctuation">,</span> params<span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token parameter">error<span class="token punctuation">,</span> url</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+        <span class="token keyword control-flow">if</span><span class="token punctuation">(</span>error<span class="token punctuation">)</span> <span class="token keyword control-flow">return</span> <span class="token function">reject</span><span class="token punctuation">(</span>error<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token function">resolve</span><span class="token punctuation">(</span>url<span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'The URL is :'</span><span class="token punctuation">,</span> url<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword control-flow">return</span> url<span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  <span class="token keyword control-flow">catch</span><span class="token punctuation">(</span>error<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span>error<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+</code></pre>
+<p><code>AWS.S3</code> の <code>headObject()</code> でファイルの存在がチェックできる。この API は Promise 形式にも対応しているので <code>.promise()</code> を <code>await</code> している。</p>
+<p>実際に署名付き URL を発行するのは <code>getSignedUrl()</code> 部分。この API はコールバック形式でしか返してくれないので自前で Promise 化している。</p>
+<p>コレで長ったらしい「署名付き URL」が生成できるので、フロントエンドでよしなにダウンロードさせてやれば良い。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token comment">// 上述のバックエンド API を呼び出して署名付き URL を取得したテイ</span>
+<span class="token keyword">const</span> response <span class="token operator">=</span> <span class="token keyword control-flow">await</span> <span class="token dom variable">window</span><span class="token punctuation">.</span><span class="token method function property-access">fetch</span><span class="token punctuation">(</span><span class="token string">'/get-signed-url'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">const</span> <span class="token punctuation">{</span> url <span class="token punctuation">}</span> <span class="token operator">=</span> <span class="token keyword control-flow">await</span> response<span class="token punctuation">.</span><span class="token method function property-access">json</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// クリックイベントを発火させてファイルをダウンロードさせる</span>
+<span class="token keyword">const</span> downloadLink <span class="token operator">=</span> <span class="token dom variable">document</span><span class="token punctuation">.</span><span class="token method function property-access">createElement</span><span class="token punctuation">(</span><span class="token string">'a'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+downloadLink<span class="token punctuation">.</span><span class="token property-access">href</span> <span class="token operator">=</span> url<span class="token punctuation">;</span>  <span class="token comment">// 署名付き URL を設定する</span>
+downloadLink<span class="token punctuation">.</span><span class="token property-access">download</span> <span class="token operator">=</span> <span class="token string">'example.txt'</span><span class="token punctuation">;</span>  <span class="token comment">// ファイル名</span>
+downloadLink<span class="token punctuation">.</span><span class="token method function property-access">click</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>以上。</p><div class="ad-amazon">
+  <div class="ad-amazon-image">
+    <a href="https://www.amazon.co.jp/dp/B09MQ14XR1?tag=neos21-22&amp;linkCode=osi&amp;th=1&amp;psc=1">
+      <img src="https://m.media-amazon.com/images/I/516cZ4DqEnL._SL160_.jpg" width="112" height="160">
+    </a>
+  </div>
+  <div class="ad-amazon-info">
+    <div class="ad-amazon-title">
+      <a href="https://www.amazon.co.jp/dp/B09MQ14XR1?tag=neos21-22&amp;linkCode=osi&amp;th=1&amp;psc=1">図解 Amazon Web Servicesの仕組みとサービスがたった1日でよくわかる</a>
+    </div>
+  </div>
+</div>
+<div class="ad-rakuten">
+  <div class="ad-rakuten-image">
+    <a href="https://hb.afl.rakuten.co.jp/hgc/g00q0722.waxyc9ff.g00q0722.waxyd017/?pc=https%3A%2F%2Fitem.rakuten.co.jp%2Fbook%2F16974150%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Fbook%2Fi%2F20533153%2F">
+      <img src="https://thumbnail.image.rakuten.co.jp/@0_mall/book/cabinet/2818/9784815612818_1_4.jpg?_ex=128x128">
+    </a>
+  </div>
+  <div class="ad-rakuten-info">
+    <div class="ad-rakuten-title">
+      <a href="https://hb.afl.rakuten.co.jp/hgc/g00q0722.waxyc9ff.g00q0722.waxyd017/?pc=https%3A%2F%2Fitem.rakuten.co.jp%2Fbook%2F16974150%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Fbook%2Fi%2F20533153%2F">図解 Amazon Web Servicesの仕組みとサービスがたった1日でよくわかる [ NRIネットコム株式会社 ]</a>
+    </div>
+    <div class="ad-rakuten-shop">
+      <a href="https://hb.afl.rakuten.co.jp/hgc/g00q0722.waxyc9ff.g00q0722.waxyd017/?pc=https%3A%2F%2Fwww.rakuten.co.jp%2Fbook%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Fbook%2F">楽天ブックス</a>
+    </div>
+    <div class="ad-rakuten-price">価格 : 2200円</div>
+  </div>
+</div>
+
+      </main>
+      <footer id="footer">
+        <div id="footer-contents">
+          <div id="date-time">
+            <dl>
+              <dt>Created</dt>
+              <dd><time>2023-02-15</time></dd>
+              <dt>Last-Modified</dt>
+              <dd><time>2023-02-15</time></dd>
+            </dl>
+          </div>
+          <nav id="footer-links">
+            <ul>
+              <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+              <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+              <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+              <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+            </ul>
+          </nav>
+          <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+        </div>
+      </footer>
+    </div>
+  </body>
+</html>
