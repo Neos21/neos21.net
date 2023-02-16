@@ -9,6 +9,7 @@ path:
 
 どのカテゴリにも合わない単発の話題とか、このサイトの技術の話とか。
 
+- [技術関連メモ](./tech-memo.html)
 - [クラウド・データセンタ・インターネットの規模を推定する](./how-big-is-the-internet.html)
 - [XREA サーバに Value-Domain で取得した独自ドメインを設定し SSL 化する](./xrea-value-domain-ssl.html)
 - [このサイトに使われている技術](./tech-of-this-site.html)

@@ -18,6 +18,7 @@ path:
   - [曖昧な表現を避け、できるだけ断定する](./make-clear.html)
   - [1文字単位で注意して読み書きする](./pay-attention-the-character.html)
   - [自分の話は常に正しく伝わっていないし、相手の話は常に正しく理解できていない](./it-is-not-getting-through.html)
+  - [システム開発で頻出する英語のイディオムを知っておこう](./study-english-idioms.html)
 - 禁止事項・アンチパターン
   - [会話・文書でこの言葉を使うな集](./anti-pattern-words.html)
   - [「〜について」と書いてはいけない](./dont-use-about.html)
@@ -25,6 +26,9 @@ path:
   - [体言止めを使ってはならない](./dont-end-with-a-noun.html)
   - [「～化する」と表現せず「～になる」と表現する](./dont-use-ize-words.html)
   - [「覚えておいてください」と暗記を強要するのではなく文書化して共有する](./dont-force-to-memorize.html)
+  - [会議で無言を貫かない・言葉で返事をする](./dont-be-silent.html)
+  - [語尾まで堂々と喋る・堂々と質問する](./speak-confidently.html)
+  - [箇条書きの一項目に複数の情報を書かない](./dont-write-multiple-in-one.html)
 - ドキュメンテーション
   - [ビジネスライティングスキルを身に付ける狙い・避けたいこと](./purpose-of-writing.html)
   - [会話とテキストコミュニケーションの違い](./talk-vs-text.html)
@@ -32,15 +36,3 @@ path:
   - [全てのドキュメントに書くべき事項・決めるべき運用ルール](./documents-rules.html)
   - [Excel ドキュメントを書く時の定石集](./excel-best-practices.html)
   - [書式を揃える](./text-formatting.html)
-
-
----
-
-
-## 雑多なメモ
-
-トピックにまとめられそうになったらまとめます。
-
-- 「誰でもわかるようなドキュメントを書け」ってのは「ググっても出てこないような暗黙知を無くすようにする」ことであって「未経験者にもわかるように」ってことじゃないんだからね！
-- オブジェクト指向でも関数型言語でも同じだけど、抽象化の方法は1つじゃないので、設計者が何を思って何をどう抽象化したのかという点がわからない。ドキュメントはこの点のみ必要だと思う。設計者の意図
-- [小ネタ : スプレッドシートでセルの中身が同じだった場合の条件付き書式 - Qiita](https://qiita.com/takiguchi-yu/items/ba1d1ce9b470a9dbd129)

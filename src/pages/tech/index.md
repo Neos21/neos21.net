@@ -15,8 +15,8 @@ path:
       <li><a href="./requirement-definition/index.html">要件定義</a> (企画)</li>
       <li><a href="./design/index.html">設計</a> (共通設計・基本設計・詳細設計)</li>
       <li><a href="./programming/index.html">プログラミング</a> (環境構築・実装)</li>
-      <li>テスト (単体テスト・結合テスト)</li>
-      <li>保守 (監視・障害の暫定対応)</li>
+      <li><a href="./tests/index.html">テスト</a> (単体・結合・総合)</li>
+      <li><a href="./maintenance/index.html">保守</a> (監視・障害の暫定対応)</li>
       <li>運用 (障害の恒久対応・リリース後の改修)</li>
     </ul>
   </dd>
@@ -40,8 +40,8 @@ path:
   <dd>
     <p>どのカテゴリにも合わない単発の話題とか、このサイトの技術の話とか。以下は主な記事。</p>
     <ul>
+      <li><strong><a href="./others/tech-memo.html">技術関連メモ</a></strong></li>
       <li><a href="./others/how-big-is-the-internet.html">クラウド・データセンタ・インターネットの規模を推定する</a></li>
-      <li><a href="./others/tech-of-this-site.html">このサイトに使われている技術</a></li>
       <li><a href="./others/pc-environment.html">Neo の PC 環境</a></li>
     </ul>
     <p>以下の Scrapbox にて、SE のための業務中の暇つぶしアイデアをまとめている。</p>
@@ -51,7 +51,6 @@ path:
     <p>以下は「<a href="/etc/index.html">Etc.</a>」配下のコンテンツだが、何かと参考になるかもしれない。</p>
     <ul>
       <li><a href="/etc/memo-impressed.html">タメになったメモ</a></li>
-      <li><a href="/etc/what-is-the-word.html">あれ何て言うの？正式名称辞典</a></li>
     </ul>
   </dd>
 </dl>
@@ -78,24 +77,3 @@ path:
     <p>知恵、テクニック。「ナレッジ」を基に、その組合せ方や選択が重要なモノについての考え方。定石、ベストプラクティスとか、発展的な Tips とか、その手のネタ。</p>
   </dd>
 </dt>
-
-
----
-
-
-## 書こうと思ってるネタの蓄え
-
-- [UT、ITa、ITb、ST、UAT の違い](http://tooljp.com/windows/chigai/html/IT/UT-ITa-ITb-ST-UAT.html)
-
-
-## 有用な文献へのリンク
-
-分類を決めあぐねています。
-
-- [BugbearR's Wiki - システム開発](http://www.bugbearr.jp/?%E3%82%B7%E3%82%B9%E3%83%86%E3%83%A0%E9%96%8B%E7%99%BA)
-- [BugbearR's Wiki - 開発規約](http://www.bugbearr.jp/?%E9%96%8B%E7%99%BA%E8%A6%8F%E7%B4%84)
-  - [BugbearR's Wiki - 開発規約/11 開発に必要と思われる文書の一覧](http://www.bugbearr.jp/?%E9%96%8B%E7%99%BA%E8%A6%8F%E7%B4%84%2F11)
-  - [BugbearR's Wiki - 開発規約/12 品質とは何か](http://www.bugbearr.jp/?%E9%96%8B%E7%99%BA%E8%A6%8F%E7%B4%84%2F12)
-- [玄系 プロジェクト管理者の道具箱 - システム開発](https://web.archive.org/web/20160718040728/http://www.h6.dion.ne.jp/~akn/pm/SystemDevelopment/SystemDevelopment.html)
-- [yutkat/katapedia: この書は常に未完成である。内容の正誤に保証はない。 ITエンジニアとして役になったTips、よく忘れることを記す。 ブログに記載してもよかったが、水平方向の情報を見つけやすい本の形式をとることにした](https://github.com/yutkat/katapedia)
-- [reverse-interview/JAPANESE.md at master · viraptor/reverse-interview](https://github.com/viraptor/reverse-interview/blob/master/translations/JAPANESE.md)
