@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#0990d0">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>定数の管理設計方針 - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/tech/programming/constants-management.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="header-brand">
+          <div id="header-brand-contents">
+            <div id="site-title"><a href="/index.html">Neo's World</a></div>
+            <nav id="header-links">
+              <ul>
+                <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+                <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+                <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+                <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+              </ul>
+            </nav>
+          </div>
+        </div>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/tech/programming/index.html">プログラミング</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <h1 id="page-title">定数の管理設計方針</h1>
+
+<p>設計やプログラミングにおいて、「定数」というモノはよく登場する。そしてそれらの定義の仕方も様々である。</p>
+<ul>
+  <li>プログラミング言語仕様が持つ「定数」、ないしは「定数クラス」として定義素r
+    <ul>
+      <li>Java でいう <code>static final</code>、JavaScript なら <code>const</code> で変更を許可しない、など</li>
+    </ul>
+  </li>
+  <li>プロパティファイル、コンフィグファイル
+    <ul>
+      <li><code>.properties</code> XML でも YAML でも JSON でも、ファイルに定数を書いておき、プログラムはファイルを読み込んで利用する</li>
+    </ul>
+  </li>
+  <li>DB にマスタテーブルを作成する</li>
+  <li>環境変数に登録し参照する
+    <ul>
+      <li>ココでは JVM の起動オプションの引数として与える場合も同様の方法とみなす</li>
+    </ul>
+  </li>
+</ul>
+<p>古のアプリだと「定数クラス」と「プロパティファイル」の組み合わせが多く、ビジネスロジックが絡むモノは「DB マスタテーブル」が使用されることが多かった。</p>
+<p>今日では Docker や Kubernetes などコンテナ化の仕組みに沿って、「プロパティファイル」の利用が減り、「OS の環境変数として注入する」方式が増えてきたと感じる。</p>
+<p>では、全ての定数を「OS の環境変数から注入する」方式で定義するべきなのか。全て「定数クラス」として定義するのはどうなのだろうか。</p>
+<hr>
+<p>結論から言えば、これら定数の管理方式は、<em>その定数の使われ方、影響の与え方によって変えるべき</em>である。<strong>一つの方法に集約するのがベストではない。</strong></p>
+<ul>
+  <li>プログラム内に記述する定数や、それらをまとめた「定数クラス」は、<em>定数の変更時にロジックにも変更が入る可能性が高いモノ</em>に使用すると良いだろう
+    <ul>
+      <li>例えばドル通貨を示す <code>$</code> 記号などは、その記号が変わる際は既存の金融関連のロジックが大きく変わっている可能性が高い。ロジックと定数値を近い位置に置いておく方が分かりよく、また「外部から記号だけを差し替えたい」ことは皆無だと思うので、プログラム内に閉じ込めておいて良いだろう</li>
+      <li>ちなみに、プログラム内の全ての定数を単一のクラスで管理するような「神定数クラス」は、一見して定数の一覧が見やすいと思う人もいるかもしれないが、あまりオススメしない。どこから参照されているのかスコープが分からなくなるためだ。できればビジネスロジックに近いところで、<code>private</code> なアクセス修飾子で示しておくと、対象の定数を使っている範囲が狭まるので分かりやすい</li>
+    </ul>
+  </li>
+  <li>DB にマスタテーブルを作る方式は、「カテゴリ定義」など、その個数や種類が増減しうるが、増減があってもプログラムには影響がない値の管理には向いている
+    <ul>
+      <li>プログラムを再ビルド、再起動することなく、マスタ値の変更を反映させたい場合には有用</li>
+    </ul>
+  </li>
+  <li>プロパティファイルやコンフィグファイルとしての注入は、デプロイの際に変更を加えたい場合に用いると良い
+    <ul>
+      <li>ビルドされるバイナリファイルや成果物群にはプロパティファイルを内包せず、ビルドした資材とプロパティファイルを一緒に配置することでデプロイする方式</li>
+      <li>1回ビルドした資材は再利用しつつ、プロパティファイルの記述によって動作や条件分岐を切り替えたい場合に用いると良いだろう</li>
+    </ul>
+  </li>
+  <li>OS の環境変数から注入する方式は、Docker や Kubernetes などによるコンテナ化が進んだ現在は「プロパティファイルによる注入」を内包する標準的な手法
+    <ul>
+      <li>Docker であれば <code>--env</code> で定数値を1つずつ定義し、<code>--env-file</code> で環境変数ファイルを丸ごと注入できる</li>
+      <li>Kubernetes であれば ConfigMap や Secret を使用して定数値ごとにでも、それをファイルとしてマウントすることもできる</li>
+      <li>内部利用するライブラリの都合などで、プロパティファイルしか受け付けない場合は、ファイルマウントの方法で OS 環境変数の注入と同様に扱えば良い</li>
+      <li>いずれも、ビルドはし直さずに振る舞いだけを変えたい場合に利用すると良いだろう</li>
+    </ul>
+  </li>
+</ul>
+<p>ビジネスロジックの変更時にどのくらい定数値に変更が入りやすいかといえば、「定数クラス」が一番可能性が高く、次いで「DB マスタテーブル」、そしてそのビジネスロジック自体を切り替えるような外部注入を「OS 環境変数」(ないしは「プロパティファイル」) が担う、という考え方だと筋が通るだろう。</p>
+<ul>
+  <li>関連ブログ記事 : 2016-09-29 <a href="/blog/2016/09/29-01.html">定数ってどう管理するのが良いかね</a></li>
+</ul>
+
+      </main>
+      <footer id="footer">
+        <div id="footer-contents">
+          <div id="date-time">
+            <dl>
+              <dt>Created</dt>
+              <dd><time>2023-02-16</time></dd>
+              <dt>Last-Modified</dt>
+              <dd><time>2023-02-16</time></dd>
+            </dl>
+          </div>
+          <nav id="footer-links">
+            <ul>
+              <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+              <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+              <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+              <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+            </ul>
+          </nav>
+          <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+        </div>
+      </footer>
+    </div>
+  </body>
+</html>
