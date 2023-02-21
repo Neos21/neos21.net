@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#0990d0">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>僕が SE になって初めて起こした本番障害のバグ - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2023/02/21-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="header-brand">
+          <div id="header-brand-contents">
+            <div id="site-title"><a href="/index.html">Neo's World</a></div>
+            <nav id="header-links">
+              <ul>
+                <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+                <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+                <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+                <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+              </ul>
+            </nav>
+          </div>
+        </div>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2023/index.html">2023年</a></li>
+            <li><a href="/blog/2023/02/index.html">02月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2023-02-21</time></div>
+        <h1 id="page-title">僕が SE になって初めて起こした本番障害のバグ</h1>
+
+<p>今年2023年の4月をもって、僕は SE として丸10年働いたことになる。転職や休職も経験したが、2013年の4月に新卒入社してから10年間、一応はプログラマ・SE として仕事をしてきた。</p>
+<p>今回は、そんな僕が10年前、<em>新卒1年目の時にやらかした、本番障害とバグの話</em>を紹介する。</p>
+<hr>
+<p>僕は2013年4月に新卒入社し、新人研修を3ヶ月ミッチリやって、参画する案件が決まるまでさらに1ヶ月間研修をして、8月から現場配属になった。最初の現場では<strong>客先社内の業務管理用のウェブアプリ</strong>みたいなモノの要件定義フェーズから携わった。僕はウェブサイトを作ってきた経験があったので、HTML・CSS・簡単な JS を書いて「動く画面イメージ」をこしらえて、新卒ながら顧客にプレゼンしたりしてた。</p>
+<p>それからも自分はその開発案件の主要メンバとして、複数の画面の設計・開発・テストをこなした。チーム全体としては順調にスケジュール遅延して炎上したりしながら、翌年2014年の3月頭に本番リリースへとこぎつけた。自分が作った画面が実際に本番稼動し、お客様が使い始めているというのは、ワクワク半分、ドキドキ半分といった感じだった。</p>
+<p>リリースから1週間ほどして、その「ドキドキ」が現実のモノとなってしまった。</p>
+<p>ある朝、お客様から問合せがあった。</p>
+<p>「<strong>○○画面にある『添付ファイル』欄から、対象のファイルをダウンロードできず違うファイルがダウンロードできてしまう</strong>」というモノだった。</p>
+<p>状況をイメージするには、Redmine や Backlog などのチケット管理システム、もしくは社内 Wiki みたいなモノを思い浮かべてもらいたい。1つのチケットに、添付できるファイルの上限が9つと決まっていて、その<strong>ファイルリンクが 3×3 マスの表に表示されている</strong>、という UI だった。以下に当時の UI とバグを再現したデモ画面を作ってみたので、触ってみてほしい。</p>
+<p>ちなみに、当時の現物は JSP (Java サーブレット) で作っていたが、今回のデモは JavaScript で再現している。バグの本質は言語の違いではないので気になさらず。</p>
+<ul>
+  <li>デモ：<a href="https://neos21.github.io/frontend-sandboxes/my-first-mistake/index.html">My First Mistake</a></li>
+  <li>コード：<a href="https://github.com/Neos21/frontend-sandboxes/blob/master/my-first-mistake/index.html">frontend-sandboxes/index.html at master · Neos21/frontend-sandboxes · GitHub</a></li>
+</ul>
+<p>表の左上、「File 1」のマスにカーソルを当てると、選択された実際のファイル名は <code>file-1.txt</code> と表示される。コレは正しい動きだ。</p>
+<p>しかし、「<em>File 2</em>」のマスにカーソルを当てると、選択されるファイル名は <strong><code>file-4.txt</code></strong> となり、表示されている番号と実際のファイル名の番号がズレてしまっている。</p>
+<p>じゃあ <strong><code>file-2.txt</code></strong> はどこにあるのかというと、「<em>File 4</em>」のマスにカーソルを当てると表示される。</p>
+<p>表のセルに表示されている番号と、カーソルを当てて取得できる実際のファイル名とが一致しているのは、「File 1」「File 5」「File 9」の時だけで、後はセルの番号と実際のファイル名がチグハグになってしまっている。</p>
+<p>コレは元々「添付ファイル欄」だったので、ファイルを2つしかアップロードしていない時は、「File 2」をクリックすると <code>file-4.txt</code> を探しに行ってしまい 404 となり、「File 4」の欄は空欄になっていたので、<code>file-2.txt</code> をダウンロードする術がない、というような状態になっていた。サーバ上にはアップロードされたファイル自体は残っているのだが、お客様からしてみれば「<em>アップロードしたファイルがダウンロードできない</em>」という挙動になる。</p>
+<hr>
+<p>さて、それではこのバグが発生する実際のコードを見てみよう。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token comment">// セルに表示するタイトルと、実際のファイル名とを宣言したオブジェクトの配列</span>
+<span class="token keyword">const</span> items <span class="token operator">=</span> <span class="token punctuation">[</span>
+  <span class="token punctuation">{</span> title<span class="token operator">:</span> <span class="token string">'File 1'</span><span class="token punctuation">,</span> fileName<span class="token operator">:</span> <span class="token string">'file-1.txt'</span> <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span> title<span class="token operator">:</span> <span class="token string">'File 2'</span><span class="token punctuation">,</span> fileName<span class="token operator">:</span> <span class="token string">'file-2.txt'</span> <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span> title<span class="token operator">:</span> <span class="token string">'File 3'</span><span class="token punctuation">,</span> fileName<span class="token operator">:</span> <span class="token string">'file-3.txt'</span> <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span> title<span class="token operator">:</span> <span class="token string">'File 4'</span><span class="token punctuation">,</span> fileName<span class="token operator">:</span> <span class="token string">'file-4.txt'</span> <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span> title<span class="token operator">:</span> <span class="token string">'File 5'</span><span class="token punctuation">,</span> fileName<span class="token operator">:</span> <span class="token string">'file-5.txt'</span> <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span> title<span class="token operator">:</span> <span class="token string">'File 6'</span><span class="token punctuation">,</span> fileName<span class="token operator">:</span> <span class="token string">'file-6.txt'</span> <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span> title<span class="token operator">:</span> <span class="token string">'File 7'</span><span class="token punctuation">,</span> fileName<span class="token operator">:</span> <span class="token string">'file-7.txt'</span> <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span> title<span class="token operator">:</span> <span class="token string">'File 8'</span><span class="token punctuation">,</span> fileName<span class="token operator">:</span> <span class="token string">'file-8.txt'</span> <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token punctuation">{</span> title<span class="token operator">:</span> <span class="token string">'File 9'</span><span class="token punctuation">,</span> fileName<span class="token operator">:</span> <span class="token string">'file-9.txt'</span> <span class="token punctuation">}</span>
+<span class="token punctuation">]</span><span class="token punctuation">;</span>
+
+<span class="token comment">// セルに触れた時の処理をとりあえず実装しておく</span>
+<span class="token dom variable">window</span><span class="token punctuation">.</span><span class="token method-variable function-variable method function property-access">onSelect</span> <span class="token operator">=</span> <span class="token punctuation">(</span><span class="token parameter">item</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token dom variable">document</span><span class="token punctuation">.</span><span class="token method function property-access">getElementById</span><span class="token punctuation">(</span><span class="token string">'selected-item'</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token property-access">innerText</span> <span class="token operator">=</span> item<span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+
+<span class="token comment">// テーブル HTML を組み立てる</span>
+<span class="token keyword">let</span> tableHtml <span class="token operator">=</span> <span class="token string">'&#x3C;table>'</span><span class="token punctuation">;</span>
+<span class="token keyword control-flow">for</span><span class="token punctuation">(</span><span class="token keyword">let</span> row <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span> row <span class="token operator">&#x3C;</span> <span class="token number">3</span><span class="token punctuation">;</span> row<span class="token operator">++</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  tableHtml <span class="token operator">+=</span> <span class="token string">'&#x3C;tr>'</span><span class="token punctuation">;</span>
+  <span class="token keyword control-flow">for</span><span class="token punctuation">(</span><span class="token keyword">let</span> col <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span> col <span class="token operator">&#x3C;</span> <span class="token number">3</span><span class="token punctuation">;</span> col<span class="token operator">++</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+    tableHtml <span class="token operator">+=</span> <span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">&#x3C;td onmouseover="onSelect('</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>items<span class="token punctuation">[</span><span class="token number">3</span> <span class="token operator">*</span> col <span class="token operator">+</span> row<span class="token punctuation">]</span><span class="token punctuation">.</span><span class="token property-access">fileName</span><span class="token interpolation-punctuation punctuation">}</span></span><span class="token string">')" onmouseleave="onSelect('')"></span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>items<span class="token punctuation">[</span><span class="token number">3</span> <span class="token operator">*</span> row <span class="token operator">+</span> col<span class="token punctuation">]</span><span class="token punctuation">.</span><span class="token property-access">title</span><span class="token interpolation-punctuation punctuation">}</span></span><span class="token string">&#x3C;/td></span><span class="token template-punctuation string">`</span></span><span class="token punctuation">;</span>  <span class="token comment">// この行にバグがあります</span>
+  <span class="token punctuation">}</span>
+  tableHtml <span class="token operator">+=</span> <span class="token string">'&#x3C;/tr>'</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+tableHtml <span class="token operator">+=</span> <span class="token string">'&#x3C;/table>'</span><span class="token punctuation">;</span>
+<span class="token comment">// テーブル HTML を画面に出力する</span>
+<span class="token dom variable">document</span><span class="token punctuation">.</span><span class="token method function property-access">getElementById</span><span class="token punctuation">(</span><span class="token string">'container'</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token property-access">innerHTML</span> <span class="token operator">=</span> tableHtml<span class="token punctuation">;</span>
+</code></pre>
+<p><code>tableHtml</code> という変数に、文字列結合でテーブルの HTML を組み立てているワケだが、コレが実際には JSP で書いていた、という違いだけ。バグの本質はそこではない。</p>
+<p><code>table</code>・<code>tr</code>・<code>td</code> 要素の構成に従って、二重の <code>for</code> ループがあり、外側のループで行を、内側のループで列 (セル) を組み立てている。添付ファイルの上限は9つなので、3列・3行となるように <code>3</code> は決め打ちでループを回している。</p>
+<p>そしてバグが潜む問題の行は、二重の <code>for</code> ループ内で <code>td</code> 要素を組み立てているところ。<em>選択したセルのファイル番号と、実際に取得できるファイル名の番号が異なってしまうバグの原因が分かっただろうか？</em></p>
+<hr>
+<p>まず、セルに表示するタイトルは、配列 <code>items</code> の添字を指定して次のように参照している。</p>
+<pre class="language-javascript"><code class="language-javascript">items<span class="token punctuation">[</span><span class="token number">3</span> <span class="token operator">*</span> row <span class="token operator">+</span> col<span class="token punctuation">]</span><span class="token punctuation">.</span><span class="token property-access">title</span>
+</code></pre>
+<p>当然ながら <code>for</code> ループは <code>0</code> 始まりなので、1行目・2列目のセルは <code>items[3 * 0 + 1].title</code> となり、<code>items[1].title</code>、つまり <em><code>File 2</code></em> という文字列が取得できる。</p>
+<p>そして <code>&#x3C;td onmouseover=""></code> 部分で指定している、実際のファイル名を取得する部分は、配列 <code>items</code> の添字を次のように指定している。</p>
+<pre class="language-javascript"><code class="language-javascript">items<span class="token punctuation">[</span><span class="token number">3</span> <span class="token operator">*</span> col <span class="token operator">+</span> row<span class="token punctuation">]</span><span class="token punctuation">.</span><span class="token property-access">fileName</span>
+</code></pre>
+<p>よーく読み比べてみてほしい。そう、<strong><code>3</code> に掛け算する値が <code>row</code> と <code>col</code> とで違ってしまっているのだ</strong>。コチラの場合、1行目・2列目のセルでは <code>items[3 * 1 + 0].fileName</code> となり、<code>items[3].fileName</code>、つまり <em><code>file-4.txt</code></em> というファイル名を取得してしまうワケだ。</p>
+<p>改めてデモ画面でカーソルを動かしてみてほしいのだが、「File 1」「File 4」「File 7」と順にカーソルを移動させると、<code>file-1.txt</code>・<code>file-2.txt</code>・<code>file-3.txt</code> とファイル名は順番に取得できていることが分かる。<strong>セルに対する並び順が横並びなのか縦並びなのか、というのが、添字の指定の仕方によってチグハグになってしまった</strong>のである。</p>
+<hr>
+<p>最初はどうしてこういうバグが発生しているのか全く分からなかった。ファイルを4つだけなど、9つまでアップロードしていないタイミングでは余計に意味不明な挙動に感じられたので、調査から原因特定までに半日ほどかかった。</p>
+<p>この画面の設計書上は、タイトルの表示どおり横並びに表示されるのが正。つまりファイル名を取得する部分の添字が間違っていたのだ。</p>
+<pre class="language-javascript"><code class="language-javascript">items<span class="token punctuation">[</span><span class="token number">3</span> <span class="token operator">*</span> col <span class="token operator">+</span> row<span class="token punctuation">]</span><span class="token punctuation">.</span><span class="token property-access">fileName</span><span class="token punctuation">;</span>  <span class="token comment">// ← コレが誤り</span>
+
+items<span class="token punctuation">[</span><span class="token number">3</span> <span class="token operator">*</span> row <span class="token operator">+</span> col<span class="token punctuation">]</span><span class="token punctuation">.</span><span class="token property-access">fileName</span><span class="token punctuation">;</span>  <span class="token comment">// ← こうすべきだった</span>
+</code></pre>
+<p><em>単純なコーディングミス</em>だったが、細かすぎるあまり、実装工程での上長による静的コードレビューはすり抜けてしまっていた。また、テスト時は</p>
+<ul>
+  <li>最大9つのファイルがアップロードできること (アップロード機能としての簡単な機能確認)</li>
+  <li>1つ目のファイルがダウンロードできること (ダウンロード機能としての簡単な機能確認)</li>
+</ul>
+<p>というテスト項目だけにしてしまっていたので、2・3・4・6・7・8個目のファイルが正常にダウンロードできないことに気付けなかった。</p>
+<p>アップロード処理を含めて類似の機能を持った既存画面があったので、そこから<strong>コードをツギハギして作った結果、こんなショボいミスを生み</strong>、<em>不十分なテストケースでテストをすり抜けてしまった</em>ワケだ。</p>
+<p>アップロードしたファイルが消えてしまったワケではないので、リンク部分のコードを直せば済む程度のバグだったのが不幸中の幸い。先輩や上司達は「しゃーない、こんなミスよくあること」とフォローしてくれたし、お客様も「すぐ直せるなら直しといてー」という感じで楽観的だった。</p>
+<p>しかし、こんな些細なミスでも PM は「障害報告書」を書いて、お客様に頭を下げていた。僕は PM に頭を下げさせるようなことをしてしまったのだ。バグの程度の問題ではない。なんならショボい程度のバグで再リリースになってしまって、自分のミスが本当に恥ずかしく、悔しく、周りに申し訳ない気持ちでいっぱいだった。</p>
+<hr>
+<p>結局このバグは、前述のとおりコードを修正し、</p>
+<ul>
+  <li>ファイルを1つアップロードする → ファイルを1つダウンロードし、期待どおりのファイルか確認する</li>
+  <li>ファイルを2つアップロードする → ファイルを2つダウンロードし、それぞれ期待どおりのファイルか確認する</li>
+  <li>……</li>
+  <li>ファイルを9つアップロードする → ファイルを9つダウンロードし、それぞれ期待どおりのファイルか確認する</li>
+</ul>
+<p>…という形で、大きく9パターンのテストケースをサボらずキッチリこなし、再リリースすることで不具合解消できた。</p>
+<p>「初の本番障害がこの程度で良かったじゃないか〜」とフォローしてくれた上司の発言のとおり、この後もっとひどいバグに悩まされるのだが、それは以前話した。ｗ</p>
+<ul>
+  <li>過去記事 : 2018-08-03 <a href="/blog/2018/08/03-01.html">とある社内業務システムで起こったバグの話 1</a></li>
+  <li>過去記事 : 2018-08-06 <a href="/blog/2018/08/06-01.html">とある社内業務システムで起こったバグの話 2</a></li>
+  <li>過去記事 : 2018-08-07 <a href="/blog/2018/08/07-01.html">とある社内業務システムで起こったバグの話 3</a></li>
+  <li>過去記事 : 2018-08-08 <a href="/blog/2018/08/08-01.html">とある社内業務システムで起こったバグの話 4</a></li>
+</ul>
+<hr>
+<p>このバグを通じて、僕は新人なりに良い教訓を得た。</p>
+<ul>
+  <li>同じ値を2回以上使うなら変数として定義する
+    <ul>
+      <li>今回の場合なら <code>const item = items[3 * row + col];</code> があれば全然結果は違った</li>
+    </ul>
+  </li>
+  <li>多重のループは書かないで済むように構成を考える
+    <ul>
+      <li>今回のような場合、<code>&#x3C;tr></code>・<code>&#x3C;/tr></code> を挟み込む必要があるが、その部分を <code>if</code> 文にしてでも、「9回回すループ」にした方が良かったかも</li>
+    </ul>
+  </li>
+</ul>
+<pre class="language-javascript"><code class="language-javascript"><span class="token comment">// 例えばこんな感じ</span>
+<span class="token keyword">let</span> tableHtml <span class="token operator">=</span> <span class="token string">'&#x3C;table>'</span><span class="token punctuation">;</span>
+<span class="token keyword control-flow">for</span><span class="token punctuation">(</span><span class="token keyword">let</span> i <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span> i <span class="token operator">&#x3C;</span> <span class="token number">9</span><span class="token punctuation">;</span> i<span class="token operator">++</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token keyword">const</span> item <span class="token operator">=</span> items<span class="token punctuation">[</span>i<span class="token punctuation">]</span><span class="token punctuation">;</span>
+  <span class="token keyword">const</span> isRowBegin <span class="token operator">=</span> <span class="token punctuation">(</span>i <span class="token operator">===</span> <span class="token number">0</span> <span class="token operator">||</span> i <span class="token operator">===</span> <span class="token number">3</span> <span class="token operator">||</span> i <span class="token operator">===</span> <span class="token number">6</span><span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment">// ココをマジックナンバーにしない方法もあるけど</span>
+  <span class="token keyword">const</span> isRowEnd   <span class="token operator">=</span> <span class="token punctuation">(</span>i <span class="token operator">===</span> <span class="token number">2</span> <span class="token operator">||</span> i <span class="token operator">===</span> <span class="token number">5</span> <span class="token operator">||</span> i <span class="token operator">===</span> <span class="token number">8</span><span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment">// コレでも二重ループよりはまだ分かりやすいかも</span>
+  <span class="token keyword control-flow">if</span><span class="token punctuation">(</span>isRowBegin<span class="token punctuation">)</span> tableHtml <span class="token operator">+=</span> <span class="token string">'&#x3C;tr>'</span><span class="token punctuation">;</span>
+  tableHtml <span class="token operator">+=</span> <span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">&#x3C;td onmouseover="onSelect('</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>item<span class="token punctuation">.</span><span class="token property-access">fileName</span><span class="token interpolation-punctuation punctuation">}</span></span><span class="token string">')" onmouseleave="onSelect('')"></span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>item<span class="token punctuation">.</span><span class="token property-access">title</span><span class="token interpolation-punctuation punctuation">}</span></span><span class="token string">&#x3C;/td></span><span class="token template-punctuation string">`</span></span><span class="token punctuation">;</span>
+  <span class="token keyword control-flow">if</span><span class="token punctuation">(</span>isRowEnd<span class="token punctuation">)</span> tableHtml <span class="token operator">+=</span> <span class="token string">'&#x3C;/tr>'</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+tableHtml <span class="token operator">+=</span> <span class="token string">'&#x3C;/table>'</span><span class="token punctuation">;</span>
+</code></pre>
+<ul>
+  <li>レビュアーが見落とす可能性も大いにある。コードは可読性 (レビュアーが読んで理解できること) が命
+    <ul>
+      <li>今回の場合、レビュアーは SE 歴15年以上で Java の資格も持っているベテランだった。しかし分かりにくいコードは見落としを生みやすい</li>
+      <li>レビュアーの責任も問われるが、基本的には「やらかしたヤツ」が記憶されている</li>
+    </ul>
+  </li>
+  <li>コピペで実装した場合は特に要注意。パッと見で動いていても、細かな操作バリエーションで抜け漏れがあり得る
+    <ul>
+      <li>コピペした後に<em>一部を調整する</em>際にバグが混じる</li>
+      <li>今回の場合、「1列・9行」を表示するテーブルが別画面に存在したので、それをコピペして調整して組んでいた</li>
+    </ul>
+  </li>
+  <li>テストサボるな。Excel 管理でスクショを貼り付けるのはダルいが、テストケースを書く段階ではとりあえず盛り込んでおけ
+    <ul>
+      <li>できるだけテストするバリエーションやパターンを「増やそう」という意識で考えてみる</li>
+      <li>多すぎるテストケースを「やらないことにする」という判断は上司にさせればいい。そうすれば「テストしておけばよかったのに」と言いやすくなるｗ</li>
+    </ul>
+  </li>
+  <li>「本番障害」は、程度によらず起こしてはならない。起こすとクッソ面倒な修正作業を無償でやる羽目になり皆が迷惑するから
+    <ul>
+      <li>人事評価だとか、「人からよく見られたい」みたいな見栄を気にする以前の段階で、個人の心の中でメチャクチャ恥ずかしい</li>
+      <li>「レビュアーもいたのだし、チーム全員の責任だ」などと表面的には言ってくれるが、皆キッチリ「誰が起こしたバグか」は覚えていて、飲み会の度に冗談にされるｗ</li>
+      <li>本番障害に至らないようにするために、設計書を細かく書き、実装を慎重に行い、テストをサボらず入念に行うのである</li>
+    </ul>
+  </li>
+</ul>
+<p>確かに、データが破損・欠落するような重大なバグではなくて良かった。簡単なミスで、被害も少ないバグで「本番障害」の重たさを経験できて、運が良かったのだと思う。</p>
+<p>だが、僕はこのミスで一気に血の気が引いたし、それ以来システム開発を「ミスなく」「確実に」行おうという意識が強くなった。</p>
+<hr>
+<p>中小企業に転職してみて、この時の現場のようなキチッとした案件など皆無で、「なんとなくイケるっしょ！」みたいな大学生的なノリで皆が仕事していてウンザリした。だがそれも数年在籍すると、単純接触効果で慣れてしまったところがある。僕が思う水準の品質はこの会社では求められておらず、抜け漏れや失敗があっても別にいい。この会社はそういう場所であり、皆それで良しとされているのだ。</p>
+<p>郷に入っては郷に従え、で良いのか。そこそこの品質でバグの不安がある成果物を納品する、そんな今の仕事のやり方に合わせていけば良いのだろうか。コレから先、どういう風に働いていこうかのう。</p><div class="ad-amazon">
+  <div class="ad-amazon-image">
+    <a href="https://www.amazon.co.jp/dp/B098YHK3FG?tag=neos21-22&amp;linkCode=osi&amp;th=1&amp;psc=1">
+      <img src="https://m.media-amazon.com/images/I/51xrJh75ZzS._SL160_.jpg" width="120" height="160">
+    </a>
+  </div>
+  <div class="ad-amazon-info">
+    <div class="ad-amazon-title">
+      <a href="https://www.amazon.co.jp/dp/B098YHK3FG?tag=neos21-22&amp;linkCode=osi&amp;th=1&amp;psc=1">SE システムエンジニアの入門書</a>
+    </div>
+  </div>
+</div>
+<div class="ad-rakuten">
+  <div class="ad-rakuten-image">
+    <a href="https://hb.afl.rakuten.co.jp/hgc/g00q0722.waxyc9ff.g00q0722.waxyd017/?pc=https%3A%2F%2Fitem.rakuten.co.jp%2Fbook%2F15871050%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Fbook%2Fi%2F19575443%2F">
+      <img src="https://thumbnail.image.rakuten.co.jp/@0_mall/book/cabinet/2488/9784296102488.jpg?_ex=128x128">
+    </a>
+  </div>
+  <div class="ad-rakuten-info">
+    <div class="ad-rakuten-title">
+      <a href="https://hb.afl.rakuten.co.jp/hgc/g00q0722.waxyc9ff.g00q0722.waxyd017/?pc=https%3A%2F%2Fitem.rakuten.co.jp%2Fbook%2F15871050%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Fbook%2Fi%2F19575443%2F">SEを極める50の鉄則　新装版 [ 馬場 史郎 ]</a>
+    </div>
+    <div class="ad-rakuten-shop">
+      <a href="https://hb.afl.rakuten.co.jp/hgc/g00q0722.waxyc9ff.g00q0722.waxyd017/?pc=https%3A%2F%2Fwww.rakuten.co.jp%2Fbook%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Fbook%2F">楽天ブックス</a>
+    </div>
+    <div class="ad-rakuten-price">価格 : 1870円</div>
+  </div>
+</div>
+
+      </main>
+      <footer id="footer">
+        <div id="footer-contents">
+          <div id="date-time">
+            <dl>
+              <dt>Created</dt>
+              <dd><time>2023-02-21</time></dd>
+              <dt>Last-Modified</dt>
+              <dd><time>2023-02-21</time></dd>
+            </dl>
+          </div>
+          <nav id="footer-links">
+            <ul>
+              <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+              <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+              <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+              <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+            </ul>
+          </nav>
+          <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+        </div>
+      </footer>
+    </div>
+  </body>
+</html>
