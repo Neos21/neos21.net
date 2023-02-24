@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#0990d0">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>Node.js から PowerShell の標準入力にテキストを渡す際の文字化け回避方法 (chcp でエンコーディング設定を変える) - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2023/02/25-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="header-brand">
+          <div id="header-brand-contents">
+            <div id="site-title"><a href="/index.html">Neo's World</a></div>
+            <nav id="header-links">
+              <ul>
+                <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+                <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+                <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+                <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+              </ul>
+            </nav>
+          </div>
+        </div>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2023/index.html">2023年</a></li>
+            <li><a href="/blog/2023/02/index.html">02月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2023-02-25</time></div>
+        <h1 id="page-title">Node.js から PowerShell の標準入力にテキストを渡す際の文字化け回避方法 (chcp でエンコーディング設定を変える)</h1>
+
+<p>以前、PowerShell でテキスト・トゥ・スピーチができるコードを書いた。</p>
+<ul>
+  <li>過去記事 : <a href="/blog/2022/09/15-01.html">Windows の SAPI・Speech Synthesizer で say コマンドもどきを作る</a></li>
+</ul>
+<p>Windows 内蔵の Speech Synthesizer という API を呼び出して喋らせたのだが、今回この API を Node.js 経由で呼んでみようと思った。</p>
+<p>PowerShell を <code>child_process.spawn()</code> で呼び出してやれば良いだろう、<em>喋らせるテキストは標準入力で渡せばよかろう</em>と思って、次のようなコードを書いた。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword">const</span> childProcess <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'node:child_process'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token keyword control-flow">try</span> <span class="token punctuation">{</span>
+  <span class="token keyword">const</span> child <span class="token operator">=</span> childProcess<span class="token punctuation">.</span><span class="token method function property-access">spawn</span><span class="token punctuation">(</span><span class="token string">'powershell'</span><span class="token punctuation">,</span>
+    <span class="token punctuation">[</span>
+      <span class="token string">'Add-Type -AssemblyName System.speech;'</span>
+      <span class="token operator">+</span> <span class="token string">'$speak = New-Object System.Speech.Synthesis.SpeechSynthesizer;'</span>
+      <span class="token operator">+</span> <span class="token string">'$speak.Speak([Console]::In.ReadToEnd());'</span>
+    <span class="token punctuation">]</span><span class="token punctuation">,</span> <span class="token punctuation">{</span> shell<span class="token operator">:</span> <span class="token boolean">true</span> <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token comment">// 以下のエンコーディング指定はあってもなくても変わらなかった</span>
+  child<span class="token punctuation">.</span><span class="token property-access">stdin</span><span class="token punctuation">.</span><span class="token method function property-access">setEncoding</span><span class="token punctuation">(</span><span class="token string">'utf8'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  child<span class="token punctuation">.</span><span class="token property-access">stdout</span><span class="token punctuation">.</span><span class="token method function property-access">setEncoding</span><span class="token punctuation">(</span><span class="token string">'utf8'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  
+  <span class="token comment">// 標準入力からテキストを渡してやる</span>
+  child<span class="token punctuation">.</span><span class="token property-access">stdin</span><span class="token punctuation">.</span><span class="token method function property-access">end</span><span class="token punctuation">(</span><span class="token string">'こんにちは'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  
+  child<span class="token punctuation">.</span><span class="token method function property-access">addListener</span><span class="token punctuation">(</span><span class="token string">'exit'</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token parameter">code<span class="token punctuation">,</span> signal</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+    <span class="token keyword control-flow">if</span><span class="token punctuation">(</span>code <span class="token operator">==</span> <span class="token keyword null nil">null</span> <span class="token operator">||</span> signal <span class="token operator">!=</span> <span class="token keyword null nil">null</span><span class="token punctuation">)</span> <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">error</span><span class="token punctuation">(</span><span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">Error : Code [</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>code<span class="token interpolation-punctuation punctuation">}</span></span><span class="token string">] Signal [</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>signal<span class="token interpolation-punctuation punctuation">}</span></span><span class="token string">]</span><span class="token template-punctuation string">`</span></span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+<span class="token keyword control-flow">catch</span><span class="token punctuation">(</span>error<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">error</span><span class="token punctuation">(</span>error<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>「こんにちは」と書いた部分、「Hello」などの英語 (ASCII 文字) だと正常に読み上げてくれるのだが、日本語を渡すと意味不明な言葉を発話してくる。</p>
+<p>多分エンコーディング周りなんだろうなと思って調べたところ、PowerShell には Shift-JIS で日本語を渡してやると良いそうだ。</p>
+<ul>
+  <li>正確には PowerShell 内部は UTF-16 だが、日本語版 Windows 環境のコンソールは Shift-JIS をデフォルトにしており、コンソールと PowerShell との間での Shift-JIS・UTF-16 変換は自動的に行われる、という仕組みらしい</li>
+  <li>GitBash などは UTF-8 (US-ASCII) が前提であり、Node.js を呼び出すところでエンコーディングの不一致が生じている</li>
+</ul>
+<p>というワケで、<strong>対処法その1</strong>は <code>iconv-lite</code> パッケージを使う方法。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">npm</span> <span class="token function">install</span> --save iconv-lite
+</code></pre>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword">const</span> iconvLite <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'iconv-lite'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// 標準入力からテキストを渡してやる部分を、次のように Shift-JIS エンコードしてやる</span>
+child<span class="token punctuation">.</span><span class="token property-access">stdin</span><span class="token punctuation">.</span><span class="token method function property-access">end</span><span class="token punctuation">(</span>iconvLite<span class="token punctuation">.</span><span class="token method function property-access">encode</span><span class="token punctuation">(</span><span class="token string">'こんにちは'</span><span class="token punctuation">,</span> <span class="token string">'Shift_JIS'</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>コレでも上手く行ったのだが、<code>iconv-lite</code> のインストールが嫌なので他に回避方法がないか調べたところ、<strong><code>chccp 65001</code> で UTF-8 に変更してしまう方法</strong>を見付けた。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword">const</span> childProcess <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'node:child_process'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token keyword control-flow">try</span> <span class="token punctuation">{</span>
+  <span class="token keyword">const</span> child <span class="token operator">=</span> childProcess<span class="token punctuation">.</span><span class="token method function property-access">spawn</span><span class="token punctuation">(</span><span class="token string">'chcp 65001 > NUL &#x26; powershell.exe -NonInteractive -NoProfile -Command'</span><span class="token punctuation">,</span>
+    <span class="token punctuation">[</span>
+      <span class="token string">'Add-Type -AssemblyName System.speech;'</span>
+      <span class="token operator">+</span> <span class="token string">'$speak = New-Object System.Speech.Synthesis.SpeechSynthesizer;'</span>
+      <span class="token operator">+</span> <span class="token string">'$speak.Speak([Console]::In.ReadToEnd());'</span>
+    <span class="token punctuation">]</span><span class="token punctuation">,</span> <span class="token punctuation">{</span> shell<span class="token operator">:</span> <span class="token boolean">true</span> <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  
+  child<span class="token punctuation">.</span><span class="token property-access">stdin</span><span class="token punctuation">.</span><span class="token method function property-access">end</span><span class="token punctuation">(</span><span class="token string">'こんにちは'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  
+  child<span class="token punctuation">.</span><span class="token method function property-access">addListener</span><span class="token punctuation">(</span><span class="token string">'exit'</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token parameter">code<span class="token punctuation">,</span> signal</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+    <span class="token keyword control-flow">if</span><span class="token punctuation">(</span>code <span class="token operator">==</span> <span class="token keyword null nil">null</span> <span class="token operator">||</span> signal <span class="token operator">!=</span> <span class="token keyword null nil">null</span><span class="token punctuation">)</span> <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">error</span><span class="token punctuation">(</span><span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">Error : Code [</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>code<span class="token interpolation-punctuation punctuation">}</span></span><span class="token string">] Signal [</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>signal<span class="token interpolation-punctuation punctuation">}</span></span><span class="token string">]</span><span class="token template-punctuation string">`</span></span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+<span class="token keyword control-flow">catch</span><span class="token punctuation">(</span>error<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">error</span><span class="token punctuation">(</span>error<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p><code>child_process.spawn()</code> 内で <code>chcp 65001</code> を呼び、それから PowerShell を起動している。コレにより、<code>child.stdin.end()</code> で標準入力を注入する部分に <code>iconv-lite</code> は不要になり、正しく読み上げてくれた。</p><div class="ad-amazon">
+  <div class="ad-amazon-image">
+    <a href="https://www.amazon.co.jp/dp/4873113822?tag=neos21-22&amp;linkCode=osi&amp;th=1&amp;psc=1">
+      <img src="https://m.media-amazon.com/images/I/51YZUMi+AsL._SL160_.jpg" width="125" height="160">
+    </a>
+  </div>
+  <div class="ad-amazon-info">
+    <div class="ad-amazon-title">
+      <a href="https://www.amazon.co.jp/dp/4873113822?tag=neos21-22&amp;linkCode=osi&amp;th=1&amp;psc=1">Windows PowerShellクックブック</a>
+    </div>
+  </div>
+</div>
+<div class="ad-rakuten">
+  <div class="ad-rakuten-image">
+    <a href="https://hb.afl.rakuten.co.jp/hgc/g00q0722.waxyc9ff.g00q0722.waxyd017/?pc=https%3A%2F%2Fitem.rakuten.co.jp%2Fbook%2F5883966%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Fbook%2Fi%2F13069415%2F">
+      <img src="https://thumbnail.image.rakuten.co.jp/@0_mall/book/cabinet/3821/9784873113821.jpg?_ex=128x128">
+    </a>
+  </div>
+  <div class="ad-rakuten-info">
+    <div class="ad-rakuten-title">
+      <a href="https://hb.afl.rakuten.co.jp/hgc/g00q0722.waxyc9ff.g00q0722.waxyd017/?pc=https%3A%2F%2Fitem.rakuten.co.jp%2Fbook%2F5883966%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Fbook%2Fi%2F13069415%2F">Windows　PowerShellクックブック [ リー・ホームズ ]</a>
+    </div>
+    <div class="ad-rakuten-shop">
+      <a href="https://hb.afl.rakuten.co.jp/hgc/g00q0722.waxyc9ff.g00q0722.waxyd017/?pc=https%3A%2F%2Fwww.rakuten.co.jp%2Fbook%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Fbook%2F">楽天ブックス</a>
+    </div>
+    <div class="ad-rakuten-price">価格 : 4400円</div>
+  </div>
+</div>
+<ul>
+  <li>参考 : <a href="https://stackoverflow.com/questions/67578079/node-js-powershell-how-to-encode-unicode-characters-when-using-stdin-write">Node.js + Powershell: how to encode Unicode characters when using stdin.write - Stack Overflow</a></li>
+  <li>参考 : <a href="https://yanor.net/wiki/?PowerShell/%E6%97%A5%E6%9C%AC%E8%AA%9E/%E3%82%B3%E3%83%9E%E3%83%B3%E3%83%89%E3%83%97%E3%83%AD%E3%83%B3%E3%83%97%E3%83%88%E3%81%AA%E3%82%B3%E3%83%9E%E3%83%B3%E3%83%89%E3%81%AE%E5%85%A5%E5%87%BA%E5%8A%9B%E3%81%8C%E6%96%87%E5%AD%97%E5%8C%96%E3%81%91%E3%81%99%E3%82%8B">PowerShell/日本語/コマンドプロンプトなコマンドの入出力が文字化けする - yanor.net/wiki</a></li>
+</ul>
+
+      </main>
+      <footer id="footer">
+        <div id="footer-contents">
+          <div id="date-time">
+            <dl>
+              <dt>Created</dt>
+              <dd><time>2023-02-25</time></dd>
+              <dt>Last-Modified</dt>
+              <dd><time>2023-02-25</time></dd>
+            </dl>
+          </div>
+          <nav id="footer-links">
+            <ul>
+              <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+              <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+              <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+              <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+            </ul>
+          </nav>
+          <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+        </div>
+      </footer>
+    </div>
+  </body>
+</html>
