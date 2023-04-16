@@ -1,7 +1,7 @@
 ---
 title        : Neo の PC 環境
 created      : 2020-03-01
-last-modified: 2022-10-15
+last-modified: 2023-04-17
 path:
   - /index.html Neo's World
   - /tech/index.html Tech
@@ -55,9 +55,11 @@ path:
 - オーディオインターフェース : Yamaha AG06MK2
   - ギターの録音に使用。PC と USB 接続して Reason Lite 10 で録音している。
   - 詳細 : [Yamaha AG06MK2](/music/gears/dtm-01.html#yamahaag06mk2)
-- ギターエフェクター・オーディオインターフェース : Boss GT-1、Zoom G2.1Nu
+- コンデンサマイク : Tascam TM-80
+  - AG06MK2 に接続して音声を録音する際に使用している。
+- ギターエフェクター・オーディオインターフェース : Nux MG-30
   - ギターの録音に使用。PC と USB 接続して Reason Lite 10 で録音している。
-  - 詳細 : [Boss GT-1](/music/gears/effector-06.html#bossgt1)、[Zoom G2.1Nu](/music/gears/effector-03.html#zoomg21nu)
+  - 詳細 : [Nux MG-30](/music/gears/effector-06.html#nuxmg30)
 
 
 ## 持ち運び用 Windows 機 : Asus ZenBook3 UX390UA-512GP (2017-11-25 ～)
@@ -107,78 +109,6 @@ path:
 - ブログ記事 : [iPhone 11 Pro Max を買った・使えた液晶ガラスフィルム・レンズ保護フィルム・ケースの話も](/blog/2019/09/22-01.html)
 
 
-## ChromeBook : Lenovo IdeaPad Duet Chromebook (2020-12-11 ～)
-
-- CPU : MediaTek Helio P60T (8コア)
-- GPU : CPU 内蔵 (Arm Mali-G72 MP3)
-- RAM : 4GB LPDDR4X
-- Storage : 128GB eMMC
-- Monitor : 10.1インチ・1920x1200 WUXGA
-- Keyboard : US 配列
-- Weight : 本体 450g + カバー 470g = 合計 920g
-
-以前 ChromeBook Flip を持っていたが売却しており、しばらくぶりに ChromeBook を購入。主に YouTube 視聴マシンとしているが、Linux (Ubuntu) もシームレスに使えるようになっていて、VSCode が普通に使えたりするので、持ち運んで簡単な開発にも使える。
-
-- ブログ記事 : [Lenovo IdeaPad Duet Chromebook を買った](/blog/2020/12/28-01.html)
-
-
-## Linux 専用機 : Lenovo ThinkPad X250 2号機 (2020-03-15 ～)
-
-- CPU : Core i7-5600U (2.60 ～ 3.20 GHz)
-- GPU : Intel HD Graphics 5500 (Broadwell GT2)
-- RAM : 8GB DDR3 1600MHz
-- HDD : 500GB → 2.5インチ SSD 240GB に換装
-- M.2 SSD : 1TB
-- Screen : 1920x1080 IPS
-- Keyboard : US キーボード
-- OS : Windows10 Pro 64bit (M.2 SSD)・Ubuntu 18.04 (2.5インチ SSD)
-- Weight : 1.58kg
-- 購入価格 : 約41,000円
-
-Core i5 の ThinkPad X250 を買ってホクホクしていたのだが、壊れてしまって買い直し。2号機のコチラは Core i7 でフル HD 液晶になり、M.2 SSD も付いていて、X250 という同型の中でスペックアップした感じ。バッテリーも大型のモノになった。
-
-M.2 SSD の方には Windows10 が入っているのでそのままにし、2.5インチ HDD を SSD に換装して Ubuntu をインストール。物理的に別れたデュアルブート環境ができあがってよきよき。
-
-- ブログ記事 : [ThinkPad X250 が壊れたので ThinkPad X250 を買った](/blog/2020/04/04-01.html)
-
-
-## Raspberry Pi 4 Model B RAM 4GB (2020-06 ～)
-
-Labists というところが出しているスターターキットでラズパイデビュー。Elecrow 5インチ LCD を繋ぎ、DIY ラップトップっぽいモノを作ったりした。
-
-同じく Labists の B01 カメラモジュールを繋いで、mjpg-streamer を使ってウェブカメラ配信を出来るようにして、自宅内監視カメラにしようかなーとか考えていたのだが、持て余している。用途募集。ｗ
-
-- ブログ記事 : [Raspberry Pi 4 Model B 4GB RAM の Labists スターターキットを買ってラズパイデビューした](/blog/2020/06/16-01.html)
-- ブログ記事 : [Raspbian OS に Fcitx-Mozc をインストールして日本語入力を可能にする](/blog/2020/06/18-01.html)
-- ブログ記事 : [Raspberry Pi 4 の初期設定を進めていく](/blog/2020/06/17-01.html)
-- ブログ記事 : [ラズパイ4に Elecrow 5インチ・タッチスクリーンを接続してみた](/blog/2020/06/29-01.html)
-- ブログ記事 : [Labists 製カメラモジュール B01 をラズパイ4に接続してみた](/blog/2020/06/30-01.html)
-- ブログ記事 : [Ewin 折りたたみ式 Bluetooth キーボード・トラックパッドを購入した](/blog/2020/07/01-01.html)
-- ブログ記事 : [Raspberry Pi 4 を DIY ラップトップ化してみた](/blog/2020/07/02-01.html)
-- ブログ記事 : [ラズパイ4をバッテリー駆動させるためのモバイルバッテリーを買った](/blog/2020/07/02-02.html)
-- ブログ記事 : [Raspberry Pi 4 と mjpg-streamer でウェブカメラ配信する](/blog/2020/12/29-02.html)
-
-
-## GPD Win2 (2021-03-29 ～)
-
-何となく UMPC が欲しくて、キレイな US 配列を持つ UMPC を探していて購入。2019年モデル。
-
-- CPU : Core m3-8100Y Amber Lake 1.1GHz ～ 3.4GHz
-- GPU : Intel UHD Graphics 615
-- RAM : 8GB LPDDR3-1866
-- SSD : 256GB M.2 2242
-- 液晶 : 6インチ・タッチパネル・1280x720px
-- 重量 : 460g
-- サイズ : 幅162mm × 奥行99mm × 高さ25mm
-- キー配列 : US 配列
-- インターフェイス : USB-A 3.0・USB-C 3.0・microSD・Micro HDMI・LAN・3.5mm イヤホンジャック
-
-サイズを考えると動作はかなり快適な方だが、CPU ファンが常に全開でなかなかうるさい。JoyToKey というフリーソフトを入れると、この本体が持つ左右のスティックや LR ボタンなどをより柔軟に設定変更できるのでオススメ。
-
-- ブログ記事 : [GPD Win2 (2019年モデル) を買った](/blog/2021/04/22-01.html)
-- ブログ記事 : [GPD Win2 に JoyToKey を入れてマウス操作を快適にする](/blog/2021/04/23-01.html)
-
-
 ## Microsoft Surface Pro 4 (2022-07-08 ～)
 
 ゴロ寝で使うタブレットとして、どうしても ChromeBook は使いづらく、Surface Pro 4 の中古品を20,800円で購入。
@@ -220,6 +150,76 @@ Labists というところが出しているスターターキットでラズパ
   - ブログ記事 : [Dell の US キーボード KB1421 を買った](/blog/2018/05/26-02.html)
 
 ### 手放したモノ
+
+### ChromeBook : Lenovo IdeaPad Duet Chromebook (2020-12-11 ～ 2023-02-10)
+
+- CPU : MediaTek Helio P60T (8コア)
+- GPU : CPU 内蔵 (Arm Mali-G72 MP3)
+- RAM : 4GB LPDDR4X
+- Storage : 128GB eMMC
+- Monitor : 10.1インチ・1920x1200 WUXGA
+- Keyboard : US 配列
+- Weight : 本体 450g + カバー 470g = 合計 920g
+
+以前 ChromeBook Flip を持っていたが売却しており、しばらくぶりに ChromeBook を購入。主に YouTube 視聴マシンとしているが、Linux (Ubuntu) もシームレスに使えるようになっていて、VSCode が普通に使えたりするので、持ち運んで簡単な開発にも使える。
+
+- ブログ記事 : [Lenovo IdeaPad Duet Chromebook を買った](/blog/2020/12/28-01.html)
+
+### Linux 専用機 : Lenovo ThinkPad X250 2号機 (2020-03-15 ～ 2023-02-12)
+
+- CPU : Core i7-5600U (2.60 ～ 3.20 GHz)
+- GPU : Intel HD Graphics 5500 (Broadwell GT2)
+- RAM : 8GB DDR3 1600MHz
+- HDD : 500GB → 2.5インチ SSD 240GB に換装
+- M.2 SSD : 1TB
+- Screen : 1920x1080 IPS
+- Keyboard : US キーボード
+- OS : Windows10 Pro 64bit (M.2 SSD)・Ubuntu 18.04 (2.5インチ SSD)
+- Weight : 1.58kg
+- 購入価格 : 約41,000円
+
+Core i5 の ThinkPad X250 を買ってホクホクしていたのだが、壊れてしまって買い直し。2号機のコチラは Core i7 でフル HD 液晶になり、M.2 SSD も付いていて、X250 という同型の中でスペックアップした感じ。バッテリーも大型のモノになった。
+
+M.2 SSD の方には Windows10 が入っているのでそのままにし、2.5インチ HDD を SSD に換装して Ubuntu をインストール。物理的に別れたデュアルブート環境ができあがってよきよき。
+
+- ブログ記事 : [ThinkPad X250 が壊れたので ThinkPad X250 を買った](/blog/2020/04/04-01.html)
+
+### Raspberry Pi 4 Model B RAM 4GB (2020-06 ～ 2023-01-15)
+
+Labists というところが出しているスターターキットでラズパイデビュー。Elecrow 5インチ LCD を繋ぎ、DIY ラップトップっぽいモノを作ったりした。
+
+同じく Labists の B01 カメラモジュールを繋いで、mjpg-streamer を使ってウェブカメラ配信を出来るようにして、自宅内監視カメラにしようかなーとか考えていたのだが、持て余している。用途募集。ｗ
+
+- ブログ記事 : [Raspberry Pi 4 Model B 4GB RAM の Labists スターターキットを買ってラズパイデビューした](/blog/2020/06/16-01.html)
+- ブログ記事 : [Raspbian OS に Fcitx-Mozc をインストールして日本語入力を可能にする](/blog/2020/06/18-01.html)
+- ブログ記事 : [Raspberry Pi 4 の初期設定を進めていく](/blog/2020/06/17-01.html)
+- ブログ記事 : [ラズパイ4に Elecrow 5インチ・タッチスクリーンを接続してみた](/blog/2020/06/29-01.html)
+- ブログ記事 : [Labists 製カメラモジュール B01 をラズパイ4に接続してみた](/blog/2020/06/30-01.html)
+- ブログ記事 : [Ewin 折りたたみ式 Bluetooth キーボード・トラックパッドを購入した](/blog/2020/07/01-01.html)
+- ブログ記事 : [Raspberry Pi 4 を DIY ラップトップ化してみた](/blog/2020/07/02-01.html)
+- ブログ記事 : [ラズパイ4をバッテリー駆動させるためのモバイルバッテリーを買った](/blog/2020/07/02-02.html)
+- ブログ記事 : [Raspberry Pi 4 と mjpg-streamer でウェブカメラ配信する](/blog/2020/12/29-02.html)
+
+### GPD Win2 (2021-03-29 ～ 2023-01-03)
+
+何となく UMPC が欲しくて、キレイな US 配列を持つ UMPC を探していて購入。2019年モデル。
+
+- CPU : Core m3-8100Y Amber Lake 1.1GHz ～ 3.4GHz
+- GPU : Intel UHD Graphics 615
+- RAM : 8GB LPDDR3-1866
+- SSD : 256GB M.2 2242
+- 液晶 : 6インチ・タッチパネル・1280x720px
+- 重量 : 460g
+- サイズ : 幅162mm × 奥行99mm × 高さ25mm
+- キー配列 : US 配列
+- インターフェイス : USB-A 3.0・USB-C 3.0・microSD・Micro HDMI・LAN・3.5mm イヤホンジャック
+
+サイズを考えると動作はかなり快適な方だが、CPU ファンが常に全開でなかなかうるさい。JoyToKey というフリーソフトを入れると、この本体が持つ左右のスティックや LR ボタンなどをより柔軟に設定変更できるのでオススメ。
+
+- ブログ記事 : [GPD Win2 (2019年モデル) を買った](/blog/2021/04/22-01.html)
+- ブログ記事 : [GPD Win2 に JoyToKey を入れてマウス操作を快適にする](/blog/2021/04/23-01.html)
+
+### それ以前のモノ
 
 - ラップトップ : Lenovo ThinkPad X250 (2020-02-14 ～ 2020-03-15)
   - スペック
@@ -316,12 +316,13 @@ Labists というところが出しているスターターキットでラズパ
 ## その他の機材遍歴
 
 - ガラケー : Vodafone 904T (2006 ～ 2009-03) → SoftBank 830N (2009-03-20 ～ 2011-04)
-- スマホ : iPhone 4 (2011-04-23 ～ 2014-07) → iPhone 4 (2014-07-08 ～ 2014-09) → iPhone 6 Plus 64GB スペースグレイ (2014-09-23 ～・現所有) → iPhone 7 Plus 128GB シルバー (2016-11-16 ～・現所有)
-- iPod : iPod 5G 60GB 白 (2005 ～ 2006) → iPod 5.5G 80GB 黒 (2006) → iPod nano 6G 16GB (2013 ～ 2016) → iPod nano 7G 16GB (2016-10-14 ～・現所有)
+- スマホ : iPhone 4 (2011-04-23 ～ 2014-07) → iPhone 4 (2014-07-08 ～ 2014-09) → iPhone 6 Plus 64GB スペースグレイ (2014-09-23 ～ 現所有) → iPhone 7 Plus 128GB シルバー (2016-11-16 ～ 現所有)
+- iPod : iPod 5G 60GB 白 (2005 ～ 2006) → iPod 5.5G 80GB 黒 (2006) → iPod nano 6G 16GB (2013 ～ 2016) → iPod nano 7G 16GB (2016-10-14 ～ 現所有)
 - デジカメ : Sony DSC-T9 (2006 ～ 2013-01) → Sony DSC-TX300V (2013-01-11 ～ 2018)
-- デジイチ : Nikon D3100 (2011-02-28 ～ 2017) → Nikon D5600 (2016-12 ～・現所有)・Olympus OM-D E-M10 Mark II (2019-03 ～・現所有)
-- アクションカム : GoPro Hero 7 (2019-03 ～・現所有)
+- デジイチ : Nikon D3100 (2011-02-28 ～ 2017) → Nikon D5600 (2016-12 ～ 2023-03)・Olympus OM-D E-M10 Mark II (2019-03 ～ 2023-03) → Sony α7SII (2023-02 ～ 現所有)・Sony αS7IV (2023-02 ～ 現所有)
+- アクションカム : GoPro Hero 7 (2019-03 ～ 2023-03)
 - ウェブカメラ : Logicool C300 (2009-08-21 ～ 2018)
+- ゲーム機 : Nintendo Switch 有機 EL モデル (2023-03-15 ～)
 
 ### 家族所有のデジタルガジェット
 

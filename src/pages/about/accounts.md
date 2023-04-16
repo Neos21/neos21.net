@@ -1,7 +1,7 @@
 ---
 title        : アカウント一覧
 created      : 2020-11-16
-last-modified: 2023-02-07
+last-modified: 2023-04-17
 path:
   - /index.html Neo's World
   - /about/index.html About
@@ -10,9 +10,18 @@ path:
 SNS やその他アカウント一覧。
 
 - ActivityPub
-  - [Pawoo.net](https://pawoo.net/@Neos21)
   - [mstdn.jp](https://mstdn.jp/@Neos21mstdn)
+  - [Pawoo.net](https://pawoo.net/@Neos21)
+  - [pokemon.mastportal.info](https://pokemon.mastportal.info/@Neos21)
+  - [itabashi.0j0.jp](https://itabashi.0j0.jp/@Neos21)
   - [Misskey.io](https://misskey.io/@Neos21)
+  - [Misskey.cf](https://misskey.cf/@Neos21)
+- Nostr : `npub1q33gf3wnejze7k93lavd90dlyt4k7sdxx05h75p626wvrl5gvv3qjqycty`
+  - [Iris](https://iris.to/neos21)
+- Bluesky : `neos21.bsky.social`
+  - [Tokimeki Bluesky](https://tokimekibluesky.vercel.app/profile/neos21.bsky.social)
+  - [Flat](https://flat-bs.vercel.app/neos21.bsky.social)
+- [Discord](https://discord.gg/QBrVwgG8BW) : `Neos21#3257`
 - [Bitbucket](https://bitbucket.org/Neos21/)
 - [CodePen.io](https://codepen.io/Neos21/)
 - [Dot Install](https://dotinstall.com/users/neos21)
