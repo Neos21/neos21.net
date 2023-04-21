@@ -1,7 +1,7 @@
 ---
 title        : アカウント一覧
 created      : 2020-11-16
-last-modified: 2023-04-17
+last-modified: 2023-04-21
 path:
   - /index.html Neo's World
   - /about/index.html About
@@ -18,9 +18,9 @@ SNS やその他アカウント一覧。
   - [Misskey.cf](https://misskey.cf/@Neos21)
 - Nostr : `npub1q33gf3wnejze7k93lavd90dlyt4k7sdxx05h75p626wvrl5gvv3qjqycty`
   - [Iris](https://iris.to/neos21)
-- Bluesky : `neos21.bsky.social`
-  - [Tokimeki Bluesky](https://tokimekibluesky.vercel.app/profile/neos21.bsky.social)
-  - [Flat](https://flat-bs.vercel.app/neos21.bsky.social)
+- Bluesky : 
+  - [neos21.bsky.social](https://staging.bsky.app/profile/neos21.bsky.social) … コチラは万が一乗っ取られたりしてたら偽物です
+  - [neos21.net](https://staging.bsky.app/profile/neos21.net) … コチラはカスタムドメインを設定しているので確実に本物です
 - [Discord](https://discord.gg/QBrVwgG8BW) : `Neos21#3257`
 - [Bitbucket](https://bitbucket.org/Neos21/)
 - [CodePen.io](https://codepen.io/Neos21/)
