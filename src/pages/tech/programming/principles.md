@@ -76,7 +76,7 @@ path:
   - *参考 :*
       - [Wikipedia - Single responsibility principle](https://en.wikipedia.org/wiki/Single_responsibility_principle)
       - [プログラマが知るべき97のこと - 単一責任原則](https://プログラマが知るべき97のこと.com/%E3%82%A8%E3%83%83%E3%82%BB%E3%82%A4/%E5%8D%98%E4%B8%80%E8%B2%AC%E4%BB%BB%E5%8E%9F%E5%89%87/)
-      - 拙記事 : [一つのモノには一つのことだけやらせる](single-responsibility-principle.html)
+      - 拙記事 : [一つのモノには一つのことだけやらせる](../design/single-responsibility-principle.html)
 - **開放 / 閉鎖原則 : <abbr title="Open / Closed Principle">OCP</abbr> : オープン・クローズドの原則**
   - *意味 :* 拡張に対して開いていて、修正に対して閉じていること
   - *例示 :* 機能の追加や変更がしやすい作りであり、かつ、既存の実装を修正した時の影響範囲が少なくなる作りが良い、ということ。一度作ったクラスは原則変更せず、継承によって機能を追加したり、ポリモーフィズムを利用したりして、拡張に対して開く。また、グローバル変数を利用しないようにしたり、インスタンス変数を `private` で扱ったりすることで、修正時の影響を小さくする
