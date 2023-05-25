@@ -1,7 +1,7 @@
 ---
 title        : アカウント一覧
 created      : 2020-11-16
-last-modified: 2023-04-21
+last-modified: 2023-05-25
 path:
   - /index.html Neo's World
   - /about/index.html About
@@ -11,10 +11,11 @@ SNS やその他アカウント一覧。
 
 - ActivityPub
   - [mstdn.jp](https://mstdn.jp/@Neos21mstdn)
+  - [Fedibird.com](https://fedibird.com/@Neos21)
+  - [itabashi.0j0.jp](https://itabashi.0j0.jp/@Neos21)
   - [Pawoo.net](https://pawoo.net/@Neos21)
   - [pokemon.mastportal.info](https://pokemon.mastportal.info/@Neos21)
-  - [itabashi.0j0.jp](https://itabashi.0j0.jp/@Neos21)
-  - [Misskey.io](https://misskey.io/@Neos21)
+  - [Vivaldi.net](https://social.vivaldi.net/@Neos21)
   - [Misskey.cf](https://misskey.cf/@Neos21)
 - Nostr : `npub1q33gf3wnejze7k93lavd90dlyt4k7sdxx05h75p626wvrl5gvv3qjqycty`
   - [Iris](https://iris.to/neos21)
@@ -61,6 +62,7 @@ SNS やその他アカウント一覧。
 ## 過去情報
 
 - ~~[Coconala](https://profile.coconala.com/users/1578422)~~ : 2021-01-23 退会
+- ~[Misskey.io](https://misskey.io/@Neos21)~ : 退会
 - ~~[Patreon](https://www.patreon.com/Neos21)~~ : 退会
 - Qrunch (`https://neos21.qrunch.io/`) : サービス停止
 - ~~[Twitter](https://twitter.com/Neos21) : 永久凍結~~
