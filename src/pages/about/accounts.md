@@ -1,7 +1,7 @@
 ---
 title        : アカウント一覧
 created      : 2020-11-16
-last-modified: 2023-05-25
+last-modified: 2023-07-03
 path:
   - /index.html Neo's World
   - /about/index.html About
@@ -11,17 +11,22 @@ SNS やその他アカウント一覧。
 
 - ActivityPub
   - [mstdn.jp](https://mstdn.jp/@Neos21mstdn)
+  - [mastodon-japan.net](https://mastodon-japan.net/@neos21)
   - [Fedibird.com](https://fedibird.com/@Neos21)
   - [itabashi.0j0.jp](https://itabashi.0j0.jp/@Neos21)
   - [Pawoo.net](https://pawoo.net/@Neos21)
   - [pokemon.mastportal.info](https://pokemon.mastportal.info/@Neos21)
   - [Vivaldi.net](https://social.vivaldi.net/@Neos21)
-  - [Misskey.cf](https://misskey.cf/@Neos21)
+  - [Misskey.gg](https://misskey.gg/@Neos21)
 - Nostr : `npub1q33gf3wnejze7k93lavd90dlyt4k7sdxx05h75p626wvrl5gvv3qjqycty`
   - [Iris](https://iris.to/neos21)
 - Bluesky : 
   - [neos21.bsky.social](https://staging.bsky.app/profile/neos21.bsky.social) … コチラは万が一乗っ取られたりしてたら偽物です
   - [neos21.net](https://staging.bsky.app/profile/neos21.net) … コチラはカスタムドメインを設定しているので確実に本物です
+- [T2](https://t2.social/Neos21)
+- [タイッツー](https://taittsuu.com/users/neos21)
+- [Post.News](https://post.news/@/Neos21)
+- [Truth Social](https://truthsocial.com/@Neos21)
 - [Discord](https://discord.gg/QBrVwgG8BW) : `Neos21#3257`
 - [Bitbucket](https://bitbucket.org/Neos21/)
 - [CodePen.io](https://codepen.io/Neos21/)
@@ -62,8 +67,8 @@ SNS やその他アカウント一覧。
 ## 過去情報
 
 - ~~[Coconala](https://profile.coconala.com/users/1578422)~~ : 2021-01-23 退会
-- ~[Misskey.io](https://misskey.io/@Neos21)~ : 退会
-- ~~[Patreon](https://www.patreon.com/Neos21)~~ : 退会
-- Qrunch (`https://neos21.qrunch.io/`) : サービス停止
-- ~~[Twitter](https://twitter.com/Neos21) : 永久凍結~~
-- [Zeit](https://zeit.co/neos21) : 現在の Vercel
+- ~~[Misskey.cf](https://misskey.cf/@Neos21)~~ : サービス停止
+- ~~[Misskey.io](https://misskey.io/@Neos21)~~ : 退会
+- ~~[Patreon(https://www.patreon.com/Neos21)~~ : 退会
+- ~~[Qrunch(https://neos21.qrunch.io/)~~ : サービス停止
+- ~~[Twitter](https://twitter.com/Neos21) : 凍結~~
