@@ -1,7 +1,7 @@
 ---
 title        : アカウント一覧
 created      : 2020-11-16
-last-modified: 2023-07-03
+last-modified: 2023-07-17
 path:
   - /index.html Neo's World
   - /about/index.html About
@@ -33,6 +33,8 @@ SNS やその他アカウント一覧。
 - [Dot Install](https://dotinstall.com/users/neos21)
 - [Enty](https://enty.jp/Neos21)
 - [Facebook](https://www.facebook.com/Neos21)
+  - [Instagram](https://www.instagram.com/Neos21/)
+  - [Threads](https://www.threads.net/@neos21)
 - [Fantia](https://fantia.jp/Neos21)
 - [GitLab](https://gitlab.com/Neos21)
 - [GitHub](https://github.com/Neos21)
@@ -41,7 +43,6 @@ SNS やその他アカウント一覧。
   - ~~[Corredor](https://neos21.hatenablog.com/)~~
   - ~~[Murga](https://neos21.hatenablog.jp/)~~
   - ~~[El Mylar](https://neos21.hateblo.jp/)~~
-- [Instagram](https://www.instagram.com/Neos21/)
 - [LinkedIn](https://www.linkedin.com/in/Neos21/)
 - [MDN](https://developer.mozilla.org/ja/profiles/Neos21)
 - [Mixi](https://mixi.jp/show_profile.pl?id=21893730)
@@ -71,4 +72,4 @@ SNS やその他アカウント一覧。
 - ~~[Misskey.io](https://misskey.io/@Neos21)~~ : 退会
 - ~~[Patreon(https://www.patreon.com/Neos21)~~ : 退会
 - ~~[Qrunch(https://neos21.qrunch.io/)~~ : サービス停止
-- ~~[Twitter](https://twitter.com/Neos21) : 凍結~~
+- ~~[Twitter](https://twitter.com/Neos21)~~ : 凍結
