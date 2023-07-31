@@ -1,7 +1,7 @@
 ---
 title        : アカウント一覧
 created      : 2020-11-16
-last-modified: 2023-07-17
+last-modified: 2023-07-31
 path:
   - /index.html Neo's World
   - /about/index.html About
@@ -21,8 +21,8 @@ SNS やその他アカウント一覧。
 - Nostr : `npub1q33gf3wnejze7k93lavd90dlyt4k7sdxx05h75p626wvrl5gvv3qjqycty`
   - [Iris](https://iris.to/neos21)
 - Bluesky : 
-  - [neos21.bsky.social](https://staging.bsky.app/profile/neos21.bsky.social) … コチラは万が一乗っ取られたりしてたら偽物です
-  - [neos21.net](https://staging.bsky.app/profile/neos21.net) … コチラはカスタムドメインを設定しているので確実に本物です
+  - [neos21.bsky.social](https://staging.bsky.app/profile/neos21.bsky.social)
+  - [neos21.net](https://staging.bsky.app/profile/neos21.net)
 - [T2](https://t2.social/Neos21)
 - [タイッツー](https://taittsuu.com/users/neos21)
 - [Post.News](https://post.news/@/Neos21)
@@ -58,7 +58,7 @@ SNS やその他アカウント一覧。
 - Tumblr
   - [Reblog Texts](https://mg360s.tumblr.com/)
   - [Reblog Images](https://mg380s.tumblr.com/)
-  - [Neo's Dream](https://neos21dream.tumblr.com/)
+  - ~~[Neo's Dream](https://neos21dream.tumblr.com/)~~
 - [YouTube](https://www.youtube.com/Neos21)
   - [Neo's Channel](https://www.youtube.com/@Neos21Channel)
 - [Vercel](https://vercel.com/neos21)
@@ -70,6 +70,6 @@ SNS やその他アカウント一覧。
 - ~~[Coconala](https://profile.coconala.com/users/1578422)~~ : 2021-01-23 退会
 - ~~[Misskey.cf](https://misskey.cf/@Neos21)~~ : サービス停止
 - ~~[Misskey.io](https://misskey.io/@Neos21)~~ : 退会
-- ~~[Patreon(https://www.patreon.com/Neos21)~~ : 退会
-- ~~[Qrunch(https://neos21.qrunch.io/)~~ : サービス停止
+- ~~[Patreon](https://www.patreon.com/Neos21)~~ : 退会
+- ~~[Qrunch](https://neos21.qrunch.io/)~~ : サービス停止
 - ~~[Twitter](https://twitter.com/Neos21)~~ : 凍結
