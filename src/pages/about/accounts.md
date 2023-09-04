@@ -1,7 +1,7 @@
 ---
 title        : アカウント一覧
 created      : 2020-11-16
-last-modified: 2023-07-31
+last-modified: 2023-09-04
 path:
   - /index.html Neo's World
   - /about/index.html About
@@ -72,4 +72,4 @@ SNS やその他アカウント一覧。
 - ~~[Misskey.io](https://misskey.io/@Neos21)~~ : 退会
 - ~~[Patreon](https://www.patreon.com/Neos21)~~ : 退会
 - ~~[Qrunch](https://neos21.qrunch.io/)~~ : サービス停止
-- ~~[Twitter](https://twitter.com/Neos21)~~ : 凍結
+- ~~[Twitter](https://twitter.com/Neos21)~~ : 凍結・現在は別名でやってますｳﾃｨ

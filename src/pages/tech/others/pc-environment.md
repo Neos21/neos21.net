@@ -1,7 +1,7 @@
 ---
 title        : Neo の PC 環境
 created      : 2020-03-01
-last-modified: 2023-04-17
+last-modified: 2023-09-04
 path:
   - /index.html Neo's World
   - /tech/index.html Tech
@@ -57,6 +57,7 @@ path:
   - 詳細 : [Yamaha AG06MK2](/music/gears/dtm-01.html#yamahaag06mk2)
 - コンデンサマイク : Tascam TM-80
   - AG06MK2 に接続して音声を録音する際に使用している。
+- ウェブカメラ : Logicool C920n
 - ギターエフェクター・オーディオインターフェース : Nux MG-30
   - ギターの録音に使用。PC と USB 接続して Reason Lite 10 で録音している。
   - 詳細 : [Nux MG-30](/music/gears/effector-06.html#nuxmg30)
