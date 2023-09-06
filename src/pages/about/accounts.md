@@ -21,8 +21,8 @@ SNS やその他アカウント一覧。
 - Nostr : `npub1q33gf3wnejze7k93lavd90dlyt4k7sdxx05h75p626wvrl5gvv3qjqycty`
   - [Iris](https://iris.to/neos21)
 - Bluesky : 
-  - [neos21.bsky.social](https://staging.bsky.app/profile/neos21.bsky.social)
-  - [neos21.net](https://staging.bsky.app/profile/neos21.net)
+  - [neos21.bsky.social](https://bsky.app/profile/neos21.bsky.social)
+  - [neos21.net](https://bsky.app/profile/neos21.net)
 - [T2](https://t2.social/Neos21)
 - [タイッツー](https://taittsuu.com/users/neos21)
 - [Post.News](https://post.news/@/Neos21)
