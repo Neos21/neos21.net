@@ -1,7 +1,7 @@
 ---
 title        : 角松敏生 元ネタ探し
 created      : 2022-03-10
-last-modified: 2022-03-11
+last-modified: 2023-10-23
 path:
   - /index.html Neo's World
   - /music/index.html Music
@@ -97,6 +97,7 @@ head: |
 | Will You Wait For Me | 1984 After 5 Clash | Airplay - It Will Be Alright |
 | Step Into The Light | 1984 After 5 Clash<br>1984 Girl In The Box<br>1986 T's 12 Inches | Unique - What I Got Is What You Need<br>Armenta & Majik - I Wanna Be With You |
 | Never Touch Again | 1984 After 5 Clash | Armenta & Majik - I Wanna Be With You |
+| Heart Dancing あいらびゅ音頭 | 1984 After 5 Clash | 美空ひばり - 笑ってよムーンライト |
 | Girl In The Box | 1984 Girl In The Box<br>1986 T's 12 Inches<br>1993 1981-1987<br>2012 Rebirth 1 | Change - Paradise<br>Luther Vandross - Never Too Much |
 | Springin' Night | 1985 Gold Digger | Titus Williams - Give Me Some Love Tonight |
 | Secret Lover | 1985 Gold Digger<br>1985 Tokyo Tower | Hey DJ - World's Famous Supreme Team |

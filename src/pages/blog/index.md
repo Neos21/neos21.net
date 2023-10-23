@@ -1,7 +1,7 @@
 ---
 title        : Blog
 created      : 2020-11-01
-last-modified: 2023-01-19
+last-modified: 2023-10-23
 path:
   - /index.html Neo's World
 head: |
@@ -79,7 +79,7 @@ head: |
 ---
 
 - ブログを購読する際は [Atom フィード](/feeds.xml) をドウゾ ([Feedly で購読する場合はコチラ](http://feedly.com/i/subscription/feed/https://neos21.net/feeds.xml))
-- 記事の内容に関してご意見・ご指摘などがありましたら、[GitHub Discussions](https://github.com/Neos21/Neos21/discussions) か[メール](/about/index.html#mail)にてご連絡ください
+- 記事の内容に関してご意見・ご指摘などがありましたら[掲示板](https://legacy-of-bbs.pages.dev/)か[メール](/about/index.html#mail)にてご連絡ください
 - カテゴリ分類などはありませんが、記事タイトルになるべくキーワードを散りばめるようにしていますので、ブラウザのページ内検索機能か、[サイト内検索](/about/search.html)をご利用ください
 
 
