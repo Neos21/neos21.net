@@ -1,7 +1,7 @@
 ---
 title        : アカウント一覧
 created      : 2020-11-16
-last-modified: 2023-09-04
+last-modified: 2023-11-06
 path:
   - /index.html Neo's World
   - /about/index.html About
@@ -10,23 +10,18 @@ path:
 SNS やその他アカウント一覧。
 
 - ActivityPub
-  - [mstdn.jp](https://mstdn.jp/@Neos21mstdn)
-  - [mastodon-japan.net](https://mastodon-japan.net/@neos21)
   - [Fedibird.com](https://fedibird.com/@Neos21)
   - [itabashi.0j0.jp](https://itabashi.0j0.jp/@Neos21)
+  - [mastodon-japan.net](https://mastodon-japan.net/@neos21)
+  - [mstdn.jp](https://mstdn.jp/@Neos21mstdn)
   - [Pawoo.net](https://pawoo.net/@Neos21)
+  - [Pebble.social](https://pebble.social/@Neos21)
   - [pokemon.mastportal.info](https://pokemon.mastportal.info/@Neos21)
   - [Vivaldi.net](https://social.vivaldi.net/@Neos21)
   - [Misskey.gg](https://misskey.gg/@Neos21)
-- Nostr : `npub1q33gf3wnejze7k93lavd90dlyt4k7sdxx05h75p626wvrl5gvv3qjqycty`
-  - [Iris](https://iris.to/neos21)
-- Bluesky : 
+- Bluesky
   - [neos21.bsky.social](https://bsky.app/profile/neos21.bsky.social)
   - [neos21.net](https://bsky.app/profile/neos21.net)
-- [T2](https://t2.social/Neos21)
-- [タイッツー](https://taittsuu.com/users/neos21)
-- [Post.News](https://post.news/@/Neos21)
-- [Truth Social](https://truthsocial.com/@Neos21)
 - [Discord](https://discord.gg/QBrVwgG8BW) : `Neos21#3257`
 - [Bitbucket](https://bitbucket.org/Neos21/)
 - [CodePen.io](https://codepen.io/Neos21/)
@@ -47,23 +42,23 @@ SNS やその他アカウント一覧。
 - [MDN](https://developer.mozilla.org/ja/profiles/Neos21)
 - [Mixi](https://mixi.jp/show_profile.pl?id=21893730)
 - [Niconico](https://www.nicovideo.jp/user/28802876)
+- Nostr : `npub1q33gf3wnejze7k93lavd90dlyt4k7sdxx05h75p626wvrl5gvv3qjqycty`
+  - [Iris](https://iris.to/neos21)
 - [Photozou](http://photozou.jp/user/top/174246)
-- [Pinterest](https://www.pinterest.jp/Neos21Pinterest/)
 - [Pixiv](https://www.pixiv.net/users/25482529)
+- [Post.News](https://post.news/@/Neos21)
 - [Qiita](https://qiita.com/Neos21)
 - [Reddit](https://www.reddit.com/user/Neos21Reddit)
 - [Scrapbox](https://scrapbox.io/Neos21/)
 - [SlideShare](https://www.slideshare.net/NeoXrea)
 - [StackOverflow](https://stackoverflow.com/users/10092546/neos21)
-- Tumblr
-  - [Reblog Texts](https://mg360s.tumblr.com/)
-  - [Reblog Images](https://mg380s.tumblr.com/)
-  - ~~[Neo's Dream](https://neos21dream.tumblr.com/)~~
+- [Truth Social](https://truthsocial.com/@Neos21)
 - [YouTube](https://www.youtube.com/Neos21)
   - [Neo's Channel](https://www.youtube.com/@Neos21Channel)
 - [Vercel](https://vercel.com/neos21)
 - [Vimeo](https://vimeo.com/neos21)
 - [VisualStudio.com](https://neos21.visualstudio.com/)
+- [タイッツー](https://taittsuu.com/users/neos21)
 
 ## 過去情報
 
@@ -71,5 +66,8 @@ SNS やその他アカウント一覧。
 - ~~[Misskey.cf](https://misskey.cf/@Neos21)~~ : サービス停止
 - ~~[Misskey.io](https://misskey.io/@Neos21)~~ : 退会
 - ~~[Patreon](https://www.patreon.com/Neos21)~~ : 退会
+- ~~[Pinterest](https://www.pinterest.jp/Neos21Pinterest/)~~ : 凍結
 - ~~[Qrunch](https://neos21.qrunch.io/)~~ : サービス停止
-- ~~[Twitter](https://twitter.com/Neos21)~~ : 凍結・現在は別名でやってますｳﾃｨ
+- ~~[T2](https://t2.social/Neos21) → [Pebble](https://pebble.is/Neos21)~~ : サービス停止
+- ~~[Tumblr : Neo's Dream](https://neos21dream.tumblr.com/)~~
+- ~~[Twitter](https://twitter.com/Neos21)~~ : 凍結
