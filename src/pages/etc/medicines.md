@@ -1,7 +1,7 @@
 ---
 title        : 薬に関するメモ
 created      : 2021-01-18
-last-modified: 2022-12-22
+last-modified: 2023-11-17
 path:
   - /index.html Neo's World
   - /etc/index.html Etc.
@@ -74,6 +74,14 @@ path:
 
 - テラムロ AP
   - ちょっと血圧下がる
+
+
+## 頭痛薬
+
+- ミグシス
+  - 偏頭痛予防
+- スマトリプタン (アスペン)
+  - 頭痛時の頓服
 
 
 ## その他
