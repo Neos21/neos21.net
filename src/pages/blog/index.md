@@ -86,7 +86,137 @@ head: |
 ## 目次
 
 
-{{ blog-list-years 2023 }}
+{{ blog-list-years 2024 }}
+
+
+## [2023](/blog/2023/index.html)
+
+- <time>2023-12-31</time>  
+  [2023年を振り返る](/blog/2023/12/31-01.html)
+- <time>2023-12-29</time>  
+  [「JavaScript ―― You Are Not Java」という曲を作った](/blog/2023/12/29-01.html)
+- <time>2023-12-10</time>  
+  [Cubase 13 Artist を買った](/blog/2023/12/10-01.html)
+- <time>2023-12-01</time>  
+  [Web Share API で共有メニューを表示してみる](/blog/2023/12/01-01.html)
+- <time>2023-11-16</time>  
+  [YouTube などの動画の音量を上げるブックマークレット](/blog/2023/11/16-01.html)
+- <time>2023-11-02</time>  
+  [Node.js の readline 組み込みモジュールで echo コマンドからのパイプを受け取る](/blog/2023/11/02-01.html)
+- <time>2023-10-23</time>  
+  [まともなひとはだれもいないよ](/blog/2023/10/23-01.html)
+- <time>2023-10-09</time>  
+  [サイト開設21周年・ブログ記事3000件目](/blog/2023/10/09-01.html)
+- <time>2023-09-18</time>  
+  [5年日記も3年目](/blog/2023/09/18-01.html)
+- <time>2023-09-17</time>  
+  [おびたのわさび](/blog/2023/09/17-01.html)
+- <time>2023-09-16</time>  
+  [mixi の参加コミュニティ一覧を見返してみた](/blog/2023/09/16-01.html)
+- <time>2023-09-15</time>  
+  [僕が出身地を聞かれて「横浜」と答える理由を考えてみた](/blog/2023/09/15-01.html)
+- <time>2023-09-14</time>  
+  [「ファーストママ・サーティワン・アイスクリーマー」と、ハンバーガーを作れるキッチンのオモチャ](/blog/2023/09/14-01.html)
+- <time>2023-09-13</time>  
+  [「パズル・コレクション」と「サンリオ・タイニーパーク」](/blog/2023/09/13-01.html)
+- <time>2023-09-10</time>  
+  [自分が見てる YouTube チャンネル一覧・2023年版](/blog/2023/09/10-01.html)
+- <time>2023-09-09</time>  
+  [秋らしいモノを食べに行きたい。サンマとか](/blog/2023/09/09-01.html)
+- <time>2023-09-08</time>  
+  [最近の習慣：散歩と半身浴](/blog/2023/09/08-01.html)
+- <time>2023-09-07</time>  
+  [2023年中にやりたいこと](/blog/2023/09/07-01.html)
+- <time>2023-09-05</time>  
+  [ウェブカメラ「Logicool C920n」を買った](/blog/2023/09/05-01.html)
+- <time>2023-08-21</time>  
+  [2023年8月雑記](/blog/2023/08/21-01.html)
+- <time>2023-07-28</time>  
+  [映画「Mission Impossible Dead Reckoning Part One」を観てきた](/blog/2023/07/28-01.html)
+- <time>2023-07-18</time>  
+  [マストドンもどきを作って疲れた](/blog/2023/07/18-01.html)
+- <time>2023-07-12</time>  
+  [勢いよく個人開発を進める時のトレードオフを許容してみる](/blog/2023/07/12-01.html)
+- <time>2023-07-01</time>  
+  [ImageMagick で写真フォルダのサムネイルを作ったりしてみる](/blog/2023/07/01-01.html)
+- <time>2023-06-30</time>  
+  [JavaScript で辞書型の曖昧検索の仕組みを作ってみた](/blog/2023/06/30-01.html)
+- <time>2023-06-26</time>  
+  [映画「エターナル・サンシャイン」を観た](/blog/2023/06/26-01.html)
+- <time>2023-06-25</time>  
+  [Python 好きのコードの汚さは異常](/blog/2023/06/25-01.html)
+- <time>2023-06-24</time>  
+  [会議は「前回のあらすじ」と「次回予告」](/blog/2023/06/24-01.html)
+- <time>2023-06-05</time>  
+  [Sinatra を試してみる](/blog/2023/06/05-01.html)
+- <time>2023-05-25</time>  
+  [VSCode で Markdown ファイルを書こうとして ini ファイルと自動判定されるのを避ける](/blog/2023/05/25-01.html)
+- <time>2023-05-24</time>  
+  [ドキュメンタリー「Still: A Michael J. Fox Movie」を観た](/blog/2023/05/24-01.html)
+- <time>2023-05-17</time>  
+  [アニメ「ぼっち・ざ・ろっく！」を見た](/blog/2023/05/17-01.html)
+- <time>2023-04-23</time>  
+  [映画「Bullet Train ブレット・トレイン」を見た](/blog/2023/04/23-01.html)
+- <time>2023-04-22</time>  
+  [早速変な奴が湧いてる Bluesky なのでカスタムドメインを設定した](/blog/2023/04/22-01.html)
+- <time>2023-04-21</time>  
+  [WSL2 環境で Angular のテストを動かす](/blog/2023/04/21-01.html)
+- <time>2023-04-20</time>  
+  [WSL2 で PostgreSQL をインストールして触る](/blog/2023/04/20-01.html)
+- <time>2023-04-18</time>  
+  [Nintendo Switch を買い直してポケモンバイオレットをやっている](/blog/2023/04/18-01.html)
+- <time>2023-04-17</time>  
+  [Mastodon・Nostr・Bluesky を使っている](/blog/2023/04/17-01.html)
+- <time>2023-04-02</time>  
+  [npm パッケージをインストールしながら動く単一 Node.js スクリプトファイルを作る](/blog/2023/04/02-01.html)
+- <time>2023-04-01</time>  
+  [成果物の寿命と短期目線・長期目線を考える](/blog/2023/04/01-01.html)
+- <time>2023-03-23</time>  
+  [「三人寄れば文殊の知恵」のちょうど良い対義語探してる](/blog/2023/03/23-01.html)
+- <time>2023-03-16</time>  
+  [理解できないコミュニケーションプロトコルの病院](/blog/2023/03/16-01.html)
+- <time>2023-03-10</time>  
+  [AliExpress でギターを買ってみた](/blog/2023/03/10-01.html)
+- <time>2023-03-09</time>  
+  [Sony α7SII と α7IV・Tamron 28-75mm と 70-180mm 買った](/blog/2023/03/09-01.html)
+- <time>2023-03-05</time>  
+  [それでいい・それでもいい](/blog/2023/03/05-01.html)
+- <time>2023-02-28</time>  
+  [新型コロナワクチン4回目を接種したので副反応の備忘](/blog/2023/02/28-01.html)
+- <time>2023-02-27</time>  
+  [遅ればせながら Stable Diffusion を触ってみました・コピペで動かせるコマンド・コード紹介](/blog/2023/02/27-01.html)
+- <time>2023-02-26</time>  
+  [【2023年版】WSL + rbenv + Ruby 3.2.0 + Rails 7 ミニマル構成でプロジェクトを作ってみる](/blog/2023/02/26-01.html)
+- <time>2023-02-25</time>  
+  [Node.js から PowerShell の標準入力にテキストを渡す際の文字化け回避方法 (chcp でエンコーディング設定を変える)](/blog/2023/02/25-01.html)
+- <time>2023-02-24</time>  
+  [OpenAI の GPT-3 API を使って ChatGPT を作る (Python Poetry と Node.js コード)](/blog/2023/02/24-01.html)
+- <time>2023-02-21</time>  
+  [僕が SE になって初めて起こした本番障害のバグ](/blog/2023/02/21-01.html)
+- <time>2023-02-20</time>  
+  [IExpress で VBScript や PowerShell スクリプトファイルを Exe ファイル化する](/blog/2023/02/20-01.html)
+- <time>2023-02-19</time>  
+  [読み手に配慮した技術文書って何だろう](/blog/2023/02/19-01.html)
+- <time>2023-02-18</time>  
+  [在宅勤務と比べて会社に出社すると良かったこと](/blog/2023/02/18-01.html)
+- <time>2023-02-17</time>  
+  [仕事における会話量が多いと何が良いのだろう](/blog/2023/02/17-01.html)
+- <time>2023-02-16</time>  
+  [マストドン向けに「しゅうまい君」もどきをセルフホストできる「Self-Shumai For Mastodon」を Deno で作った](/blog/2023/02/16-01.html)
+- <time>2023-02-15</time>  
+  [Amazon S3 の署名付き URL を使ってファイルをダウンロードする Node.js コード](/blog/2023/02/15-01.html)
+- <time>2023-02-10</time>  
+  [同じ話しか出来なくなった](/blog/2023/02/10-01.html)
+- <time>2023-02-07</time>  
+  [終了・大幅に過疎った SNS を振り返る](/blog/2023/02/07-01.html)
+- <time>2023-01-26</time>  
+  [学習した言語一覧を表示する「Linguist Languages」を作った](/blog/2023/01/26-01.html)
+- <time>2023-01-19</time>  
+  [CommonMark の強調の分かち書きヤバすぎ～](/blog/2023/01/19-01.html)
+- <time>2023-01-14</time>  
+  [Pedantic な記法止めた。コレからは強調構文はアスタリスクに統一する](/blog/2023/01/14-01.html)
+- <time>2023-01-01</time>  
+  [あのサイトっぽい掲示板を Cloudflare Pages Functions と D1 SQLite で作った](/blog/2023/01/01-01.html)
 
 
 ## [2022](/blog/2022/index.html)
