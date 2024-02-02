@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#0990d0">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>QEMU で PureDarwin 環境を作ってみる - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2024/02/03-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="header-brand">
+          <div id="header-brand-contents">
+            <div id="site-title"><a href="/index.html">Neo's World</a></div>
+            <nav id="header-links">
+              <ul>
+                <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+                <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+                <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+                <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+              </ul>
+            </nav>
+          </div>
+        </div>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2024/index.html">2024年</a></li>
+            <li><a href="/blog/2024/02/index.html">02月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2024-02-03</time></div>
+        <h1 id="page-title">QEMU で PureDarwin 環境を作ってみる</h1>
+
+<p>MacOS の根幹である Darwin の、オープンソース版である PureDarwin というモノを触ってみる。この前試した FreeBSD みたいな感じで簡単に導入できるかと思ったら上手く行かなくて、QEMU という別のエミュレータを試してみた。</p>
+<h2 id="virtualbox-では起動できず"><a class="header-link" href="#virtualbox-では起動できず"><span class="header-link-mark"></span></a>VirtualBox では起動できず</h2>
+<p>PureDarwin の VMDK ファイルを以下からダウンロードする。</p>
+<ul>
+  <li><a href="https://www.puredarwin.org/">PureDarwin | Moving the Darwin community in the right direction!</a></li>
+  <li><a href="https://github.com/PureDarwin/PD-17.4-Beta?tab=readme-ov-file">PureDarwin/PD-17.4-Beta: Beta vmdk for the community</a>
+    <ul>
+      <li><code>https://www.pd-devs.org/Beta/pd_17_4.vmdk.xz</code> → 解凍する</li>
+    </ul>
+  </li>
+</ul>
+<p>Windows 10 上の VirtualBox で VMDK ファイルを基に仮想ディスクを作り、それを利用する形で仮想マシンを立ててみた。</p>
+<ul>
+  <li>
+    <img src="./03-01-01.png" alt="VirtualBox で新規マシンを作る">
+    <ul>
+      <li>タイプ : Other</li>
+      <li>バージョン : Other/Unknown</li>
+      <li>(後に色々試すが MacOS を選択してもダメだった)</li>
+    </ul>
+  </li>
+  <li>
+    <img src="./03-01-02.png" alt="VMDK ファイルを指定する">
+  </li>
+</ul>
+<p>起動してみると、次のようなエラーが出た。</p>
+<p>
+  <img src="./03-01-03.png" alt="VirtualBox では PureDarwin を起動できず">
+</p>
+<pre><code>No kexts.plist replacement found.
+Booting on macOS 10.13.3 (17D47)
+
+(中略)
+
+Mach-0 (i386) file has bad magic number
+Decoding kernel failed.
+</code></pre>
+<p>なんか CPU が合わない雰囲気のエラーメッセージだが、どうしたらいいか分からず。</p>
+<h2 id="qemu-を使ってみる"><a class="header-link" href="#qemu-を使ってみる"><span class="header-link-mark"></span></a>QEMU を使ってみる</h2>
+<p>PureDarwin の GitHub README には、QEMU という別のエミュレータを使った起動コマンドが書かれていたので、QEMU とやらを試してみる。</p>
+<ul>
+  <li><a href="https://www.qemu.org/download/">Download QEMU - QEMU</a></li>
+</ul>
+<p>コチラによると Windows では <code>pacman</code> でインストールできるっぽいので、Git SDK の <code>pacman</code> コマンドでインストールを試みたが上手くインストールできず断念。素直に MSYS2 を使えば行けると思うけど、面倒臭がってやらなかった。ｗ</p>
+<p>MacOS だと Homebrew でインストールできるようなので、Mac で試してみた。</p>
+<pre class="language-bash"><code class="language-bash">$ brew <span class="token function">install</span> qemu
+
+$ qemu-system-x86_64 --version
+QEMU emulator version <span class="token number">8.2</span>.1
+Copyright <span class="token punctuation">(</span>c<span class="token punctuation">)</span> <span class="token number">2003</span>-2023 Fabrice Bellard and the QEMU Project developers
+
+<span class="token comment"># 以下で VMDK ファイルを指定して PureDarwin を起動する</span>
+$ qemu-system-x86_64 -m <span class="token number">8192</span> -cpu Penryn -smp <span class="token number">2</span> -netdev user,id<span class="token operator">=</span>network0 -device rtl8139,netdev<span class="token operator">=</span>network0 -serial stdio -drive <span class="token assign-left variable">format</span><span class="token operator">=</span>vmdk,file<span class="token operator">=</span>pd_17_4.vmdk
+</code></pre>
+<p>起動させてみるとこんな感じでウィンドウが開いた。</p>
+<p>
+  <img src="./03-01-04.png" alt="PureDarwin 起動中">
+</p>
+<p>可愛らしい起動ロゴも一瞬見えた。</p>
+<p>
+  <img src="./03-01-05.png" alt="PureDarwin 起動ロゴ">
+</p>
+<p>ターミナルが起動した。<code>$ uname -a</code> で確認してみると、確かに PureDarwin v17.4 が起動していた。</p>
+<p>
+  <img src="./03-01-06.png" alt="PureDarwin 起動">
+</p>
+<p>起動してみれば MacOS のターミナルと大して変わらないので、特別な感動はなく。ｗ</p><div class="ad-amazon">
+  <div class="ad-amazon-image">
+    <a href="https://www.amazon.co.jp/dp/B0BCTZT9ZW?tag=neos21-22&amp;linkCode=osi&amp;th=1&amp;psc=1">
+      <img src="https://m.media-amazon.com/images/I/31K8tPKUR1L._SL160_.jpg" width="160" height="160">
+    </a>
+  </div>
+  <div class="ad-amazon-info">
+    <div class="ad-amazon-title">
+      <a href="https://www.amazon.co.jp/dp/B0BCTZT9ZW?tag=neos21-22&amp;linkCode=osi&amp;th=1&amp;psc=1">Apple MacBook Pro M2 2022 (13インチ,8GB RAM,256GB SSD,8コアCPU/10コアGPU) スペースグレイ (整備済み品)</a>
+    </div>
+  </div>
+</div>
+<div class="ad-rakuten">
+  <div class="ad-rakuten-image">
+    <a href="https://hb.afl.rakuten.co.jp/hgc/g00t6qc2.waxyc342.g00t6qc2.waxyd986/?pc=https%3A%2F%2Fitem.rakuten.co.jp%2Finateck%2Flb02006%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Finateck%2Fi%2F10000250%2F">
+      <img src="https://thumbnail.image.rakuten.co.jp/@0_mall/inateck/cabinet/07955827/1bn98.jpg?_ex=128x128">
+    </a>
+  </div>
+  <div class="ad-rakuten-info">
+    <div class="ad-rakuten-title">
+      <a href="https://hb.afl.rakuten.co.jp/hgc/g00t6qc2.waxyc342.g00t6qc2.waxyd986/?pc=https%3A%2F%2Fitem.rakuten.co.jp%2Finateck%2Flb02006%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Finateck%2Fi%2F10000250%2F">360°超強保護 PC バッグ ノートパソコン ノートPC パソコン ケース スリーブ PCケース PCバッグ 収納 13 13.3 13.6 14 15 15.6 16 インチ 型 手提げ インナーケース Macbook air Pro M1 M2 M3 2023 Surface 2022 撥水 持ち手 取っ手 大人 かわいい おしゃれ 衝撃防止</a>
+    </div>
+    <div class="ad-rakuten-shop">
+      <a href="https://hb.afl.rakuten.co.jp/hgc/g00t6qc2.waxyc342.g00t6qc2.waxyd986/?pc=https%3A%2F%2Fwww.rakuten.co.jp%2Finateck%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Finateck%2F">Inateck楽天市場店</a>
+    </div>
+    <div class="ad-rakuten-price">価格 : 1880円</div>
+  </div>
+</div>
+
+      </main>
+      <footer id="footer">
+        <div id="footer-contents">
+          <div id="date-time">
+            <dl>
+              <dt>Created</dt>
+              <dd><time>2024-02-03</time></dd>
+              <dt>Last-Modified</dt>
+              <dd><time>2024-02-03</time></dd>
+            </dl>
+          </div>
+          <nav id="footer-links">
+            <ul>
+              <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+              <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+              <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+              <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+            </ul>
+          </nav>
+          <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+        </div>
+      </footer>
+    </div>
+  </body>
+</html>
