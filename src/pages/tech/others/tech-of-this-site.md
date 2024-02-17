@@ -24,11 +24,6 @@ path:
 
 2021年に XREA Plus の契約更新を止め、ホスティング先も XREA から GitHub Pages に変更した。生の URL は <https://neos21.github.io/neos21.net/> となり、コレに独自ドメインを割り当てている。
 
-ちなみに、元の `neo.s21.xrea.com` というスペースは `neos21.tk` という Freenom の無料ドメインを割り当てた状態で放置してある。
-
-- [Neo's World Origin](https://neos21.tk/) (<http://neo.s21.xrea.com/>)
-- [GitHub - Neos21/neo.s21.xrea.com: Neo's World Origin](https://github.com/Neos21/neo.s21.xrea.com)
-
 ### 独自ドメイン : Value-Domain
 
 このサイトの独自ドメイン `neos21.net` は、[Value-Domain](https://www.value-domain.com/) で2020年11月に取得した。XREA でホスティングしている場合は、XREA との親和性が高く、設定が楽なので助かっている。
