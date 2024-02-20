@@ -1,7 +1,7 @@
 ---
 title        : Neo の PC 環境
 created      : 2020-03-01
-last-modified: 2023-09-04
+last-modified: 2024-02-20
 path:
   - /index.html Neo's World
   - /tech/index.html Tech
@@ -50,17 +50,37 @@ path:
 - USB ハブ : J5 Create JUH377 USB3.0 7ポートハブ
   - 7ポートの USB ハブ。1ポートだけセルフパワー駆動もできるが、AC 電源は繋いでいない。
 - MIDI キーボード : Korg microKEY Air-49
-  - 他のラップトップ達と Bluetooth 接続したりもしたが、現在は Galleria XG と USB 接続して、主に Reason Lite 10 とともに使っている。
+  - 他のラップトップ達と Bluetooth 接続したりもしたが、現在は Galleria XG と USB 接続して、主に Reason Lite 10・Cubase 13 Artist とともに使っている。
   - ブログ記事 : [MIDI キーボード「Korg microKEY Air-49」を買った](/blog/2020/02/21-02.html)
 - オーディオインターフェース : Yamaha AG06MK2
-  - ギターの録音に使用。PC と USB 接続して Reason Lite 10 で録音している。
+  - ギターの録音に使用。PC と USB 接続して Reason Lite 10・Cubase 13 Artist で録音している。
   - 詳細 : [Yamaha AG06MK2](/music/gears/dtm-01.html#yamahaag06mk2)
 - コンデンサマイク : Tascam TM-80
   - AG06MK2 に接続して音声を録音する際に使用している。
 - ウェブカメラ : Logicool C920n
 - ギターエフェクター・オーディオインターフェース : Nux MG-30
-  - ギターの録音に使用。PC と USB 接続して Reason Lite 10 で録音している。
+  - ギターの録音に使用。PC と USB 接続して Reason Lite 10・Cubase 13 Artist で録音している。
   - 詳細 : [Nux MG-30](/music/gears/effector-06.html#nuxmg30)
+- NAS : Synology DS224+ (2024-02-19 ～)
+  - 各種データの保管に NAS を導入
+
+
+## サブ Windows 機 : Dell XPS15 9570 (2023-02-18 ～)
+
+- CPU : Intel Core i7-8750H (6コア12スレッド)
+- GPU : NVIDIA GeForce GTX1050Ti With Max-Q Design (4GB GDDR5)
+- RAM : 16GB (2x8GB) DDR4 SK Hynix 2666MHz → **32GB** (2x16GB) DDR4 Corsair Vengeance 2666MHz Dual Channel
+- SSD : SK Hynix 512GB PCIe M2 → Samsung 980 **1TB** PCIe M2
+- ポート : Thunderbolt 3 x1、USB Type-A 3.2 x2、HDMI 2.0、オーディオ入出力、SD カードスロット
+- Wi-Fi : Killer 802.11ac → Intel AX210NGW Wi-Fi6E
+- Bluetooth : Bluetooth 4.1 → Bluetooth 5.2
+- ディスプレイ : 15.6インチ FHD (1920x1080) IPS タッチ非対応
+- OS : Windows 11 Pro
+- Size : 幅 35.7cm × 奥行 23.5cm × 高さ 1.7cm
+- Weight : 1.8kg
+- 購入価格 : 98,500円
+
+メインのデスクトップマシンと遜色のない、GPU が強力なノートパソコンが欲しくなり購入。動画編集もできるレベルで、筐体の高級感もあって所有欲が満たされる。
 
 
 ## 持ち運び用 Windows 機 : Asus ZenBook3 UX390UA-512GP (2017-11-25 ～)
@@ -110,19 +130,6 @@ path:
 - ブログ記事 : [iPhone 11 Pro Max を買った・使えた液晶ガラスフィルム・レンズ保護フィルム・ケースの話も](/blog/2019/09/22-01.html)
 
 
-## Microsoft Surface Pro 4 (2022-07-08 ～)
-
-ゴロ寝で使うタブレットとして、どうしても ChromeBook は使いづらく、Surface Pro 4 の中古品を20,800円で購入。
-
-- CPU : Core i5-6300U
-- RAM : 8GB
-- SSD : 256GB
-
-ブラウザで YouTube を垂れ流せれば十分と思って買ったのだが、なんだかしばらくしたら iPhone6Plus で垂れ流していれば十分になってしまい、急に使わなくなってしまった。
-
-一応、WSL など開発環境も含めてセットアップしてある。第6世代の i5 に 8GB メモリと、自分がコレまで買ってきたマシンと比べるとだいぶスペックは低いが、そこそこ動きはしている。ただ、Surface Pro 4 は特によく起こる問題らしいのだが、しばらく使っていると液晶のチラ付きが発生したり、液晶周りの不具合が多い。CPU ファンがついているモデルだが、ちょっと負荷がかかると結構な熱さになるし、Surface って意外とモロいんやな？と実感した。
-
-
 ## 仕事用
 
 会社から支給されるマシンにあわせて使用しているモノとか。
@@ -138,19 +145,28 @@ path:
   - ブログ記事 : [MacBookPro 用に Logicool M558 Bluetooth マウスを買った](/blog/2017/03/11-01.html)
 
 
-## 過去の使用機材
+## その他機材
 
-### まだ持ってる
-
-- キャプチャカード : Elgato HD60S (2022-04-20 ～)
-  - 購入したものの Galleria XG との相性が悪いのか上手く映像を取り込めず、しまってある。
 - スピーカー : Creative T12 Wireless (2019-02 ～)
   - Bluetooth 接続も可能なスピーカー。スピーカー内蔵モニタ Dell S2721QS を買ったのでしまってある。
 - キーボード : Dell KB1421 (2018-05 ～)
   - 現在も所有しているが未使用。一般的な104レイアウトの US キーボードで、格安だった。有線接続しかできないが、仕事で必要になったらコレを持っていこうかな。
   - ブログ記事 : [Dell の US キーボード KB1421 を買った](/blog/2018/05/26-02.html)
 
-### 手放したモノ
+
+## 手放したモノ
+
+### Microsoft Surface Pro 4 (2022-07-08 ～ 2023-12-30)
+
+ゴロ寝で使うタブレットとして、どうしても ChromeBook は使いづらく、Surface Pro 4 の中古品を20,800円で購入。
+
+- CPU : Core i5-6300U
+- RAM : 8GB
+- SSD : 256GB
+
+ブラウザで YouTube を垂れ流せれば十分と思って買ったのだが、なんだかしばらくしたら iPhone6Plus で垂れ流していれば十分になってしまい、急に使わなくなってしまった。
+
+一応、WSL など開発環境も含めてセットアップしてある。第6世代の i5 に 8GB メモリと、自分がコレまで買ってきたマシンと比べるとだいぶスペックは低いが、そこそこ動きはしている。ただ、Surface Pro 4 は特によく起こる問題らしいのだが、しばらく使っていると液晶のチラ付きが発生したり、液晶周りの不具合が多い。CPU ファンがついているモデルだが、ちょっと負荷がかかると結構な熱さになるし、Surface って意外とモロいんやな？と実感した。
 
 ### ChromeBook : Lenovo IdeaPad Duet Chromebook (2020-12-11 ～ 2023-02-10)
 
