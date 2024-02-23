@@ -63,6 +63,7 @@ path:
   - 詳細 : [Nux MG-30](/music/gears/effector-06.html#nuxmg30)
 - NAS : Synology DS224+ (2024-02-19 ～)
   - 各種データの保管に NAS を導入
+  - ブログ記事 : 2024-02-22 [念願の NAS。Synology DS224+ を買った](/blog/2024/02/22-01.html)
 
 
 ## サブ Windows 機 : Dell XPS15 9570 (2023-02-18 ～)
@@ -81,6 +82,26 @@ path:
 - 購入価格 : 98,500円
 
 メインのデスクトップマシンと遜色のない、GPU が強力なノートパソコンが欲しくなり購入。動画編集もできるレベルで、筐体の高級感もあって所有欲が満たされる。
+
+- ブログ記事 : 2024-02-21 [Dell XPS15 9570 を買った](/blog/2024/02/21-01.html)
+
+
+## ゴロ寝用 Windows 機 : Dell Latitude 5300 (2024-02-21 ～)
+
+- CPU : Intel Core i7-8665U
+- GPU : (内蔵 GPU) Intel UHD Graphics 620
+- RAM : 32GB
+- SSD : 256GB
+- ポート : USB Type-C 3.1 Gen2 x1、USB Type-A 3.1 Gen1 x2、HDMI 1.4、RJ45 LAN ポート、オーディオ入出力、SD カードスロット
+- ディスプレイ : 13.3インチ FHD (1920x1080) タッチ非対応
+- Size : 幅30.57cm × 奥行 20.75cm × 高さ 1.69cm
+- Weight : 1.24 kg
+- OS : Windows 11 Pro
+- 購入価格 : 40,000円
+
+ベッドでゴロ寝利用するためのサブ・サブ PC を買ってみた。Asus ZenBook3 より重たくはなるが、画面サイズが大きく、筐体の堅牢性も高そうで、寝転がって使うには勝手が良い。
+
+- ブログ記事 : 2024-02-23 [Dell Latitude 5300 を買った・Dell XPS15 9570 と比較](/blog/2024/02/23-01.html)
 
 
 ## 持ち運び用 Windows 機 : Asus ZenBook3 UX390UA-512GP (2017-11-25 ～)
