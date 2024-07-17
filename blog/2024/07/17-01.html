@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#0990d0">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>Cloudflare D1 を Alpha 版からマイグレートする - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2024/07/17-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="header-brand">
+          <div id="header-brand-contents">
+            <div id="site-title"><a href="/index.html">Neo's World</a></div>
+            <nav id="header-links">
+              <ul>
+                <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+                <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+                <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+                <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+              </ul>
+            </nav>
+          </div>
+        </div>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2024/index.html">2024年</a></li>
+            <li><a href="/blog/2024/07/index.html">07月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2024-07-17</time></div>
+        <h1 id="page-title">Cloudflare D1 を Alpha 版からマイグレートする</h1>
+
+<p><strong>[懐かし掲示板 BBS(<a href="https://legacy-of-bbs.pages.dev/">https://legacy-of-bbs.pages.dev/</a>)</strong> で使っている Cloudflare D1。SQLite データベースだが、コチラの Alpha 版が 2024-08-15 にクローズして正式版になるようで、マイグレーションしてねと通知が来たので対応する。</p>
+<ul>
+  <li>参考 : <a href="https://developers.cloudflare.com/d1/platform/alpha-migration/">Cloudflare D1 docs - Alpha database migration guide</a>
+    <ul>
+      <li>コチラの公式の手順に沿って作業したのみ</li>
+    </ul>
+  </li>
+</ul>
+<hr>
+<ul>
+  <li>Prerequisites : 事前準備
+    <ul>
+      <li>Wrangler CLI の最新版を入れておく</li>
+    </ul>
+  </li>
+</ul>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">npm</span> <span class="token function">install</span> -g wrangler
+$ wrangler -v
+
+ ⛅️ wrangler <span class="token number">3.64</span>.0
+</code></pre>
+<ul>
+  <li>
+    <ol>
+      <li>Verify that a database is alpha : 作業前の状態確認</li>
+    </ol>
+    <ul>
+      <li><code>version</code> が <code>alpha</code> なことが分かる</li>
+    </ul>
+  </li>
+</ul>
+<pre class="language-bash"><code class="language-bash">$ wrangler d1 info legacy-of-bbs
+
+ ⛅️ wrangler <span class="token number">3.64</span>.0
+-------------------
+
+┌───────────────┬──────────────────────────────────────┐
+│ DB            │ xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx │
+├───────────────┼──────────────────────────────────────┤
+│ name          │ legacy-of-bbs                        │
+├───────────────┼──────────────────────────────────────┤
+│ created_at    │                                      │
+├───────────────┼──────────────────────────────────────┤
+│ version       │ alpha                                │
+├───────────────┼──────────────────────────────────────┤
+│ num_tables    │ <span class="token number">3</span>                                    │
+├───────────────┼──────────────────────────────────────┤
+│ database_size │ <span class="token number">344</span> kB                               │
+└───────────────┴──────────────────────────────────────┘
+</code></pre>
+<ul>
+  <li>
+    <ol start="2">
+      <li>Create a manual backup : バックアップを取る</li>
+    </ol>
+  </li>
+</ul>
+<pre class="language-bash"><code class="language-bash">$ wrangler d1 backup create legacy-of-bbs
+┌──────────────────────────┬──────────────────────────────────────┬────────────┬────────┬───────┐
+│ created_at               │ <span class="token function">id</span>                                   │ num_tables │ size   │ state │
+├──────────────────────────┼──────────────────────────────────────┼────────────┼────────┼───────┤
+│ <span class="token number">2024</span>-07-16T09:28:06.983Z │ yyyyyyyy-yyyy-yyyy-yyyy-yyyyyyyyyyyy │ <span class="token number">3</span>          │ <span class="token number">344</span> kB │ <span class="token keyword">done</span>  │
+└──────────────────────────┴──────────────────────────────────────┴────────────┴────────┴───────┘
+</code></pre>
+<ul>
+  <li>
+    <ol start="3">
+      <li>Download the manual backup : バックアップをダウンロードする</li>
+    </ol>
+  </li>
+</ul>
+<pre class="language-bash"><code class="language-bash">$ wrangler d1 backup download legacy-of-bbs yyyyyyyy-yyyy-yyyy-yyyy-yyyyyyyyyyyy
+🌀 Downloading backup yyyyyyyy-yyyy-yyyy-yyyy-yyyyyyyyyyyy from <span class="token string">'legacy-of-bbs'</span>
+🌀 Saving to /home/neo/Documents/Dev/GitHub/legacy-of-bbs/legacy-of-bbs.yyyyyyyy.sqlite3
+🌀 Done<span class="token operator">!</span>
+</code></pre>
+<ul>
+  <li>
+    <ol start="4">
+      <li>Convert the manual backup into SQL statements : <code>.sqlite3</code> ファイルを <code>.sql</code> ファイル (SQL 文) に変換する</li>
+    </ol>
+  </li>
+</ul>
+<pre class="language-bash"><code class="language-bash">$ sqlite3 --version
+<span class="token number">3.42</span>.0 <span class="token number">2023</span>-05-16 <span class="token number">12</span>:36:15 831d0fb2836b71c9bc51067c49fee4b8f18047814f2ff22d817d25195cf350b0
+$ sqlite3 ./legacy-of-bbs.yyyyyyyy.sqlite3 .dump <span class="token operator">></span> db.sql
+</code></pre>
+<ul>
+  <li>4.1. Remove <code>BEGIN TRANSACTION</code> and <code>COMMIT;</code> from the file.
+    <ul>
+      <li>生成した <code>db.sql</code> からトランザクション文を消す</li>
+    </ul>
+  </li>
+  <li>4.2. Remove the following table creation statement: <code>CREATE TABLE _cf_KV</code>
+    <ul>
+      <li><code>_cf_KV</code> テーブルの定義はなかったので無視</li>
+    </ul>
+  </li>
+  <li>
+    <ol start="5">
+      <li>Create a new D1 database : 新たな DB を作る</li>
+    </ol>
+  </li>
+</ul>
+<pre class="language-bash"><code class="language-bash">$ wrangler d1 create legacy-of-bbs-20240716
+
+ ⛅️ wrangler <span class="token number">3.64</span>.0
+-------------------
+
+✅ Successfully created DB <span class="token string">'legacy-of-bbs-20240716'</span> <span class="token keyword">in</span> region APAC
+Created your new D1 database.
+
+<span class="token punctuation">[</span><span class="token punctuation">[</span>d1_databases<span class="token punctuation">]</span><span class="token punctuation">]</span>
+binding <span class="token operator">=</span> <span class="token string">"DB"</span> <span class="token comment"># i.e. available in your Worker on env.DB</span>
+database_name <span class="token operator">=</span> <span class="token string">"legacy-of-bbs-20240716"</span>
+database_id <span class="token operator">=</span> <span class="token string">"zzzzzzzz-zzzz-zzzz-zzzz-zzzzzzzzzzzz"</span>
+</code></pre>
+<ul>
+  <li>
+    <ol start="6">
+      <li>Run SQL statements against the new D1 database : SQL 文を流す</li>
+    </ol>
+  </li>
+</ul>
+<pre class="language-bash"><code class="language-bash">$ wrangler d1 execute legacy-of-bbs-20240716 --remote --file<span class="token operator">=</span>./db.sql
+
+ ⛅️ wrangler <span class="token number">3.64</span>.0
+-------------------
+
+✔ ⚠️ This process may take some time, during <span class="token function">which</span> your D1 database will be unavailable to serve queries.
+  Ok to proceed? … <span class="token function">yes</span>
+🌀 Executing on remote database legacy-of-bbs-20240716 <span class="token punctuation">(</span>zzzzzzzz-zzzz-zzzz-zzzz-zzzzzzzzzzzz<span class="token punctuation">)</span>:
+🌀 To execute on your <span class="token builtin class-name">local</span> development database, remove the --remote flag from your wrangler command.
+Note: <span class="token keyword">if</span> the execution fails to complete, your DB will <span class="token builtin class-name">return</span> to its original state and you can safely retry.
+├ 🌀 Uploading zzzzzzzz-zzzz-zzzz-zzzz-zzzzzzzzzzzz.zzzzzzzzzzzzzzzz.sql 
+│ 🌀 Uploading complete.
+│ 
+🌀 Starting import<span class="token punctuation">..</span>.
+🚣 Executed <span class="token number">1166</span> queries <span class="token keyword">in</span> <span class="token number">0.04</span> seconds <span class="token punctuation">(</span><span class="token number">2163</span> rows read, <span class="token number">2251</span> rows written<span class="token punctuation">)</span>
+   Database is currently at bookmark 00000000-0000000f-00004dd0-843e4bf18c5f1d42f18aafa13380ea18.
+┌────────────────────────┬───────────┬──────────────┬────────────────────┐
+│ Total queries executed │ Rows <span class="token builtin class-name">read</span> │ Rows written │ Database size <span class="token punctuation">(</span>MB<span class="token punctuation">)</span> │
+├────────────────────────┼───────────┼──────────────┼────────────────────┤
+│ <span class="token number">1166</span>                   │ <span class="token number">2163</span>      │ <span class="token number">2251</span>         │ <span class="token number">0.27</span>               │
+└────────────────────────┴───────────┴──────────────┴────────────────────┘
+</code></pre>
+<ul>
+  <li>
+    <ol start="7">
+      <li>Delete your alpha database : 古い DB を消す</li>
+    </ol>
+  </li>
+</ul>
+<pre class="language-bash"><code class="language-bash">$ wrangler d1 delete legacy-of-bbs
+</code></pre>
+<ul>
+  <li>新 DB を確認する</li>
+</ul>
+<pre class="language-bash"><code class="language-bash">$ wrangler d1 info legacy-of-bbs-20240716
+
+ ⛅️ wrangler <span class="token number">3.64</span>.0
+-------------------
+
+┌───────────────────┬──────────────────────────────────────┐
+│ DB                │ zzzzzzzz-zzzz-zzzz-zzzz-zzzzzzzzzzzz │
+├───────────────────┼──────────────────────────────────────┤
+│ name              │ legacy-of-bbs-20240716               │
+├───────────────────┼──────────────────────────────────────┤
+│ created_at        │ <span class="token number">2024</span>-07-16T09:34:13.005Z             │
+├───────────────────┼──────────────────────────────────────┤
+│ num_tables        │ <span class="token number">4</span>                                    │
+├───────────────────┼──────────────────────────────────────┤
+│ running_in_region │ APAC                                 │
+├───────────────────┼──────────────────────────────────────┤
+│ database_size     │ <span class="token number">274</span> kB                               │
+├───────────────────┼──────────────────────────────────────┤
+│ read_queries_24h  │ <span class="token number">0</span>                                    │
+├───────────────────┼──────────────────────────────────────┤
+│ write_queries_24h │ <span class="token number">1</span>                                    │
+├───────────────────┼──────────────────────────────────────┤
+│ rows_read_24h     │ <span class="token number">2,163</span>                                │
+├───────────────────┼──────────────────────────────────────┤
+│ rows_written_24h  │ <span class="token number">2,251</span>                                │
+└───────────────────┴──────────────────────────────────────┘
+</code></pre>
+<p>というワケで、Alpha 版の DB から SQL 文を出力して、新 DB を立ててそちらに流す、という原始的なマイグレーション方法だった。</p>
+<p>あとは Cloudflare Pages で新 DB を接続するように環境設定をし直して再デプロイすれば作業完了。</p>
+
+      </main>
+      <footer id="footer">
+        <div id="footer-contents">
+          <div id="date-time">
+            <dl>
+              <dt>Created</dt>
+              <dd><time>2024-07-17</time></dd>
+              <dt>Last-Modified</dt>
+              <dd><time>2024-07-17</time></dd>
+            </dl>
+          </div>
+          <nav id="footer-links">
+            <ul>
+              <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+              <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+              <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+              <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+            </ul>
+          </nav>
+          <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+        </div>
+      </footer>
+    </div>
+  </body>
+</html>
