@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#0990d0">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>Poetry で環境構築して大規模言語モデル Rinna を動かして文章生成させてみた - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2024/08/13-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="header-brand">
+          <div id="header-brand-contents">
+            <div id="site-title"><a href="/index.html">Neo's World</a></div>
+            <nav id="header-links">
+              <ul>
+                <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+                <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+                <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+                <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+              </ul>
+            </nav>
+          </div>
+        </div>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2024/index.html">2024年</a></li>
+            <li><a href="/blog/2024/08/index.html">08月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2024-08-13</time></div>
+        <h1 id="page-title">Poetry で環境構築して大規模言語モデル Rinna を動かして文章生成させてみた</h1>
+
+<p>ようやく安定した Python 環境で GPT が動かせるようになりましたよ～。</p>
+<p>以前から格闘していたローカル LLM。</p>
+<ul>
+  <li>過去記事 : 2021-04-11 <a href="/blog/2021/04/11-01.html">GPT2 再挑戦して WSL で日本語文章を自動生成できた</a>
+    <ul>
+      <li>↑ 試行錯誤して萎えてた</li>
+    </ul>
+  </li>
+  <li>過去記事 : 2023-02-24 <a href="/blog/2023/02/24-01.html">OpenAI の GPT-3 API を使って ChatGPT を作る (Python Poetry と Node.js コード)</a>
+    <ul>
+      <li>↑ API 呼び出しだけの簡単なコードなので Poetry 化できていた</li>
+    </ul>
+  </li>
+</ul>
+<p>今回は <code>rinna/japanese-gpt-neox-3.6b-instruction-sft-v2</code> という大規模言語モデルを使って、ローカルで文章生成をさせてみる。</p>
+<h2 id="rinna-って何"><a class="header-link" href="#rinna-って何"><span class="header-link-mark"></span></a>Rinna って何</h2>
+<p>今回、GPT 関連の用語やモデルを色々調べていたので、素人なりに参考文献をまとめておく。</p>
+<ul>
+  <li><a href="https://huggingface.co/rinna/japanese-gpt-neox-3.6b-instruction-sft-v2">rinna/japanese-gpt-neox-3.6b-instruction-sft-v2 · Hugging Face</a>
+    <ul>
+      <li>今回使うモデル。Rinna という会社が作っている Rinna というシリーズのモデルの一つ</li>
+      <li>36億のパラメータを学習し、Instruction Tuning を施したモノ</li>
+      <li>EleutherAI の <a href="https://huggingface.co/EleutherAI/gpt-neox-20b">GPT-NeoX</a> というモデルがベースになっている</li>
+    </ul>
+  </li>
+  <li><a href="https://qiita.com/gyokuro338/items/747ec1423262e7726e36">日本語特化型の大規模言語モデル、OpenCALMとrinna/japanese-gpt-neox-3.6bの検証 #ChatGPT - Qiita</a>
+    <ul>
+      <li>Instruction Tuning とは、ChatGPT (チャットボット) のように、指示に基づいてタスクを実行するようファインチューニングすること</li>
+      <li>Rinna でいうと <a href="https://huggingface.co/rinna/japanese-gpt-neox-3.6b">rinna/japanese-gpt-neox-3.6b</a> コチラがファインチューニング前の事前学習のみ行ったモデル、ということになる。どちらが「良い」のかは用途次第であろう</li>
+    </ul>
+  </li>
+  <li><a href="https://zenn.dev/fusic/articles/try-various-llms">色々な大規模言語モデルを試してみる</a>
+    <ul>
+      <li>環境構築やコーディングで参考にした</li>
+    </ul>
+  </li>
+  <li><a href="https://qiita.com/ilovebooks0618/items/0292ec6ad09a6340f64b">LLMでよく見る関数についての解説 #Python - Qiita</a>
+    <ul>
+      <li><code>transformers</code> あたりの関数の詳細</li>
+    </ul>
+  </li>
+  <li><a href="https://zenn.dev/tyaahan/articles/a8d99900000002">rinna GPT-2モデルの生成パラメータ</a>
+    <ul>
+      <li><code>model.generate()</code> に与えるパラメータの詳細</li>
+    </ul>
+  </li>
+  <li><a href="https://internet.watch.impress.co.jp/docs/column/shimizu/1503707.html">自宅PCで「rinna」の日本語言語モデルを試用、メモリ32GBあればCPUだけでも動くぞ！【イニシャルB】 - INTERNET Watch</a>
+    <ul>
+      <li>後でまた詳しく話すが、自分の環境 (GTX1080) だと一文の生成に2分ほどかかった。この所要時間が速い方なのか遅い方なのか知りたくて調べた</li>
+      <li>RTX3070 で10秒以下、という感じらしい</li>
+    </ul>
+  </li>
+  <li><a href="https://soysoftware.sakura.ne.jp/archives/3903">最近ローカルLLMがアツいらしい – soy-software</a>
+    <ul>
+      <li>今時は RTX4060Ti や RTX4090 なんかを使うのが当たり前で、2枚挿ししている人も少なくないようだ</li>
+    </ul>
+  </li>
+</ul>
+<p>これらの文献でだいぶ理解が深まった。</p>
+<h2 id="wsl-上の-poetry-で環境構築してみる"><a class="header-link" href="#wsl-上の-poetry-で環境構築してみる"><span class="header-link-mark"></span></a>WSL 上の Poetry で環境構築してみる</h2>
+<p>以前の記事でも愚痴ったが、Python 界隈はいつまで経っても環境構築の再現性が乏しいというか、その辺の解説を無視してるモノが多いなと思っている。なので今回も Poetry でランタイムのバージョンや必要なライブラリを吐き出しておくことにする。</p>
+<p>WSL 上で作業開始する時点で、次のような状態。</p>
+<pre class="language-bash"><code class="language-bash">$ python3 -V
+Python <span class="token number">3.11</span>.2
+
+$ poetry -V
+Poetry <span class="token punctuation">(</span>version <span class="token number">1.8</span>.3<span class="token punctuation">)</span>
+</code></pre>
+<p>まずは Poetry プロジェクトを作る。</p>
+<pre class="language-bash"><code class="language-bash">$ poetry new practice
+$ <span class="token builtin class-name">cd</span> ./practice/
+
+<span class="token comment"># 以下に処理を書く</span>
+$ <span class="token function">touch</span> ./practice/__main__.py
+</code></pre>
+<p>次に必要なライブラリのインストール。後述するコード内で明示的に <code>import</code> しているのは <code>torch</code> と <code>transformers</code> の2つだけなのだが、実行時にエラーが出たりして怒られたので、後ろ3つもインストールしている。</p>
+<pre class="language-bash"><code class="language-bash">$ poetry <span class="token function">add</span> torch transformers accelerate sentencepiece protobuf
+</code></pre>
+<h2 id="コーディング"><a class="header-link" href="#コーディング"><span class="header-link-mark"></span></a>コーディング</h2>
+<p>コードは Hugging Face にある Rinna 公式のサンプルコードをベースに、色んな文献を見たり、実行時のワーニングメッセージを見たりして調整した。</p>
+<pre class="language-python"><code class="language-python"><span class="token keyword">import</span> datetime
+
+<span class="token keyword">import</span> torch
+<span class="token keyword">from</span> transformers <span class="token keyword">import</span> AutoModelForCausalLM<span class="token punctuation">,</span> AutoTokenizer
+
+model_name <span class="token operator">=</span> <span class="token string">'rinna/japanese-gpt-neox-3.6b-instruction-sft-v2'</span>
+<span class="token keyword">print</span><span class="token punctuation">(</span>datetime<span class="token punctuation">.</span>datetime<span class="token punctuation">.</span>now<span class="token punctuation">(</span>datetime<span class="token punctuation">.</span>timezone<span class="token punctuation">(</span>datetime<span class="token punctuation">.</span>timedelta<span class="token punctuation">(</span>hours<span class="token operator">=</span><span class="token number">9</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token string">'Start : Model Name ['</span><span class="token punctuation">,</span> model_name<span class="token punctuation">,</span> <span class="token string">']'</span><span class="token punctuation">)</span>
+
+<span class="token keyword">print</span><span class="token punctuation">(</span>datetime<span class="token punctuation">.</span>datetime<span class="token punctuation">.</span>now<span class="token punctuation">(</span>datetime<span class="token punctuation">.</span>timezone<span class="token punctuation">(</span>datetime<span class="token punctuation">.</span>timedelta<span class="token punctuation">(</span>hours<span class="token operator">=</span><span class="token number">9</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token string">'Tokenizer'</span><span class="token punctuation">)</span>  <span class="token comment"># ワーニングが出るから legacy と clean_up_tokenization_spaces を入れた・float16 は高速化のため</span>
+tokenizer <span class="token operator">=</span> AutoTokenizer<span class="token punctuation">.</span>from_pretrained<span class="token punctuation">(</span>model_name<span class="token punctuation">,</span> use_fast<span class="token operator">=</span><span class="token boolean">False</span><span class="token punctuation">,</span> legacy<span class="token operator">=</span><span class="token boolean">False</span><span class="token punctuation">,</span> clean_up_tokenization_spaces<span class="token operator">=</span><span class="token boolean">True</span><span class="token punctuation">,</span> torch_dtype<span class="token operator">=</span>torch<span class="token punctuation">.</span>float16<span class="token punctuation">)</span>
+<span class="token keyword">print</span><span class="token punctuation">(</span>datetime<span class="token punctuation">.</span>datetime<span class="token punctuation">.</span>now<span class="token punctuation">(</span>datetime<span class="token punctuation">.</span>timezone<span class="token punctuation">(</span>datetime<span class="token punctuation">.</span>timedelta<span class="token punctuation">(</span>hours<span class="token operator">=</span><span class="token number">9</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token string">'Model'</span><span class="token punctuation">)</span>
+model <span class="token operator">=</span> AutoModelForCausalLM<span class="token punctuation">.</span>from_pretrained<span class="token punctuation">(</span>model_name<span class="token punctuation">)</span>
+
+<span class="token keyword">print</span><span class="token punctuation">(</span>datetime<span class="token punctuation">.</span>datetime<span class="token punctuation">.</span>now<span class="token punctuation">(</span>datetime<span class="token punctuation">.</span>timezone<span class="token punctuation">(</span>datetime<span class="token punctuation">.</span>timedelta<span class="token punctuation">(</span>hours<span class="token operator">=</span><span class="token number">9</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token string">'Is Cuda Available?'</span><span class="token punctuation">)</span>
+<span class="token keyword">if</span> torch<span class="token punctuation">.</span>cuda<span class="token punctuation">.</span>is_available<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">:</span>
+    <span class="token keyword">print</span><span class="token punctuation">(</span>datetime<span class="token punctuation">.</span>datetime<span class="token punctuation">.</span>now<span class="token punctuation">(</span>datetime<span class="token punctuation">.</span>timezone<span class="token punctuation">(</span>datetime<span class="token punctuation">.</span>timedelta<span class="token punctuation">(</span>hours<span class="token operator">=</span><span class="token number">9</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token string">'Use Cuda'</span><span class="token punctuation">)</span>
+    model <span class="token operator">=</span> model<span class="token punctuation">.</span>to<span class="token punctuation">(</span><span class="token string">'cuda'</span><span class="token punctuation">)</span>
+
+input_text <span class="token operator">=</span> <span class="token string">'こんにちは世界！'</span>
+<span class="token keyword">print</span><span class="token punctuation">(</span>datetime<span class="token punctuation">.</span>datetime<span class="token punctuation">.</span>now<span class="token punctuation">(</span>datetime<span class="token punctuation">.</span>timezone<span class="token punctuation">(</span>datetime<span class="token punctuation">.</span>timedelta<span class="token punctuation">(</span>hours<span class="token operator">=</span><span class="token number">9</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token string">'Prompt : ['</span><span class="token punctuation">,</span> input_text<span class="token punctuation">,</span> <span class="token string">']'</span><span class="token punctuation">)</span>
+
+<span class="token keyword">print</span><span class="token punctuation">(</span>datetime<span class="token punctuation">.</span>datetime<span class="token punctuation">.</span>now<span class="token punctuation">(</span>datetime<span class="token punctuation">.</span>timezone<span class="token punctuation">(</span>datetime<span class="token punctuation">.</span>timedelta<span class="token punctuation">(</span>hours<span class="token operator">=</span><span class="token number">9</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token string">'Prompt Tokenizer'</span><span class="token punctuation">)</span>
+inputs <span class="token operator">=</span> tokenizer<span class="token punctuation">(</span>input_text<span class="token punctuation">,</span> add_special_tokens<span class="token operator">=</span><span class="token boolean">False</span><span class="token punctuation">,</span> return_tensors<span class="token operator">=</span><span class="token string">"pt"</span><span class="token punctuation">)</span><span class="token punctuation">.</span>to<span class="token punctuation">(</span>model<span class="token punctuation">.</span>device<span class="token punctuation">)</span>
+
+<span class="token keyword">print</span><span class="token punctuation">(</span>datetime<span class="token punctuation">.</span>datetime<span class="token punctuation">.</span>now<span class="token punctuation">(</span>datetime<span class="token punctuation">.</span>timezone<span class="token punctuation">(</span>datetime<span class="token punctuation">.</span>timedelta<span class="token punctuation">(</span>hours<span class="token operator">=</span><span class="token number">9</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token string">'Model Generate'</span><span class="token punctuation">)</span>
+<span class="token keyword">with</span> torch<span class="token punctuation">.</span>no_grad<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">:</span>
+    outputs <span class="token operator">=</span> model<span class="token punctuation">.</span>generate<span class="token punctuation">(</span>
+        <span class="token operator">**</span>inputs<span class="token punctuation">,</span>
+        do_sample<span class="token operator">=</span><span class="token boolean">True</span><span class="token punctuation">,</span>
+        max_new_tokens<span class="token operator">=</span><span class="token number">256</span><span class="token punctuation">,</span>
+        temperature<span class="token operator">=</span><span class="token number">0.7</span><span class="token punctuation">,</span>
+        repetition_penalty<span class="token operator">=</span><span class="token number">1.1</span><span class="token punctuation">,</span>
+        pad_token_id<span class="token operator">=</span>tokenizer<span class="token punctuation">.</span>pad_token_id<span class="token punctuation">,</span>
+        bos_token_id<span class="token operator">=</span>tokenizer<span class="token punctuation">.</span>bos_token_id<span class="token punctuation">,</span>
+        eos_token_id<span class="token operator">=</span>tokenizer<span class="token punctuation">.</span>eos_token_id
+    <span class="token punctuation">)</span>
+
+<span class="token keyword">print</span><span class="token punctuation">(</span>datetime<span class="token punctuation">.</span>datetime<span class="token punctuation">.</span>now<span class="token punctuation">(</span>datetime<span class="token punctuation">.</span>timezone<span class="token punctuation">(</span>datetime<span class="token punctuation">.</span>timedelta<span class="token punctuation">(</span>hours<span class="token operator">=</span><span class="token number">9</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token string">'Decode'</span><span class="token punctuation">)</span>
+output_text <span class="token operator">=</span> tokenizer<span class="token punctuation">.</span>decode<span class="token punctuation">(</span>outputs<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">,</span> clean_up_tokenization_spaces<span class="token operator">=</span><span class="token boolean">True</span><span class="token punctuation">,</span> skip_special_tokens<span class="token operator">=</span><span class="token boolean">True</span><span class="token punctuation">)</span>
+
+<span class="token keyword">print</span><span class="token punctuation">(</span>datetime<span class="token punctuation">.</span>datetime<span class="token punctuation">.</span>now<span class="token punctuation">(</span>datetime<span class="token punctuation">.</span>timezone<span class="token punctuation">(</span>datetime<span class="token punctuation">.</span>timedelta<span class="token punctuation">(</span>hours<span class="token operator">=</span><span class="token number">9</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token string">'----------'</span><span class="token punctuation">)</span>
+<span class="token keyword">print</span><span class="token punctuation">(</span>output_text<span class="token punctuation">)</span>
+<span class="token keyword">print</span><span class="token punctuation">(</span>datetime<span class="token punctuation">.</span>datetime<span class="token punctuation">.</span>now<span class="token punctuation">(</span>datetime<span class="token punctuation">.</span>timezone<span class="token punctuation">(</span>datetime<span class="token punctuation">.</span>timedelta<span class="token punctuation">(</span>hours<span class="token operator">=</span><span class="token number">9</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token string">'=========='</span><span class="token punctuation">)</span>
+</code></pre>
+<p>実行時間を見るために <code>print</code> 文を挟んでいるが、主な流れは次のとおり。</p>
+<ul>
+  <li><code>AutoTokenizer.from_pretrained()</code> で Tokenizer を準備する</li>
+  <li><code>AutoModelForCausalLM.from_pretrained()</code> で Model を読み込む</li>
+  <li>Cuda が使えそうなら <code>torch.cuda.is_available()</code> Cuda を使う : <code>model = model.to('cuda')</code></li>
+  <li><code>tokenizer('プロンプト')</code> で Input を作る</li>
+  <li><code>model.generate()</code> で文章を生成させる</li>
+  <li><code>tokenizer.decode()</code> で Output を整形する</li>
+</ul>
+<h2 id="動かしてみる"><a class="header-link" href="#動かしてみる"><span class="header-link-mark"></span></a>動かしてみる</h2>
+<p>コーディングしたら以下のコマンドで実行する。</p>
+<pre class="language-bash"><code class="language-bash">$ poetry run python -m practice
+</code></pre>
+<p>実行例は以下のとおり。初回はモデルのダウンロードが入ってだいぶ時間がかかるが、2回目以降はキャッシュされるので、モデルのロードと計算時間だけになる。</p>
+<pre class="language-bash"><code class="language-bash">$ poetry run python -m practice
+<span class="token number">2024</span>-08-10 <span class="token number">13</span>:47:15.382350+09:00 Start <span class="token builtin class-name">:</span> Model Name <span class="token punctuation">[</span> rinna/japanese-gpt-neox-3.6b-instruction-sft-v2 <span class="token punctuation">]</span>
+<span class="token number">2024</span>-08-10 <span class="token number">13</span>:47:15.382409+09:00 Tokenizer
+<span class="token number">2024</span>-08-10 <span class="token number">13</span>:47:16.179210+09:00 Model
+<span class="token number">2024</span>-08-10 <span class="token number">13</span>:47:51.498773+09:00 Is Cuda Available?
+<span class="token number">2024</span>-08-10 <span class="token number">13</span>:47:55.486486+09:00 Use Cuda
+<span class="token number">2024</span>-08-10 <span class="token number">13</span>:48:31.154504+09:00 Prompt <span class="token builtin class-name">:</span> <span class="token punctuation">[</span> 私は一風変わった猫を飼っています。その猫はいま <span class="token punctuation">]</span>
+<span class="token number">2024</span>-08-10 <span class="token number">13</span>:48:31.154595+09:00 Prompt Tokenizer
+<span class="token number">2024</span>-08-10 <span class="token number">13</span>:48:31.302476+09:00 Model Generate
+<span class="token number">2024</span>-08-10 <span class="token number">13</span>:49:51.914125+09:00 Decode
+<span class="token number">2024</span>-08-10 <span class="token number">13</span>:49:51.938365+09:00 ----------
+私は一風変わった猫を飼っています。その猫はいま、私のお腹の上に寝ています。私のお腹の上というのは、私が彼女の上に座れる唯一の場所です。そして私は彼女の頭や顔に触れて安心します。そうやって寝るのが好きです。
+<span class="token number">2024</span>-08-10 <span class="token number">13</span>:49:51.938428+09:00 <span class="token operator">==</span><span class="token operator">==</span><span class="token operator">==</span><span class="token operator">==</span><span class="token operator">==</span>
+</code></pre>
+<p>検証に利用したマシンは i7-7700K・GTX1080・RAM 32GB という構成なのだが、実行開始から出力終了までに2分ちょっとかかっている。コレは <code>torch_dtype=torch.float16</code> の指定を入れても入れなくても同じくらいで、<code>max_new_tokens</code> を大きくすると時間が長くなる印象だ。</p>
+<p>GPU をちゃんと使えているのはパフォーマンスモニタでも確認できていて、GTX1080 だとコレが速度的に限界なのかなーという感じ。ChatGPT のようにキビキビと高速に返事してもらうのは難しそうだ。</p>
+<h2 id="プロジェクト全量を-github-に置きました"><a class="header-link" href="#プロジェクト全量を-github-に置きました"><span class="header-link-mark"></span></a>プロジェクト全量を GitHub に置きました</h2>
+<p>いつものように、これら検証用コードを含めた Poetry プロジェクトは以下の GitHub リポジトリに置いてある。</p>
+<ul>
+  <li><a href="https://github.com/Neos21/practice-rinna-japanese-gpt-neox-instruction-sft-v2">Neos21/practice-rinna-japanese-gpt-neox-instruction-sft-v2: Practice Rinna Japanese GPT-NeoX 3.6B Instruction SFT V2</a></li>
+</ul>
+<p>環境再現時は以下のコマンドで依存ライブラリをインストールして上げてから <code>$ poetry run</code> すれば OK。</p>
+<pre class="language-bash"><code class="language-bash">$ poetry <span class="token function">install</span>
+</code></pre>
+<h2 id="gpt-2-より精度は上がっている"><a class="header-link" href="#gpt-2-より精度は上がっている"><span class="header-link-mark"></span></a>GPT-2 より精度は上がっている</h2>
+<p>以前の記事 (2021-04-11 <a href="/blog/2021/04/11-01.html">GPT2 再挑戦して WSL で日本語文章を自動生成できた</a>) と比べてみると、同じマシンを使っているのでハード的なスペックは同じで、実行時間は一文あたり2分程度でコレもほぼ同じ。</p>
+<p>しかしながら、出力される文章の精度が Rinna GPT-NeoX はかなりそれっぽくなっていて、実行速度を無視すれば OpenAI ChatGPT の GPT-3.5 に迫る精度なのではないだろうか。</p>
+<p>今回は Poetry でプロジェクト環境を整えることも出来たし、ワケも分からず書いていたコードの意味もだいぶ理解できた。あとは他にも色々な日本語対応の大規模言語モデルがあるので、今回検証した「りんな」と比較して今後も遊んでみようと思う。</p><div class="ad-amazon">
+  <div class="ad-amazon-image">
+    <a href="https://www.amazon.co.jp/dp/4297143933?tag=neos21-22&amp;linkCode=osi&amp;th=1&amp;psc=1">
+      <img src="https://m.media-amazon.com/images/I/41cLGZoqWfL._SL160_.jpg" width="113" height="160">
+    </a>
+  </div>
+  <div class="ad-amazon-info">
+    <div class="ad-amazon-title">
+      <a href="https://www.amazon.co.jp/dp/4297143933?tag=neos21-22&amp;linkCode=osi&amp;th=1&amp;psc=1">大規模言語モデル入門Ⅱ〜生成型LLMの実装と評価</a>
+    </div>
+  </div>
+</div>
+<div class="ad-rakuten">
+  <div class="ad-rakuten-image">
+    <a href="https://hb.afl.rakuten.co.jp/hgc/g00q0722.waxyc9ff.g00q0722.waxyd017/?pc=https%3A%2F%2Fitem.rakuten.co.jp%2Fbook%2F17930699%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Fbook%2Fi%2F21320223%2F&amp;rafcid=wsc_i_is_1051972513434300252">
+      <img src="https://thumbnail.image.rakuten.co.jp/@0_mall/book/cabinet/3930/9784297143930.gif?_ex=128x128">
+    </a>
+  </div>
+  <div class="ad-rakuten-info">
+    <div class="ad-rakuten-title">
+      <a href="https://hb.afl.rakuten.co.jp/hgc/g00q0722.waxyc9ff.g00q0722.waxyd017/?pc=https%3A%2F%2Fitem.rakuten.co.jp%2Fbook%2F17930699%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Fbook%2Fi%2F21320223%2F&amp;rafcid=wsc_i_is_1051972513434300252">大規模言語モデル入門2～生成型LLMの実装と評価 [ 山田 育矢 ]</a>
+    </div>
+    <div class="ad-rakuten-shop">
+      <a href="https://hb.afl.rakuten.co.jp/hgc/g00q0722.waxyc9ff.g00q0722.waxyd017/?pc=https%3A%2F%2Fwww.rakuten.co.jp%2Fbook%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Fbook%2F&amp;rafcid=wsc_i_is_1051972513434300252">楽天ブックス</a>
+    </div>
+    <div class="ad-rakuten-price">価格 : 3300円</div>
+  </div>
+</div>
+
+      </main>
+      <footer id="footer">
+        <div id="footer-contents">
+          <div id="date-time">
+            <dl>
+              <dt>Created</dt>
+              <dd><time>2024-08-13</time></dd>
+              <dt>Last-Modified</dt>
+              <dd><time>2024-08-13</time></dd>
+            </dl>
+          </div>
+          <nav id="footer-links">
+            <ul>
+              <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+              <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+              <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+              <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+            </ul>
+          </nav>
+          <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+        </div>
+      </footer>
+    </div>
+  </body>
+</html>
