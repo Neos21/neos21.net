@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#0990d0">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>OwnCast でストリーミング配信サイトをセルフホストして Serveo で公開してみた - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2024/08/15-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="header-brand">
+          <div id="header-brand-contents">
+            <div id="site-title"><a href="/index.html">Neo's World</a></div>
+            <nav id="header-links">
+              <ul>
+                <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+                <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+                <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+                <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+              </ul>
+            </nav>
+          </div>
+        </div>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2024/index.html">2024年</a></li>
+            <li><a href="/blog/2024/08/index.html">08月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2024-08-15</time></div>
+        <h1 id="page-title">OwnCast でストリーミング配信サイトをセルフホストして Serveo で公開してみた</h1>
+
+<p>昨日は Restreamer というツールを使ってストリーミング配信サイトをセルフホストしてみたが、このツールはどちらかというと「他の配信サービスに再配信するためのソフト」であり、例えばコメント機能などは有していないツールだった。</p>
+<p>今回用いる <strong>OwnCast</strong> は、Restreamer と同様にストリーミング配信がセルフホストでき、かつコメント欄も用意されているので、ちょっとした YouTube Live みたいなサイトを自分で構築できる。</p>
+<ul>
+  <li><a href="https://owncast.online/">Owncast - Free and Open Source Livestreaming</a></li>
+</ul>
+<p>今回はさらに、前回の記事で説明しなかった <strong>Serveo によるトンネリングでの世界公開</strong>も説明する。</p>
+<ul>
+  <li><a href="https://serveo.net/">Serveo: expose local servers to the internet using SSH</a></li>
+</ul>
+<h2 id="owncast-を準備する"><a class="header-link" href="#owncast-を準備する"><span class="header-link-mark"></span></a>OwnCast を準備する</h2>
+<p>今回は Docker を起動した上で、WSL 上でコンテナを立てる。Windows GitBash 上で立てるとボリュームのパス名が狂ってしまいデータ永続化ができなかったため。</p>
+<ul>
+  <li><a href="https://owncast.online/quickstart/container/">Use a container image - Owncast</a></li>
+</ul>
+<p>公式の上のガイドにあるとおり、</p>
+<pre class="language-bash"><code class="language-bash">$ docker run -v <span class="token variable"><span class="token variable">`</span><span class="token builtin class-name">pwd</span><span class="token variable">`</span></span>/data:/app/data -p <span class="token number">8080</span>:8080 -p <span class="token number">1935</span>:1935 -it owncast/owncast:latest
+</code></pre>
+<p>このコマンド一発で OwnCast のサイトが立ち上がる。</p>
+<p><code>http://localhost:8080/admin</code> にアクセスすると BASIC 認証がかかっているので、</p>
+<ul>
+  <li><a href="https://owncast.online/quickstart/configure/">Configure - Owncast</a></li>
+</ul>
+<p>↑ コチラのガイドにもあるとおり、ユーザ名 <code>admin</code>、初期パスワード <code>abc123</code> で管理画面にログインする。</p>
+<p>ログインできたら、このウェブ画面内で全ての設定を行える。パスワードを変更したり、閲覧者数やコメントの確認、サイトの掲載内容などを調整できる。</p>
+<p>OwnCast の場合も、RTMP での配信になるので、</p>
+<ul>
+  <li><a href="https://owncast.online/quickstart/startstreaming/">Start Streaming - Owncast</a></li>
+</ul>
+<p>コチラのガイドに従って <em>OBS</em> に <code>rtmp://localhost:1935/live</code> を指定してやれば良い。ストリームキーについては初期値はパスワードと同じ <code>abc123</code> を設定する。</p>
+<p>OBS で配信を開始すると <code>http://localhost:8080/</code> で配信が閲覧できるようになる。</p>
+<h2 id="トンネリングサービスを利用してローカルホストを全世界に公開する"><a class="header-link" href="#トンネリングサービスを利用してローカルホストを全世界に公開する"><span class="header-link-mark"></span></a>トンネリングサービスを利用してローカルホストを全世界に公開する</h2>
+<p>昔だったら「自宅サーバの公開」として、ルータのポート開放を行ったりダイナミック DNS を設定したりして自鯖をインターネットに公開していたが、最近はトンネリングサービスを利用することが多いようだ。</p>
+<p>中でも <strong>Serveo</strong> は一時閉鎖を乗り越えてサービスが再開されており、無料で任意のサブドメインを指定できるため、オススメだ。</p>
+<ul>
+  <li><a href="https://serveo.net/">Serveo: expose local servers to the internet using SSH</a></li>
+</ul>
+<p>Serveo の設定手順に入る前に、一応他の類似サービスを紹介しておく。</p>
+<ul>
+  <li><a href="https://localhost.run/">localhost.run | localhost.run</a></li>
+</ul>
+<p>↑ コチラは Serveo 同様にインストール不要、<code>ssh</code> コマンドのみで実行できる。任意のサブドメインを指定するには月額9ドルの有料プランに入る必要があるが、自分の独自ドメインに割り当てるサービスもある。</p>
+<p>以下はエージェントのインストールが必要なタイプだが、いずれも無料で使える。</p>
+<ul>
+  <li><a href="https://ngrok.com/">ngrok | API Gateway, IoT Device Gateway, Secure Tunnels for Containers, Apps &#x26; APIs</a>
+    <ul>
+      <li>この手のトンネリングサービスの先駆け。任意のドメインを指定するには月額8ドルの有料サービスとなる</li>
+    </ul>
+  </li>
+  <li><a href="https://github.com/localtunnel/localtunnel">localtunnel/localtunnel: expose yourself</a></li>
+  <li><a href="https://loophole.cloud/">Home | Loophole</a></li>
+  <li><a href="https://tunnelin.com/">Tunnel In - Single place to manage your network tunnels</a></li>
+  <li><a href="https://localtonet.com/">Localtonet | Localhost to Internet</a></li>
+  <li><a href="https://zrok.io/">Home - zrok</a></li>
+</ul>
+<p>最後の Zrok に関しては、ngrok 風なサービスであり、コレ自体をセルフホストできるオープンソースツールである。どうも Caddy を併用してサブドメインにあたる部分のワイルドカード証明書を発行するようである。</p>
+<h2 id="serveo-で任意のカスタムドメインを指定して-localhost8080-を公開する"><a class="header-link" href="#serveo-で任意のカスタムドメインを指定して-localhost8080-を公開する"><span class="header-link-mark"></span></a>Serveo で任意のカスタムドメインを指定して <code>localhost:8080</code> を公開する</h2>
+<p>というワケで Serveo の説明に入る。任意の文字列でカスタムドメインを作るため、まずは WSL 上で <code>$ ssh-keygen</code> コマンドを使って鍵ペアを作る。</p>
+<pre class="language-bash"><code class="language-bash">$ ssh-keygen -f serveo
+</code></pre>
+<p>続いて以下のコマンドで SSH リモートフォワードのトンネルを作ってやる。<code>example</code> 部分を任意の文字列に変えてやれば OK。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">ssh</span> -R example:80:localhost:8080 -i ~/.ssh/serveo serveo.net
+Forwarding HTTP traffic from https://example.serveo.net
+</code></pre>
+<p>コレで、<code>http://localhost:8080/</code> と同じモノが <code>https://example.serveo.net/</code> でアクセスできるようになった。つまりは <code>https://example.serveo.net/</code> を友人に教えてあげれば、自分のマシンで動いている OwnCast のサイトにアクセスしてもらえるというワケだ。</p>
+<h2 id="以上"><a class="header-link" href="#以上"><span class="header-link-mark"></span></a>以上</h2>
+<p>OwnCast はそれ自体にコメント投稿機能がついているため、YouTube Live 的な使い方が簡単に出来る。環境を汚さず Docker コンテナとして起動できるのも便利なところだ。なお、配信遅延はだいたい1分くらいあるようなのでその点は YouTube Live なんかの低遅延配信に劣るが、よほどのことがなければ1分程度の配信遅延なら問題ないだろう。</p>
+<p>Serveo はインストール不要かつ、無料で任意のサブドメインを発行できるところが素晴らしい。DNS 設定もすれば自分のドメインにも割当可能なので、無料で運営し続けてほしいサービスである。</p><div class="ad-amazon">
+  <div class="ad-amazon-image">
+    <a href="https://www.amazon.co.jp/dp/B0C244V1W5?tag=neos21-22&amp;linkCode=osi&amp;th=1&amp;psc=1">
+      <img src="https://m.media-amazon.com/images/I/41PAQ6Eg77L._SL160_.jpg" width="160" height="160">
+    </a>
+  </div>
+  <div class="ad-amazon-info">
+    <div class="ad-amazon-title">
+      <a href="https://www.amazon.co.jp/dp/B0C244V1W5?tag=neos21-22&amp;linkCode=osi&amp;th=1&amp;psc=1">【Amazon.co.jp限定】Elgato Stream Deck + White, オーディオミキサー, コンテンツクリエイターのためのライブ制作とスタジオコントローラー, ストリーミング, 配信, ゲーミング, カスタム可能なタッチストリップとダイヤルおよびLCDキー搭載, Mac/PC対応</a>
+    </div>
+  </div>
+</div>
+<div class="ad-rakuten">
+  <div class="ad-rakuten-image">
+    <a href="https://hb.afl.rakuten.co.jp/hgc/g00tupx2.waxyce8a.g00tupx2.waxyd23c/?pc=https%3A%2F%2Fitem.rakuten.co.jp%2Fsanreishop%2F4943765050025%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Fsanreishop%2Fi%2F10005163%2F&amp;rafcid=wsc_i_is_1051972513434300252">
+      <img src="https://thumbnail.image.rakuten.co.jp/@0_mall/sanreishop/cabinet/07795391/07829050/4943765050025-01.jpg?_ex=128x128">
+    </a>
+  </div>
+  <div class="ad-rakuten-info">
+    <div class="ad-rakuten-title">
+      <a href="https://hb.afl.rakuten.co.jp/hgc/g00tupx2.waxyce8a.g00tupx2.waxyd23c/?pc=https%3A%2F%2Fitem.rakuten.co.jp%2Fsanreishop%2F4943765050025%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Fsanreishop%2Fi%2F10005163%2F&amp;rafcid=wsc_i_is_1051972513434300252">logicool ロジクール Webカメラ C920n フルHD 1080P カメラ パソコン PC オートフォーカス ウェブカメラ ビデオ通話 デュアルマイク搭載ステレオオーディオ 最高品質 テレビ電話 自動光補正 Skype通話 Web会議 オンライン授業 YouTube動画の作成 ストリーミング配信</a>
+    </div>
+    <div class="ad-rakuten-shop">
+      <a href="https://hb.afl.rakuten.co.jp/hgc/g00tupx2.waxyce8a.g00tupx2.waxyd23c/?pc=https%3A%2F%2Fwww.rakuten.co.jp%2Fsanreishop%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Fsanreishop%2F&amp;rafcid=wsc_i_is_1051972513434300252">サンレイ プロ</a>
+    </div>
+    <div class="ad-rakuten-price">価格 : 7350円</div>
+  </div>
+</div>
+
+      </main>
+      <footer id="footer">
+        <div id="footer-contents">
+          <div id="date-time">
+            <dl>
+              <dt>Created</dt>
+              <dd><time>2024-08-15</time></dd>
+              <dt>Last-Modified</dt>
+              <dd><time>2024-08-15</time></dd>
+            </dl>
+          </div>
+          <nav id="footer-links">
+            <ul>
+              <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+              <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+              <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+              <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+            </ul>
+          </nav>
+          <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+        </div>
+      </footer>
+    </div>
+  </body>
+</html>
