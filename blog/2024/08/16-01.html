@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#0990d0">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <title>セルフホスト可能な Slack。Mattermost と Rocket Chat を Docker で構築してみた - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2024/08/16-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="header-brand">
+          <div id="header-brand-contents">
+            <div id="site-title"><a href="/index.html">Neo's World</a></div>
+            <nav id="header-links">
+              <ul>
+                <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+                <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+                <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+                <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+              </ul>
+            </nav>
+          </div>
+        </div>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2024/index.html">2024年</a></li>
+            <li><a href="/blog/2024/08/index.html">08月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2024-08-16</time></div>
+        <h1 id="page-title">セルフホスト可能な Slack。Mattermost と Rocket Chat を Docker で構築してみた</h1>
+
+<p>本当は音声通話・ビデオ会議がセルフホストできるツールを探していたのだが、その流れで見つけて検証したツール2つを紹介しておく。</p>
+<h2 id="mattermost"><a class="header-link" href="#mattermost"><span class="header-link-mark"></span></a>Mattermost</h2>
+<ul>
+  <li><a href="https://mattermost.com/">Mattermost | Collaboration for Your Mission-Critical Work</a></li>
+</ul>
+<p>まずは Mattermost というモノ。ミニマムな Slack という感じ。Docker での構築手順は以下の公式ガイドにまとまっている。</p>
+<ul>
+  <li><a href="https://docs.mattermost.com/install/install-docker.html">Deploy Mattermost via Docker - Mattermost documentation</a></li>
+</ul>
+<p>最小構成で作るにはこんな感じ。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># Docker 構築用の公式リポジトリを Clone してくる</span>
+$ <span class="token function">git</span> clone https://github.com/mattermost/docker
+$ <span class="token builtin class-name">cd</span> ./docker/
+
+<span class="token comment"># .env ファイルを用意する</span>
+$ <span class="token function">cp</span> ./env.example ./.env
+
+<span class="token comment"># 作業ディレクトリ配下にマウント用のディレクトリを作る</span>
+$ <span class="token function">mkdir</span> -p ./volumes/app/mattermost/<span class="token punctuation">{</span>config,data,logs,plugins,client/plugins,bleve-indexes<span class="token punctuation">}</span>
+$ <span class="token function">sudo</span> <span class="token function">chown</span> -R <span class="token number">2000</span>:2000 ./volumes/app/mattermost
+
+<span class="token comment"># Docker Compose で起動する</span>
+$ docker compose -f docker-compose.yml -f docker-compose.without-nginx.yml up -d
+</code></pre>
+<p>コレで <code>http://localhost:8065</code> にアクセスすれば利用開始できる。終了時は以下。</p>
+<pre class="language-bash"><code class="language-bash">$ docker compose -f docker-compose.yml -f docker-compose.without-nginx.yml down
+</code></pre>
+<h2 id="rocket-chat"><a class="header-link" href="#rocket-chat"><span class="header-link-mark"></span></a>Rocket Chat</h2>
+<ul>
+  <li><a href="https://www.rocket.chat/">Rocket.Chat: Communications Platform You Can Fully Trust</a></li>
+</ul>
+<p>Rocket Chat は AWS の人が研修をやる時に使っていたのを見て知ったモノで、プラグインを入れればビデオ通話にも対応できるということだったが、Jitsi というツールを別途入れる必要がある他、何やらセルフホストの場合でも会員登録や有料プランへの加入が必要な機能もあり、ちょっと微妙だと感じた。結局無料で使える範囲というと Mattermost と大差なく、Slack の代替品 (テキストチャット) という感じ。</p>
+<p>Docker での構築手順は以下の公式ガイドにまとまっている。</p>
+<ul>
+  <li><a href="https://docs.rocket.chat/docs/deploy-with-docker-docker-compose">Deploy with Docker &#x26; Docker Compose</a></li>
+</ul>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># 適当に作業ディレクトリを作っておくと良いだろう</span>
+$ <span class="token function">mkdir</span> ./rocket-chat/ <span class="token operator">&#x26;&#x26;</span> <span class="token builtin class-name">cd</span> <span class="token variable">$_</span>
+
+<span class="token comment"># Docker Compose ファイルを取得する</span>
+$ <span class="token function">curl</span> -L https://raw.githubusercontent.com/RocketChat/Docker.Official.Image/master/compose.yml -O
+
+<span class="token comment"># .env ファイルを取得する</span>
+$ <span class="token function">curl</span> -L -o .env https://raw.githubusercontent.com/RocketChat/Docker.Official.Image/master/env.example
+</code></pre>
+<p>次に、GitHub の Releases と DockerHub のリリースされている Tag を確認して、最新バージョンの番号を確認する。本稿執筆時点では <code>6.11.0</code> が最新版だった。</p>
+<ul>
+  <li><a href="https://github.com/RocketChat/Rocket.Chat/releases">Releases · RocketChat/Rocket.Chat</a></li>
+  <li><a href="https://hub.docker.com/r/rocketchat/rocket.chat/tags">rocketchat/rocket.chat Tags | Docker Hub</a></li>
+</ul>
+<p>この内容を <code>.env</code> ファイルに書き込む。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># Rocket.Chat version</span>
+<span class="token comment"># see:- https://github.com/RocketChat/Rocket.Chat/releases</span>
+<span class="token assign-left variable">RELEASE</span><span class="token operator">=</span><span class="token number">6.11</span>.0
+</code></pre>
+<p>そしたらあとは Docker Compose で起動するだけ。</p>
+<pre class="language-bash"><code class="language-bash">$ docker compose up -d
+</code></pre>
+<p><code>http://localhost:3000</code> にアクセスすると使い始められる。セルフホストしてるのに Rocket Chat への会員登録が要るっぽいのが面倒なところ。</p>
+<p>閉じる時は以下で OK。</p>
+<pre class="language-bash"><code class="language-bash">$ docker compose down
+</code></pre>
+<h2 id="以上"><a class="header-link" href="#以上"><span class="header-link-mark"></span></a>以上</h2>
+<p>今回も Docker を使って簡単に Slack 代替ツールを2つ試してみた。テキストチャットだけであればこれらのツールでも全然問題ないので、手軽に始めたい場合はご参考に。</p><div class="ad-amazon">
+  <div class="ad-amazon-image">
+    <a href="https://www.amazon.co.jp/dp/B0BV8VCCYX?tag=neos21-22&amp;linkCode=osi&amp;th=1&amp;psc=1">
+      <img src="https://m.media-amazon.com/images/I/518YvXHcICL._SL160_.jpg" width="125" height="160">
+    </a>
+  </div>
+  <div class="ad-amazon-info">
+    <div class="ad-amazon-title">
+      <a href="https://www.amazon.co.jp/dp/B0BV8VCCYX?tag=neos21-22&amp;linkCode=osi&amp;th=1&amp;psc=1">Docker実践ガイド 第3版 impress top gearシリーズ</a>
+    </div>
+  </div>
+</div>
+<div class="ad-rakuten">
+  <div class="ad-rakuten-image">
+    <a href="https://hb.afl.rakuten.co.jp/hgc/g00q0722.waxyc9ff.g00q0722.waxyd017/?pc=https%3A%2F%2Fitem.rakuten.co.jp%2Fbook%2F17365463%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Fbook%2Fi%2F20839082%2F&amp;rafcid=wsc_i_is_1051972513434300252">
+      <img src="https://thumbnail.image.rakuten.co.jp/@0_mall/book/cabinet/5895/9784295015895_1_2.jpg?_ex=128x128">
+    </a>
+  </div>
+  <div class="ad-rakuten-info">
+    <div class="ad-rakuten-title">
+      <a href="https://hb.afl.rakuten.co.jp/hgc/g00q0722.waxyc9ff.g00q0722.waxyd017/?pc=https%3A%2F%2Fitem.rakuten.co.jp%2Fbook%2F17365463%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Fbook%2Fi%2F20839082%2F&amp;rafcid=wsc_i_is_1051972513434300252">Docker実践ガイド 第3版 （impress top gear） [ 古賀 政純 ]</a>
+    </div>
+    <div class="ad-rakuten-shop">
+      <a href="https://hb.afl.rakuten.co.jp/hgc/g00q0722.waxyc9ff.g00q0722.waxyd017/?pc=https%3A%2F%2Fwww.rakuten.co.jp%2Fbook%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Fbook%2F&amp;rafcid=wsc_i_is_1051972513434300252">楽天ブックス</a>
+    </div>
+    <div class="ad-rakuten-price">価格 : 4180円</div>
+  </div>
+</div>
+
+      </main>
+      <footer id="footer">
+        <div id="footer-contents">
+          <div id="date-time">
+            <dl>
+              <dt>Created</dt>
+              <dd><time>2024-08-16</time></dd>
+              <dt>Last-Modified</dt>
+              <dd><time>2024-08-16</time></dd>
+            </dl>
+          </div>
+          <nav id="footer-links">
+            <ul>
+              <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+              <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+              <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+              <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+            </ul>
+          </nav>
+          <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+        </div>
+      </footer>
+    </div>
+  </body>
+</html>
