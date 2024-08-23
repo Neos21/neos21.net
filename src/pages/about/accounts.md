@@ -1,7 +1,7 @@
 ---
 title        : アカウント一覧
 created      : 2020-11-16
-last-modified: 2023-11-06
+last-modified: 2024-08-22
 path:
   - /index.html Neo's World
   - /about/index.html About
@@ -13,7 +13,10 @@ SNS やその他アカウント一覧。
   - [Fedibird.com](https://fedibird.com/@Neos21)
   - [itabashi.0j0.jp](https://itabashi.0j0.jp/@Neos21)
   - [mastodon-japan.net](https://mastodon-japan.net/@neos21)
+  - [mstdn.beer](https://mstdn.beer/@neos21)
+  - [mstdn.ikebuku.ro](https://mstdn.ikebuku.ro/@Neos21)
   - [mstdn.jp](https://mstdn.jp/@Neos21mstdn)
+  - [mstdn.maud.io](https://mstdn.maud.io/@Neos21)
   - [Pawoo.net](https://pawoo.net/@Neos21)
   - [Pebble.social](https://pebble.social/@Neos21)
   - [pokemon.mastportal.info](https://pokemon.mastportal.info/@Neos21)
@@ -26,18 +29,20 @@ SNS やその他アカウント一覧。
 - [Bitbucket](https://bitbucket.org/Neos21/)
 - [CodePen.io](https://codepen.io/Neos21/)
 - [Dot Install](https://dotinstall.com/users/neos21)
-- [Enty](https://enty.jp/Neos21)
 - [Facebook](https://www.facebook.com/Neos21)
   - [Instagram](https://www.instagram.com/Neos21/)
   - [Threads](https://www.threads.net/@neos21)
 - [Fantia](https://fantia.jp/Neos21)
+- [FediMovie](https://fedimovie.com/a/neos21/)
 - [GitLab](https://gitlab.com/Neos21)
 - [GitHub](https://github.com/Neos21)
   - [Neo's GitHub Pages](https://neos21.github.io/)
+- [GNU Social JP](https://gnusocial.jp/neos21)
 - [Hatena](http://profile.hatena.ne.jp/neos21/)
   - ~~[Corredor](https://neos21.hatenablog.com/)~~
   - ~~[Murga](https://neos21.hatenablog.jp/)~~
   - ~~[El Mylar](https://neos21.hateblo.jp/)~~
+- [Keybase](https://keybase.io/neos21)
 - [LinkedIn](https://www.linkedin.com/in/Neos21/)
 - [MDN](https://developer.mozilla.org/ja/profiles/Neos21)
 - [Mixi](https://mixi.jp/show_profile.pl?id=21893730)
@@ -46,15 +51,15 @@ SNS やその他アカウント一覧。
   - [Iris](https://iris.to/neos21)
 - [Photozou](http://photozou.jp/user/top/174246)
 - [Pixiv](https://www.pixiv.net/users/25482529)
-- [Post.News](https://post.news/@/Neos21)
 - [Qiita](https://qiita.com/Neos21)
 - [Reddit](https://www.reddit.com/user/Neos21Reddit)
 - [Scrapbox](https://scrapbox.io/Neos21/)
 - [SlideShare](https://www.slideshare.net/NeoXrea)
+- [SoundCloud](https://soundcloud.com/neos21)
 - [StackOverflow](https://stackoverflow.com/users/10092546/neos21)
-- [Truth Social](https://truthsocial.com/@Neos21)
 - [YouTube](https://www.youtube.com/Neos21)
   - [Neo's Channel](https://www.youtube.com/@Neos21Channel)
+- [Twitch](https://www.twitch.tv/neos21twitch)
 - [Vercel](https://vercel.com/neos21)
 - [Vimeo](https://vimeo.com/neos21)
 - [VisualStudio.com](https://neos21.visualstudio.com/)
@@ -62,12 +67,15 @@ SNS やその他アカウント一覧。
 
 ## 過去情報
 
-- ~~[Coconala](https://profile.coconala.com/users/1578422)~~ : 2021-01-23 退会
-- ~~[Misskey.cf](https://misskey.cf/@Neos21)~~ : サービス停止
-- ~~[Misskey.io](https://misskey.io/@Neos21)~~ : 退会
-- ~~[Patreon](https://www.patreon.com/Neos21)~~ : 退会
-- ~~[Pinterest](https://www.pinterest.jp/Neos21Pinterest/)~~ : 凍結
-- ~~[Qrunch](https://neos21.qrunch.io/)~~ : サービス停止
-- ~~[T2](https://t2.social/Neos21) → [Pebble](https://pebble.is/Neos21)~~ : サービス停止
+- ~~[Coconala](https://profile.coconala.com/users/1578422)~~
+- ~~[Enty](https://enty.jp/Neos21)~~
+- ~~[Misskey.cf](https://misskey.cf/@Neos21)~~
+- ~~[Misskey.io](https://misskey.io/@Neos21)~~
+- ~~[Patreon](https://www.patreon.com/Neos21)~~
+- ~~[Pinterest](https://www.pinterest.jp/Neos21Pinterest/)~~
+- ~~[Post.News](https://post.news/@/Neos21)~~
+- ~~[Qrunch](https://neos21.qrunch.io/)~~
+- ~~[T2](https://t2.social/Neos21) → [Pebble](https://pebble.is/Neos21)~~
+- ~~[Truth Social](https://truthsocial.com/@Neos21)~~
 - ~~[Tumblr : Neo's Dream](https://neos21dream.tumblr.com/)~~
-- ~~[Twitter](https://twitter.com/Neos21)~~ : 凍結
+- ~~[Twitter](https://twitter.com/Neos21)~~
