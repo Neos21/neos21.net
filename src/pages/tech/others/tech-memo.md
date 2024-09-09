@@ -1,7 +1,7 @@
 ---
 title        : 技術関連メモ
 created      : 2023-02-16
-last-modified: 2024-08-11
+last-modified: 2024-09-10
 path:
   - /index.html Neo's World
   - /tech/index.html Tech
@@ -21,8 +21,13 @@ path:
     - [BugbearR's Wiki - 開発規約/11 開発に必要と思われる文書の一覧](http://www.bugbearr.jp/?%E9%96%8B%E7%99%BA%E8%A6%8F%E7%B4%84%2F11)
     - [BugbearR's Wiki - 開発規約/12 品質とは何か](http://www.bugbearr.jp/?%E9%96%8B%E7%99%BA%E8%A6%8F%E7%B4%84%2F12)
 - [玄系 プロジェクト管理者の道具箱 - システム開発](https://web.archive.org/web/20160718040728/http://www.h6.dion.ne.jp/~akn/pm/SystemDevelopment/SystemDevelopment.html)
-- [yutkat/katapedia: この書は常に未完成である。内容の正誤に保証はない。 ITエンジニアとして役になったTips、よく忘れることを記す。 ブログに記載してもよかったが、水平方向の情報を見つけやすい本の形式をとることにした](https://github.com/yutkat/katapedia)
 - [reverse-interview/JAPANESE.md at master · viraptor/reverse-interview](https://github.com/viraptor/reverse-interview/blob/master/translations/JAPANESE.md)
+
+
+## みんなのナレッジベース
+
+- [八寿のナレッジベース](https://yaju.sakura.ne.jp/wiki/doku.php?id=start)
+- [yutkat/katapedia: この書は常に未完成である。内容の正誤に保証はない。 ITエンジニアとして役になったTips、よく忘れることを記す。 ブログに記載してもよかったが、水平方向の情報を見つけやすい本の形式をとることにした](https://github.com/yutkat/katapedia)
 
 
 ## 用語
@@ -41,6 +46,8 @@ path:
 
 ## 雑多
 
+- [カナかな団の躁鬱_CSS とか HTML](https://www.aboutworks.com/shokodei/diary/doc/#diary)
+- [Database Answers | We provide advice on Best Practice in Data Modelling and over 1,000 free Databases.](https://www.database-answers.com/)
 - > アジャイル開発はコミットメント(約束)を大切にしてないよ。指標と実績を計測可能にして科学的にそのずれを最小にすることで見積もり精度を高めるアプローチだよ。見積もりの話なのに、真逆の説明しないでー
 - [コンテクストメニューの役割 (agenda)](http://jintrick.net/agenda/2007/08/post-6.html)
   - コンテクストメニューは、ポイントされているオブジェクト、または位置に関する操作を行う為のメニューに絞るべき
