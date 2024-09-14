@@ -1,9 +1,9 @@
+import childProcess from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 
 import browserSync from 'browser-sync';
 
-import { buildCss } from '../lib/build-css.js';
 import { buildHtml } from '../lib/build-html.js';
 import { buildMarkdown } from '../lib/build-markdown.js';
 import { constants } from '../lib/constants.js';
@@ -62,6 +62,17 @@ const buildForBlog = sourceFilePath => {
   buildMarkdown(`${constants.pages.src}/blog/${year}/index.md`);
   buildMarkdown(`${constants.pages.src}/blog/index.md`);
   buildHtml(`${constants.pages.src}/index.html`);
+};
+
+/**
+ * CSS ファイルをビルドする
+ * 
+ * - `clean-css` の API は `process.cwd` の位置に影響されて `@import` が解釈できないことがあるので
+ *   `clean-css-cli` を使った `npm run` スクリプトを呼び出すことにする
+ */
+const buildCss = () => {
+  const result = childProcess.execFileSync('npm', ['run', 'build-css']);
+  console.log(result.toString());
 };
 
 // Main
