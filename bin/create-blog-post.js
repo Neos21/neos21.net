@@ -20,7 +20,7 @@ import { makeDirectory } from '../lib/make-directory.js';
  * @param {string} questionText 質問文
  * @return {Promise<string>} ユーザが入力した文字列・改行や空白は除去しておく
  */
-const readText = (questionText) => {
+const readText = questionText => {
   process.stdout.write(`${questionText ? questionText + ' ' : ''}> `);
   process.stdin.resume();
   return new Promise(resolve => process.stdin.once('data', resolve)).finally(() => process.stdin.pause()).then(text => text.toString().trim());

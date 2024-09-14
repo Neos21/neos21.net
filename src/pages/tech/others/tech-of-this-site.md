@@ -64,17 +64,17 @@ CSS のビルドには `clean-css-cli` を使用している。SCSS はもう使
 
 ### Front Matter 入り HTML
 
-このサイトの元の HTML ファイルは、次のように書かれている。
+このサイトの元の HTML ファイルは、次のように書かれている。ハイフン部分は本来半角。
 
 ```html
----
+－－－
 title        : Neo's World
 created      : 2002-10-09
 last-modified: 2020-11-20
 toc          : false
 path:
   - /index.html Neo's World
----
+－－－
 
 <h2>こんにちは世界</h2>
 ```
@@ -145,17 +145,17 @@ HTML ソースの一部を自動一括処理するために、[Rehype](https://g
 
 ### Front Matter 入り Markdown
 
-Markdown 形式でページを作る場合は、次のような Markdown ファイルを作る。
+Markdown 形式でページを作る場合は、次のような Markdown ファイルを作る。コチラもハイフン部分は本来半角。
 
 ```markdown
----
+－－－
 title        : このサイトに使われている技術
 created      : 2020-11-23
 last-modified: 2020-11-23
 path:
   - /index.html Neo's World
   - /tech/index.html Tech
----
+－－－
 
 ## こんにちは世界
 ```
@@ -301,7 +301,7 @@ GitHub Actions などで自動アップロードしている都合上、GitHub �
 こうしたちょっとしたウェブアプリを作っておけば、スマホ上でも記事を書いたりできる。GitHub への Push を忘れていても、データは OCI の IaaS 上に保管されているワケなので、PC でエディタを開いて続きを書いて、そこから Push したりしても良い。我ながら、シンプルかつやりたいことが全部できていて、よきよき。
 
 
----
+-----
 
 
 以上。2022年時点で、このサイトはこのようにして構築されている。

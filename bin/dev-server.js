@@ -19,7 +19,7 @@ import { isExist } from '../lib/is-exist.js';
  * 
  * @param {string} sourceFilePath 変更があったファイルパス
  */
-const unlinkFunc = (sourceFilePath) => {
+const unlinkFunc = sourceFilePath => {
   const distFilePath = sourceFilePath.replace(constants.pages.src, constants.pages.dist).replace('.md', '.html');
   try {
     fs.unlinkSync(distFilePath);
@@ -35,7 +35,7 @@ const unlinkFunc = (sourceFilePath) => {
  * 
  * @param {string} sourceFilePath 変更があったディレクトリパス
  */
-const unlinkDirFunc = (sourceFilePath) => {
+const unlinkDirFunc = sourceFilePath => {
   const distDirectoryPath = sourceFilePath.replace(constants.pages.src, constants.pages.dist);
   try {
     fs.rmdirSync(distDirectoryPath, { recursive: true });
@@ -51,7 +51,7 @@ const unlinkDirFunc = (sourceFilePath) => {
  * 
  * @param {string} sourceFilePath 変更があったファイルパス
  */
-const buildForBlog = (sourceFilePath) => {
+const buildForBlog = sourceFilePath => {
   const match = sourceFilePath.match((/\/blog\/([0-9]{4})\/([0-9]{2})\/[0-9]{2}-[0-9]{2}\.md/u));
   if(!match) return;
   

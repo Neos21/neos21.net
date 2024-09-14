@@ -22,13 +22,11 @@ import { makeDirectory } from '../../lib/make-directory.js';
 
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
 
+// `return` で中断するため即時関数を使用している
 (() => {
   // 最終更新日が今日に設定されているファイルを取得する
   const today = `${jstCurrentYear}-${zeroPadJstCurrentMonth}-${zeroPadJstCurrentDate}`;
   const todaySourceFilePaths = listFiles(constants.pages.src).filter(sourceFilePath => {
-    // ファイルパスにアンダースコアを含んでいればアップロード対象にしない)
-    if(sourceFilePath.includes('_')) return false;
-    
     if(['.html', '.md'].includes(path.extname(sourceFilePath))) {
       // HTML と Markdown : `last-modified` を確認する
       const text = fs.readFileSync(sourceFilePath, 'utf-8');

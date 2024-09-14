@@ -13,13 +13,8 @@ import { makeDirectory } from '../lib/make-directory.js';
 const pages = listFiles(constants.pages.src)
   .filter(filePath => ['.html', '.md'].includes(path.extname(filePath)))
   .filter(filePath => {
-    // エラーページ、またはファイルパスにアンダースコアを含んでいれば除外する
-    if(filePath.includes('403.html') ||
-       filePath.includes('404.html') ||
-       filePath.includes('500.html') ||
-       filePath.includes('_')) {
-      return false;
-    }
+    // エラーページは除外する
+    if(filePath.includes('403.html') || filePath.includes('404.html') || filePath.includes('500.html')) return false;
     
     // `created` が未来日のファイルを除外する (コレで未来日のブログも除外される)
     // 作成日が未来日なファイルは公開しておらずサイトマップには載せられないため

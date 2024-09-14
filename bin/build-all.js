@@ -9,23 +9,24 @@ import { listFiles } from '../lib/list-files.js';
 /*!
  * HTML・Markdown をビルドし、それ以外のファイルをコピーする
  * 
- * - CSS は clean-css-cli の `@import` 解釈に問題があるのでこのスクリプト内からは実行せず `$npm run` にて別途実行する
+ * - CSS は clean-css-cli の `@import` 解釈に問題があるのでこのスクリプト内からは実行せず `$ npm run` にて別途実行する
  * - 最終更新日やブログのファイルパスが未来日のモノも除外せずビルドする
  */
 
+console.log('Build All : Start');
 const sourceFilePaths = listFiles(constants.pages.src);
 
-// HTML
+console.log('Build All : HTML');
 sourceFilePaths
   .filter(sourceFilePath => sourceFilePath.endsWith('.html'))
   .forEach(sourceFilePath => buildHtml(sourceFilePath));
 
-// Markdown
+console.log('Build All : Markdown');
 sourceFilePaths
   .filter(sourceFilePath => sourceFilePath.endsWith('.md'))
   .forEach(sourceFilePath => buildMarkdown(sourceFilePath));
 
-// Other Assets
+console.log('Build All : Other Assets');
 sourceFilePaths
   .filter(sourceFilePath => !['.html', '.md'].includes(path.extname(sourceFilePath)))
   .forEach(sourceFilePath => {
@@ -33,7 +34,7 @@ sourceFilePaths
     copyFile(sourceFilePath, distFilePath);
   });
 
-// Documents
+console.log('Build All : Documents');
 listFiles(constants.documents.src).forEach(sourceFilePath => {
   const distFilePath = sourceFilePath.replace(constants.documents.src, constants.documents.dist);
   copyFile(sourceFilePath, distFilePath);

@@ -17,6 +17,7 @@ import { makeDirectory } from '../../lib/make-directory.js';
 
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
 
+// `return` で中断するため即時関数を使用している
 (() => {
   // 前 Step で JSON ファイルに書き出しておいた変更ファイル一覧を取得する
   // ファイルパスは `'src/pages/index.html'` のようにプロジェクトルートからの表記になっている
@@ -35,7 +36,6 @@ const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
   const isTemplateChanged = rawChangedFiles.some(sourceFilePath => sourceFilePath.includes(constants.templates.src));
   if(isTemplateChanged) return console.log('Templates Changed! Please Upload Manually. Aborted');
   
-  
   // `last-modified` が今日日付のファイルを追加する
   // 
   // `daily-deploy.js` の一部コードを流用
@@ -51,9 +51,6 @@ const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
   // 最終更新日が今日に設定されているファイルを取得する
   const today = `${jstCurrentYear}-${zeroPadJstCurrentMonth}-${zeroPadJstCurrentDate}`;
   const todaySourceFilePaths = listFiles(constants.pages.src).filter(sourceFilePath => {
-    // ファイルパスにアンダースコアを含んでいればアップロード対象にしない)
-    if(sourceFilePath.includes('_')) return false;
-    
     if(['.html', '.md'].includes(path.extname(sourceFilePath))) {
       // HTML と Markdown : `last-modified` を確認する
       const text = fs.readFileSync(sourceFilePath, 'utf-8');
@@ -70,7 +67,6 @@ const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
   
   // 変更があったファイルとマージし重複を消す
   const changedFiles = Array.from(new Set([...rawChangedFiles, ...todaySourceFilePaths]));
-  
   
   // アップロード対象のファイルを特定して追加していく
   // ================================================================================
@@ -111,8 +107,6 @@ const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
       // `src/pages/` 配下の HTML・Markdown ファイルのみ
       if(!sourceFilePath.includes(constants.pages.src)) return false;
       if(!['.html', '.md'].includes(path.extname(sourceFilePath))) return false;
-      // ファイルパスにアンダースコアを含んでいればアップロード対象にしない
-      if(sourceFilePath.includes('_')) return false;
       
       // 最終更新日が未来日のファイルを除外する (コレで未来日のブログも除外される)
       const text = fs.readFileSync(sourceFilePath, 'utf-8');
@@ -169,8 +163,6 @@ const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
       // `src/pages/` 配下の HTML・Markdown 以外の画像ファイルなどのみ
       if(!sourceFilePath.includes(constants.pages.src)) return false;
       if(['.html', '.md'].includes(path.extname(sourceFilePath))) return false;
-      // ファイルパスにアンダースコアを含んでいればアップロード対象にしない
-      if(sourceFilePath.includes('_')) return false;
       
       // 未来日のブログ関連のファイルは除外する
       const match = sourceFilePath.match((/\/blog\/([0-9]{4})\/([0-9]{2})\/([0-9]{2})/u));

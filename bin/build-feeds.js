@@ -3,10 +3,10 @@ import fs from 'node:fs';
 import yaml from 'yaml';
 
 import { constants } from '../lib/constants.js';
+import { extractFrontMatter } from '../lib/extract-front-matter.js';
 import { isNotFuture } from '../lib/is-not-future.js';
 import { listFiles } from '../lib/list-files.js';
 import { makeDirectory } from '../lib/make-directory.js';
-import { markdownExtractFrontMatter } from '../lib/markdown-extract-front-matter.js';
 
 /*!
  * Atom フィードを生成する
@@ -44,7 +44,6 @@ const getLatestNews = () => {
  * @return {Array<object>} 最新のブログ投稿情報
  */
 const getLatestBlogPosts = () => listFiles(`${constants.pages.src}/blog`)
-  .filter(filePath => !filePath.includes('_'))  // ファイルパスにアンダースコアを含んでいれば除外する
   .filter(filePath => {
     // 未来日でない記事ファイルのみに絞り込む
     const match = filePath.match((/\/blog\/([0-9]{4})\/([0-9]{2})\/([0-9]{2})-[0-9]{2}\.md/u));
@@ -59,7 +58,7 @@ const getLatestBlogPosts = () => listFiles(`${constants.pages.src}/blog`)
   .slice(0, constants.feeds.feedsCount)  // 最新の指定件数のみ取得する
   .map(filePath => {
     const post = fs.readFileSync(filePath, 'utf-8');
-    const postFrontMatter = markdownExtractFrontMatter(post);
+    const postFrontMatter = extractFrontMatter(post);
     const time = filePath.replace((/.*\/blog\/[0-9]{4}\/[0-9]{2}\/[0-9]{2}-([0-9]{2})\.md/u), '$1');  // ファイル名の連番部分を時間に利用する
     return {
       title  : postFrontMatter.title,
@@ -89,7 +88,7 @@ const mergeLatests = (news, blogPosts) => [...news, ...blogPosts]
  * @param {Array<object>} latests フィード情報
  * @return {string} フィードのエントリ部分の文字列
  */
-const createEntries = (latests) => latests.map(item => `  <entry>
+const createEntries = latests => latests.map(item => `  <entry>
     <title>${item.title}</title>
     <id>${item.link}</id>
     <link rel="alternate" type="text/html" href="${item.link}" />
