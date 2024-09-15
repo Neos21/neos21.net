@@ -15,6 +15,7 @@ head: |
     
     .table-wrapper td:not(:first-child) {
       min-width: 15rem;
+      color: #000;
       font-size: .86rem;
     }
     
