@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#0990d0">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <!-- Open Graph・Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="Neo's World">
+    <meta property="og:title" content="API 経由で DB を操作したい！「DB API」を作ってみた - Neo's World">
+    <meta property="og:description" content="API 経由で DB を操作したい！「DB API」を作ってみた - Neo's World">
+    <meta property="og:url" content="https://neos21.net/blog/2024/10/03-01.html">
+    <meta property="og:image" content="https://neos21.net/ogp.png">
+    <meta property="og:locale" content="ja_JP">
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:title" content="API 経由で DB を操作したい！「DB API」を作ってみた - Neo's World">
+    <meta property="twitter:description" content="API 経由で DB を操作したい！「DB API」を作ってみた - Neo's World">
+    <meta property="twitter:url" content="https://neos21.net/blog/2024/10/03-01.html">
+    <meta property="twitter:image" content="https://neos21.net/ogp.png">
+    <title>API 経由で DB を操作したい！「DB API」を作ってみた - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+    <link rel="manifest" href="/manifest.webmanifest">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2024/10/03-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" title="Feeds" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <script src="/scripts.js"></script>
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="header-brand">
+          <div id="header-brand-contents">
+            <div id="site-title"><a href="/index.html">Neo's World</a></div>
+            <nav id="header-links">
+              <ul>
+                <li id="header-link-theme"><a href="#" title="Toggle Theme"><span>Toggle Theme</span></a></li>
+                <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+                <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+                <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+                <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+              </ul>
+            </nav>
+          </div>
+        </div>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2024/index.html">2024年</a></li>
+            <li><a href="/blog/2024/10/index.html">10月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2024-10-03</time></div>
+        <h1 id="page-title">API 経由で DB を操作したい！「DB API」を作ってみた</h1>
+
+<p><a href="https://developers.cloudflare.com/d1/">Cloudflare D1 Database</a> という、SQLite を Cloudflare Workers から呼び出して使えるサービスがある。他にも <a href="https://www.mongodb.com/ja-jp/products/platform/atlas-database">MongoDB Atlas</a> だったり、<a href="https://vercel.com/docs/storage">Vercel Storage</a> などのように、ちょっとした Functions から呼び出して利用できるようなストレージサービスはいくつかある。</p>
+<p>ただしこれらは、DB 接続のための Serverless Functions が必要だったり、そのために DB 接続パスワードの秘匿化 (環境変数での注入) が必要だったりで、ローカルからすんなり呼び出しづらい。</p>
+<p>MongoDB Atlas と、Vercel Storage についてはローカルからの呼び出しに対応しているようだが、D1 に関しては Cloudflare Workers 経由でしか呼び出せないので、実行環境が制限されるところも難点だ。</p>
+<p>大したデータを置きたいワケじゃないけど、RDB ないしは JSON データをちょこっと管理できるようなストレージが欲しいんじゃ…。できれば <strong><code>curl</code> で API を叩いて DB の読み出しができるようなモノが欲しい……。</strong></p>
+<hr>
+<p>というワケで作りました。その名も <strong>DB API</strong>。</p>
+<ul>
+  <li>API ドキュメント : <a href="https://neos21.github.io/db-api/">DB API</a></li>
+  <li>ソースコード : <a href="https://github.com/Neos21/db-api">Neos21/db-api: DB API</a></li>
+</ul>
+<p>API ドキュメントのページを見てもらうと大体分かると思うけど、JSON ファイルを DB 代わりに用いる「JSON DB」と、SQLite の2つに対応している。</p>
+<p>JSON DB の方は、<a href="https://github.com/typicode/lowdb">lowdb</a> というシンプルなツールを利用して JSON ファイルを読み書きしている。微妙に TypeScript での <code>import</code> に対応していなかったので、ソースコードを一部改変して直接取り込んで利用させてもらっている。</p>
+<p>SQLite の方は素直に npm の <a href="https://www.npmjs.com/package/sqlite3">sqlite3</a> パッケージを利用している。</p>
+<hr>
+<p>これらのデータ永続化層に対して、NestJS で API サーバを作っている。DB 自体の作成・削除にはマスターパスワードが必要になっていて、そこで DB ごとの名前と接続パスワードを決める。</p>
+<p>DB が作成できたら、DB 名と接続パスワードを書きつつ、SQL ないしは API エンドポイントを指定することで CRUD ができるようになっている。</p>
+<p>これらを <code>curl</code> で実現しようとすると、以下のように叩ける。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># JSON DB を1つ作成する (マスターパスワードが必要)</span>
+$ <span class="token function">curl</span> -X POST -d <span class="token string">'{ "credential": "【マスターパスワード】", "db_name": "example", "db_credential": "【接続パスワード】" }'</span> -H <span class="token string">'Content-Type: application/json'</span> http://localhost:5001/json-db/create-db
+
+<span class="token comment"># 作成されている JSON DB の名前を列挙する (マスターパスワードが必要)</span>
+$ <span class="token function">curl</span> -X POST -d <span class="token string">'{ "credential": "【マスターパスワード】" }'</span> -H <span class="token string">'Content-Type: application/json'</span> http://localhost:5001/json-db/list-db-names
+
+<span class="token comment"># 作成した JSON DB に対してデータを投入する (`id` プロパティが自動採番して付与される)</span>
+$ <span class="token function">curl</span> -X POST -d <span class="token string">'{ "db_name": "example", "db_credential": "【接続パスワード】", "item": { ... } }'</span> -H <span class="token string">'Content-Type: application/json'</span> http://localhost:5001/json-db/create
+
+<span class="token comment"># JSON DB の内容を全件出力する</span>
+$ <span class="token function">curl</span> -X POST -d <span class="token string">'{ "db_name": "example", "db_credential": "【接続パスワード】" }'</span> -H <span class="token string">'Content-Type: application/json'</span> http://localhost:5001/json-db/find-all
+</code></pre>
+<p>一方、SQLite の方は <code>sqlite3</code> パッケージの API (<code>run</code>・<code>all</code>・<code>get</code>) がほぼそのままむき出しになっている。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># SQLite DB を1つ作成する (マスターパスワードが必要)</span>
+$ <span class="token function">curl</span> -X POST -d <span class="token string">'{ "credential": "【マスターパスワード】", "db_name": "example", "db_credential": "【接続パスワード】" }'</span> -H <span class="token string">'Content-Type: application/json'</span> http://localhost:5001/sqlite/create-db
+
+<span class="token comment"># 作成されている SQLite DB の名前を列挙する (マスターパスワードが必要)</span>
+$ <span class="token function">curl</span> -X POST -d <span class="token string">'{ "credential": "【マスターパスワード】" }'</span> -H <span class="token string">'Content-Type: application/json'</span> http://localhost:5001/sqlite/list-db-names
+
+<span class="token comment"># 作成した SQLite DB に対してデータを投入する (CREATE TABLE・INSERT・UPDATE・DELETE の時は `run` を利用する)</span>
+$ <span class="token function">curl</span> -X POST -d <span class="token string">'{ "db_name": "example", "db_credential": "【接続パスワード】", "sql": "INSERT INTO my_table (name) VALUES (?)", "params": [<span class="token entity" title="\&#x22;">\"</span>Example Name<span class="token entity" title="\&#x22;">\"</span>] }'</span> -H <span class="token string">'Content-Type: application/json'</span> http://localhost:5001/sqlite/run
+
+<span class="token comment"># SQLite DB に対して SELECT を投げる (複数件取得は `all`・1件取得は `get` を利用する)</span>
+$ <span class="token function">curl</span> -X POST -d <span class="token string">'{ "db_name": "example", "db_credential": "【接続パスワード】", "sql": "SELECT * FROM my_table" }'</span> -H <span class="token string">'Content-Type: application/json'</span> http://localhost:5001/sqlite/all
+</code></pre>
+<p>全ての通信は POST メソッドで行う。RESTful な API ではない。</p>
+<p>マスターパスワードも、DB 接続パスワードも、平文でリクエストボディの中に漂うので、その点セキュアではない。ついでに DB 名と DB 接続パスワードを管理する「マスター DB」を JSON DB と SQLite とで作成するのだが、その中身も平文のまま保存しているので全然セキュアではない。ｗ</p>
+<hr>
+<p>NestJS の実装としては特段変わったことはしていない。ただ今回、API ドキュメントを出力するために Swagger モジュール <code>@nestjs/swagger</code> を入れたので、そこだけ特殊かな。</p>
+<p>Swagger ドキュメントの生成は <code>main.ts</code> で行う。</p>
+<pre class="language-typescript"><code class="language-typescript"><span class="token keyword">import</span> <span class="token imports"><span class="token operator">*</span> <span class="token keyword">as</span> fs</span> <span class="token keyword">from</span> <span class="token string">'node:fs/promises'</span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token imports"><span class="token operator">*</span> <span class="token keyword">as</span> path</span> <span class="token keyword">from</span> <span class="token string">'node:path'</span><span class="token punctuation">;</span>
+
+<span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">NestFactory</span> <span class="token punctuation">}</span></span> <span class="token keyword">from</span> <span class="token string">'@nestjs/core'</span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">SwaggerModule</span><span class="token punctuation">,</span> <span class="token maybe-class-name">DocumentBuilder</span> <span class="token punctuation">}</span></span> <span class="token keyword">from</span> <span class="token string">'@nestjs/swagger'</span><span class="token punctuation">;</span>
+
+<span class="token keyword">import</span> <span class="token imports"><span class="token punctuation">{</span> <span class="token maybe-class-name">AppModule</span> <span class="token punctuation">}</span></span> <span class="token keyword">from</span> <span class="token string">'./app.module'</span><span class="token punctuation">;</span>
+
+<span class="token keyword">async</span> <span class="token keyword">function</span> <span class="token function">bootstrap</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token keyword">const</span> app <span class="token operator">=</span> <span class="token keyword">await</span> <span class="token maybe-class-name">NestFactory</span><span class="token punctuation">.</span><span class="token method function property-access">create</span><span class="token punctuation">(</span><span class="token maybe-class-name">AppModule</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  
+  <span class="token comment">// Swagger を生成する</span>
+  <span class="token keyword">const</span> swaggerConfig <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name"><span class="token maybe-class-name">DocumentBuilder</span></span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+    <span class="token punctuation">.</span><span class="token method function property-access">setTitle</span><span class="token punctuation">(</span><span class="token string">'DB API'</span><span class="token punctuation">)</span>
+    <span class="token punctuation">.</span><span class="token method function property-access">setVersion</span><span class="token punctuation">(</span><span class="token string">'0.0.0'</span><span class="token punctuation">)</span>
+    <span class="token punctuation">.</span><span class="token method function property-access">build</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">const</span> swaggerDocument <span class="token operator">=</span> <span class="token maybe-class-name">SwaggerModule</span><span class="token punctuation">.</span><span class="token method function property-access">createDocument</span><span class="token punctuation">(</span>app<span class="token punctuation">,</span> swaggerConfig<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  
+  <span class="token comment">// Swagger のページを `/` で公開し、JSON と YAML 版も公開する</span>
+  <span class="token maybe-class-name">SwaggerModule</span><span class="token punctuation">.</span><span class="token method function property-access">setup</span><span class="token punctuation">(</span><span class="token string">''</span><span class="token punctuation">,</span> app<span class="token punctuation">,</span> swaggerDocument<span class="token punctuation">,</span> <span class="token punctuation">{</span>
+    jsonDocumentUrl<span class="token operator">:</span> <span class="token string">'swagger/json'</span><span class="token punctuation">,</span>
+    yamlDocumentUrl<span class="token operator">:</span> <span class="token string">'swagger/yaml'</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  
+  <span class="token comment">// Swagger JSON ファイルを書き出す</span>
+  <span class="token keyword">await</span> fs<span class="token punctuation">.</span><span class="token method function property-access">mkdir</span><span class="token punctuation">(</span>path<span class="token punctuation">.</span><span class="token method function property-access">resolve</span><span class="token punctuation">(</span>__dirname<span class="token punctuation">,</span> <span class="token string">'../docs'</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token punctuation">{</span> recursive<span class="token operator">:</span> <span class="token boolean">true</span> <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">await</span> fs<span class="token punctuation">.</span><span class="token method function property-access">writeFile</span><span class="token punctuation">(</span>path<span class="token punctuation">.</span><span class="token method function property-access">resolve</span><span class="token punctuation">(</span>__dirname<span class="token punctuation">,</span> <span class="token string">'../docs/swagger.json'</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token known-class-name class-name">JSON</span><span class="token punctuation">.</span><span class="token method function property-access">stringify</span><span class="token punctuation">(</span>swaggerDocument<span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token string">'utf-8'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  
+  <span class="token comment">// …省略…</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p><code>SwaggerModule.setup()</code> を使うと、NestJS サーバ上に Swagger API ドキュメントのページをデプロイできる。便利な半面、API 一覧と仕様が外部公開されることになるので、あんまり大っぴらにしたくない API サーバを作る時は要注意。</p>
+<p><code>SwaggerModule.createDocument()</code> の実体は JSON データなので、コレを <code>.json</code> ファイルに保存し、次のようなシングル HTML で読み込むようにすると、前述の GitHub Pages で公開している API ドキュメントが作れる。</p>
+<pre class="language-html"><code class="language-html"><span class="token doctype"><span class="token punctuation">&#x3C;!</span><span class="token doctype-tag">DOCTYPE</span> <span class="token name">html</span><span class="token punctuation">></span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>html</span> <span class="token attr-name">lang</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>ja<span class="token punctuation">"</span></span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>head</span><span class="token punctuation">></span></span>
+    <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>meta</span> <span class="token attr-name">charset</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>UTF-8<span class="token punctuation">"</span></span><span class="token punctuation">></span></span>
+    <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>meta</span> <span class="token attr-name">name</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>viewport<span class="token punctuation">"</span></span> <span class="token attr-name">content</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>width=device-width, initial-scale=1<span class="token punctuation">"</span></span><span class="token punctuation">></span></span>
+    <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>title</span><span class="token punctuation">></span></span>API<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>title</span><span class="token punctuation">></span></span>
+    <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>link</span> <span class="token attr-name">rel</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>stylesheet<span class="token punctuation">"</span></span> <span class="token attr-name">href</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>https://unpkg.com/swagger-ui-dist@5.11.0/swagger-ui.css<span class="token punctuation">"</span></span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>head</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>body</span><span class="token punctuation">></span></span>
+    <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>div</span> <span class="token attr-name">id</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>swagger-ui<span class="token punctuation">"</span></span><span class="token punctuation">></span></span><span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>div</span><span class="token punctuation">></span></span>
+    <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>script</span> <span class="token attr-name">src</span><span class="token attr-value"><span class="token punctuation attr-equals">=</span><span class="token punctuation">"</span>https://unpkg.com/swagger-ui-dist@5.11.0/swagger-ui-bundle.js<span class="token punctuation">"</span></span> <span class="token attr-name">crossorigin</span><span class="token punctuation">></span></span><span class="token script"></span><span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>script</span><span class="token punctuation">></span></span>
+    <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;</span>script</span><span class="token punctuation">></span></span><span class="token script"><span class="token language-javascript">
+      <span class="token dom variable">window</span><span class="token punctuation">.</span><span class="token method function property-access">addEventListener</span><span class="token punctuation">(</span><span class="token string">'load'</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+        <span class="token dom variable">window</span><span class="token punctuation">.</span><span class="token property-access">ui</span> <span class="token operator">=</span> <span class="token function"><span class="token maybe-class-name">SwaggerUIBundle</span></span><span class="token punctuation">(</span><span class="token punctuation">{</span>
+          url<span class="token operator">:</span> <span class="token string">'./swagger.json'</span><span class="token punctuation">,</span>  <span class="token comment">// 生成した swagger.json を読み込む</span>
+          dom_id<span class="token operator">:</span> <span class="token string">'#swagger-ui'</span><span class="token punctuation">,</span>
+        <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    </span></span><span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>script</span><span class="token punctuation">></span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>body</span><span class="token punctuation">></span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&#x3C;/</span>html</span><span class="token punctuation">></span></span>
+</code></pre>
+<ul>
+  <li>参考 : <a href="https://github.com/nestjs/swagger/issues/110#issuecomment-527455775">Feature Request Generate a static web site · Issue #110 · nestjs/swagger</a>
+    <ul>
+      <li><code>SwaggerModule.createDocument()</code> を <code>writeFile()</code> で書き出しちゃえばいいじゃん、という情報はこの GitHub Issues に書いてあった</li>
+    </ul>
+  </li>
+  <li>参考 : <a href="https://github.com/swagger-api/swagger-ui/blob/HEAD/docs/usage/installation.md">swagger-ui/docs/usage/installation.md - swagger-api/swagger-ui</a>
+    <ul>
+      <li>CDN 経由で CSS と JS を読み込めば Swagger のページが作れるよ～、という情報は、この <code>swagger-ui</code> のドキュメントに書いてあった</li>
+    </ul>
+  </li>
+</ul>
+<p>あとは <code>@nestjs/swagger</code> 向けに、Controller の各メソッドに色々とデコレーターを書いた。パラメータ類の <code>description</code> とか <code>example</code> とかその辺。コレがめんどくさかった。</p>
+<hr>
+<p>npm の <code>sqlite3</code> パッケージはコールバック関数形式なので、<code>node:util</code> の <code>util:promisify</code> で Promise 化して利用した。内部的に <code>this</code> を多用するため、以下の記事で解説されているように <code>call()</code> や <code>bind()</code> を用いる必要がある。</p>
+<ul>
+  <li>参考 : <a href="https://kazuhira-r.hatenablog.com/entry/2023/01/03/225957">Node.js＋TypeScriptでSQLite 3を使う - CLOVER🍀</a></li>
+</ul>
+<p>それでも一つうまくいかなかったのは <code>Database#run()</code> メソッドの結果取得で、コレだけ <code>this</code> 自身を <code>resolve()</code> したかったため、素直に <code>new Promise()</code> でラップした。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword">const</span> db <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">Database</span><span class="token punctuation">(</span><span class="token string">'./EXAMPLE.sqlite3'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token keyword">const</span> result <span class="token operator">=</span> <span class="token keyword control-flow">await</span> <span class="token keyword">new</span> <span class="token class-name">Promise</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token parameter">resolve<span class="token punctuation">,</span> reject</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  db<span class="token punctuation">.</span><span class="token method function property-access">run</span><span class="token punctuation">(</span>sql<span class="token punctuation">,</span> params<span class="token punctuation">,</span> <span class="token keyword">function</span><span class="token punctuation">(</span><span class="token parameter">error</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>  <span class="token comment">// ← `this` を取りたいのでアロー関数などにはできない</span>
+    <span class="token keyword control-flow">if</span><span class="token punctuation">(</span>error<span class="token punctuation">)</span> <span class="token function">reject</span><span class="token punctuation">(</span>error<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">resolve</span><span class="token punctuation">(</span><span class="token keyword">this</span><span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment">// コレで `lastID` と `changes` プロパティが拾える</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<hr>
+<p>こんなところかな。個人のサーバにデプロイしておいて、よしなに使えばいいと思う。パスワードが平文で気になるよ、って人はテキトーに暗号化すれば良いんじゃないでしょうか… (投げやり)</p><div class="ad-amazon">
+  <div class="ad-amazon-info">
+    <div class="ad-amazon-title">
+      <a href="https://www.amazon.co.jp/dp/4798179612?&amp;linkCode=ll1&amp;tag=neos21-22&amp;linkId=58aa1226e117a94a6e258e0c00541354&amp;language=ja_JP&amp;ref_=as_li_ss_tl">SQL1年生 データベースのしくみ SQLiteで体験してわかる！会話でまなべる！</a>
+    </div>
+  </div>
+</div>
+<div class="ad-rakuten">
+  <div class="ad-rakuten-image">
+    <a href="https://hb.afl.rakuten.co.jp/hgc/g00q0722.waxyc9ff.g00q0722.waxyd017/?pc=https%3A%2F%2Fitem.rakuten.co.jp%2Fbook%2F17602672%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Fbook%2Fi%2F21037304%2F&amp;rafcid=wsc_i_is_1051972513434300252">
+      <img src="https://thumbnail.image.rakuten.co.jp/@0_mall/book/cabinet/9612/9784798179612_1_148.jpg?_ex=128x128">
+    </a>
+  </div>
+  <div class="ad-rakuten-info">
+    <div class="ad-rakuten-title">
+      <a href="https://hb.afl.rakuten.co.jp/hgc/g00q0722.waxyc9ff.g00q0722.waxyd017/?pc=https%3A%2F%2Fitem.rakuten.co.jp%2Fbook%2F17602672%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Fbook%2Fi%2F21037304%2F&amp;rafcid=wsc_i_is_1051972513434300252">SQL1年生 データベースのしくみ SQLiteで体験してわかる！会話でまなべる！ [ リブロワークス ]</a>
+    </div>
+    <div class="ad-rakuten-shop">
+      <a href="https://hb.afl.rakuten.co.jp/hgc/g00q0722.waxyc9ff.g00q0722.waxyd017/?pc=https%3A%2F%2Fwww.rakuten.co.jp%2Fbook%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Fbook%2F&amp;rafcid=wsc_i_is_1051972513434300252">楽天ブックス</a>
+    </div>
+    <div class="ad-rakuten-price">価格 : 2178円</div>
+  </div>
+</div>
+
+      </main>
+      <footer id="footer">
+        <div id="footer-contents">
+          <div id="date-time">
+            <dl>
+              <dt>Created</dt>
+              <dd><time>2024-10-03</time></dd>
+              <dt>Last-Modified</dt>
+              <dd><time>2024-10-03</time></dd>
+            </dl>
+          </div>
+          <nav id="footer-links">
+            <ul>
+              <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+              <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+              <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+              <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+            </ul>
+          </nav>
+          <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+        </div>
+      </footer>
+    </div>
+  </body>
+</html>
