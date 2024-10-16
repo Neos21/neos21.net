@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#0990d0">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <!-- Open Graph・Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="Neo's World">
+    <meta property="og:title" content="Handpick で lintDependencies や testDependencies を管理しよう！ - Neo's World">
+    <meta property="og:description" content="Handpick で lintDependencies や testDependencies を管理しよう！ - Neo's World">
+    <meta property="og:url" content="https://neos21.net/blog/2024/10/17-01.html">
+    <meta property="og:image" content="https://neos21.net/ogp.png">
+    <meta property="og:locale" content="ja_JP">
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:title" content="Handpick で lintDependencies や testDependencies を管理しよう！ - Neo's World">
+    <meta property="twitter:description" content="Handpick で lintDependencies や testDependencies を管理しよう！ - Neo's World">
+    <meta property="twitter:url" content="https://neos21.net/blog/2024/10/17-01.html">
+    <meta property="twitter:image" content="https://neos21.net/ogp.png">
+    <title>Handpick で lintDependencies や testDependencies を管理しよう！ - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+    <link rel="manifest" href="/manifest.webmanifest">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2024/10/17-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" title="Feeds" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <script src="/scripts.js"></script>
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="header-brand">
+          <div id="header-brand-contents">
+            <div id="site-title"><a href="/index.html">Neo's World</a></div>
+            <nav id="header-links">
+              <ul>
+                <li id="header-link-theme"><a href="#" title="Toggle Theme"><span>Toggle Theme</span></a></li>
+                <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+                <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+                <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+                <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+              </ul>
+            </nav>
+          </div>
+        </div>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2024/index.html">2024年</a></li>
+            <li><a href="/blog/2024/10/index.html">10月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2024-10-17</time></div>
+        <h1 id="page-title">Handpick で lintDependencies や testDependencies を管理しよう！</h1>
+
+<p>React + TypeScript 構成などで巨大な Node.js プロジェクトを構築していると面倒になってくるのが、<code>devDependencies</code> に積まれた開発用 npm パッケージの量。</p>
+<p>大量の ESLint Config や Prettier 関連のツールが並び、テストのために Jest や Playwright などがインストールされている。</p>
+<p>これらは Lint のため、Unit Test や E2E テストのために必要なツールであり、<code>package.json</code> で管理したいのは山々なのだが、いかんせん物量が多いと <code>npm install</code> に時間がかかるようになる。</p>
+<p>また、CI サーバを導入していて、feature ブランチであっても Lint やテストは Git Push に応じて CI サーバで回してしまう場合もあるだろう。そうすると、開発者のローカルマシンに大量の Linter や Testing ツールを導入する必要は、必ずしも必要でなかったりもする。</p>
+<p>そんなワケで、<code>devDependencies</code> 内にある Lint 用のパッケージ、テスト用のパッケージなどを切り出して、<code>devDependencies</code> を軽くしたい、という要件が挙がった。</p>
+<p>そこで調べたところ、<strong><a href="https://github.com/henryruhs/handpick">Handpick</a></strong> という npm パッケージでコレを実現できそうなのでやってみることにした。</p>
+<h2 id="検証プロジェクト"><a class="header-link" href="#検証プロジェクト"><span class="header-link-mark"></span></a>検証プロジェクト</h2>
+<p>Handpick の挙動を確認するためのサンプルプロジェクトを以下に用意した。</p>
+<ul>
+  <li><a href="https://github.com/Neos21/practice-handpick">Neos21/practice-handpick: Practice Handpick</a></li>
+</ul>
+<p>Vite で react-ts プロジェクトを立ち上げ、Linter として ESLint 系のパッケージを用意した。最初は <code>--save-dev</code> で <code>devDependencies</code> に追加して動作確認したが、一通り確認が終わったら、次のように <code>package.json</code> に <em><code>lintDependencies</code></em> という項目を増やしてそちらにパッケージ群を記載するようにした。</p>
+<ul>
+  <li><code>package.json</code></li>
+</ul>
+<pre class="language-json"><code class="language-json"><span class="token punctuation">{</span>
+  <span class="token comment">// …中略…</span>
+  <span class="token property">"dependencies"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+    <span class="token property">"react"</span><span class="token operator">:</span> <span class="token string">"18.3.1"</span><span class="token punctuation">,</span>
+    <span class="token property">"react-dom"</span><span class="token operator">:</span> <span class="token string">"18.3.1"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token property">"devDependencies"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+    <span class="token property">"@types/react"</span><span class="token operator">:</span> <span class="token string">"18.3.11"</span><span class="token punctuation">,</span>
+    <span class="token property">"@types/react-dom"</span><span class="token operator">:</span> <span class="token string">"18.3.0"</span><span class="token punctuation">,</span>
+    <span class="token property">"@vitejs/plugin-react"</span><span class="token operator">:</span> <span class="token string">"4.3.2"</span><span class="token punctuation">,</span>
+    <span class="token property">"typescript"</span><span class="token operator">:</span> <span class="token string">"5.6.3"</span><span class="token punctuation">,</span>
+    <span class="token property">"vite"</span><span class="token operator">:</span> <span class="token string">"5.4.8"</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token property">"lintDependencies"</span><span class="token operator">:</span> <span class="token punctuation">{</span>
+    <span class="token property">"@eslint/js"</span><span class="token operator">:</span> <span class="token string">"9.12.0"</span><span class="token punctuation">,</span>
+    <span class="token property">"eslint"</span><span class="token operator">:</span> <span class="token string">"9.12.0"</span><span class="token punctuation">,</span>
+    <span class="token property">"eslint-plugin-react"</span><span class="token operator">:</span> <span class="token string">"7.37.1"</span><span class="token punctuation">,</span>
+    <span class="token property">"eslint-plugin-react-hooks"</span><span class="token operator">:</span> <span class="token string">"5.1.0-rc-fb9a90fa48-20240614"</span><span class="token punctuation">,</span>
+    <span class="token property">"eslint-plugin-react-refresh"</span><span class="token operator">:</span> <span class="token string">"0.4.12"</span><span class="token punctuation">,</span>
+    <span class="token property">"globals"</span><span class="token operator">:</span> <span class="token string">"15.11.0"</span><span class="token punctuation">,</span>
+    <span class="token property">"typescript-eslint"</span><span class="token operator">:</span> <span class="token string">"8.8.1"</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>名称は <code>lintDependencies</code> としたが、この名前は任意に決められる。ユニットテスト系の依存パッケージを増やしたければ <code>testDependencies</code>、E2E テストを別けて書きたければ <code>e2eDependencies</code> などと名前を付けてやると、依存パッケージの宣言だと分かりやすいであろう。</p>
+<p>パッケージ数が少ないものの、こうして別けてみると見通しが良くて分かりやすくなった。</p>
+<ul>
+  <li><code>devDependencies</code> は開発用サーバを立てたりビルドしたり、コーディング時に使用する型定義類のパッケージ</li>
+  <li><code>lintDependencies</code> は色々入っているが、とにかく ESLint を回す時に必要になるパッケージ</li>
+</ul>
+<p>というのが一目瞭然である。</p>
+<h2 id="handpick-で個別にインストールしてみる"><a class="header-link" href="#handpick-で個別にインストールしてみる"><span class="header-link-mark"></span></a>Handpick で個別にインストールしてみる</h2>
+<p>さて、<a href="https://github.com/henryruhs/handpick">Handpick</a> というツールは、一時的に <code>package.json</code> の <code>dependencies</code> 部分を書き換えることで動作する仕組みになっている。<code>npm</code> の他に <code>yarn</code> や <code>pnpm</code> にも対応しており、内部的にはこれらのインストールコマンドを直接実行する形になっている。</p>
+<p>まずは Handpick をグローバルインストールしよう。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">npm</span> <span class="token function">install</span> --global handpick
+</code></pre>
+<p>そして <code>$ handpick</code> とオプションなしで実行すると、<code>dependencies</code> と <code>devDependencies</code> がインストールされる挙動になっている。</p>
+<p>それでは <code>lintDependencies</code> をインストールする場合はどうするかというと、次のように <code>--target</code> オプションを指定する。</p>
+<pre class="language-bash"><code class="language-bash">$ handpick --target<span class="token operator">=</span>lintDependencies
+</code></pre>
+<p>すると、コマンド実行中だけ、<code>package.json</code> の <code>dependencies</code> の内容が <code>lintDependencies</code> のモノになり、前述の検証プロジェクトでいうと ESLint 類だけインストールされる形となる。なお、この時 <strong><code>dependencies</code> と <code>devDependencies</code> のパッケージはインストールされない</strong>。本当に <code>lintDependencies</code> に書かれたモノだけがインストールされる動きとなる。</p>
+<p>使用するツールによっては <em><code>dependencies</code>・<code>devDependencies</code> と、それにプラスして <code>lintDependencies</code> もインストールしたい</em>、という場合が多いと思うので、そういう時は以下のように3つとも <code>--target</code> オプションに指定してやることで対応できる。</p>
+<pre class="language-bash"><code class="language-bash">$ handpick --target<span class="token operator">=</span>dependencies --target<span class="token operator">=</span>devDependencies --target<span class="token operator">=</span>lintDependencies
+</code></pre>
+<h2 id="コレは素晴らしい"><a class="header-link" href="#コレは素晴らしい"><span class="header-link-mark"></span></a>コレは素晴らしい～</h2>
+<p>そんなワケで、Handpick というツールを使うと、<code>devDependencies</code> にひとまとまりになってしまう Linter や Testing ツール類を、<code>lintDependencies</code> や <code>testDependencies</code> として切り出して管理ができる。</p>
+<p>コレにより <code>npm install</code> の所要時間を削減でき、開発者は今までどおり <code>npm install</code> で開発に必要なツールだけインストールできる。</p>
+<p>そして CI サーバなどでは <code>handpick</code> コマンドを用いることで <code>lintDependencies</code> などを追加でインストールしてやることで、CI サーバ上では Lint や Test が行えるようになる。もちろん、ローカルで開発者が <code>handpick</code> コマンドを使えば同じことができる。</p>
+<p>これらを同じ単一の <code>package.json</code> で管理できるので、とても分かりやすく見通しが良い。</p>
+<p>ESLint 系のパッケージが肥大化してしまっているプロジェクトではかなりオススメだ。</p><div class="ad-amazon">
+  <div class="ad-amazon-info">
+    <div class="ad-amazon-title">
+      <a href="https://www.amazon.co.jp/dp/B0CQBFS9DM?&linkCode=ll1&tag=neos21-22&linkId=c27057e20c5a8b43887673e4b78a55e5&language=ja_JP&ref_=as_li_ss_tl">10. JavaScript：モダンなフロントエンド開発環境構築入門: Webpack（ウェブパック）、Babel（バベル）、ESLint（イーエスリント）などのツールを活用した効率的な開発フロー</a>
+    </div>
+  </div>
+</div>
+<div class="ad-rakuten">
+  <div class="ad-rakuten-image">
+    <a href="https://hb.afl.rakuten.co.jp/hgc/g00reb42.waxycf23.g00reb42.waxyd080/?pc=https%3A%2F%2Fitem.rakuten.co.jp%2Frakutenkobo-ebooks%2Fcd01eece8d213cdca60be7c05a41ca88%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Frakutenkobo-ebooks%2Fi%2F20680744%2F&amp;rafcid=wsc_i_is_1051972513434300252">
+      <img src="https://thumbnail.image.rakuten.co.jp/@0_mall/rakutenkobo-ebooks/cabinet/1100/2000010661100.jpg?_ex=128x128">
+    </a>
+  </div>
+  <div class="ad-rakuten-info">
+    <div class="ad-rakuten-title">
+      <a href="https://hb.afl.rakuten.co.jp/hgc/g00reb42.waxycf23.g00reb42.waxyd080/?pc=https%3A%2F%2Fitem.rakuten.co.jp%2Frakutenkobo-ebooks%2Fcd01eece8d213cdca60be7c05a41ca88%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Frakutenkobo-ebooks%2Fi%2F20680744%2F&amp;rafcid=wsc_i_is_1051972513434300252">React Angular Vueをスムーズに修得するための最新フロントエンド技術入門【電子書籍】[ 末次 章 ]</a>
+    </div>
+    <div class="ad-rakuten-shop">
+      <a href="https://hb.afl.rakuten.co.jp/hgc/g00reb42.waxycf23.g00reb42.waxyd080/?pc=https%3A%2F%2Fwww.rakuten.co.jp%2Frakutenkobo-ebooks%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Frakutenkobo-ebooks%2F&amp;rafcid=wsc_i_is_1051972513434300252">楽天Kobo電子書籍ストア</a>
+    </div>
+    <div class="ad-rakuten-price">価格 : 3080円</div>
+  </div>
+</div>
+
+      </main>
+      <footer id="footer">
+        <div id="footer-contents">
+          <div id="date-time">
+            <dl>
+              <dt>Created</dt>
+              <dd><time>2024-10-17</time></dd>
+              <dt>Last-Modified</dt>
+              <dd><time>2024-10-17</time></dd>
+            </dl>
+          </div>
+          <nav id="footer-links">
+            <ul>
+              <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+              <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+              <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+              <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+            </ul>
+          </nav>
+          <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+        </div>
+      </footer>
+    </div>
+  </body>
+</html>
