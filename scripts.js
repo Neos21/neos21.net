@@ -26,3 +26,6 @@ try {
 catch(error) {
   console.warn('Failed To Setup Toggle Theme', error);
 }
+
+// PV カウンタ
+fetch('https://ct.neos21.net/ct/pv?id=1&referrer=' + (document.referrer ?? '')).catch(error => console.error('Failed To Update Counter', error));
