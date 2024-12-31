@@ -1,7 +1,7 @@
 ---
 title        : Blog
 created      : 2020-11-01
-last-modified: 2024-09-02
+last-modified: 2025-01-01
 path:
   - /index.html Neo's World
 head: |
@@ -86,7 +86,133 @@ head: |
 ## 目次
 
 
-{{ blog-list-years 2024 }}
+{{ blog-list-years 2025 }}
+
+
+## [2024](/blog/2024/index.html)
+
+- <time>2024-12-31</time>  
+  [2024年を振り返る](/blog/2024/12/31-01.html)
+- <time>2024-12-19</time>  
+  [Favoriya という SNS を作っている](/blog/2024/12/19-01.html)
+- <time>2024-10-30</time>  
+  [node-canvas でアクセスカウンタを作った](/blog/2024/10/30-01.html)
+- <time>2024-10-18</time>  
+  [オレオレ Handpick も作ってみた](/blog/2024/10/18-01.html)
+- <time>2024-10-17</time>  
+  [Handpick で lintDependencies や testDependencies を管理しよう！](/blog/2024/10/17-01.html)
+- <time>2024-10-10</time>  
+  [情報共有と情報漏洩の違い](/blog/2024/10/10-01.html)
+- <time>2024-10-07</time>  
+  [1つの nginx サーバで複数のサブドメインのアクセスを振り分ける](/blog/2024/10/07-01.html)
+- <time>2024-10-06</time>  
+  [サブディレクトリを含めて .gitkeep だけ残したい](/blog/2024/10/06-01.html)
+- <time>2024-10-05</time>  
+  [Netlify Functions のパス変更方法は？リクエストボディってどう取るの？など調べた](/blog/2024/10/05-01.html)
+- <time>2024-10-04</time>  
+  [GitHub Actions から特定のサーバに SSH 接続してデプロイ作業を行う](/blog/2024/10/04-01.html)
+- <time>2024-10-03</time>  
+  [API 経由で DB を操作したい！「DB API」を作ってみた](/blog/2024/10/03-01.html)
+- <time>2024-10-02</time>  
+  [ESM 対応の Unified.js で Markdown を書きつつ Cloudflare Pages + D1 Database でデータ永続化してやる！](/blog/2024/10/02-01.html)
+- <time>2024-10-01</time>  
+  [Unified.js が ESM 対応していたのでシングル HTML でパース表示できるようにしてみた](/blog/2024/10/01-01.html)
+- <time>2024-09-30</time>  
+  [Transformers.js 対応の言語モデルを Node.js で動かしてみた](/blog/2024/09/30-01.html)
+- <time>2024-09-29</time>  
+  [Poetry 環境で色んな大規模言語モデルを動かして文章生成させてみた](/blog/2024/09/29-01.html)
+- <time>2024-09-28</time>  
+  [OCI の IaaS VM に root ユーザで直接 SSH 接続できる](/blog/2024/09/28-01.html)
+- <time>2024-09-27</time>  
+  [Amazon アソシエイトの収益が少なすぎて Product Advertising API が使えなくなった](/blog/2024/09/27-01.html)
+- <time>2024-09-21</time>  
+  [Google 検索時代の終焉](/blog/2024/09/21-01.html)
+- <time>2024-09-02</time>  
+  [個人サイト界隈を盛り上げるため「相互リンク」をしませんか？](/blog/2024/09/02-01.html)
+- <time>2024-08-31</time>  
+  [WSL・Ubuntu 環境の無駄なファイルを削除するためのコマンド集](/blog/2024/08/31-01.html)
+- <time>2024-08-30</time>  
+  [GPT4All で ELYZA-japanese-Llama-2-7b を試してみた](/blog/2024/08/30-01.html)
+- <time>2024-08-29</time>  
+  [LlamaGPT を試してみた](/blog/2024/08/29-01.html)
+- <time>2024-08-28</time>  
+  [EasyForge で Flux によるローカル AI 画像生成を試してみた](/blog/2024/08/28-01.html)
+- <time>2024-08-27</time>  
+  [LocalAI を試す](/blog/2024/08/27-01.html)
+- <time>2024-08-20</time>  
+  [簡単にローカルで動かせる ChatGLM-6B を試してみた](/blog/2024/08/20-01.html)
+- <time>2024-08-19</time>  
+  [ワンクリックで AI が使える「RWKV-Runner」を試してみた](/blog/2024/08/19-01.html)
+- <time>2024-08-18</time>  
+  [A3RT Talk API を試してみた](/blog/2024/08/18-01.html)
+- <time>2024-08-17</time>  
+  [Google Meet のセルフホスト代替品。Jitsi Meet を Docker で構築してみた](/blog/2024/08/17-01.html)
+- <time>2024-08-16</time>  
+  [セルフホスト可能な Slack。Mattermost と Rocket Chat を Docker で構築してみた](/blog/2024/08/16-01.html)
+- <time>2024-08-15</time>  
+  [OwnCast でストリーミング配信サイトをセルフホストして Serveo で公開してみた](/blog/2024/08/15-01.html)
+- <time>2024-08-14</time>  
+  [Restreamer でストリーミング配信サイトをセルフホストしてみた](/blog/2024/08/14-01.html)
+- <time>2024-08-13</time>  
+  [Poetry で環境構築して大規模言語モデル Rinna を動かして文章生成させてみた](/blog/2024/08/13-01.html)
+- <time>2024-08-12</time>  
+  [映画「Saving Private Ryan プライベート・ライアン」を見た](/blog/2024/08/12-01.html)
+- <time>2024-08-05</time>  
+  [映画「Stand By Me スタンド・バイ・ミー」を見た](/blog/2024/08/05-01.html)
+- <time>2024-08-04</time>  
+  [映画「Limitless リミットレス」を見た](/blog/2024/08/04-01.html)
+- <time>2024-08-03</time>  
+  [映画「Equalizer 3 イコライザー The Final」を見た](/blog/2024/08/03-01.html)
+- <time>2024-08-02</time>  
+  [ドキュメンタリー「SNS 少女たちの10日間」を見た](/blog/2024/08/02-01.html)
+- <time>2024-08-01</time>  
+  [Casiopea P4 ツアー「Right Now ～Summer～」ライブを観に行った](/blog/2024/08/01-01.html)
+- <time>2024-07-30</time>  
+  [映画「Black Swan ブラック・スワン」を見た](/blog/2024/07/30-01.html)
+- <time>2024-07-29</time>  
+  [ドキュメンタリー「Citizenfour シチズンフォー スノーデンの暴露」を見た](/blog/2024/07/29-01.html)
+- <time>2024-07-28</time>  
+  [映画「Wall Street Money Never Sleeps ウォール・ストリート」を見た](/blog/2024/07/28-01.html)
+- <time>2024-07-27</time>  
+  [映画「Wall Street ウォール街」を見た](/blog/2024/07/27-01.html)
+- <time>2024-07-26</time>  
+  [AsciiDoc とやらを書いてみた](/blog/2024/07/26-01.html)
+- <time>2024-07-25</time>  
+  [Nim 言語を試してみた](/blog/2024/07/25-01.html)
+- <time>2024-07-17</time>  
+  [Cloudflare D1 を Alpha 版からマイグレートする](/blog/2024/07/17-01.html)
+- <time>2024-06-23</time>  
+  [許容範囲が狭い・我慢ができない・自分が変わるしかない](/blog/2024/06/23-01.html)
+- <time>2024-05-23</time>  
+  [アトミック・ユニバース](/blog/2024/05/23-01.html)
+- <time>2024-04-27</time>  
+  [僕が個人サイトを続ける理由](/blog/2024/04/27-01.html)
+- <time>2024-04-26</time>  
+  [Vite で TypeScript 環境を構築して Phaser.js でゲームを作ってみた](/blog/2024/04/26-01.html)
+- <time>2024-04-17</time>  
+  [映画「Winny」を観た](/blog/2024/04/17-01.html)
+- <time>2024-02-23</time>  
+  [Dell Latitude 5300 を買った・Dell XPS15 9570 と比較](/blog/2024/02/23-01.html)
+- <time>2024-02-22</time>  
+  [念願の NAS。Synology DS224+ を買った](/blog/2024/02/22-01.html)
+- <time>2024-02-21</time>  
+  [Dell XPS15 9570 を買った](/blog/2024/02/21-01.html)
+- <time>2024-02-03</time>  
+  [QEMU で PureDarwin 環境を作ってみる](/blog/2024/02/03-01.html)
+- <time>2024-02-02</time>  
+  [VirtualBox で ReactOS 環境を作ってみる](/blog/2024/02/02-01.html)
+- <time>2024-02-01</time>  
+  [VirtualBox で FreeBSD 環境を作ってみる](/blog/2024/02/01-01.html)
+- <time>2024-01-17</time>  
+  [Voidol3 を試してみた](/blog/2024/01/17-01.html)
+- <time>2024-01-16</time>  
+  [Canvas を使って画像変換するアプリを作った](/blog/2024/01/16-01.html)
+- <time>2024-01-15</time>  
+  [Web Audio API で和音を鳴らしてみた](/blog/2024/01/15-01.html)
+- <time>2024-01-09</time>  
+  [趣味の活動と個人の感情](/blog/2024/01/09-01.html)
+- <time>2024-01-01</time>  
+  [あけおメンチカツ・ことよロースカツ](/blog/2024/01/01-01.html)
 
 
 ## [2023](/blog/2023/index.html)
