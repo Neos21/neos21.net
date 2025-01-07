@@ -28,4 +28,4 @@ catch(error) {
 }
 
 // PV カウンタ
-fetch('https://ct.neos21.net/ct/pv?id=1&referrer=' + encodeURIComponent(document.referrer ?? '') + '&landing=' + encodeURIComponent(location.href) + '&title=' + encodeURIComponent(document.title ?? '')).catch(error => console.warn('Failed To Update Counter', error));
+fetch('https://app.neos21.net/api/access-counter/pv?id=1&referrer=' + encodeURIComponent(document.referrer ?? '') + '&landing=' + encodeURIComponent(location.href) + '&title=' + encodeURIComponent(document.title ?? '')).catch(error => console.warn('Failed To Update Counter', error));
