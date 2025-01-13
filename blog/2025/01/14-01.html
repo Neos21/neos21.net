@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#0990d0">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <!-- Open Graph・Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="Neo's World">
+    <meta property="og:title" content="Keycloak を使って SAML 認証する SSO の仕組みを作る - Neo's World">
+    <meta property="og:description" content="Keycloak を使って SAML 認証する SSO の仕組みを作る - Neo's World">
+    <meta property="og:url" content="https://neos21.net/blog/2025/01/14-01.html">
+    <meta property="og:image" content="https://neos21.net/ogp.png">
+    <meta property="og:locale" content="ja_JP">
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:title" content="Keycloak を使って SAML 認証する SSO の仕組みを作る - Neo's World">
+    <meta property="twitter:description" content="Keycloak を使って SAML 認証する SSO の仕組みを作る - Neo's World">
+    <meta property="twitter:url" content="https://neos21.net/blog/2025/01/14-01.html">
+    <meta property="twitter:image" content="https://neos21.net/ogp.png">
+    <title>Keycloak を使って SAML 認証する SSO の仕組みを作る - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+    <link rel="manifest" href="/manifest.webmanifest">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2025/01/14-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" title="Feeds" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <script src="/scripts.js"></script>
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="header-brand">
+          <div id="header-brand-contents">
+            <div id="site-title"><a href="/index.html">Neo's World</a></div>
+            <nav id="header-links">
+              <ul>
+                <li id="header-link-theme"><a href="#" title="Toggle Theme"><span>Toggle Theme</span></a></li>
+                <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+                <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+                <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+                <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+              </ul>
+            </nav>
+          </div>
+        </div>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2025/index.html">2025年</a></li>
+            <li><a href="/blog/2025/01/index.html">01月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2025-01-14</time></div>
+        <h1 id="page-title">Keycloak を使って SAML 認証する SSO の仕組みを作る</h1>
+
+<p>Keycloak という SSO を実現するための OSS がある。RedHat SSO という製品の元になっているモノらしい。</p>
+<p>OIDC や SAML 認証によるシングルサインオンを比較的簡単に実装できる。今回は Docker で試してみた。</p>
+<ul>
+  <li>参考 : <a href="https://www.keycloak.org/getting-started/getting-started-docker">Docker - Keycloak</a></li>
+</ul>
+<pre class="language-bash"><code class="language-bash">$ docker run -p <span class="token number">8080</span>:8080 -e <span class="token assign-left variable">KC_BOOTSTRAP_ADMIN_USERNAME</span><span class="token operator">=</span>admin -e <span class="token assign-left variable">KC_BOOTSTRAP_ADMIN_PASSWORD</span><span class="token operator">=</span>admin quay.io/keycloak/keycloak:26.0.7 start-dev
+</code></pre>
+<p>公式ガイドにある Docker コマンドそのまんま。<code>http://localhost:8080</code> にアクセスすると Keycloak の管理画面が立ち上がるので、SAML 用のクライアントを作ったりする。</p>
+<p>んで、コレを利用する Web アプリについてだが、今回は Express.js でバックエンドを作ってみた。以下の例では <code>http://localhost:3000</code> で起動しているのが、Keycloak とやり取りするバックエンドサーバ。Node.js では「Passport-Saml」というパッケージで SAML 認証に対応させられる。このへんは使用している言語・フレームワークに応じて SAML 用のライブラリを探してほしい。</p>
+<p>フロントエンドは正直なんでもいい。ココでは Vite で立ち上げている (<code>http://localhost:5173</code>) 別サーバとの通信が発生するテイで書いている。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword">const</span> fs <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'node:fs'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">const</span> express <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'express'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">const</span> session <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'express-session'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">const</span> passport <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'passport'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">const</span> <span class="token maybe-class-name">SamlStrategy</span> <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'passport-saml'</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token property-access"><span class="token maybe-class-name">Strategy</span></span><span class="token punctuation">;</span>
+<span class="token keyword">const</span> cors <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'cors'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">const</span> cookieParser <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'cookie-parser'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">const</span> fetch <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'node-fetch'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token keyword">const</span> app <span class="token operator">=</span> <span class="token function">express</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+app<span class="token punctuation">.</span><span class="token method function property-access">use</span><span class="token punctuation">(</span><span class="token function">cookieParser</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+app<span class="token punctuation">.</span><span class="token method function property-access">use</span><span class="token punctuation">(</span>express<span class="token punctuation">.</span><span class="token method function property-access">urlencoded</span><span class="token punctuation">(</span><span class="token punctuation">{</span> extended<span class="token operator">:</span> <span class="token boolean">false</span> <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+app<span class="token punctuation">.</span><span class="token method function property-access">use</span><span class="token punctuation">(</span><span class="token function">cors</span><span class="token punctuation">(</span><span class="token punctuation">{</span>
+  origin<span class="token operator">:</span> <span class="token string">'http://localhost:5173'</span><span class="token punctuation">,</span> <span class="token comment">// 許可するオリジン (SPA フロントエンドなどを想定)</span>
+  credentials<span class="token operator">:</span> <span class="token boolean">true</span>                <span class="token comment">// クッキーや認証ヘッダーを含む</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+app<span class="token punctuation">.</span><span class="token method function property-access">use</span><span class="token punctuation">(</span><span class="token function">session</span><span class="token punctuation">(</span><span class="token punctuation">{</span>
+  secret<span class="token operator">:</span> <span class="token string">'saml_secret_key'</span><span class="token punctuation">,</span>
+  resave<span class="token operator">:</span> <span class="token boolean">false</span><span class="token punctuation">,</span>
+  saveUninitialized<span class="token operator">:</span> <span class="token boolean">true</span><span class="token punctuation">,</span>
+  cookie<span class="token operator">:</span> <span class="token punctuation">{</span> secure<span class="token operator">:</span> <span class="token boolean">false</span> <span class="token punctuation">}</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+passport<span class="token punctuation">.</span><span class="token method function property-access">use</span><span class="token punctuation">(</span><span class="token keyword">new</span> <span class="token class-name">SamlStrategy</span><span class="token punctuation">(</span><span class="token punctuation">{</span>
+  path<span class="token operator">:</span> <span class="token string">'/login/callback'</span><span class="token punctuation">,</span>  <span class="token comment">// このパスに POST される</span>
+  entryPoint<span class="token operator">:</span> <span class="token string">'http://localhost:8080/realms/myrealm/protocol/saml'</span><span class="token punctuation">,</span>  <span class="token comment">// Keycloak のエントリポイント</span>
+  issuer<span class="token operator">:</span> <span class="token string">'mysaml'</span><span class="token punctuation">,</span>  <span class="token comment">// Keycloak で設定した Client ID</span>
+  cert<span class="token operator">:</span> fs<span class="token punctuation">.</span><span class="token method function property-access">readFileSync</span><span class="token punctuation">(</span><span class="token string">'./keycloak-cert.pem'</span><span class="token punctuation">,</span> <span class="token string">'utf-8'</span><span class="token punctuation">)</span><span class="token punctuation">,</span>  <span class="token comment">// Keycloak の証明書</span>
+  validateInResponseTo<span class="token operator">:</span> <span class="token boolean">false</span><span class="token punctuation">,</span>  <span class="token comment">// リクエストの検証を無効化</span>
+  disableRequestedAuthnContext<span class="token operator">:</span> <span class="token boolean">true</span>  <span class="token comment">// 圧縮無効化</span>
+<span class="token punctuation">}</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token parameter">profile<span class="token punctuation">,</span> done</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token function">done</span><span class="token punctuation">(</span><span class="token keyword null nil">null</span><span class="token punctuation">,</span> profile<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+passport<span class="token punctuation">.</span><span class="token method function property-access">serializeUser</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token parameter">user<span class="token punctuation">,</span> done</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token function">done</span><span class="token punctuation">(</span><span class="token keyword null nil">null</span><span class="token punctuation">,</span> user<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+passport<span class="token punctuation">.</span><span class="token method function property-access">deserializeUser</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token parameter">user<span class="token punctuation">,</span> done</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token function">done</span><span class="token punctuation">(</span><span class="token keyword null nil">null</span><span class="token punctuation">,</span> user<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+app<span class="token punctuation">.</span><span class="token method function property-access">use</span><span class="token punctuation">(</span>passport<span class="token punctuation">.</span><span class="token method function property-access">initialize</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+app<span class="token punctuation">.</span><span class="token method function property-access">use</span><span class="token punctuation">(</span>passport<span class="token punctuation">.</span><span class="token method function property-access">session</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// Keycloak によるログイン画面に遷移させるためのエンドポイント</span>
+app<span class="token punctuation">.</span><span class="token method function property-access">get</span><span class="token punctuation">(</span><span class="token string">'/login'</span><span class="token punctuation">,</span> passport<span class="token punctuation">.</span><span class="token method function property-access">authenticate</span><span class="token punctuation">(</span><span class="token string">'saml'</span><span class="token punctuation">,</span> <span class="token punctuation">{</span> failureRedirect<span class="token operator">:</span> <span class="token string">'/login/fail'</span><span class="token punctuation">,</span> failureFlash<span class="token operator">:</span> <span class="token boolean">true</span> <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// Keycloak のログイン画面から戻ってくるエンドポイント・SPA フロントエンドなどにリダイレクトするイメージ</span>
+app<span class="token punctuation">.</span><span class="token method function property-access">post</span><span class="token punctuation">(</span><span class="token string">'/login/callback'</span><span class="token punctuation">,</span> passport<span class="token punctuation">.</span><span class="token method function property-access">authenticate</span><span class="token punctuation">(</span><span class="token string">'saml'</span><span class="token punctuation">,</span> <span class="token punctuation">{</span> failureRedirect<span class="token operator">:</span> <span class="token string">'/login/fail'</span><span class="token punctuation">,</span> failureFlash<span class="token operator">:</span> <span class="token boolean">true</span> <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token parameter">_req<span class="token punctuation">,</span> res</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span> res<span class="token punctuation">.</span><span class="token method function property-access">redirect</span><span class="token punctuation">(</span><span class="token string">'http://localhost:5173'</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// ログイン失敗時のエンドポイント</span>
+app<span class="token punctuation">.</span><span class="token method function property-access">get</span><span class="token punctuation">(</span><span class="token string">'/login/fail'</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token parameter">_req<span class="token punctuation">,</span> res</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span> res<span class="token punctuation">.</span><span class="token method function property-access">send</span><span class="token punctuation">(</span><span class="token string">'Login Failed'</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// 本 Express サーバ内にセッション (req.user) があるか否かの確認用エンドポイント</span>
+app<span class="token punctuation">.</span><span class="token method function property-access">get</span><span class="token punctuation">(</span><span class="token string">'/'</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token parameter">req<span class="token punctuation">,</span> res</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span> res<span class="token punctuation">.</span><span class="token method function property-access">send</span><span class="token punctuation">(</span>req<span class="token punctuation">.</span><span class="token method function property-access">isAuthenticated</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">?</span> <span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">Hello </span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>req<span class="token punctuation">.</span><span class="token property-access">user</span><span class="token punctuation">.</span><span class="token property-access">nameID</span><span class="token interpolation-punctuation punctuation">}</span></span><span class="token template-punctuation string">`</span></span> <span class="token operator">:</span> <span class="token string">'&#x3C;a href="/login">Login&#x3C;/a>'</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// ログアウト用エンドポイント : 本 Express サーバのセッションを破棄するのみ</span>
+app<span class="token punctuation">.</span><span class="token method function property-access">get</span><span class="token punctuation">(</span><span class="token string">'/logout'</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token parameter">req<span class="token punctuation">,</span> res</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span> req<span class="token punctuation">.</span><span class="token method function property-access">logout</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span> res<span class="token punctuation">.</span><span class="token method function property-access">redirect</span><span class="token punctuation">(</span><span class="token string">'/'</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+app<span class="token punctuation">.</span><span class="token method function property-access">listen</span><span class="token punctuation">(</span><span class="token number">3000</span><span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span> <span class="token console class-name">console</span><span class="token punctuation">.</span><span class="token method function property-access">log</span><span class="token punctuation">(</span><span class="token string">'Server Started'</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>バックエンドサーバと Keycloak とのやり取りは最低限コレで実現できる。Keycloak との橋渡しを行ってログインが出来たら、Express に戻ってきて Express 内にもセッションを持つ形となる。</p>
+<hr>
+<p>正直、今時は OIDC 認証の方が、フロントエンドの非同期通信だけで実現できたりするので手軽なのだが、まだまだ XML を利用する SAML 認証が求められる現場も多いので、今回お試ししてみた次第。</p><div class="ad-amazon">
+  <div class="ad-amazon-image">
+    <a href="https://www.amazon.co.jp/dp/4814400098?tag=neos21-22&amp;linkCode=osi&amp;th=1&amp;psc=1">
+      <img src="https://m.media-amazon.com/images/I/41Dp1HuKPWL._SL160_.jpg" width="125" height="160">
+    </a>
+  </div>
+  <div class="ad-amazon-info">
+    <div class="ad-amazon-title">
+      <a href="https://www.amazon.co.jp/dp/4814400098?tag=neos21-22&amp;linkCode=osi&amp;th=1&amp;psc=1">実践 Keycloak ―OpenID Connect、OAuth 2.0を利用したモダンアプリケーションのセキュリティー保護</a>
+    </div>
+  </div>
+</div>
+<div class="ad-rakuten">
+  <div class="ad-rakuten-image">
+    <a href="https://hb.afl.rakuten.co.jp/hgc/g00q0722.waxyc9ff.g00q0722.waxyd017/?pc=https%3A%2F%2Fitem.rakuten.co.jp%2Fbook%2F17269728%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Fbook%2Fi%2F20757697%2F&amp;rafcid=wsc_i_is_1051972513434300252">
+      <img src="https://thumbnail.image.rakuten.co.jp/@0_mall/book/cabinet/0096/9784814400096_1_2.jpg?_ex=128x128">
+    </a>
+  </div>
+  <div class="ad-rakuten-info">
+    <div class="ad-rakuten-title">
+      <a href="https://hb.afl.rakuten.co.jp/hgc/g00q0722.waxyc9ff.g00q0722.waxyd017/?pc=https%3A%2F%2Fitem.rakuten.co.jp%2Fbook%2F17269728%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Fbook%2Fi%2F20757697%2F&amp;rafcid=wsc_i_is_1051972513434300252">実践 Keycloak OpenID Connect、OAuth 2.0を利用したモダンアプリケーションのセキュリティー保護 [ Stian Thorgersen ]</a>
+    </div>
+    <div class="ad-rakuten-shop">
+      <a href="https://hb.afl.rakuten.co.jp/hgc/g00q0722.waxyc9ff.g00q0722.waxyd017/?pc=https%3A%2F%2Fwww.rakuten.co.jp%2Fbook%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Fbook%2F&amp;rafcid=wsc_i_is_1051972513434300252">楽天ブックス</a>
+    </div>
+    <div class="ad-rakuten-price">価格 : 4180円</div>
+  </div>
+</div>
+
+      </main>
+      <footer id="footer">
+        <div id="footer-contents">
+          <div id="date-time">
+            <dl>
+              <dt>Created</dt>
+              <dd><time>2025-01-14</time></dd>
+              <dt>Last-Modified</dt>
+              <dd><time>2025-01-14</time></dd>
+            </dl>
+          </div>
+          <nav id="footer-links">
+            <ul>
+              <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+              <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+              <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+              <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+            </ul>
+          </nav>
+          <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+        </div>
+      </footer>
+    </div>
+  </body>
+</html>
