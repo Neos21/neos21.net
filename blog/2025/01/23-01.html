@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#0990d0">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <!-- Open Graph・Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="Neo's World">
+    <meta property="og:title" content="Cloudflare Zero Trust Tunnel を利用して自宅の Ubuntu 機にインターネット経由で SSH 接続する - Neo's World">
+    <meta property="og:description" content="Cloudflare Zero Trust Tunnel を利用して自宅の Ubuntu 機にインターネット経由で SSH 接続する - Neo's World">
+    <meta property="og:url" content="https://neos21.net/blog/2025/01/23-01.html">
+    <meta property="og:image" content="https://neos21.net/ogp.png">
+    <meta property="og:locale" content="ja_JP">
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:title" content="Cloudflare Zero Trust Tunnel を利用して自宅の Ubuntu 機にインターネット経由で SSH 接続する - Neo's World">
+    <meta property="twitter:description" content="Cloudflare Zero Trust Tunnel を利用して自宅の Ubuntu 機にインターネット経由で SSH 接続する - Neo's World">
+    <meta property="twitter:url" content="https://neos21.net/blog/2025/01/23-01.html">
+    <meta property="twitter:image" content="https://neos21.net/ogp.png">
+    <title>Cloudflare Zero Trust Tunnel を利用して自宅の Ubuntu 機にインターネット経由で SSH 接続する - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+    <link rel="manifest" href="/manifest.webmanifest">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2025/01/23-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" title="Feeds" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <script src="/scripts.js"></script>
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="header-brand">
+          <div id="header-brand-contents">
+            <div id="site-title"><a href="/index.html">Neo's World</a></div>
+            <nav id="header-links">
+              <ul>
+                <li id="header-link-theme"><a href="#" title="Toggle Theme"><span>Toggle Theme</span></a></li>
+                <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+                <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+                <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+                <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+              </ul>
+            </nav>
+          </div>
+        </div>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2025/index.html">2025年</a></li>
+            <li><a href="/blog/2025/01/index.html">01月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2025-01-23</time></div>
+        <h1 id="page-title">Cloudflare Zero Trust Tunnel を利用して自宅の Ubuntu 機にインターネット経由で SSH 接続する</h1>
+
+<p>Cloudflare の Zero Trust Tunnel という機能を利用して、自宅の Ubuntu 機にインターネット経由で SSH 接続できるようにする。</p>
+<p>Cloudflare が提供するネットワークに乗って VPN トンネルを作る感じになるので、昔ながらの「自宅サーバ」のようにルータ設定をいじくって22番ポートを開放したりする必要はない。</p>
+<p>ただ、Cloudflare の設定画面などが頻繁に変わっており、ネット上のどの記事を参考にすれば良いか中々分かりづらかった。コマンドライン (<code>cloudflared</code> コマンド) で設定を完結できそうではあるが、今回は Cloudflare の Web コンソールを使っての作業手順としてまとめる。</p>
+<h2 id="前提--所有ドメインの-dns-を-cloudflare-で管理するようにしておく"><a class="header-link" href="#前提--所有ドメインの-dns-を-cloudflare-で管理するようにしておく"><span class="header-link-mark"></span></a>前提 : 所有ドメインの DNS を Cloudflare で管理するようにしておく</h2>
+<p>前提として、自分が所有する独自ドメインがあること。そしてそのドメインの DNS 設定を Cloudflare 上で行えるようにしておく必要がある。</p>
+<p>自分の場合は Value-Domain で取得したドメインがあり、コレまでは Value-Domain の DNS 設定を利用していたので、Cloudflare の Web コンソールにて「ドメインの登録」というモノを行った。</p>
+<p>具体的には、ブラウザで Cloudflare のダッシュボードにログインしたら、左メニューの「ドメイン登録」→「ドメインの登録」を選択する。</p>
+<p>ココで所有するドメインを入力すると、自動的に現在の DNS 設定を引っ張ってきてくれる。</p>
+<p>あとは Value-Domain 側に、Cloudflare 指定のネームサーバを2つ設定してやり、変更反映を待つ。そうすると DNS 設定を Cloudflare 上で出来るようになる。なお、Value-Domain の管理画面からは「DNS 設定」の項目が消える。</p>
+<p>ココら辺は画面の指示に従ってやっていくだけですんなり実施できた。</p>
+<h2 id="サーバ側に-cloudflared-をインストールする"><a class="header-link" href="#サーバ側に-cloudflared-をインストールする"><span class="header-link-mark"></span></a>サーバ側に <code>cloudflared</code> をインストールする</h2>
+<ul>
+  <li>参考 : <a href="https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/get-started/create-local-tunnel/">Create a locally-managed tunnel (CLI) · Cloudflare Zero Trust docs</a></li>
+</ul>
+<p>まずは SSH 接続したい Ubuntu マシンに <code>cloudflared</code> コマンドをインストールする。</p>
+<pre class="language-bash"><code class="language-bash">$ <span class="token function">sudo</span> <span class="token function">mkdir</span> -p --mode<span class="token operator">=</span>0755 /usr/share/keyrings
+$ <span class="token function">curl</span> -fsSL https://pkg.cloudflare.com/cloudflare-main.gpg <span class="token operator">|</span> <span class="token function">sudo</span> <span class="token function">tee</span> /usr/share/keyrings/cloudflare-main.gpg <span class="token operator">></span>/dev/null
+$ <span class="token builtin class-name">echo</span> <span class="token string">"deb [signed-by=/usr/share/keyrings/cloudflare-main.gpg] https://pkg.cloudflare.com/cloudflared <span class="token variable"><span class="token variable">$(</span>lsb_release -cs<span class="token variable">)</span></span> main"</span> <span class="token operator">|</span> <span class="token function">sudo</span> <span class="token function">tee</span> /etc/apt/sources.list.d/cloudflared.list
+$ <span class="token function">sudo</span> <span class="token function">apt-get</span> update <span class="token operator">&#x26;&#x26;</span> <span class="token function">sudo</span> <span class="token function">apt-get</span> <span class="token function">install</span> -y cloudflared
+
+$ cloudflared --version
+cloudflared version <span class="token number">2025.1</span>.0 <span class="token punctuation">(</span>built <span class="token number">2025</span>-01-07-1219 UTC<span class="token punctuation">)</span>
+</code></pre>
+<p>そしたら Zero Trust Tunnel を構築するためのログインを行う。</p>
+<pre class="language-bash"><code class="language-bash">$ cloudflared tunnel login
+</code></pre>
+<p>ブラウザが開くと思うので、適宜 Cloudflare にログインする。</p>
+<h2 id="web-コンソールでトンネルを設定していく"><a class="header-link" href="#web-コンソールでトンネルを設定していく"><span class="header-link-mark"></span></a>Web コンソールでトンネルを設定していく</h2>
+<p>この後、コマンドラインでは <code>$ cloudflared tunnel create</code> したり <code>config.yml</code> を書いたり <code>$ cloudflared tunnel route dns</code> コマンドを叩いたり…という感じで進めていくのだが、ちょっとよく分からなくなったので、Cloudflare の Web コンソールで設定をやり直した。</p>
+<ul>
+  <li>ブラウザで Cloudflare のダッシュボードにログインしたら、左メニューの「Zero Trust」を選ぶ</li>
+  <li>次に左メニューの「ネットワーク」→「Tunnels」と進み、「トンネルを作成する」ボタンを押す</li>
+  <li>トンネルの種類は「cloudflared」を選ぶ</li>
+  <li>トンネル名を適当に名付けて保存する</li>
+  <li>「コネクタをインストールして実行する」というところで、「Debian」向けの設定を確認する。「すでにマシンに cloudflared がインストールされている場合」というところに、おおよそ以下のようなコマンドが書かれているのでコレをまるっとコピーする
+    <ul>
+      <li><code>$ sudo cloudflared service install 【ランダムな文字列】</code></li>
+    </ul>
+  </li>
+  <li>このコマンドを SSH 接続したいマシンで実行し、Cloudflare とのトンネル接続を確立しておく</li>
+</ul>
+<p>ココまでで初期設定は完了。</p>
+<p>続いて、「パブリックホスト名の設定」で、どういうサブドメインにアクセスした時に SSH 接続するか、という設定を行う。</p>
+<ul>
+  <li>サブドメイン : 任意</li>
+  <li>ドメイン : 「前提」として Cloudflare 管理したドメイン名 (登録が成功していればプルダウンに自動的に表示される)</li>
+  <li>タイプ : 「SSH」を選択する</li>
+  <li>URL : ココが分かりにくかったが、「localhost:22」と指定すれば良い</li>
+</ul>
+<p>その他の設定は変更不要。コレでパブリックホスト名を保存すれば OK。</p>
+<p>最後にプライベートネットワークを指定しておく。自分は適当に <code>192.168.1.0/24</code> という CIDR で登録しておいた。正直よく分からん。ｗ</p>
+<p>以上で、トンネル設定が完了した。ココまでの設定で、DNS 設定の中に指定したサブドメインに対するレコードが自動的に追加されているはずだ。</p>
+<h2 id="アプリケーション設定を行う"><a class="header-link" href="#アプリケーション設定を行う"><span class="header-link-mark"></span></a>アプリケーション設定を行う</h2>
+<p>引き続き、左メニューの「Access」→「アプリケーション」に進み、「アプリケーションを追加する」から設定を行っていく。</p>
+<ul>
+  <li>「セルフホスト」を選ぶ</li>
+  <li>アプリケーション名 : 任意</li>
+  <li>セッション時間 : 任意で設定する</li>
+  <li>アプリケーションドメイン : 先程設定した「サブドメイン」と「ドメイン」を設定する</li>
+</ul>
+<p>「次へ」と進み、各種設定を進める。</p>
+<ul>
+  <li>「ポリシー」タブ
+    <ul>
+      <li>アクション : 「Allow」</li>
+      <li>ルールを構成する … 包含 (Include) : セレクターで「Everyone」を選んでおく</li>
+      <li>コレで保存する</li>
+    </ul>
+  </li>
+  <li>「認証」タブ
+    <ul>
+      <li>特にイジらず</li>
+    </ul>
+  </li>
+  <li>「設定」タブ
+    <ul>
+      <li>ブラウザレンダリング : 「SSH」を選択する</li>
+    </ul>
+  </li>
+</ul>
+<p>最後の「ブラウザレンダリング」で SSH を選択しておくと、<code>https://sub.example.com</code> にブラウザでアクセスした時に SSH 接続ができるようになる。</p>
+<p>コレで、指定のサブドメインに対するアクセスの認証設定などが出来た。</p>
+<h2 id="クライアント-pc-から-ssh-コマンドで接続を試してみる"><a class="header-link" href="#クライアント-pc-から-ssh-コマンドで接続を試してみる"><span class="header-link-mark"></span></a>クライアント PC から <code>ssh</code> コマンドで接続を試してみる</h2>
+<p>さて、それではクライアント PC から <code>ssh</code> コマンドで接続してみる。ちょっと面倒だが、クライアント PC にも <code>cloudflared</code> コマンドのインストールが必要なので、そこだけ留意。今回は WSL Ubuntu で実施したので、前述のサーバ側でのインストール手順と同じモノを利用した。</p>
+<p><code>cloudflared</code> コマンドがインストールできたら、<code>~/.ssh/config</code> を次のように設定する。</p>
+<pre class="language-bash"><code class="language-bash">Host sub.example.com
+  HostName      sub.example.com
+  Port          <span class="token number">22</span>
+  User          username
+  IdentityFile  ~/.ssh/example
+  ProxyCommand  /usr/local/bin/cloudflared access <span class="token function">ssh</span> --hostname %h
+</code></pre>
+<p>このように準備したら、<code>$ ssh sub.example.com</code> コマンドで接続する。初回のみ、<code>ProxyCommand</code> に書いたとおり <code>cloudflared</code> コマンドを経由してログイン認証を求められるかと思うので、起動したブラウザに従ってログイン認証を行う。</p>
+<p>コレで Cloudflare Zero Trust Tunnel 経由で SSH 接続ができるはずだ。</p>
+<h2 id="ブラウザレンダリングの-ssh-接続を試してみる"><a class="header-link" href="#ブラウザレンダリングの-ssh-接続を試してみる"><span class="header-link-mark"></span></a>ブラウザレンダリングの SSH 接続を試してみる</h2>
+<p>最後に、ブラウザレンダリングの SSH 接続を試す。ココでちょっとつまづいた。</p>
+<p>SSH 接続するサーバ側の、<code>/etc/ssh/sshd_config</code> ファイルで次のように設定しておく。特に <code>PubkeyAcceptedAlgorithms</code> がないと、秘密鍵・パスワードの形式が合わないとしてエラーになってしまうので入れておく。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># root ユーザでのログインを禁止する</span>
+PermitRootLogin no
+<span class="token comment"># パスワード認証を無効にする</span>
+PasswordAuthentication no
+<span class="token comment"># 公開鍵認証を有効にする</span>
+PubkeyAuthentication <span class="token function">yes</span>
+<span class="token comment"># ssh-rsa 方式の公開鍵を許可する</span>
+PubkeyAcceptedAlgorithms +ssh-rsa
+</code></pre>
+<p>設定をしたら <code>$ sudo systemctl restart ssh</code> で設定変更のため再起動する。</p>
+<ul>
+  <li>参考 : <a href="https://community.cloudflare.com/t/browser-ssh-private-keys-not-working/566455">Browser SSH Private Keys not working - Zero Trust / Access - Cloudflare Community</a></li>
+</ul>
+<p>で、ブラウザで <code>https://sub.example.com</code> にアクセスしてみると、Cloudflare が用意したログインページが開く。まずは SSH 接続したいユーザ名を入力する。</p>
+<p>そして次の画面で、SSH 接続に利用する「SSH 秘密鍵」をペーストする。パスワード欄は、SSH 秘密鍵のパスフレーズを入れてなければ空欄で良い。</p>
+<p>コレでブラウザレンダリングの SSH 接続ができるはずだ。</p>
+<h2 id="以上"><a class="header-link" href="#以上"><span class="header-link-mark"></span></a>以上</h2>
+<p>いやー思ったよりも設定ダルかったな…。終わってしまえば仕組みは分かるけど、なかなか再現性のある手順でまとめるのはめんどくさい。ｗ</p>
+<ul>
+  <li>参考 : <a href="https://zenn.dev/takajun/articles/fbd783e459c722">Cloudflare Tunnel を使って自宅をデータセンターみたいにする</a></li>
+  <li>参考 : <a href="https://qiita.com/kiyotaman/items/d04d1aa9dfcc451a7b2e">Cloudflare TunnelでローカルネットワークサーバーにSSHでアクセスする方法 #Linux - Qiita</a></li>
+</ul><div class="ad-amazon">
+  <div class="ad-amazon-image">
+    <a href="https://www.amazon.co.jp/dp/B0CB9VR8V7?tag=neos21-22&amp;linkCode=osi&amp;th=1&amp;psc=1">
+      <img src="https://m.media-amazon.com/images/I/519VM7ktV6L._SL160_.jpg" width="113" height="160">
+    </a>
+  </div>
+  <div class="ad-amazon-info">
+    <div class="ad-amazon-title">
+      <a href="https://www.amazon.co.jp/dp/B0CB9VR8V7?tag=neos21-22&amp;linkCode=osi&amp;th=1&amp;psc=1">Cloudflare Workers+Pagesで旅行メモのサイトを作ってみよう！ 技術の泉シリーズ</a>
+    </div>
+  </div>
+</div>
+<div class="ad-rakuten">
+  <div class="ad-rakuten-image">
+    <a href="https://hb.afl.rakuten.co.jp/hgc/g00reb42.waxycf23.g00reb42.waxyd080/?pc=https%3A%2F%2Fitem.rakuten.co.jp%2Frakutenkobo-ebooks%2F78f9376d17883fbf952a5d1b415b7972%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Frakutenkobo-ebooks%2Fi%2F22491505%2F&amp;rafcid=wsc_i_is_1051972513434300252">
+      <img src="https://thumbnail.image.rakuten.co.jp/@0_mall/rakutenkobo-ebooks/cabinet/1646/2000013241646.jpg?_ex=128x128">
+    </a>
+  </div>
+  <div class="ad-rakuten-info">
+    <div class="ad-rakuten-title">
+      <a href="https://hb.afl.rakuten.co.jp/hgc/g00reb42.waxycf23.g00reb42.waxyd080/?pc=https%3A%2F%2Fitem.rakuten.co.jp%2Frakutenkobo-ebooks%2F78f9376d17883fbf952a5d1b415b7972%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Frakutenkobo-ebooks%2Fi%2F22491505%2F&amp;rafcid=wsc_i_is_1051972513434300252">Cloudflare Workers+Pagesで旅行メモのサイトを作ってみよう！【電子書籍】[ 木村 俊彦 ]</a>
+    </div>
+    <div class="ad-rakuten-shop">
+      <a href="https://hb.afl.rakuten.co.jp/hgc/g00reb42.waxycf23.g00reb42.waxyd080/?pc=https%3A%2F%2Fwww.rakuten.co.jp%2Frakutenkobo-ebooks%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Frakutenkobo-ebooks%2F&amp;rafcid=wsc_i_is_1051972513434300252">楽天Kobo電子書籍ストア</a>
+    </div>
+    <div class="ad-rakuten-price">価格 : 1980円</div>
+  </div>
+</div>
+
+      </main>
+      <footer id="footer">
+        <div id="footer-contents">
+          <div id="date-time">
+            <dl>
+              <dt>Created</dt>
+              <dd><time>2025-01-23</time></dd>
+              <dt>Last-Modified</dt>
+              <dd><time>2025-01-23</time></dd>
+            </dl>
+          </div>
+          <nav id="footer-links">
+            <ul>
+              <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+              <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+              <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+              <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+            </ul>
+          </nav>
+          <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+        </div>
+      </footer>
+    </div>
+  </body>
+</html>
