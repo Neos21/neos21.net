@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#0990d0">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <!-- Open Graph・Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="Neo's World">
+    <meta property="og:title" content="Apache Guacamole を使って自宅 Ubuntu マシンに SSH 接続してみた - Neo's World">
+    <meta property="og:description" content="Apache Guacamole を使って自宅 Ubuntu マシンに SSH 接続してみた - Neo's World">
+    <meta property="og:url" content="https://neos21.net/blog/2025/02/05-01.html">
+    <meta property="og:image" content="https://neos21.net/ogp.png">
+    <meta property="og:locale" content="ja_JP">
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:title" content="Apache Guacamole を使って自宅 Ubuntu マシンに SSH 接続してみた - Neo's World">
+    <meta property="twitter:description" content="Apache Guacamole を使って自宅 Ubuntu マシンに SSH 接続してみた - Neo's World">
+    <meta property="twitter:url" content="https://neos21.net/blog/2025/02/05-01.html">
+    <meta property="twitter:image" content="https://neos21.net/ogp.png">
+    <title>Apache Guacamole を使って自宅 Ubuntu マシンに SSH 接続してみた - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+    <link rel="manifest" href="/manifest.webmanifest">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2025/02/05-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" title="Feeds" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <script src="/scripts.js"></script>
+    <!-- Global Site Tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-YMHFLZP1M1"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-YMHFLZP1M1');gtag('config','UA-106501-1');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="header-brand">
+          <div id="header-brand-contents">
+            <div id="site-title"><a href="/index.html">Neo's World</a></div>
+            <nav id="header-links">
+              <ul>
+                <li id="header-link-theme"><a href="#" title="Toggle Theme"><span>Toggle Theme</span></a></li>
+                <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+                <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+                <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+                <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+              </ul>
+            </nav>
+          </div>
+        </div>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2025/index.html">2025年</a></li>
+            <li><a href="/blog/2025/02/index.html">02月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2025-02-05</time></div>
+        <h1 id="page-title">Apache Guacamole を使って自宅 Ubuntu マシンに SSH 接続してみた</h1>
+
+<p>以前、Cloudflare Zero Trust Tunnel の「ブラウザレンダリング SSH」機能を使って、ブラウザ上から自宅の Ubuntu マシンへと SSH 接続をした。</p>
+<p>機能的にはコレで申し分ないのだが、SSH 接続するたびに秘密鍵をコピペしないといけないのが若干面倒だった。また、ブラウザ上から Ubuntu の GUI デスクトップにもリモートデスクトップ接続出来たらいいなーと思い、やり方を調べたところ <strong>Apache Guacamole</strong> というフリーソフトが使えそうだったので試してみた。</p>
+<p>試行錯誤した結果、以下のように Docker Compose で準備してやると簡単だった。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># 適当な作業ディレクトリを作る</span>
+$ <span class="token function">mkdir</span> guacamole <span class="token operator">&#x26;&#x26;</span> <span class="token builtin class-name">cd</span> <span class="token variable">$_</span>
+
+<span class="token comment"># Guacamole 用の PostgreSQL DB を構築するための SQL ファイルを出力する</span>
+$ <span class="token function">mkdir</span> ./init
+$ <span class="token function">chmod</span> -R +x ./init
+$ docker run --rm guacamole/guacamole /opt/guacamole/bin/initdb.sh --postgresql <span class="token operator">></span> ./init/initdb.sql
+
+<span class="token comment"># ボリュームマウント用の空ディレクトリを作る</span>
+$ <span class="token function">mkdir</span> ./drive ./record ./data
+
+<span class="token comment"># 以下の Docker Compose ファイルを用意する</span>
+$ <span class="token function">touch</span> docker-compose.yml
+</code></pre>
+<p><code>docker-compose.yml</code> ファイルの内容は次のようにする。<code>guacd</code> というバックエンドサービス、<code>guacamole</code> フロントエンド、それからユーザ管理などを保存しておく PostgreSQL データベースから構成される。</p>
+<ul>
+  <li><code>docker-compose.yml</code></li>
+</ul>
+<pre class="language-yaml"><code class="language-yaml"><span class="token key atrule">networks</span><span class="token punctuation">:</span>
+  <span class="token key atrule">guacnetwork</span><span class="token punctuation">:</span>
+    <span class="token key atrule">driver</span><span class="token punctuation">:</span> bridge
+<span class="token key atrule">services</span><span class="token punctuation">:</span>
+  <span class="token key atrule">guacd</span><span class="token punctuation">:</span>
+    <span class="token key atrule">container_name</span><span class="token punctuation">:</span> guacamole<span class="token punctuation">-</span>guacd
+    <span class="token key atrule">image</span><span class="token punctuation">:</span> guacamole/guacd
+    <span class="token key atrule">networks</span><span class="token punctuation">:</span>
+      <span class="token punctuation">-</span> guacnetwork
+    <span class="token key atrule">restart</span><span class="token punctuation">:</span> always
+    <span class="token key atrule">volumes</span><span class="token punctuation">:</span>
+      <span class="token punctuation">-</span> ./drive<span class="token punctuation">:</span>/drive<span class="token punctuation">:</span>rw
+      <span class="token punctuation">-</span> ./record<span class="token punctuation">:</span>/record<span class="token punctuation">:</span>rw
+  <span class="token key atrule">postgres</span><span class="token punctuation">:</span>
+    <span class="token key atrule">container_name</span><span class="token punctuation">:</span> guacamole<span class="token punctuation">-</span>postgres
+    <span class="token key atrule">image</span><span class="token punctuation">:</span> postgres<span class="token punctuation">:</span>15<span class="token punctuation">-</span>alpine
+    <span class="token key atrule">environment</span><span class="token punctuation">:</span>
+      <span class="token key atrule">PGDATA</span><span class="token punctuation">:</span> /var/lib/postgresql/data/guacamole
+      <span class="token key atrule">POSTGRES_DB</span>      <span class="token punctuation">:</span> guacamole_db
+      <span class="token key atrule">POSTGRES_PASSWORD</span><span class="token punctuation">:</span> guacamole_pass
+      <span class="token key atrule">POSTGRES_USER</span>    <span class="token punctuation">:</span> guacamole_user
+    <span class="token key atrule">volumes</span><span class="token punctuation">:</span>
+      <span class="token punctuation">-</span> ./init<span class="token punctuation">:</span>/docker<span class="token punctuation">-</span>entrypoint<span class="token punctuation">-</span>initdb.d<span class="token punctuation">:</span>z
+      <span class="token punctuation">-</span> ./data<span class="token punctuation">:</span>/var/lib/postgresql/data<span class="token punctuation">:</span>Z
+    <span class="token key atrule">networks</span><span class="token punctuation">:</span>
+      <span class="token punctuation">-</span> guacnetwork
+    <span class="token key atrule">restart</span><span class="token punctuation">:</span> always
+  <span class="token key atrule">guacamole</span><span class="token punctuation">:</span>
+    <span class="token key atrule">container_name</span><span class="token punctuation">:</span> guacamole
+    <span class="token key atrule">image</span><span class="token punctuation">:</span> guacamole/guacamole
+    <span class="token key atrule">depends_on</span><span class="token punctuation">:</span>
+      <span class="token punctuation">-</span> guacd
+      <span class="token punctuation">-</span> postgres
+    <span class="token key atrule">environment</span><span class="token punctuation">:</span>
+      <span class="token key atrule">GUACD_HOSTNAME</span><span class="token punctuation">:</span> guacd
+      <span class="token key atrule">POSTGRES_HOSTNAME</span><span class="token punctuation">:</span> postgres
+      <span class="token key atrule">POSTGRES_DATABASE</span><span class="token punctuation">:</span> guacamole_db
+      <span class="token key atrule">POSTGRES_PASSWORD</span><span class="token punctuation">:</span> guacamole_pass
+      <span class="token key atrule">POSTGRES_USER</span>    <span class="token punctuation">:</span> guacamole_user
+    <span class="token key atrule">volumes</span><span class="token punctuation">:</span>
+      <span class="token punctuation">-</span> ./record<span class="token punctuation">:</span>/record<span class="token punctuation">:</span>rw
+    <span class="token key atrule">ports</span><span class="token punctuation">:</span>
+      <span class="token punctuation">-</span> 8080<span class="token punctuation">:</span>8080/tcp
+    <span class="token key atrule">networks</span><span class="token punctuation">:</span>
+      <span class="token punctuation">-</span> guacnetwork
+    <span class="token key atrule">restart</span><span class="token punctuation">:</span> always
+</code></pre>
+<p>外部公開しているのは <code>guacamole</code> の <code>8080</code> ポート。<code>$ docker compose up -d</code> でコンテナ群を起動したら、</p>
+<ul>
+  <li><code>http://localhost:8080/guacamole</code></li>
+</ul>
+<p>にアクセスしてみる。<code>/guacamole</code> パスを忘れないこと。</p>
+<hr>
+<p>うまくいくとログイン画面が表示されると思うので、ユーザ ID・パスワードともに初期値の <code>guacadmin</code> でログインする。</p>
+<p>そしたら「設定」よりパスワードを変更したり、「接続」から接続先情報を設定したりしていく。</p>
+<p>SSH に関しては、Guacamole を起動している <code>localhost</code> 自身に対して、SSH 接続に必要な秘密鍵を貼り付けて保存しておいてやれば良い。ちゃんと設定できていれば「ホーム」から SSH 接続ができるはずだ。</p>
+<p>GUI デスクトップ接続については、当方の Ubuntu 24.04 マシンの GNOME デスクトップで試したところ、<code>xrdp</code> も <code>tigervnc</code> も、うまく設定して接続することが出来なかった。ココら辺は Guacamole のせいというワケではなく、xrdp や TigerVNC の設定の詰めの問題だと思われるが、とにかく自分はうまくいかなかったので GUI 接続に関しては断念;;。</p>
+<p>また、今回は localhost に対する SSH や RDP・VNC 接続を試しているが、この Ubuntu マシンから接続できる他のマシン、例えば Windows マシンへの RDP などを接続先として設定することも可能だ。Guacamole が <code>~/.ssh/config</code> 的な役割を果たしてくれて、ココから色々なマシンに、色々な接続方式でリモートデスクトップ接続できるワケだ。これは素晴らしい。</p>
+<p>今回はとりあえず、ブラウザ上で Guacamole を経由しての SSH 接続はできるところまで設定をした。</p>
+<hr>
+<p>最後に、この <code>http://localhost:8080/</code> に対して Cloudflare Zero Trust Tunnel でトンネルを作ってやる。ちゃんと設定できれば <code>https://guacamole.example.com/guacamole</code> といった感じの URL で Guacamole の管理画面にアクセスできるようになる。</p>
+<p>コレで、秘密鍵を都度コピペしないといけなかった Cloudflare の「ブラウザレンダリング SSH 接続」よりは若干お手軽に SSH 接続できるようになった。</p><div class="ad-amazon">
+  <div class="ad-amazon-image">
+    <a href="https://www.amazon.co.jp/dp/B0B57YB396?tag=neos21-22&amp;linkCode=osi&amp;th=1&amp;psc=1">
+      <img src="https://m.media-amazon.com/images/I/61DzbmzuTVL._SL160_.jpg" width="160" height="160">
+    </a>
+  </div>
+  <div class="ad-amazon-info">
+    <div class="ad-amazon-title">
+      <a href="https://www.amazon.co.jp/dp/B0B57YB396?tag=neos21-22&amp;linkCode=osi&amp;th=1&amp;psc=1">カークランド アボカドディップ (グァカモレ) 70g×16個 ポーションカップ KS Guacamole</a>
+    </div>
+  </div>
+</div>
+<div class="ad-rakuten">
+  <div class="ad-rakuten-image">
+    <a href="https://hb.afl.rakuten.co.jp/hgc/g00thrd2.waxyc9b0.g00thrd2.waxyd49c/?pc=https%3A%2F%2Fitem.rakuten.co.jp%2Fglomarket%2F11761577%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Fglomarket%2Fi%2F11761577%2F&amp;rafcid=wsc_i_is_1051972513434300252">
+      <img src="https://thumbnail.image.rakuten.co.jp/@0_mall/glomarket/cabinet/07178412/11456973/imgb00fagl24m0.jpg?_ex=128x128">
+    </a>
+  </div>
+  <div class="ad-rakuten-info">
+    <div class="ad-rakuten-title">
+      <a href="https://hb.afl.rakuten.co.jp/hgc/g00thrd2.waxyc9b0.g00thrd2.waxyd49c/?pc=https%3A%2F%2Fitem.rakuten.co.jp%2Fglomarket%2F11761577%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Fglomarket%2Fi%2F11761577%2F&amp;rafcid=wsc_i_is_1051972513434300252">マコーミック ワカモレ シーズニングミックス 1オンス (9パケット) McCormick GUACAMOLE Seasoning Mix 1oz. (9 Packets)</a>
+    </div>
+    <div class="ad-rakuten-shop">
+      <a href="https://hb.afl.rakuten.co.jp/hgc/g00thrd2.waxyc9b0.g00thrd2.waxyd49c/?pc=https%3A%2F%2Fwww.rakuten.co.jp%2Fglomarket%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Fglomarket%2F&amp;rafcid=wsc_i_is_1051972513434300252">Glomarket</a>
+    </div>
+    <div class="ad-rakuten-price">価格 : 7042円</div>
+  </div>
+</div>
+
+      </main>
+      <footer id="footer">
+        <div id="footer-contents">
+          <div id="date-time">
+            <dl>
+              <dt>Created</dt>
+              <dd><time>2025-02-05</time></dd>
+              <dt>Last-Modified</dt>
+              <dd><time>2025-02-05</time></dd>
+            </dl>
+          </div>
+          <nav id="footer-links">
+            <ul>
+              <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+              <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+              <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+              <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+            </ul>
+          </nav>
+          <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+        </div>
+      </footer>
+    </div>
+  </body>
+</html>
