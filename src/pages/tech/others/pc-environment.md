@@ -37,7 +37,7 @@ path:
 - ディスプレイ : BenQ VW2424H (2012～)
   - 購入してからしばらく経つが、フル HD (1920x1080) で特に不満はない。Dell S2721QS を購入してからはサブディスプレイに降格、普段は電源を切っているが時々デュアルディスプレイ環境にして使っている。
 - マウス : Logicool M336 (2019-02 ～)
-  - PC 本体に Newiy Start の Bluetooth アダプタを挿し、Bluetooth 接続してりう。余計なボタンが付いていない、こういうシンプルなマウスが好き。
+  - PC 本体に Newiy Start の Bluetooth アダプタを挿し、Bluetooth 接続している。余計なボタンが付いていない、こういうシンプルなマウスが好き。
 - キーボード : Filco Majestouch2 Convertible フルサイズ US 配列・赤軸 FKBC104MRL/EB2 (2019-08 ～)
   - US キーボード。長らく Bluetooth 接続で使っていたが、チャタリングが酷くて最近は有線接続。テンキーアリの、一般的な104キーボードが好み。
   - ブログ記事 : [Filco Majestouch Convertible 2 テンキーあり版を買い直した](/blog/2019/08/09-01.html)
