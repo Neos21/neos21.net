@@ -30,12 +30,12 @@ catch(error) {
   try {
     const body = {
       id      : 1,
-      ref     : document.referrer ?? '-',
-      url     : location.href ?? '-',
-      title   : document.title ?? '-',
-      langs   : navigator.languages ?? [navigator.language ?? '-'],
-      lang    : navigator.languages?.[0] ?? navigator.language ?? '-',
-      ua      : navigator.userAgent ?? '-',
+      ref     : document.referrer || '-',
+      url     : location.href || '-',
+      title   : document.title || '-',
+      langs   : navigator.languages ?? [navigator.language || '-'],
+      lang    : navigator.languages?.[0] ?? (navigator.language || '-'),
+      ua      : navigator.userAgent || '-',
       ua_data : navigator.userAgentData ?? '-',
       ua_model: '- (UNDEF)'
     };
