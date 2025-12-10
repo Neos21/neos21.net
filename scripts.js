@@ -1,5 +1,3 @@
-// 本 JS ファイルは `head` 内で `defer` 等を付けずに同期読み込みしている
-
 // ライトテーマ ⇔ ダークテーマの切替機能
 try {
   const setTheme = condition => {
@@ -9,14 +7,14 @@ try {
   };
   
   const darkModeMediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-  darkModeMediaQuery.onchange = event => setTheme(event.matches);  // OS・ブラウザ設定変更時に動的にテーマを切り替える
+  darkModeMediaQuery.onchange = event => setTheme(event.matches);
   
   const lastTheme = localStorage.getItem('theme');
   if(lastTheme) {
-    document.documentElement.dataset.theme = lastTheme;  // 2回目以降の訪問時の初期表示
+    document.documentElement.dataset.theme = lastTheme;  // 2回目以降
   }
   else {
-    setTheme(darkModeMediaQuery.matches);  // 初回訪問時の初期表示
+    setTheme(darkModeMediaQuery.matches);  // 初回訪問時
   }
   
   document.addEventListener('DOMContentLoaded', () => {
@@ -28,4 +26,29 @@ catch(error) {
 }
 
 // PV カウンタ
-fetch('https://app.neos21.net/api/access-counter/pv?id=1&referrer=' + encodeURIComponent(document.referrer ?? '') + '&landing=' + encodeURIComponent(location.href) + '&title=' + encodeURIComponent(document.title ?? '')).catch(error => console.warn('Failed To Update Counter', error));
+(async () => {
+  try {
+    const body = {
+      id      : 1,
+      ref     : document.referrer ?? '-',
+      url     : location.href ?? '-',
+      title   : document.title ?? '-',
+      langs   : navigator.languages ?? [navigator.language ?? '-'],
+      lang    : navigator.languages?.[0] ?? navigator.language ?? '-',
+      ua      : navigator.userAgent ?? '-',
+      ua_data : navigator.userAgentData ?? '-',
+      ua_model: '- (UNDEF)'
+    };
+    if(navigator.userAgentData) body.ua_model = await navigator.userAgentData.getHighEntropyValues(['model']).then(values => values.model || '-').catch(_ => '- (ERROR)');
+    
+    await fetch('https://app.neos21.net/api/access-counter/pv', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      keepalive: true
+    });
+  }
+  catch(error) {
+    console.warn('Failed To Update Counter', error);
+  }
+})();
