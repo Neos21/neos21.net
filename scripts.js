@@ -42,6 +42,7 @@ catch(error) {
     if(navigator.userAgentData) body.ua_model = await navigator.userAgentData.getHighEntropyValues(['model']).then(values => values.model || '-').catch(_ => '- (ERROR)');
     
     await fetch('https://app.neos21.net/api/access-counter/pv', {
+      mode: 'cors',
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
