@@ -10,7 +10,7 @@
   - 2020-11-01 に Value Domain で取得した独自ドメイン
   - [GitHub Pages](https://neos21.github.io/neos21.net) にてホスティングしている
   - GitHub Pages の Enforce HTTPS 機能で HTTPS 化している
-  - Value Domain の DNS 設定にて、Apex ドメインには GitHub の IP を4つ指定し、`www` には `CNAME` で `neos21.github.io` を指定している
+  - DNS 設定は Value Domain から Cloudflare に移管しており、Apex ドメインには GitHub の IP を4つ指定し、`www` には `CNAME` で `neos21.github.io` を指定している
 - <https://neos21.github.io/neos21.net/>
   - 実際にホスティングされている GitHub Pages の URL。`neos21.net` にリダイレクトされる
 

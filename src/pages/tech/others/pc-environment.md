@@ -1,7 +1,7 @@
 ---
 title        : Neo の PC 環境
 created      : 2020-03-01
-last-modified: 2024-02-20
+last-modified: 2025-12-31
 path:
   - /index.html Neo's World
   - /tech/index.html Tech
@@ -88,67 +88,14 @@ path:
 - ブログ記事 : 2024-02-21 [Dell XPS15 9570 を買った](/blog/2024/02/21-01.html)
 
 
-## ゴロ寝用 Windows 機 : Dell Latitude 5300 (2024-02-21 ～)
+## スマホ : iPhone 17 Pro Max 256GB Silver (2025-10-05 ～)
 
-- CPU : Intel Core i7-8665U
-- GPU : (内蔵 GPU) Intel UHD Graphics 620
-- RAM : 32GB
-- SSD : 256GB
-- ポート : USB Type-C 3.1 Gen2 x1、USB Type-A 3.1 Gen1 x2、HDMI 1.4、RJ45 LAN ポート、オーディオ入出力、SD カードスロット
-- ディスプレイ : 13.3インチ FHD (1920x1080) タッチ非対応
-- Size : 幅30.57cm × 奥行 20.75cm × 高さ 1.69cm
-- Weight : 1.24 kg
-- OS : Windows 11 Pro
-- 購入価格 : 40,000円
-
-ベッドでゴロ寝利用するためのサブ・サブ PC を買ってみた。Asus ZenBook3 より重たくはなるが、画面サイズが大きく、筐体の堅牢性も高そうで、寝転がって使うには勝手が良い。
-
-- ブログ記事 : 2024-02-23 [Dell Latitude 5300 を買った・Dell XPS15 9570 と比較](/blog/2024/02/23-01.html)
-
-
-## 持ち運び用 Windows 機 : Asus ZenBook3 UX390UA-512GP (2017-11-25 ～)
-
-- CPU : Core i7 7500U (Kaby Lake) 2.7GHz / 2コア
-- GPU : Intel HD Graphics 620
-- RAM : 16GB LPDDR3 PC3-17000
-- SSD : 512GB
-- Screen : 12.5 Inches Full HD (1920x1080)
-- Keyboard : 英字配列
-- OS : Windows 10 Pro
-- Size : 幅 29.6cm × 奥行 19.12cm × 高さ 1.19cm
-- Weight : 910g
-- Colour : ロイヤルブルー
-- 購入価格 : $999 (約112,000円)
-
-初めて買った Windows ノート。12インチ MacBook クローンなスペックで軽く、持ち運びに最適。
-
-- ブログ記事 : [Asus ZenBook3 UX390UA-512GP を買いました](/blog/2017/12/06-01.html)
-- ブログ記事 : [英語版の Windows 10 Pro を日本語化した](/blog/2017/12/31-04.html)
-- ブログ記事 : [Asus ZenBook3 UX390UA-512GP のアクセサリを色々買った](/blog/2017/12/13-02.html)
-
-
-## Mac 端末 : Apple MacBook 12 Inch 2017 (2018-08-26 ～)
-
-- CPU : Core i7-7Y75 1.4GHz (Turbo Boost 使用時最大 3.6GHz) Kaby Lake
-- メモリ : 16 GB (8 GBx2) 1,866 MHz LPDDR3
-- GPU : Intel HD Graphics 615 (CPU 内蔵)
-- SSD : 512 GB PCIe 3.0x2
-- Screen : 12 Inches
-- Keyboard : 第2世代バタフライ構造 US 配列
-- OS : High Sierra → Big Sur にアップデート
-- Weight : 920g
-- Colour : Silver
-- 購入価格 : 約180,000円
-
-現在唯一所有する Mac 端末。920g という軽さが好きだったのにディスコンになってしまい大変残念。現在も大事に使っている。
-
-- ブログ記事 : [12インチ MacBook 2017年モデルを買ってしまった…！](/blog/2018/09/05-01.html)
-- 参考 : [Apple - MacBook (Retina, 12-inch, 2017) 技術仕様](https://support.apple.com/kb/SP757?locale=ja_JP)
+スマホは歴代ずっと iPhone を使用している。
 
 
 ## スマホ : iPhone 11 Pro Max 256GB Silver (2019-09-13 ～)
 
-スマホは歴代ずっと iPhone を使用している。
+iPhone 17 Pro Max に買い替えてからは枕元で動画を垂れ流す用のサブ機として使用している。
 
 - ブログ記事 : [iPhone 11 Pro Max を買った・使えた液晶ガラスフィルム・レンズ保護フィルム・ケースの話も](/blog/2019/09/22-01.html)
 
@@ -178,6 +125,61 @@ path:
 
 
 ## 手放したモノ
+
+### Dell Latitude 5300 (2024-02-21 ～ 2025-05-30)
+
+- CPU : Intel Core i7-8665U
+- GPU : (内蔵 GPU) Intel UHD Graphics 620
+- RAM : 32GB
+- SSD : 256GB
+- ポート : USB Type-C 3.1 Gen2 x1、USB Type-A 3.1 Gen1 x2、HDMI 1.4、RJ45 LAN ポート、オーディオ入出力、SD カードスロット
+- ディスプレイ : 13.3インチ FHD (1920x1080) タッチ非対応
+- Size : 幅30.57cm × 奥行 20.75cm × 高さ 1.69cm
+- Weight : 1.24 kg
+- OS : Windows 11 Pro
+- 購入価格 : 40,000円
+
+ベッドでゴロ寝利用するためのサブ・サブ PC を買ってみた。Asus ZenBook3 より重たくはなるが、画面サイズが大きく、筐体の堅牢性も高そうで、寝転がって使うには勝手が良い。金欠になり2025年に売却。
+
+- ブログ記事 : 2024-02-23 [Dell Latitude 5300 を買った・Dell XPS15 9570 と比較](/blog/2024/02/23-01.html)
+
+### Asus ZenBook3 UX390UA-512GP (2017-11-25 ～ 2025-05-30)
+
+- CPU : Core i7 7500U (Kaby Lake) 2.7GHz / 2コア
+- GPU : Intel HD Graphics 620
+- RAM : 16GB LPDDR3 PC3-17000
+- SSD : 512GB
+- Screen : 12.5 Inches Full HD (1920x1080)
+- Keyboard : 英字配列
+- OS : Windows 10 Pro
+- Size : 幅 29.6cm × 奥行 19.12cm × 高さ 1.19cm
+- Weight : 910g
+- Colour : ロイヤルブルー
+- 購入価格 : $999 (約112,000円)
+
+初めて買った Windows ノート。12インチ MacBook クローンなスペックで軽く、持ち運びに最適だった。
+
+- ブログ記事 : [Asus ZenBook3 UX390UA-512GP を買いました](/blog/2017/12/06-01.html)
+- ブログ記事 : [英語版の Windows 10 Pro を日本語化した](/blog/2017/12/31-04.html)
+- ブログ記事 : [Asus ZenBook3 UX390UA-512GP のアクセサリを色々買った](/blog/2017/12/13-02.html)
+
+### Apple MacBook 12 Inch 2017 (2018-08-26 ～ 2025-05-30)
+
+- CPU : Core i7-7Y75 1.4GHz (Turbo Boost 使用時最大 3.6GHz) Kaby Lake
+- メモリ : 16 GB (8 GBx2) 1,866 MHz LPDDR3
+- GPU : Intel HD Graphics 615 (CPU 内蔵)
+- SSD : 512 GB PCIe 3.0x2
+- Screen : 12 Inches
+- Keyboard : 第2世代バタフライ構造 US 配列
+- OS : High Sierra → Big Sur にアップデート
+- Weight : 920g
+- Colour : Silver
+- 購入価格 : 約180,000円
+
+920g という軽さが好きだったのにディスコンになってしまい大変残念。Mac 自体の使用頻度が下がったため売却。
+
+- ブログ記事 : [12インチ MacBook 2017年モデルを買ってしまった…！](/blog/2018/09/05-01.html)
+- 参考 : [Apple - MacBook (Retina, 12-inch, 2017) 技術仕様](https://support.apple.com/kb/SP757?locale=ja_JP)
 
 ### Microsoft Surface Pro 4 (2022-07-08 ～ 2023-12-30)
 

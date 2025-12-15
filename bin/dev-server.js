@@ -28,7 +28,7 @@ const unlinkFunc = sourceFilePath => {
   catch(error) {
     console.warn(`Failed To Remove File [${distFilePath}]`, error);
   }
-}
+};
 
 /**
  * ディレクトリを削除する
@@ -55,7 +55,7 @@ const buildForBlog = sourceFilePath => {
   const match = sourceFilePath.match((/\/blog\/([0-9]{4})\/([0-9]{2})\/[0-9]{2}-[0-9]{2}\.md/u));
   if(!match) return;
   
-  console.log(`Build Index Pages For Blog`);
+  console.log('Build Index Pages For Blog');
   const year  = match[1];
   const month = match[2];
   buildMarkdown(`${constants.pages.src}/blog/${year}/${month}/index.md`);
