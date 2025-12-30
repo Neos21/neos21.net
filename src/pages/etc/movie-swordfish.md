@@ -103,7 +103,7 @@ path:
 - [Swordfish (film) - Wikipedia](https://en.wikipedia.org/wiki/Swordfish_(film)) … 英語版 Wikipedia
 - [ソードフィッシュ (映画) - Wikipedia](https://ja.wikipedia.org/wiki/%E3%82%BD%E3%83%BC%E3%83%89%E3%83%95%E3%82%A3%E3%83%83%E3%82%B7%E3%83%A5_(%E6%98%A0%E7%94%BB)) … 日本語版 Wikipedia
 - [ソードフィッシュ Swordfish (2001) - Audio-Visual Trivia](https://www.audio-visual-trivia.com/2005/04/swordfish/)
-- [Useless hacker|cracker|computer-criminal|* Movie Trivia: Swordfish](http://mike.passwall.com/uselesstrivia/swordfish.html) … 劇中に登場するコード等の書き起こし
+- [Useless hacker|cracker|computer-criminal| Movie Trivia: Swordfish](http://mike.passwall.com/uselesstrivia/swordfish.html) … 劇中に登場するコード等の書き起こし
 - [mixi ソードフィッシュの世界観が好き](https://mixi.jp/view_community.pl?id=45712) … mixi コミュニティ
 - [トーマス・ジェファーソンは本当に反逆罪で男を撃ったのですか？ | スマートな質問と回答](https://qaja.xtool.best/movies/ask/789141/)
   - > モンティセロのジェファーソンの専門家によると、違います。あなたはここで主張に対する彼らの反応を読むことができます。ソードフィッシュを除いて、唯一の裏付けとなる証拠は、有名な小説家ロバート・ラドラムの名前を流用した追跡不可能な「歴史教授」からのインターネット投稿であるようです。

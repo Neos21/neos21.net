@@ -294,7 +294,7 @@ Labists というところが出しているスターターキットでラズパ
       - Screen : 10.1 Inches / 1280x800 Pixels / Touch Screen
       - Keyboard : US key
       - Weight : 890g
-  - Crouton を使って Xubuntu 環境を構築したりしていた。大して重量差がない ZenBook3 を購入してからは出番が減り売却。</p>
+  - Crouton を使って Xubuntu 環境を構築したりしていた。大して重量差がない ZenBook3 を購入してからは出番が減り売却。
   - ブログ記事 : [Asus ChromeBook Flip C100PA-DB02 を買いました](/blog/2016/11/07-01.html)
 - ラップトップ : MacBook Pro 13 Inch Early 2015 (2016-05-01 ～ 2018-11-07)
   - 人生初の Mac 端末。当時の OS は OS X El Capitan だった。持ち運ぶには少々重かったが、コレのおかげで色々なスキルが身についた。
@@ -327,7 +327,7 @@ Labists というところが出しているスターターキットでラズパ
   - スペック
       - CPU : Intel Core 2 Duo 2.4GHz
       - RAM : 2GB
-      - HDD : 320GB → 外付け 160GB + 250GB を併用 → 2008-04 さらに外付け 500GB を増設</li>
+      - HDD : 320GB → 外付け 160GB + 250GB を併用 → 2008-04 さらに外付け 500GB を増設
       - OS : Microsoft Windows Vista Home Premium
       - Monitor : Toshiba 17インチ
       - 光学ドライブ : DVD ±RW

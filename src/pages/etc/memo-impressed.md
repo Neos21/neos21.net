@@ -1841,7 +1841,7 @@ path:
   - 参考 : [2012年に身についた良習慣ベスト7](http://hama73.com/archives/2913)
 - 情報を制限する。集めすぎない
   - 参考 : [実践すれば本当に人生が変わってしまう7つのポイント](http://hama73.com/archives/1386)
-- [暗記しておくとなにかと便利なプチ公式まとめ | IDEA*IDEA](https://www.ideaxidea.com/archives/2009/10/mental_math.html)
+- [暗記しておくとなにかと便利なプチ公式まとめ | IDEA IDEA](https://www.ideaxidea.com/archives/2009/10/mental_math.html)
   - **1年＝250労働日＝2,000労働時間**  
     ま、ざっくりと。通勤時間に往復2時間かけているなら、2時間×250労働日で、年間500時間とか。
   - **時給1,000円＝年収200万円**  
