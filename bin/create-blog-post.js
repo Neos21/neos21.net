@@ -78,9 +78,7 @@ const createBlogPost = (year, month, date) => {
   try {
     childProcess.execFileSync('code', ['-a', createdFilePath]);
   }
-  catch(_error) {
-    // Nothing To Do
-  }
+  catch(_error) { /* Do Nothing */ }
 };
 
 /**

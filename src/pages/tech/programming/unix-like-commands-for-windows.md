@@ -599,7 +599,7 @@ Windows コマンドプロンプトと、Windows GitBash までをベース環�
       <tr>
         <td>touch</td>
         <td class="ok">
-          <div class="mark">○</div>type nul > 【ファイル名】<br>copy 【ファイル名】 +
+          <div class="mark">○</div>type nul &gt; 【ファイル名】<br>copy 【ファイル名】 +
         </td>
         <td class="ok">
           <div class="mark">○</div>(拙作) Touch.bat

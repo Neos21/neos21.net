@@ -2478,7 +2478,7 @@ head: |
 - <time>2020-01-14</time>  
   [JavaScript コードをブックマークレットコードに変換する「Bookmarkletify」を作った](/blog/2020/01/14-01.html)
 - <time>2020-01-13</time>  
-  [Bash の $@ と $* の挙動の違い](/blog/2020/01/13-01.html)
+  [Bash の `$@` と `$*` の挙動の違い](/blog/2020/01/13-01.html)
 - <time>2020-01-12</time>  
   [docker-compose を使った Node.js・npm 開発環境構築例](/blog/2020/01/12-01.html)
 - <time>2020-01-11</time>  
@@ -3938,7 +3938,7 @@ head: |
 - <time>2018-06-24</time>  
   [Excel の数式で特定の文字列が登場する回数を検索する](/blog/2018/06/24-01.html)
 - <time>2018-06-23</time>  
-  [SQL*Plus で2500文字以上のデータを INSERT したりするには](/blog/2018/06/23-01.html)
+  [`SQL*Plus` で2500文字以上のデータを INSERT したりするには](/blog/2018/06/23-01.html)
 - <time>2018-06-22</time>  
   [Swift iOS アプリでステータスバーを非表示にする](/blog/2018/06/22-02.html)
 - <time>2018-06-22</time>  
@@ -4472,7 +4472,7 @@ head: |
 - <time>2018-01-09</time>  
   [プログラミングで誤用される英語たち](/blog/2018/01/09-01.html)
 - <time>2018-01-08</time>  
-  [Bootstrap でテーブルのセル幅を指定する時に Grid System の col-* が使える](/blog/2018/01/08-02.html)
+  [Bootstrap でテーブルのセル幅を指定する時に Grid System の `col-*` が使える](/blog/2018/01/08-02.html)
 - <time>2018-01-08</time>  
   [技術英語の発音を正しく覚える](/blog/2018/01/08-01.html)
 - <time>2018-01-07</time>  
@@ -5418,7 +5418,7 @@ head: |
 - <time>2017-03-08</time>  
   [Excel の数式の中にコメントを書く方法](/blog/2017/03/08-01.html)
 - <time>2017-03-06</time>  
-  [SQL*Loader を使ってみる](/blog/2017/03/06-02.html)
+  [`SQL*Loader` を使ってみる](/blog/2017/03/06-02.html)
 - <time>2017-03-06</time>  
   [我が家の N64 事情 : 番外編 1](/blog/2017/03/06-01.html)
 - <time>2017-03-05</time>  
@@ -6152,7 +6152,7 @@ head: |
 - <time>2016-02-26</time>  
   [VLOOKUP 関数を使う時の小技](/blog/2016/02/26-01.html)
 - <time>2016-02-25</time>  
-  [Oracle DB の SQL*Plus で Spool Log を取る時の定石コマンド](/blog/2016/02/25-01.html)
+  [Oracle DB の `SQL*Plus` で Spool Log を取る時の定石コマンド](/blog/2016/02/25-01.html)
 - <time>2016-02-24</time>  
   [はてなダイアリーはネストする箇条書きの記法が違った](/blog/2016/02/24-01.html)
 - <time>2016-02-23</time>  
