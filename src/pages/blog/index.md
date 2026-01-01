@@ -1,7 +1,7 @@
 ---
 title        : Blog
 created      : 2020-11-01
-last-modified: 2025-01-01
+last-modified: 2026-01-01
 path:
   - /index.html Neo's World
 head: |
@@ -14,8 +14,6 @@ head: |
       padding-left: 0;
       font-family: var(--nn-font-family-monospace);
       list-style: none;
-      white-space: nowrap;
-      overflow-x: auto;
     }
     
     h2[id="目次"] + ul li {
@@ -86,7 +84,57 @@ head: |
 ## 目次
 
 
-{{ blog-list-years 2025 }}
+{{ blog-list-years 2026 }}
+
+
+## [2025](/blog/2025/index.html)
+
+- <time>2025-12-31</time>  
+  [2025年を振り返る](/blog/2025/12/31-01.html)
+- <time>2025-11-28</time>  
+  [Zod のスキーマを HTML フォームに合わせやすくする・ついでにシングル HTML ファイルで TypeScript React TSX を書く](/blog/2025/11/28-01.html)
+- <time>2025-11-22</time>  
+  [「全ては個人の偏見に基づく発言である」という前提でいかないか？](/blog/2025/11/22-01.html)
+- <time>2025-10-16</time>  
+  [雑談](/blog/2025/10/16-01.html)
+- <time>2025-08-12</time>  
+  [ファンをこじらせてアンチ化しないための作法を考える](/blog/2025/08/12-01.html)
+- <time>2025-06-16</time>  
+  [映画？「Broken Rage ブロークン・レイジ」を見た](/blog/2025/06/16-01.html)
+- <time>2025-05-23</time>  
+  [ポケモン雑考察・作品の鑑賞の仕方とか・その時代を生きるということとか](/blog/2025/05/23-01.html)
+- <time>2025-05-22</time>  
+  [スマン、ポケモンの厳選行為について文句言わせてくれ](/blog/2025/05/22-01.html)
+- <time>2025-05-19</time>  
+  [映画「Mission Impossible Final Reckoning」を観てきた](/blog/2025/05/19-01.html)
+- <time>2025-03-10</time>  
+  [ウッカリ main ブランチにコミット・Push しないようにする Git Hooks を作る](/blog/2025/03/10-01.html)
+- <time>2025-03-09</time>  
+  [Tmux でペインを作ったりする Bash スクリプト](/blog/2025/03/09-01.html)
+- <time>2025-02-17</time>  
+  [Misskey の Cypress E2E を動かす手順](/blog/2025/02/17-01.html)
+- <time>2025-02-06</time>  
+  [Misskey 鯖缶になった](/blog/2025/02/06-01.html)
+- <time>2025-02-05</time>  
+  [Apache Guacamole を使って自宅 Ubuntu マシンに SSH 接続してみた](/blog/2025/02/05-01.html)
+- <time>2025-01-24</time>  
+  [Ollama と Open WebUI を使ってセルフホストの ChatGPT もどきを用意する](/blog/2025/01/24-01.html)
+- <time>2025-01-23</time>  
+  [Cloudflare Zero Trust Tunnel を利用して自宅の Ubuntu 機にインターネット経由で SSH 接続する](/blog/2025/01/23-01.html)
+- <time>2025-01-22</time>  
+  [Ubuntu 24.04 マシンに LAN 内から SSH 接続できるようにする](/blog/2025/01/22-01.html)
+- <time>2025-01-21</time>  
+  [Ubuntu 24.04 でプライベート IP アドレスを固定する](/blog/2025/01/21-01.html)
+- <time>2025-01-15</time>  
+  [Ubuntu Desktop 24.04 でサスペンドからの復帰・再起動時に HDMI 信号がなくなる不具合を直した](/blog/2025/01/15-01.html)
+- <time>2025-01-14</time>  
+  [Keycloak を使って SAML 認証する SSO の仕組みを作る](/blog/2025/01/14-01.html)
+- <time>2025-01-13</time>  
+  [遅ればせながら Mermaid.js を使ってみた](/blog/2025/01/13-01.html)
+- <time>2025-01-12</time>  
+  [JS で Draw.io ちっくなダイアグラムを描く。LogicFlow.js を使ってみた](/blog/2025/01/12-01.html)
+- <time>2025-01-11</time>  
+  [34歳になったのでミニ PC の GMKtec G3 Plus を買って Ubuntu 24.04 を入れた](/blog/2025/01/11-01.html)
 
 
 ## [2024](/blog/2024/index.html)
