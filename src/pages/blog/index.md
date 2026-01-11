@@ -77,7 +77,7 @@ head: |
 ---
 
 - ブログを購読する際は [Atom フィード](/feeds.xml) をドウゾ ([Feedly で購読する場合はコチラ](http://feedly.com/i/subscription/feed/https://neos21.net/feeds.xml))
-- 記事の内容に関してご意見・ご指摘などがありましたら、[懐かし掲示板 BBS](https://legacy-of-bbs.pages.dev/) か[メール](/about/index.html#mail)にてご連絡ください
+- 記事の内容に関してご意見・ご指摘などがありましたら、[メール](/about/index.html#mail)にてご連絡ください
 - カテゴリ分類などはありませんが、記事タイトルになるべくキーワードを散りばめるようにしていますので、ブラウザのページ内検索機能か、[サイト内検索](/about/search.html)をご利用ください
 
 
