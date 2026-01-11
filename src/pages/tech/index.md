@@ -44,10 +44,6 @@ path:
       <li><a href="./others/how-big-is-the-internet.html">クラウド・データセンタ・インターネットの規模を推定する</a></li>
       <li><a href="./others/pc-environment.html">Neo の PC 環境</a></li>
     </ul>
-    <p>以下の Scrapbox にて、SE のための業務中の暇つぶしアイデアをまとめている。</p>
-    <ul>
-      <li><a href="https://scrapbox.io/Neos21/">Neo's Scrapbox</a></li>
-    </ul>
     <p>以下は「<a href="/etc/index.html">Etc.</a>」配下のコンテンツだが、何かと参考になるかもしれない。</p>
     <ul>
       <li><a href="/etc/memo-impressed.html">タメになったメモ</a></li>
