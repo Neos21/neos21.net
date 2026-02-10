@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#0990d0">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <!-- Open Graph・Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="Neo's World">
+    <meta property="og:title" content="OCI 上のサーバを IPv6 対応させる - Neo's World">
+    <meta property="og:description" content="OCI 上のサーバを IPv6 対応させる - Neo's World">
+    <meta property="og:url" content="https://neos21.net/blog/2026/02/10-01.html">
+    <meta property="og:image" content="https://neos21.net/ogp.png">
+    <meta property="og:locale" content="ja_JP">
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:title" content="OCI 上のサーバを IPv6 対応させる - Neo's World">
+    <meta property="twitter:description" content="OCI 上のサーバを IPv6 対応させる - Neo's World">
+    <meta property="twitter:url" content="https://neos21.net/blog/2026/02/10-01.html">
+    <meta property="twitter:image" content="https://neos21.net/ogp.png">
+    <title>OCI 上のサーバを IPv6 対応させる - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+    <link rel="manifest" href="/manifest.webmanifest">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2026/02/10-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" title="Feeds" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <script src="/scripts.js"></script>
+    <!-- Google Tag Manager -->
+    <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer','GTM-MZCGD23');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <!-- Google Tag Manager (noscript) -->
+    <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-MZCGD23" height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+    <div id="container">
+      <header id="header">
+        <div id="header-brand">
+          <div id="header-brand-contents">
+            <div id="site-title"><a href="/index.html">Neo's World</a></div>
+            <nav id="header-links">
+              <ul>
+                <li id="header-link-theme"><a href="#" title="Toggle Theme"><span>Toggle Theme</span></a></li>
+                <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+                <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+                <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+                <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+              </ul>
+            </nav>
+          </div>
+        </div>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2026/index.html">2026年</a></li>
+            <li><a href="/blog/2026/02/index.html">02月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2026-02-10</time></div>
+        <h1 id="page-title">OCI 上のサーバを IPv6 対応させる</h1>
+
+<p>自分は OCI (Oracle Cloud) に Always Free の Compute Instance (IaaS VM) を立てて利用している。今回、なんとなく IPv6 対応できるようにしとくかー、と思って、した。</p>
+<h2 id="ipv6-でサーバに到達する仕組み"><a class="header-link" href="#ipv6-でサーバに到達する仕組み"><span class="header-link-mark"></span></a>IPv6 でサーバに到達する仕組み</h2>
+<p>IPv6 でクライアントとサーバが通信するに至るには、当然クライアント側で「自分、IPv6 でそっちにアクセスできます！」という準備が整っていることが前提となるが、サーバ側も「自分、IPv6 でのアクセスを受け付けられます！」というセットアップが必要になる。</p>
+<p>クライアント側が IPv6 で通信しようとしてもサーバ側が対応していない場合は、ISP などが用意するゲートウェイにて共有 IPv4 アドレスが付与されて通信が行われる。そのため、サーバ側で <code>X-Forwarded-For</code> や <code>X-Real-IP</code> といった HTTP ヘッダを見ても、ゲートウェイの IPv4 アドレスしか分からないことになる。</p>
+<p>サーバ側で IPv6 対応ができていて、DNS でも <em>AAAA レコード</em> (IPv4 アドレスを指定する A レコードのように、IPv6 アドレスを指定するためのレコード) を指定してあると、サーバへの IPv6 通信の経路が出来上がるワケだが、通信環境によっては IPv6 よりも IPv4 の方が速い場合もある。そのため、一般的なブラウザ等では <em>Happy Eyeballs</em> という仕組みを持っており、IPv4 での通信の方が速いと判断した場合は、IPv6 に対応した環境であっても IPv4 で通信が行われる場合もある。</p>
+<p>IPv6 (IPoE 方式) で通信できると何が良いのかというと、従来の IPv4 (PPPoE 方式) と比べて通信が速く、混雑に左右されにくくなるという。前述のとおり、大抵の ISP なら「IPv6 でうまく通信できなさそうなら IPv4 で」というフォールバックも出来ているので、クライアント側の OS 設定で IPv6 も有効にしておいて損はないだろう。</p>
+<h2 id="oci-の仮想ネットワーク環境を-ipv6-対応する"><a class="header-link" href="#oci-の仮想ネットワーク環境を-ipv6-対応する"><span class="header-link-mark"></span></a>OCI の仮想ネットワーク環境を IPv6 対応する</h2>
+<p>まずは Compute Instance の外側にある VCN (仮想ネットワーク) 周りの設定を調整して、IPv6 対応させていこう。</p>
+<ol>
+  <li>VCN : IPv6 の CIDR ブロックを付与する … IPv4 に関しては <code>/16</code> などで CIDR が割り当てられていると思う。コレに追加して、<code>::/56</code> な CIDR を自動指定できる</li>
+  <li>ルーティングテーブル : <code>0.0.0.0</code> でインターネット・ゲートウェイに接続するようなルールが既にあると思うが、コレに追加して <code>::/0</code> でインターネット・ゲートウェイに接続するルールも追加する</li>
+  <li>サブネット : <code>/64</code> になる IPv6 接頭辞を割り当てる (CIDR 指定するだけでテキトーにやってくれる)</li>
+  <li>セキュリティリスト・イングレスルール : 必要に応じて、22・80・443 ポートなどに関して <code>::/0</code> からのアクセスを許可するように設定する</li>
+  <li>セキュリティリスト・エグレスルール : VCN 内から <code>::/0</code> へのアクセスは全て許可するようにしておくと楽</li>
+  <li>Compute Instance・VNIC : 自分の場合、サーバ用途のため Public IPv4 アドレスを割り当ててあるのだが、この VNIC に対して「IPv6 アドレスの割り当て」を行う。色々設定が行えるが何も指定せず自動設定に任せた。作成後、「IPv6 アドレスの予約」をしておくと IPv6 アドレスを固定できる</li>
+</ol>
+<p>コレでネットワーク的には IPv6 アドレスで Compute Instance まで到達できるようになった。</p>
+<h2 id="compute-instance-内の-nginx-で-ipv6-アクセスを受け付ける"><a class="header-link" href="#compute-instance-内の-nginx-で-ipv6-アクセスを受け付ける"><span class="header-link-mark"></span></a>Compute Instance 内の nginx で IPv6 アクセスを受け付ける</h2>
+<p>次は nginx (v1.28.0 を使用) の設定で、IPv6 でのアクセスを受け付けるようにする。最低限必要なのは <code>server</code> コンテキスト内の <code>listen</code> ディレクティブ指定。</p>
+<pre><code>server {
+  listen [::]:80      default_server;  # IPv6 アクセスを許可する
+  listen 80           default_server;
+  listen [::]:443 ssl default_server;  # IPv6 アクセスを許可する
+  listen 443      ssl default_server;
+  
+  # 以下省略…
+  server_name  example.com;
+  ssl_certificate      /etc/letsencrypt/live/example.com/fullchain.pem;
+  ssl_certificate_key  /etc/letsencrypt/live/example.com/privkey.pem;
+}
+</code></pre>
+<p><code>default_server</code> の指定はよしなに。<code>[::]:80</code> とか <code>[::]:443</code> とかでの指定を追加する感じ。設定できたら <code>$ nginx -t</code> で設定ファイルの構文チェックをした後に、<code>$ systemctl restart nginx</code> などで nginx を再起動して設定を有効にする。</p>
+<p>ちなみに、前述のネットワーク周りの設定が完了していれば、OCI インスタンス内で <code>ip</code> コマンドを叩いて自身の IPv6 アドレスが確認できるようになっているはずだ。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># IPv6 アドレスを割り当てていない状態</span>
+$ <span class="token function">ip</span> -6 addr show
+<span class="token number">1</span>: lo: <span class="token operator">&#x3C;</span>LOOPBACK,UP,LOWER_UP<span class="token operator">></span> mtu <span class="token number">65536</span> state UNKNOWN qlen <span class="token number">1000</span>
+    inet6 ::1/128 scope <span class="token function">host</span> noprefixroute
+       valid_lft forever preferred_lft forever
+<span class="token number">2</span>: ens3: <span class="token operator">&#x3C;</span>BROADCAST,MULTICAST,UP,LOWER_UP<span class="token operator">></span> mtu <span class="token number">9000</span> state UP qlen <span class="token number">1000</span>
+    inet6 XXXX::XXXX:XXXX:XXXX/64 scope <span class="token function">link</span>
+       valid_lft forever preferred_lft forever
+
+<span class="token comment"># IPv6 アドレスを割り当てた状態 (VM 自体の再起動などは必要なし)</span>
+$ <span class="token function">ip</span> -6 addr show
+<span class="token number">1</span>: lo: <span class="token operator">&#x3C;</span>LOOPBACK,UP,LOWER_UP<span class="token operator">></span> mtu <span class="token number">65536</span> state UNKNOWN qlen <span class="token number">1000</span>
+    inet6 ::1/128 scope <span class="token function">host</span> noprefixroute
+       valid_lft forever preferred_lft forever
+<span class="token number">2</span>: ens3: <span class="token operator">&#x3C;</span>BROADCAST,MULTICAST,UP,LOWER_UP<span class="token operator">></span> mtu <span class="token number">9000</span> state UP qlen <span class="token number">1000</span>
+    inet6 XXXX:XXXX:XXXX:XXXX:X:XXXX:XXXX:XXXX/128 scope global dynamic noprefixroute  <span class="token comment"># ← この `/128` のアドレス部分が自分の IPv6 アドレス</span>
+       valid_lft 89961sec preferred_lft 86361sec
+    inet6 XXXX::XXXX:XXXX:XXXX/64 scope <span class="token function">link</span>
+       valid_lft forever preferred_lft forever
+
+<span class="token comment"># IPv6 アドレス確認サービスなどに `curl` を投げてみても良いだろう</span>
+$ <span class="token function">curl</span> -6 https://ipv6-test.com/api/myip.php
+</code></pre>
+<h2 id="dns-設定で-aaaa-レコードを指定する"><a class="header-link" href="#dns-設定で-aaaa-レコードを指定する"><span class="header-link-mark"></span></a>DNS 設定で AAAA レコードを指定する</h2>
+<p>自分は Cloudflare で DNS 設定を行っているのだが、どの DNS サービスでも同じように指定すれば良い。A レコードで IPv4 アドレスを指定していると思うが、コレと同等のことを AAAA レコードという形で、IPv6 アドレスを指定するようにすればいい。</p>
+<p>Cloudflare の場合、<strong>オレンジ色の雲アイコン</strong>で表現される「Proxied プロキシ済み」に設定してしまうと、Cloudflare のサーバを経由するようになってしまう点に注意。VM 内で Let's Encrypt などを使用して証明書を発行しており、nginx で SSL 証明書を設定しているような場合、その前に Cloudflare 側で SSL 証明書をチェックしようとしてしまうためおかしくなってしまう。Cloudflare の CDN キャッシュを使用しているなど、意図的に Cloudflare を使用している場合を除いて、基本的には<em>灰色の雲アイコン</em>で表示される「DNS Only DNS のみ」(プロキシステータス OFF) に設定しておいた方が良い。</p>
+<h2 id="動作確認してみる"><a class="header-link" href="#動作確認してみる"><span class="header-link-mark"></span></a>動作確認してみる</h2>
+<p>ココまでの設定ができたら、クライアント側から IPv6 アドレスが見えるかどうか確認してみる。WSL2 より <code>dig</code> と <code>nslookup</code> コマンドで確認した。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># IPv6 設定前・AAAA レコードが返ってこない (`ANSWER: 0` 部分)</span>
+$ <span class="token function">dig</span> AAAA example.com
+<span class="token punctuation">;</span> <span class="token operator">&#x3C;&#x3C;</span><span class="token operator">>></span> DiG <span class="token number">9.18</span>.39-0ubuntu0.24.04.2-Ubuntu <span class="token operator">&#x3C;&#x3C;</span><span class="token operator">>></span> AAAA example.com
+<span class="token punctuation">;</span><span class="token punctuation">;</span> global options: +cmd
+<span class="token punctuation">;</span><span class="token punctuation">;</span> Got answer:
+<span class="token punctuation">;</span><span class="token punctuation">;</span> -<span class="token operator">>></span>HEADER<span class="token operator">&#x3C;&#x3C;-</span> opcode: QUERY, status: NOERROR, id: <span class="token number">1026</span>
+<span class="token punctuation">;</span><span class="token punctuation">;</span> flags: qr rd ra<span class="token punctuation">;</span> QUERY: <span class="token number">1</span>, ANSWER: <span class="token number">0</span>, AUTHORITY: <span class="token number">1</span>, ADDITIONAL: <span class="token number">1</span>
+</code></pre>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># IPv6 設定後・AAAA レコードが返ってきた</span>
+$ <span class="token function">dig</span> AAAA example.com
+<span class="token punctuation">;</span> <span class="token operator">&#x3C;&#x3C;</span><span class="token operator">>></span> DiG <span class="token number">9.18</span>.39-0ubuntu0.24.04.2-Ubuntu <span class="token operator">&#x3C;&#x3C;</span><span class="token operator">>></span> AAAA example.com
+<span class="token punctuation">;</span><span class="token punctuation">;</span> global options: +cmd
+<span class="token punctuation">;</span><span class="token punctuation">;</span> Got answer:
+<span class="token punctuation">;</span><span class="token punctuation">;</span> -<span class="token operator">>></span>HEADER<span class="token operator">&#x3C;&#x3C;-</span> opcode: QUERY, status: NOERROR, id: <span class="token number">60554</span>
+<span class="token punctuation">;</span><span class="token punctuation">;</span> flags: qr rd ad<span class="token punctuation">;</span> QUERY: <span class="token number">1</span>, ANSWER: <span class="token number">1</span>, AUTHORITY: <span class="token number">0</span>, ADDITIONAL: <span class="token number">0</span>
+<span class="token punctuation">;</span><span class="token punctuation">;</span> WARNING: recursion requested but not available
+
+<span class="token punctuation">;</span><span class="token punctuation">;</span> QUESTION SECTION:
+<span class="token punctuation">;</span>example.com.                        IN      AAAA
+
+<span class="token punctuation">;</span><span class="token punctuation">;</span> ANSWER SECTION:
+example.com.         <span class="token number">0</span>       IN      AAAA    XXXX:XXXX:XXXX:XXXX:X:XXXX:XXXX:XXXX
+</code></pre>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># IPv6 設定前・AAAA レコードが返ってこない</span>
+$ <span class="token function">nslookup</span> -type<span class="token operator">=</span>AAAA example.com
+Non-authoritative answer:
+*** Can't <span class="token function">find</span> example.com: No answer
+</code></pre>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># IPv6 設定後・AAAA レコードが返ってきた</span>
+$ <span class="token function">nslookup</span> -type<span class="token operator">=</span>AAAA example.com
+Non-authoritative answer:
+Name:   example.com
+Address: XXXX:XXXX:XXXX:XXXX:X:XXXX:XXXX:XXXX
+</code></pre>
+<p><code>$ curl -6</code> でも IPv6 で通信確認できるが、WSL2 では基本的に通信に失敗するため留意。WSL2 の設定ファイルで「ミラーモード」などのネットワークモードに設定していないと、通信は Windows ホスト側で IPv4 に NAT されるためだ。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># WSL2 で IPv6 での `curl` に失敗しても基本的には「仕様」なので気にしない</span>
+$ <span class="token function">curl</span> -6 https://example.com/
+curl: <span class="token punctuation">(</span><span class="token number">7</span><span class="token punctuation">)</span> Failed to connect to example.com port <span class="token number">443</span> after <span class="token number">1</span> ms: Couldn't connect to server
+</code></pre>
+<p>自分は WSL2 からではなく、Windows GitBash から <code>$ curl -6</code> で通信して確認した。</p>
+<p>ついでに、Public IPv6 でサーバへ到達できるようにしてあると、ブラウザからでも IPv6 アドレスを指定してアクセスができる。IPv6 アドレスはブラケット <code>[]</code> で囲んであげる必要がある。</p>
+<ul>
+  <li>記述例 : <code>http://[XXXX:XXXX:XXXX:XXXX:X:XXXX:XXXX:XXXX]/index.html</code></li>
+</ul>
+<h2 id="以上"><a class="header-link" href="#以上"><span class="header-link-mark"></span></a>以上</h2>
+<p>今回、自分のメイン PC でも IPv6 を有効にしつつ、IPv4・IPv6 ともに使用する DNS サーバを Cloudflare が提供する DNS リゾルバ「1.1.1.1」に設定した。</p>
+<p>OCI のネットワークから VM まで IPv6 対応をしたので、nginx のアクセスログなどでユーザの IPv6 アドレスが確認できるようになった。IPv6 でサーバまでアクセス出来ているということだ。</p>
+<p>このサイト <code>neos21.net</code> は GitHub Pages にカスタムドメインを指定して公開しているのだが、GitHub Pages 用の A レコード (IPv4 用) しか指定してなかったため、今回セットで AAAA レコード (IPv6 用) も指定することにした。</p>
+<ul>
+  <li>参考 : <a href="https://docs.github.com/ja/pages/configuring-a-custom-domain-for-your-github-pages-site/managing-a-custom-domain-for-your-github-pages-site">GitHub Pages サイトのカスタムドメインを管理する - GitHub ドキュメント</a>
+    <ul>
+      <li>
+        <blockquote>
+          <p>AAAA レコードを作成するには、apex ドメインが GitHub Pages の IP アドレスを指すようにします</p>
+        </blockquote>
+      </li>
+    </ul>
+  </li>
+</ul>
+<p>別に体感できるほど通信が速くなったーとかそういうことはないけども、コレでとりあえず自分が公開・利用しているサーバ類に関してはいずれも IPv6 対応ができたことになる。</p>
+
+      </main>
+      <footer id="footer">
+        <div id="footer-contents">
+          <div id="date-time">
+            <dl>
+              <dt>Created</dt>
+              <dd><time>2026-02-10</time></dd>
+              <dt>Last-Modified</dt>
+              <dd><time>2026-02-10</time></dd>
+            </dl>
+          </div>
+          <nav id="footer-links">
+            <ul>
+              <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+              <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+              <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+              <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+            </ul>
+          </nav>
+          <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+        </div>
+      </footer>
+    </div>
+  </body>
+</html>
