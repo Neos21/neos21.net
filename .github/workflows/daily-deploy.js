@@ -11,7 +11,7 @@ import { listFiles } from '../../lib/list-files.js';
 import { makeDirectory } from '../../lib/make-directory.js';
 
 /*!
- * `last-modified` が今日日付のファイルをビルドしてアップロードする
+ * `last-modified` が今日日付のファイルをビルドする
  * 
  * - 対象外
  *   - CSS の変更

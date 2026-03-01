@@ -12,7 +12,7 @@ import { listFiles } from '../../lib/list-files.js';
 import { makeDirectory } from '../../lib/make-directory.js';
 
 /*!
- * 対象のファイルをビルドしてアップロードする
+ * 対象のファイルをビルドする
  */
 
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
