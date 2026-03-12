@@ -128,6 +128,15 @@ $ cd ./dist
 - `./dist/` ディレクトリが出来上がってから `gh-pages` ブランチへ Push するまでの処理は、上述の Deploy On Commit と同じ
 
 
+## サイト上に置く設定ファイル系
+
+- `/ads.txt` : Google AdSense 用
+- `/ae52213dcf6345ccb5cfd82813bbbe70.txt` : IndexNow 確認用
+- `/.well-known/atproto-did` : [Bluesky アカウント](https://bsky.app/profile/neos21.net) 認証用
+- `/.well-known/brave-rewards-verification.txt` : Brave Rewards 用
+- HTML ヘッダ内に書くモノはコメント入れてある
+
+
 ## Author
 
 [Neo](https://neos21.net/)

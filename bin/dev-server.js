@@ -9,6 +9,7 @@ import { buildMarkdown } from '../lib/build-markdown.js';
 import { constants } from '../lib/constants.js';
 import { copyFile } from '../lib/copy-file.js';
 import { isExist } from '../lib/is-exist.js';
+import { reloadTemplate } from '../lib/template-replacers.js';
 
 /*!
  * 開発サーバを起動する
@@ -135,8 +136,9 @@ browserSyncInstance.init({
     {
       match: [constants.templates.src],
       fn: (event, sourceFilePath) => {
-        // テンプレートファイルを更新時は全量ビルドが必要になるが、うまくファイル更新されないので諦める
-        console.warn(`Warning : Template Changes Does Not Supported, So Do Nothing. Please Build All Manually … [${event}] [${sourceFilePath}]`);
+        // テンプレートファイル更新時は、本来全量ビルドが必要になるが、ココでは「この後に変更したソース HTML・Markdown ファイル」に新テンプレートを適用するようにする
+        reloadTemplate();
+        console.warn(`Warning : テンプレート HTML ファイルが更新されました・ソースファイルを再度更新してください : [${event}] [${sourceFilePath}]`);
       }
     }
   ]
