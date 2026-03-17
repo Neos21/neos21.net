@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#0990d0">
+    <!-- Google Search Console -->
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <!-- Open Graph・Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="Neo's World">
+    <meta property="og:title" content="Windows PowerShell で Bash の kill lsof 相当を行う - Neo's World">
+    <meta property="og:description" content="Windows PowerShell で Bash の kill lsof 相当を行う - Neo's World">
+    <meta property="og:url" content="https://neos21.net/blog/2026/03/17-01.html">
+    <meta property="og:image" content="https://neos21.net/ogp.png">
+    <meta property="og:locale" content="ja_JP">
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:title" content="Windows PowerShell で Bash の kill lsof 相当を行う - Neo's World">
+    <meta property="twitter:description" content="Windows PowerShell で Bash の kill lsof 相当を行う - Neo's World">
+    <meta property="twitter:url" content="https://neos21.net/blog/2026/03/17-01.html">
+    <meta property="twitter:image" content="https://neos21.net/ogp.png">
+    <title>Windows PowerShell で Bash の kill lsof 相当を行う - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+    <link rel="manifest" href="/manifest.webmanifest">
+    <link rel="stylesheet" href="/styles.css">
+    <link rel="canonical" href="https://neos21.net/blog/2026/03/17-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" title="Feeds" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <script src="/scripts.js"></script>
+    <!-- Google Tag Manager -->
+    <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src='https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer','GTM-MZCGD23');</script>
+    <!-- Google AdSense -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6475907504235292" crossorigin="anonymous"></script>
+  </head>
+  <body>
+    <!-- Google Tag Manager (noscript) -->
+    <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-MZCGD23" height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
+    <div id="container">
+      <header id="header">
+        <div id="header-brand">
+          <div id="header-brand-contents">
+            <div id="site-title"><a href="/index.html">Neo's World</a></div>
+            <nav id="header-links">
+              <ul>
+                <li id="header-link-theme"><a href="#" title="Toggle Theme"><span>Toggle Theme</span></a></li>
+                <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+                <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+                <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+                <li id="header-link-to-bottom"><a href="#footer" title="To Bottom"><span>▼ To Bottom</span></a></li>
+              </ul>
+            </nav>
+          </div>
+        </div>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2026/index.html">2026年</a></li>
+            <li><a href="/blog/2026/03/index.html">03月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2026-03-17</time></div>
+        <h1 id="page-title">Windows PowerShell で Bash の kill lsof 相当を行う</h1>
+
+<p>Linux・Bash の世界だと、<code>lsof</code> コマンドでそのポート番号を使っているプロセスを調べて、<code>ps</code> で実行コマンドを調べたり <code>kill</code> したり、といったことができる。</p>
+<pre class="language-bash"><code class="language-bash"><span class="token comment"># 8080 ポートを使っているプロセス ID は？ → PID 995 と判明</span>
+$ <span class="token function">lsof</span> -i:8080
+COMMAND   PID <span class="token environment constant">USER</span>   FD   TYPE DEVICE SIZE/OFF NODE NAME
+MainThrea <span class="token number">995</span>  neo   21u  IPv6  <span class="token number">21578</span>      0t0  TCP *:tproxy <span class="token punctuation">(</span>LISTEN<span class="token punctuation">)</span>
+
+<span class="token comment"># PID 995 は何のコマンドが動いてる？</span>
+$ <span class="token function">ps</span> <span class="token number">995</span>
+PID TTY      STAT   TIME COMMAND
+<span class="token number">995</span> pts/4    Sl+    <span class="token number">0</span>:00 node index.js
+
+<span class="token comment"># `lsof` コマンドは PID だけを出力できる (`-t` オプション)</span>
+$ <span class="token function">lsof</span> -i:8080 -t
+<span class="token number">995</span>
+
+<span class="token comment"># `kill` コマンドに流し込めば一発でタスクキルできる</span>
+$ <span class="token function">kill</span> <span class="token variable"><span class="token variable">$(</span><span class="token function">lsof</span> -i:8080 -t<span class="token variable">)</span></span>
+</code></pre>
+<p>コレと同等のことを、Windows 環境・PowerShell でやりたかったので、調べた。</p>
+<pre class="language-powershell"><code class="language-powershell"><span class="token comment"># 方法 1 : `netstat` を使う</span>
+<span class="token function">PS</span>> netstat <span class="token operator">-</span>ano <span class="token punctuation">|</span> <span class="token function">Select-String</span> <span class="token string">'0.0.0.0:8080'</span>
+  TCP         0<span class="token punctuation">.</span>0<span class="token punctuation">.</span>0<span class="token punctuation">.</span>0:8080           0<span class="token punctuation">.</span>0<span class="token punctuation">.</span>0<span class="token punctuation">.</span>0:0              LISTENING       7064
+
+<span class="token comment"># `netstat` で PID だけ取り出す</span>
+<span class="token function">PS</span>> netstat <span class="token operator">-</span>ano <span class="token punctuation">|</span> <span class="token function">Select-String</span> <span class="token string">'0.0.0.0:8080'</span> <span class="token punctuation">|</span> <span class="token function">ForEach-Object</span> <span class="token punctuation">{</span> <span class="token punctuation">(</span><span class="token variable">$_</span> <span class="token operator">-</span>split <span class="token string">'\s+'</span><span class="token punctuation">)</span><span class="token punctuation">[</span><span class="token operator">-</span>1<span class="token punctuation">]</span> <span class="token punctuation">}</span>
+7064
+
+<span class="token comment"># 方法 2 : `Get-NetTCPConnection` で一発で取れる</span>
+<span class="token function">PS</span>> <span class="token function">Get-NetTCPConnection</span> <span class="token operator">-</span>LocalPort 8080
+LocalAddress                        LocalPort RemoteAddress                       RemotePort State       AppliedSetting
+<span class="token operator">--</span>-<span class="token operator">--</span>-<span class="token operator">--</span>-<span class="token operator">--</span><span class="token operator">-</span>                        <span class="token operator">--</span>-<span class="token operator">--</span>-<span class="token operator">--</span><span class="token operator">-</span> <span class="token operator">--</span>-<span class="token operator">--</span>-<span class="token operator">--</span>-<span class="token operator">--</span>-<span class="token operator">-</span>                       <span class="token operator">--</span>-<span class="token operator">--</span>-<span class="token operator">--</span>-<span class="token operator">-</span> <span class="token operator">--</span>-<span class="token operator">--</span>       <span class="token operator">--</span>-<span class="token operator">--</span>-<span class="token operator">--</span>-<span class="token operator">--</span>-<span class="token operator">--</span>
+::                                  8080      ::                                  0          Listen                    
+
+<span class="token comment"># PID だけ取り出す</span>
+<span class="token function">PS</span>> <span class="token function">Get-NetTCPConnection</span> <span class="token operator">-</span>LocalPort 8080 <span class="token punctuation">|</span> <span class="token function">Select-Object</span> <span class="token operator">-</span>ExpandProperty OwningProcess
+7064
+
+<span class="token comment"># PID を指定して実行されているコマンドを調べる</span>
+<span class="token function">PS</span>> <span class="token function">Get-CimInstance</span> Win32_Process <span class="token operator">-</span><span class="token keyword">Filter</span> <span class="token string">'ProcessId = 7064'</span> <span class="token punctuation">|</span> <span class="token function">Select-Object</span> ProcessId<span class="token punctuation">,</span> Name<span class="token punctuation">,</span> CommandLine
+ProcessId Name     CommandLine
+<span class="token operator">--</span>-<span class="token operator">--</span>-<span class="token operator">--</span><span class="token operator">-</span> <span class="token operator">--</span>-<span class="token operator">-</span>     <span class="token operator">--</span>-<span class="token operator">--</span>-<span class="token operator">--</span>-<span class="token operator">--</span>
+     7064 node<span class="token punctuation">.</span>exe C:\nvm4w\nodejs\node<span class="token punctuation">.</span>exe index<span class="token punctuation">.</span>js
+
+<span class="token comment"># ポート番号から直接実行コマンドを調べる</span>
+<span class="token function">PS</span>> <span class="token function">Get-NetTCPConnection</span> <span class="token operator">-</span>LocalPort 8080 <span class="token punctuation">|</span> <span class="token function">ForEach-Object</span> <span class="token punctuation">{</span> <span class="token function">Get-CimInstance</span> Win32_Process <span class="token operator">-</span><span class="token keyword">Filter</span> <span class="token string">'ProcessId = $($_.OwningProcess)'</span> <span class="token punctuation">}</span> <span class="token punctuation">|</span> <span class="token function">Select</span> ProcessId<span class="token punctuation">,</span> Name<span class="token punctuation">,</span> CommandLine
+ProcessId Name     CommandLine
+<span class="token operator">--</span>-<span class="token operator">--</span>-<span class="token operator">--</span><span class="token operator">-</span> <span class="token operator">--</span>-<span class="token operator">-</span>     <span class="token operator">--</span>-<span class="token operator">--</span>-<span class="token operator">--</span>-<span class="token operator">--</span>
+     7064 node<span class="token punctuation">.</span>exe C:\nvm4w\nodejs\node<span class="token punctuation">.</span>exe index<span class="token punctuation">.</span>js
+
+
+<span class="token comment"># ポート番号を指定してタスクキルに持ち込むなら以下のいずれかで良い</span>
+<span class="token function">PS</span>> netstat <span class="token operator">-</span>ano <span class="token punctuation">|</span> <span class="token function">Select-String</span> <span class="token string">'0.0.0.0:8080'</span> <span class="token punctuation">|</span> <span class="token function">ForEach-Object</span> <span class="token punctuation">{</span> <span class="token punctuation">(</span><span class="token variable">$_</span> <span class="token operator">-</span>split <span class="token string">'\s+'</span><span class="token punctuation">)</span><span class="token punctuation">[</span><span class="token operator">-</span>1<span class="token punctuation">]</span> <span class="token punctuation">}</span> <span class="token punctuation">|</span> <span class="token function">ForEach-Object</span> <span class="token punctuation">{</span> <span class="token function">Stop-Process</span> <span class="token operator">-</span>Id <span class="token variable">$_</span> <span class="token operator">-</span>Force <span class="token punctuation">}</span>
+<span class="token function">PS</span>> <span class="token function">Stop-Process</span> <span class="token operator">-</span>Id <span class="token punctuation">(</span><span class="token function">Get-NetTCPConnection</span> <span class="token operator">-</span>LocalPort 8080<span class="token punctuation">)</span><span class="token punctuation">.</span>OwningProcess <span class="token operator">-</span>Force
+<span class="token function">PS</span>> <span class="token function">Stop-Process</span> <span class="token operator">-</span>Id <span class="token punctuation">(</span><span class="token function">Get-NetTCPConnection</span> <span class="token operator">-</span>LocalPort 8080 <span class="token punctuation">|</span> <span class="token function">Select-Object</span> <span class="token operator">-</span>ExpandProperty OwningProcess<span class="token punctuation">)</span> <span class="token operator">-</span>Force
+</code></pre>
+<p>個人的には</p>
+<pre class="language-powershell"><code class="language-powershell"><span class="token function">PS</span>> <span class="token function">Get-NetTCPConnection</span> <span class="token operator">-</span>LocalPort 8080
+<span class="token function">PS</span>> <span class="token punctuation">(</span><span class="token function">Get-NetTCPConnection</span> <span class="token operator">-</span>LocalPort 8080<span class="token punctuation">)</span><span class="token punctuation">.</span>OwningProcess
+</code></pre>
+<p>だけ覚えておけばなんとかなるかも。</p>
+<ul>
+  <li>参考 : <a href="https://anton0825.hatenablog.com/entry/2015/09/17/000000">Windowsでlsofする（ポートを使っているプロセス名を調べる） - 日々精進</a></li>
+</ul><div class="ad-rakuten">
+  <div class="ad-rakuten-image">
+    <a href="https://hb.afl.rakuten.co.jp/hgc/g00q0722.waxyc9ff.g00q0722.waxyd017/?pc=https%3A%2F%2Fitem.rakuten.co.jp%2Fbook%2F5883966%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Fbook%2Fi%2F13069415%2F&amp;rafcid=wsc_i_is_c80a44f7-e2d0-44c7-a1e6-750af3f15e55">
+      <img src="https://thumbnail.image.rakuten.co.jp/@0_mall/book/cabinet/3821/9784873113821.jpg?_ex=128x128">
+    </a>
+  </div>
+  <div class="ad-rakuten-info">
+    <div class="ad-rakuten-title">
+      <a href="https://hb.afl.rakuten.co.jp/hgc/g00q0722.waxyc9ff.g00q0722.waxyd017/?pc=https%3A%2F%2Fitem.rakuten.co.jp%2Fbook%2F5883966%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Fbook%2Fi%2F13069415%2F&amp;rafcid=wsc_i_is_c80a44f7-e2d0-44c7-a1e6-750af3f15e55">Windows　PowerShellクックブック [ リー・ホームズ ]</a>
+    </div>
+    <div class="ad-rakuten-shop">
+      <a href="https://hb.afl.rakuten.co.jp/hgc/g00q0722.waxyc9ff.g00q0722.waxyd017/?pc=https%3A%2F%2Fwww.rakuten.co.jp%2Fbook%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Fbook%2F&amp;rafcid=wsc_i_is_c80a44f7-e2d0-44c7-a1e6-750af3f15e55">楽天ブックス</a>
+    </div>
+    <div class="ad-rakuten-price">価格 : 4400円</div>
+  </div>
+</div>
+<div class="ad-amazon">
+  <div class="ad-amazon-info">
+    <div class="ad-amazon-title">
+      <a href="https://www.amazon.co.jp/dp/4873113822?&linkCode=ll2&tag=neos21-22&linkId=6579983efd1846b4c088d3298816935b&ref_=as_li_ss_tl">Windows PowerShellクックブック</a>
+    </div>
+  </div>
+</div>
+
+      </main>
+      <aside id="aside">
+        <section id="donate">
+          <h2>☕ このサイトを応援する</h2>
+          <p>このサイトが役に立ったら、コーヒー1杯分ご支援してもらえると嬉しいです。</p>
+          <div id="donate-banners">
+            <div id="donate-ofuse">
+              <a data-ofuse-widget-button href="https://ofuse.me/o?uid=160256" data-ofuse-id="160256" data-ofuse-text="Ofuse">Ofuse</a><script async src="https://ofuse.me/assets/platform/widget.js" charset="utf-8"></script>
+            </div>
+            <div id="donate-buy-me-a-coffee">
+              <script type="text/javascript" src="https://cdnjs.buymeacoffee.com/1.0.0/button.prod.min.js" data-name="bmc-button" data-slug="Neos21" data-color="#ffdd00" data-emoji="☕" data-font="Lato" data-text="Buy Me A Coffee" data-outline-color="#000000" data-font-color="#000000" data-coffee-color="#ffffff"></script>
+            </div>
+            <div id="donate-stripe">
+              <div><script async src="https://js.stripe.com/v3/buy-button.js"></script><stripe-buy-button buy-button-id="buy_btn_1T9yzqR7Q3yCtdl2Add7ZpPz" publishable-key="pk_live_51T9ybqR7Q3yCtdl2jmMhRVA6DJYLSIlNEaVXWt8ohjcCM5XFneB5UpjFyRWiwbWHK6ILBuTSNd8tSr0ZzqpmePDP00g6wJioQc"></stripe-buy-button></div>
+            </div>
+            <div id="donate-github-sponsors">
+              <div><iframe src="https://github.com/sponsors/Neos21/button" title="Sponsor Neos21" height="32" width="114" style="border: 0; border-radius: 6px;"></iframe></div>
+            </div>
+          </div>
+        </section>
+      </aside>
+      <footer id="footer">
+        <div id="footer-contents">
+          <div id="date-time">
+            <dl>
+              <dt>Created</dt>
+              <dd><time>2026-03-17</time></dd>
+              <dt>Last-Modified</dt>
+              <dd><time>2026-03-17</time></dd>
+            </dl>
+          </div>
+          <nav id="footer-links">
+            <ul>
+              <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+              <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+              <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+              <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+            </ul>
+          </nav>
+          <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+        </div>
+      </footer>
+    </div>
+  </body>
+</html>
