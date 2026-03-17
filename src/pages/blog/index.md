@@ -1,7 +1,7 @@
 ---
 title        : Blog
 created      : 2020-11-01
-last-modified: 2026-01-01
+last-modified: 2026-03-17
 path:
   - /index.html Neo's World
 head: |
@@ -1640,7 +1640,7 @@ head: |
 - <time>2020-09-25</time>  
   [クエリ文字列を連想配列に変換する簡単なやり方 (URLSearchParams)](/blog/2020/09/25-01.html)
 - <time>2020-09-24</time>  
-  [ルータ付属の無線 LAN に3つある SSID の違い](/blog/2020/09/24-01.html)
+  [ルータ付属の無線 LAN Wi-Fi に SSID が複数ある理由：2つ目・3つ目の SSID は何なのか解説します](/blog/2020/09/24-01.html)
 - <time>2020-09-23</time>  
   [Fire 7 タブレットを Echo Show っぽくするためにフルスクリーン表示する時計アプリを作った](/blog/2020/09/23-01.html)
 - <time>2020-09-22</time>  

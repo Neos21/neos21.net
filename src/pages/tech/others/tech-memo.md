@@ -1,14 +1,14 @@
 ---
 title        : 技術関連メモ
 created      : 2023-02-16
-last-modified: 2024-09-10
+last-modified: 2026-03-17
 path:
   - /index.html Neo's World
   - /tech/index.html Tech
   - /tech/others/index.html その他技術情報
 ---
 
-技術関連の短いメモです。その他 [Etc.](/etc/index.html) 配下のコンテンツですが、[タメになったメモ](/etc/memo-impressed.html)もご参考にドウゾ。
+技術関連の短いメモです。その他 [Etc.](/etc/index.html) 配下のコンテンツですが、[人生で役に立った言葉・学びのメモ集](/etc/memo-impressed.html)もご参考にドウゾ。
 
 
 ## 目次

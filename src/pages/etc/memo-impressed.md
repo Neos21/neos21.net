@@ -1,7 +1,7 @@
 ---
-title        : タメになったメモ
+title        : 人生で役に立った言葉・学びのメモ集【随時更新】
 created      : 2021-01-22
-last-modified: 2024-11-18
+last-modified: 2026-03-17
 path:
   - /index.html Neo's World
   - /etc/index.html Etc.

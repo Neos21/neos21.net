@@ -1,7 +1,7 @@
 ---
 title        : アンガーマネジメントメモ
 created      : 2022-02-15
-last-modified: 2022-02-15
+last-modified: 2026-03-17
 path:
   - /index.html Neo's World
   - /etc/index.html Etc.
@@ -103,4 +103,4 @@ path:
 
 本サイト内のブログ以外だと、他に以下のようなページもある。
 
-- [タメになったメモ](./memo-impressed.html) … 「アンガーマネジメント・ストレス」セクション
+- [人生で役に立った言葉・学びのメモ集](./memo-impressed.html) … 「アンガーマネジメント・ストレス」セクション

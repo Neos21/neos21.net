@@ -1,7 +1,7 @@
 ---
 title        : Tech
 created      : 2020-11-23
-last-modified: 2022-02-15
+last-modified: 2026-03-17
 path:
   - /index.html Neo's World
 ---
@@ -46,7 +46,7 @@ path:
     </ul>
     <p>以下は「<a href="/etc/index.html">Etc.</a>」配下のコンテンツだが、何かと参考になるかもしれない。</p>
     <ul>
-      <li><a href="/etc/memo-impressed.html">タメになったメモ</a></li>
+      <li><a href="/etc/memo-impressed.html">人生で役に立った言葉・学びのメモ集</a></li>
     </ul>
   </dd>
 </dl>
