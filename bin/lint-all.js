@@ -188,4 +188,4 @@ sourceFilePaths
   .filter(sourceFilePath => sourceFilePath.endsWith('.md'))
   .forEach(sourceFilePath => lintMarkdown(sourceFilePath));
 
-console.log('Lint All : Finished');
+console.log('Lint All : Succeeded');
