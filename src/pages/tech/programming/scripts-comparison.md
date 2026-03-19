@@ -1,7 +1,7 @@
 ---
-title        : Scripts Comparison
+title        : 'Scripts Comparison : スクリプト言語ごとの構文比較表'
 created      : 2020-11-21
-last-modified: 2022-05-26
+last-modified: 2026-03-20
 path:
   - /index.html Neo's World
   - /tech/index.html Tech

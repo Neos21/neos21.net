@@ -1,5 +1,5 @@
 ---
-title        : 健康メモ
+title        : Neo 流・健康を保つためのメモ【随時更新】
 created      : 2022-02-15
 last-modified: 2026-03-17
 path:

@@ -1,5 +1,5 @@
 ---
-title        : Tech
+title        : 'Tech : 技術関連ナレッジ・ノウハウデータベース'
 created      : 2020-11-23
 last-modified: 2026-03-17
 path:

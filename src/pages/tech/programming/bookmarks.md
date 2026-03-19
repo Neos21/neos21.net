@@ -1,7 +1,7 @@
 ---
 title        : プログラミング関連ブックマーク
 created      : 2020-11-16
-last-modified: 2020-11-16
+last-modified: 2026-03-20
 path:
   - /index.html Neo's World
   - /tech/index.html Tech
@@ -11,7 +11,7 @@ path:
 ## 目次
 
 
-## SE
+## SE システムエンジニア
 
 - [BugbearR's Wiki - 開発規約](https://web.archive.org/web/20130509182127/http://www.bugbearr.jp/?%E9%96%8B%E7%99%BA%E8%A6%8F%E7%B4%84)
   - [品質とは何か](https://web.archive.org/web/20130614141306/http://www.bugbearr.jp/?%E9%96%8B%E7%99%BA%E8%A6%8F%E7%B4%84%2F12)
@@ -42,7 +42,7 @@ path:
 - [Linux と過ごす](https://linux.just4fun.biz/?FrontPage)
 
 
-## VM On Browser
+## VM On Browser ブラウザ上で動かせる仮想マシン
 
 - [Virtual x86](https://copy.sh/v86/)
 - [JSLinux](https://bellard.org/jslinux/)
@@ -52,18 +52,18 @@ path:
 - [Webminal](https://www.webminal.org/) : Membership
 
 
-## Dev Tools
+## Dev Tools 開発ツール
 
 - [JSONPlaceholder](https://jsonplaceholder.typicode.com/)
 
 
-## Scraping
+## Scraping スクレイピング
 
 - [スクレイピングにおいて IP の Ban を防ぐ方法](https://datanerd.hateblo.jp/entry/2019/11/25/121303)
   - nordvpn を使う
 
 
-## Raspberry Pi
+## Raspberry Pi ラズパイ
 
 - [LibreELEC で地デジを楽しむために Mirakurun と EPGStation を一発で動かす](https://mzyy94.com/blog/2020/08/18/libreelec-mirakurun-epgstation/)
 - [自宅録画環境2020 Raspberry Pi 4](https://blog.kksg.net/posts/raspi4-recorder/)
@@ -72,7 +72,7 @@ path:
 - [ラズパイとWebカメラで赤ちゃんに優しいベビーモニターを作る](https://qiita.com/osamasao/items/0638ec0050cf2e15e71d)
 
 
-## Internet History
+## Internet History インターネットの歴史
 
 - [Geekring](https://geekring.net/)
 - [Unofficial Apple Archive](https://www.applearchive.org/)
@@ -83,7 +83,7 @@ path:
 - [The Surprisingly Rich History of ASCII Art – The New Stack](https://thenewstack.io/surprisingly-rich-history-ascii-art/)
 
 
-## Interesting
+## Interesting 興味深いメモ
 
 - [Neal.fun](https://neal.fun/)
 - [Bruno Simon](https://bruno-simon.com/)
@@ -96,13 +96,13 @@ path:
 - [Text to ASCII Art Generator (TAAG)](http://patorjk.com/software/taag/#p=display&amp;f=Graffiti&amp;t=Type%20Something%20)
 
 
-## Design Reference
+## Design Reference デザインの参考になりそうなサイト
 
 - [Brian Tracy](https://briantracy.xyz/)
   - Simple 1 Column
 
 
-## Etc.
+## その他
 
 - [Welcome to 自宅](https://jitaku.work/)
 - [ProgSoft.net](https://progsoft.net/ja)

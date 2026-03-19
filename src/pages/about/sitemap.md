@@ -7,10 +7,10 @@ path:
   - /about/index.html About
 ---
 
-**ブログの過去記事は「[Blog](/blog/index.html)」ページにリストアップ**しており、本ページにはリストアップしていませんので、[Blog](/blog/index.html) にてご確認ください。
+*ブログの過去記事は「[Blog](/blog/index.html)」ページにリストアップ*しており、本ページにはリストアップしていませんので、[Blog](/blog/index.html) にてご確認ください。
 
 「[Neo's Documents](/documents/index.html)」配下のページも本ページにはリストアップしていませんので、[Neo's Documents](/documents/index.html) にてご確認ください。
 
 {{ sitemap }}
 
-- [Neo's Documents](/documents/index.html)
+- [Neo's Documents : 雑多なコンテンツ置き場](/documents/index.html)

@@ -1,7 +1,7 @@
 ---
-title        : Bash
+title        : Bash ナレッジ集
 created      : 2021-01-27
-last-modified: 2021-12-18
+last-modified: 2026-03-20
 path:
   - /index.html Neo's World
   - /tech/index.html Tech

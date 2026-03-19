@@ -1,16 +1,13 @@
 ---
 title        : テスト
 created      : 2023-02-16
-last-modified: 2023-03-09
+last-modified: 2026-03-20
 path:
   - /index.html Neo's World
   - /tech/index.html Tech
 ---
 
 テストに関するナレッジやノウハウ。
-
-
-## 目次
 
 
 ## テストナレッジ

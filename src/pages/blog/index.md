@@ -1,5 +1,5 @@
 ---
-title        : Blog
+title        : Neo's Blog
 created      : 2020-11-01
 last-modified: 2026-03-17
 path:

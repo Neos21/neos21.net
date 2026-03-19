@@ -1,5 +1,5 @@
 ---
-title        : アンガーマネジメントメモ
+title        : アンガーマネジメントメモ【随時更新】
 created      : 2022-02-15
 last-modified: 2026-03-17
 path:

@@ -140,6 +140,20 @@ browserSyncInstance.init({
         reloadTemplate();
         console.warn(`Warning : テンプレート HTML ファイルが更新されました・ソースファイルを再度更新してください : [${event}] [${sourceFilePath}]`);
       }
+    },
+    {
+      match: [`${constants.documents.src}/**/*`],
+      // event : `add`・`change`・`unlink`・`addDir`・`unlinkDir`
+      // sourdePath : ex. `src/documents/index.html`
+      fn: (event, sourceFilePath) => {
+        if(event === 'addDir') return;  // Do Nothing
+        if(event === 'unlink') return unlinkFunc(sourceFilePath);
+        if(event === 'unlinkDir') return unlinkDirFunc(sourceFilePath);
+        
+        // 以降 `add` or `change` : ファイルコピーのみ
+        const distFilePath = sourceFilePath.replace(constants.documents.src, constants.documents.dist);
+        copyFile(sourceFilePath, distFilePath);
+      }
     }
   ]
 });

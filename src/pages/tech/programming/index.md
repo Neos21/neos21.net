@@ -1,7 +1,7 @@
 ---
-title        : プログラミング
+title        : プログラミング ナレッジ・ノウハウデータベース
 created      : 2021-01-27
-last-modified: 2021-11-18
+last-modified: 2026-03-20
 path:
   - /index.html Neo's World
   - /tech/index.html Tech
@@ -43,7 +43,7 @@ path:
 
 ### 特集
 
-- [Scripts Comparison](./scripts-comparison.html)
+- [Scripts Comparison : スクリプト言語ごとの構文比較表](./scripts-comparison.html)
   - 「あの処理はあのスクリプト言語でどう書くの？」のまとめ。Windows 向けのスクリプト言語多め
 - [Unix Like Commands For Windows](./unix-like-commands-for-windows.html)
   - Bash コマンド名と、それを Windows で再現する方法をまとめた一覧表
