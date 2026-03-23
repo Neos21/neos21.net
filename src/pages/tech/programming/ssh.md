@@ -1,7 +1,7 @@
 ---
 title        : SSH ナレッジ集
 created      : 2021-01-27
-last-modified: 2026-03-20
+last-modified: 2026-03-23
 path:
   - /index.html Neo's World
   - /tech/index.html Tech
@@ -115,6 +115,12 @@ $ ssh-keygen -vlf "${HOME}/.ssh/id_rsa.pub"
 |         +OXo..  |
 +----[SHA256]-----+
 ```
+
+<div class="ad-banner">
+  <a href="https://px.a8.net/svt/ejp?a8mat=4AZLSF+W5FG2+7QW+2HCIR5" rel="nofollow"><img border="0" width="250" height="250" alt="" src="https://www27.a8.net/svt/bgt?aid=260322063054&wid=001&eno=01&mid=s00000001004015007000&mc=1"></a>
+  <img border="0" width="1" height="1" src="https://www18.a8.net/0.gif?a8mat=4AZLSF+W5FG2+7QW+2HCIR5" alt="">
+  <!-- Interlink VPN -->
+</div>
 
 ### 参考文献
 
@@ -289,6 +295,12 @@ $ openssl x509 -pubkey -noout -in ./ca-cert.pem
 $ openssl x509 -pubkey -noout -in ./ca-cert.pem | openssl md5 -c
 ```
 
+<div class="ad-banner">
+  <a href="https://px.a8.net/svt/ejp?a8mat=4AZLSF+UYK8I+5JSS+5YZ75" rel="nofollow"><img border="0" width="300" height="250" alt="" src="https://www25.a8.net/svt/bgt?aid=260322063052&wid=001&eno=01&mid=s00000025894001003000&mc=1"></a>
+  <img border="0" width="1" height="1" src="https://www16.a8.net/0.gif?a8mat=4AZLSF+UYK8I+5JSS+5YZ75" alt="">
+  <!-- Express VPN -->
+</div>
+
 ### 参考文献
 
 - [オレだよオレオレ認証局で証明書つくる - Qiita](https://qiita.com/ll_kuma_ll/items/13c962a6a74874af39c6)
@@ -345,6 +357,12 @@ $ openssl rsa -pubin -outform DER -in ./rsa-public.pem | openssl md5 -c
 writing RSA key
 xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx:xx
 ```
+
+<div class="ad-banner">
+  <a href="https://px.a8.net/svt/ejp?a8mat=4AZLSF+4RHMA+3YFI+626XT" rel="nofollow"><img border="0" width="320" height="50" alt="" src="https://www21.a8.net/svt/bgt?aid=260322063008&wid=001&eno=01&mid=s00000018459001018000&mc=1"></a>
+  <img border="0" width="1" height="1" src="https://www18.a8.net/0.gif?a8mat=4AZLSF+4RHMA+3YFI+626XT" alt="">
+  <!-- Nord VPN -->
+</div>
 
 ### 参考文献
 

@@ -41,6 +41,12 @@ BASIC 認証のテストに使えるサイトを紹介する。
   - 参考 : [Authorization - HTTP | MDN](https://developer.mozilla.org/ja/docs/Web/HTTP/Headers/Authorization)
   - 参考 : [Proxy-Authorization - HTTP | MDN](https://developer.mozilla.org/ja/docs/Web/HTTP/Headers/Proxy-Authorization)
 
+<div class="ad-banner">
+  <a href="https://px.a8.net/svt/ejp?a8mat=2TGVX0+GC8AGI+3IBI+639IP" rel="nofollow"><img border="0" width="300" height="250" alt="" src="https://www28.a8.net/svt/bgt?aid=170429076988&wid=001&eno=01&mid=s00000016371001023000&mc=1"></a>
+  <img border="0" width="1" height="1" src="https://www18.a8.net/0.gif?a8mat=2TGVX0+GC8AGI+3IBI+639IP" alt="">
+  <!-- Norton -->
+</div>
+
 
 ## BASIC 認証付きリクエストのコードサンプル
 
@@ -86,3 +92,9 @@ const response = await axios.get('https://example.com/', {
 });
 const result = response.data;
 ```
+
+<div class="ad-banner">
+  <a href="https://px.a8.net/svt/ejp?a8mat=4AZLSF+YJ5V6+7QW+1ZKAWX" rel="nofollow"><img border="0" width="234" height="60" alt="" src="https://www20.a8.net/svt/bgt?aid=260322063058&wid=001&eno=01&mid=s00000001004012020000&mc=1"></a>
+  <img border="0" width="1" height="1" src="https://www14.a8.net/0.gif?a8mat=4AZLSF+YJ5V6+7QW+1ZKAWX" alt="">
+  <!-- Interlink Sekai VPN -->
+</div>
