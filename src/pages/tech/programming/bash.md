@@ -6,13 +6,6 @@ path:
   - /index.html Neo's World
   - /tech/index.html Tech
   - /tech/programming/index.html プログラミング
-head: |
-  <style>
-    .table-wrapper th,
-    .table-wrapper td {
-      white-space: nowrap;
-    }
-  </style>
 ---
 
 「[Linux](./linux.html)」全般の話題というより、Bash シェル上で使うことの多いコマンドのチートシートがメイン。
@@ -77,7 +70,7 @@ $ tail -f ./apache/logs/catalina.out | nkf -u -w
 
 ## `tar` コマンドのオプション
 
-<div class="table-wrapper">
+<div class="table-wrapper white-space-nowrap">
   <table>
     <thead>
       <tr>

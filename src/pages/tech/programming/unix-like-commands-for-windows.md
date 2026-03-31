@@ -8,15 +8,10 @@ path:
   - /tech/programming/index.html プログラミング
 head: |
   <style>
-    .table-wrapper table {
-      min-width: 100%;
-      white-space: nowrap;
-    }
-    
     .table-wrapper td:not(:first-child) {
       min-width: 15rem;
       color: #000;
-      font-size: .86rem;
+      font-size: var(--nn-font-size-small);
     }
     
     .ok   { background: #f6ffff; }
@@ -35,8 +30,8 @@ Bash コマンド名と、それを Windows で再現する方法をまとめた
 
 Windows コマンドプロンプトと、Windows GitBash までをベース環境とし、それ以外の統合環境 (Cygwin や MSYS・MinGW など) は、依存するモノを減らすためなるべく利用しないようにします。
 
-<div class="table-wrapper monospace">
-  <table>
+<div class="table-wrapper font-family-monospace">
+  <table class="min-width-full white-space-nowrap">
     <thead>
       <tr>
         <th rowspan="2" title="Windows 環境で再現したい、元とするコマンド。">コマンド</th>

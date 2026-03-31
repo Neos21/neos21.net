@@ -6,16 +6,6 @@ path:
   - /index.html Neo's World
   - /music/index.html Music
 head: |
-  <style>
-    .table-wrapper table {
-      min-width: 100%;
-      white-space: nowrap;
-    }
-    
-    .note {
-      font-size: var(--font-size-small);
-    }
-  </style>
   <script>
     document.addEventListener('DOMContentLoaded', () => {
       // 検索クエリ用の文字列に置換する
@@ -79,7 +69,7 @@ head: |
 
 <q>〜新鮮保証56.5.10迄〜</q> でおなじみ (？)、僕が大好きな角松敏生の楽曲の「元ネタ」を探してみました。リンクは YouTube の検索ページに飛ぶ他、「(検索)」は Google 検索へのリンクとしているので、実際の楽曲を聴き比べてみてください。
 
-<div id="tk-sampled-table" class="table-wrapper">
+<div id="tk-sampled-table" class="table-wrapper min-width-full white-space-nowrap">
 
 | 曲名 | 収録シングル・アルバム名 | 元ネタ |
 |------|--------------------------|--------|

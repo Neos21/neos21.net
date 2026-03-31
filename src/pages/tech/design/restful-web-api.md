@@ -6,16 +6,6 @@ path:
   - /index.html Neo's World
   - /tech/index.html Tech
   - /tech/design/index.html 設計
-head: |
-  <style>
-    .table-wrapper table {
-      font-size: var(--font-size-default);
-    }
-    
-    .table-wrapper thead th {
-      white-space: nowrap;
-    }
-  </style>
 ---
 
 REST・RESTful な Web API の設計に関するナレッジ。
@@ -50,14 +40,14 @@ Rails の Scaffold などを参考にした、RESTful な URL 一覧。
 <div class="table-wrapper">
   <table>
     <thead>
-      <tr>
+      <tr class="white-space-nowrap">
         <th>フロントエンド</th>
         <th colspan="3">RESTful API</th>
         <th colspan="2">バックエンド API</th>
         <th colspan="2">ビジネスロジック</th>
         <th colspan="3">データベース</th>
       </tr>
-      <tr>
+      <tr class="white-space-nowrap">
         <th>画面 URL パス</th>
         <th>エンドポイントパス</th>
         <th>メソッド</th>
