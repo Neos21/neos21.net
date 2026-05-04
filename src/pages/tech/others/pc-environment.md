@@ -1,7 +1,7 @@
 ---
 title        : Neo の PC 環境
 created      : 2020-03-01
-last-modified: 2026-04-13
+last-modified: 2026-05-04
 path:
   - /index.html Neo's World
   - /tech/index.html Tech
@@ -133,6 +133,42 @@ path:
   <a href="https://px.a8.net/svt/ejp?a8mat=4AZLSF+CI4HE+5HXK+5YZ75" rel="nofollow"><img border="0" width="300" height="250" alt="" src="https://www29.a8.net/svt/bgt?aid=260322063021&wid=001&eno=01&mid=s00000025652001003000&mc=1"></a>
   <img border="0" width="1" height="1" src="https://www12.a8.net/0.gif?a8mat=4AZLSF+CI4HE+5HXK+5YZ75" alt="">
   <!-- MDL Make BTO -->
+</div>
+
+
+## ノート PC : Chuwi MiniBook X N150 (2026-05-02 ～)
+
+- CPU : Intel N150
+- RAM : DDR5 16GB
+- SSD : 512GB
+- OS : Windows11 Home
+- モニタ : 10.51インチ (16:10・1920x1200px) タッチ液晶
+- キーボード : US 配列・バックライト付
+- ポート : USB-C × 2、3.5mm オーディオジャック
+- 重量 : 920g
+- 購入価格 : 56,888円
+
+ノート PC を全て手放していたので、持ち運び用に改めて購入。10.5インチ、920g という軽量小型なのがナイス。Intel N150 CPU も GMKtec G3 Plus ミニ PC で体験しているので、性能的にも必要十分。
+
+OS のエディションが Windows11 Home であること、液晶のリフレッシュレートが 50Hz で 60Hz は選べない点は、人によっては留意が必要かも。ただ Office が付属するので価格的には十分。
+
+- ブログ記事 : [Chuwi MiniBook X N150 を買った](/blog/2026/05/04-01.html)
+
+<div class="ad-rakuten">
+  <div class="ad-rakuten-image">
+    <a href="https://hb.afl.rakuten.co.jp/hgc/g00thrf2.waxycfac.g00thrf2.waxydd22/?pc=https%3A%2F%2Fitem.rakuten.co.jp%2Flifeinnotech%2Ffe-pf-ag-qj180-pn00493-zf%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Flifeinnotech%2Fi%2F10121591%2F&amp;rafcid=wsc_i_is_c80a44f7-e2d0-44c7-a1e6-750af3f15e55">
+      <img src="https://thumbnail.image.rakuten.co.jp/@0_mall/lifeinnotech/cabinet/product/zf_auto/pf-ag-qj180/pn00493-pf-ag-qj-180.jpg?_ex=128x128">
+    </a>
+  </div>
+  <div class="ad-rakuten-info">
+    <div class="ad-rakuten-title">
+      <a href="https://hb.afl.rakuten.co.jp/hgc/g00thrf2.waxycfac.g00thrf2.waxydd22/?pc=https%3A%2F%2Fitem.rakuten.co.jp%2Flifeinnotech%2Ffe-pf-ag-qj180-pn00493-zf%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Flifeinnotech%2Fi%2F10121591%2F&amp;rafcid=wsc_i_is_c80a44f7-e2d0-44c7-a1e6-750af3f15e55">CHUWI MiniBook X N150 【 180度 】 覗き見防止 フィルム ブルーライトカット アンチグレア 日本製</a>
+    </div>
+    <div class="ad-rakuten-shop">
+      <a href="https://hb.afl.rakuten.co.jp/hgc/g00thrf2.waxycfac.g00thrf2.waxydd22/?pc=https%3A%2F%2Fwww.rakuten.co.jp%2Flifeinnotech%2F&amp;m=http%3A%2F%2Fm.rakuten.co.jp%2Flifeinnotech%2F&amp;rafcid=wsc_i_is_c80a44f7-e2d0-44c7-a1e6-750af3f15e55">ライフイノテック 楽天市場店</a>
+    </div>
+    <div class="ad-rakuten-price">価格 : 2390円</div>
+  </div>
 </div>
 
 
