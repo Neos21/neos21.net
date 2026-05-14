@@ -12,7 +12,10 @@ if(lastTheme == null) { setTheme(darkModeMediaQuery.matches); }
 else { document.documentElement.dataset.theme = lastTheme; }
 
 document.addEventListener('DOMContentLoaded', () => {
-  document.querySelector('#header-link-theme > a').addEventListener('click', () => setTheme(document.documentElement.dataset.theme === 'light'));
+  document.querySelector('#header-link-theme > a')?.addEventListener('click', event => {
+    event.preventDefault();
+    setTheme(document.documentElement.dataset.theme === 'light');
+  });
 });
 
 // PV カウンタ
