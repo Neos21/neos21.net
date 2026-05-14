@@ -65,15 +65,15 @@ const buildForBlog = sourceFilePath => {
   buildHtml(`${constants.pages.src}/index.html`);
 };
 
-/**
- * CSS ファイルをビルドする
- * 
- * - `clean-css` の API は `process.cwd` の位置に影響されて `@import` が解釈できないことがあるので
- *   `clean-css-cli` を使った `npm run` スクリプトを呼び出すことにする
- */
+/** CSS ファイルをビルドする */
 const buildCss = () => {
-  const result = childProcess.execFileSync('npm', ['run', 'build-css']);
-  console.log(result.toString());
+  try {
+    const result = childProcess.execFileSync('npm', ['run', 'build-css']);
+    console.log(result.toString());
+  }
+  catch(error) {
+    console.warn(error);
+  }
 };
 
 // Main
