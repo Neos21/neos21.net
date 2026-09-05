@@ -1,7 +1,7 @@
 ---
 title        : Neo の PC 環境
 created      : 2020-03-01
-last-modified: 2026-05-04
+last-modified: 2026-09-05
 path:
   - /index.html Neo's World
   - /tech/index.html Tech
@@ -9,6 +9,8 @@ path:
 ---
 
 昔のウェブサイトによくあった「ホームページの製作環境紹介」みたいなページを思い出して、僕の使用機材を語る。
+
+スマホ、ガラケー、カメラ機材は「[カメラ機材紹介](/gallery/camera-gears.html)」ページを参照。
 
 
 ## 目次
@@ -488,7 +490,7 @@ Labists というところが出しているスターターキットでラズパ
 ## その他の機材遍歴
 
 - ガラケー・スマホ、カメラの類は「[カメラ機材紹介](/gallery/camera-gears.html)」を参照
-- iPod : iPod 5G 60GB 白 (2005 ～ 2006) → iPod 5.5G 80GB 黒 (2006) → iPod nano 6G 16GB (2013 ～ 2016) → iPod nano 7G 16GB (2016-10-14 ～ 現所有)
+- iPod : iPod 5G 60GB 白 (2005 ～ 2006) → iPod 5.5G 80GB 黒 (2006) → iPod nano 6G 16GB シルバー (2013 ～ 2016) → iPod nano 7G 16GB ピンク (2016-10-14 ～ 現所有)
 - ウェブカメラ : Logicool C300 (2009-08-21 ～ 2018)
 - ゲーム機 : Nintendo Switch 有機 EL モデル (2023-03-15 ～)
 
@@ -501,4 +503,6 @@ Labists というところが出しているスターターキットでラズパ
     - Windows 95・98・Me あたりまで使っていた記憶がある
   - 東芝 DynaBook SS475 (1995-05-31 発売・その直後頃に購入と思われる)
     - Windows 3.1 を使った記憶がある。一時期借りていてポケモンのデータ分析に使わせてもらっていたが、僕がシステムファイルを消したっぽくて文鎮化させてしまった
+    - ![2002-02-12 頃撮影 1](./pc-environment-toshiba-dynabook-ss475-01.jpg)
+    - ![2002-02-12 頃撮影 2](./pc-environment-toshiba-dynabook-ss475-02.jpg)
 - なんか父はザウルスとか PDA とかも持ってたなぁ～
