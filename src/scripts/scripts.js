@@ -87,10 +87,12 @@ document.addEventListener('DOMContentLoaded', () => {
     gtmScript.src = 'https://www.googletagmanager.com/gtm.js?id=GTM-MZCGD23';  // GTM の識別コードを付ける・`window.dataLayer` という変数名は維持しているので `&l=` は要らない
     document.head.appendChild(gtmScript);
     
+    /** 複数イベントが重複実行しないようにフラグでチェックする */
+    let isGtmTriggered = false;
     /** 画面操作があったタイミングで動かす関数 */
     let triggerGtm = () => {
-      if(window.gtmTriggered) return;  // 複数イベントが重複実行しないようにフラグでチェックする
-      window.gtmTriggered = true;
+      if(isGtmTriggered) return;
+      isGtmTriggered = true;
       
       // GTM に画面操作があったことを通知する → GTM 内で紐付けている Google Analytics・Microsoft Clarity が発火する
       window.dataLayer.push({ event: 'user_interacted' });
