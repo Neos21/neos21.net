@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#0990d0">
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="Neo's World">
+    <meta property="og:title" content="Cloudflare DNS をダイナミック DNS として利用するための定期実行スクリプトを書いた - Neo's World">
+    <meta property="og:description" content="Cloudflare DNS をダイナミック DNS として利用するための定期実行スクリプトを書いた - Neo's World">
+    <meta property="og:url" content="https://neos21.net/blog/2026/10/23-01.html">
+    <meta property="og:image" content="https://neos21.net/ogp.png">
+    <meta property="og:locale" content="ja_JP">
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:title" content="Cloudflare DNS をダイナミック DNS として利用するための定期実行スクリプトを書いた - Neo's World">
+    <meta property="twitter:description" content="Cloudflare DNS をダイナミック DNS として利用するための定期実行スクリプトを書いた - Neo's World">
+    <meta property="twitter:url" content="https://neos21.net/blog/2026/10/23-01.html">
+    <meta property="twitter:image" content="https://neos21.net/ogp.png">
+    <title>Cloudflare DNS をダイナミック DNS として利用するための定期実行スクリプトを書いた - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+    <link rel="manifest" href="/manifest.webmanifest">
+    <link rel="canonical" href="https://neos21.net/blog/2026/10/23-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" title="Feeds" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <script>try{document.documentElement.dataset.theme=localStorage.getItem('theme')??(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light')}catch{document.documentElement.dataset.theme='light'}</script>
+    <link rel="stylesheet" href="/styles.css">
+    <script src="/scripts.js" defer></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="header-brand">
+          <div id="header-brand-contents">
+            <div id="site-title"><a href="/index.html">Neo's World</a></div>
+            <nav id="header-links">
+              <ul>
+                <li id="header-link-theme"><a href="#" title="Toggle Theme"><span>Toggle Theme</span></a></li>
+                <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+                <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+                <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+                <li id="header-link-to-bottom"><a href="#date-time" title="To Bottom"><span>▼ To Bottom</span></a></li>
+              </ul>
+            </nav>
+          </div>
+        </div>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2026/index.html">2026年</a></li>
+            <li><a href="/blog/2026/10/index.html">10月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2026-10-23</time></div>
+        <h1 id="page-title">Cloudflare DNS をダイナミック DNS として利用するための定期実行スクリプトを書いた</h1>
+
+<p>以下の記事のとおり、WSL 環境に <code>cloudlfared</code> をインストールし Cloudflare Tunnel の設定をすることで、自分のドメイン URL から WSL 環境に対して SSH 接続ができるようになった。そしてマシン起動時に自動ログインを済ませ、WSL 環境を起こすための VBScript もタスクスケジューラに仕込んだ。</p>
+<ul>
+  <li>過去記事 : 2026-09-03 <a href="/blog/2026/09/03-01.html">2026年版・Cloudflare Tunnel で WSL 環境に SSH 接続する</a></li>
+  <li>過去記事 : 2026-09-05 <a href="/blog/2026/09/05-01.html">Windows 11 起動時に WSL も起動させておく VBScript</a></li>
+</ul>
+<p>つまり、<em>PC の電源さえ入れれば</em> WSL 環境のスタンバイは完了するので、あとは <code>https://my-pc.example.com</code> にブラウザでアクセスして認証すれば、WSL 環境に対して SSH 接続できる状態になっているワケだ。</p>
+<p>…じゃあその、<strong>PC の電源を入れる</strong>ってのは、どうやるんです？というと、DDNS (ダイナミック DNS) が必要になりますな。電源が切られているマシンに対するトンネルは Cloudflare Tunnel といえどトンネリングできておらず、依然として Wake on WAN (インターネット越しの Wake on LAN) が必要になるワケです。</p>
+<ul>
+  <li>過去記事 : 2020-08-24 <a href="/blog/2020/08/24-01.html">Wake on LAN・Wake on WAN が実現できたのでやり方細かく教える</a>
+    <ul>
+      <li>「RemoteBoot WOL」という iPhone アプリは2026年現在も使っています</li>
+    </ul>
+  </li>
+</ul>
+<p>自分は過去に <code>mydns.jp</code> を使っていたけど、<code>mydns.jp</code> に自分の IP アドレスを送信するには DiCE というフリーソフトを常駐させないといけなくて、タスクトレイにコレが居るというのが個人的に鬱陶しかった。</p>
+<p>そこで調べてみると、Cloudflare DNS も API コールで更新することが出来て、DDNS の用途で使っている事例もあるようだと知ったので、そのためのスクリプトを組んでみた。その名も <strong>Update Cloudflare DNS</strong>。</p>
+<ul>
+  <li>コード : <a href="https://github.com/Neos21/update-cloudflare-dns">Neos21/update-cloudflare-dns: Update Cloudflare DNS</a></li>
+</ul>
+<p>Cloudflare DNS を更新するための API コールは Node.js スクリプトとして実装した。コレはもう、ワイの好きな JavaScript という言語で何でもやりたい、ただそれだけの理由でございます。Windows 環境で動けばいいので、GitBash を活用して Bash スクリプトから <code>curl</code> コマンドを叩いてもいいし、PowerShell の <code>curl</code> = <code>Invoke-WebRequest</code> で実装しても自然よね。</p>
+<p>まぁともかく、グローバル IP アドレスを確認して Cloudflare DNS を API で更新するというスクリプトは用意したので、あとはコレを定期実行するようにすればいい。ということで GitHub リポジトリの <code>README.md</code> に設定手順を書きましたが、ウィンドウを出すことなくスクリプト実行を済ませるための VBScript を置いといて、コレをタスクスケジューラで定期実行するという構成になっとります。</p>
+<p>コレで、マシン起動中は定期的に自身の IP アドレスを <code>my-pc-ddns.example.com</code> なドメインへと反映できるようになったので、あとは iPhone アプリの「RemoteBoot WOL」なりでこのドメインを指定してやれば、自動的にグローバル IP アドレスが解決され、PC に向けて Wake on WAN のマジックパケットが届いてマシンは起動、そして冒頭で説明したとおり Windows ログインから WSL の起動までが自動的に済むので、あとは SSH したらええねん、ということですな。</p>
+<p>ついでに、マジックパケットを受信したことをチェックできる Node.js スクリプトも作った。ホントに DNS の更新が上手く出来ているのか、他の端末から送信したマジックパケットが PC へと到達しているのかどうかを確認する際に使える。</p>
+<ul>
+  <li><a href="https://github.com/Neos21/shell-scripts/blob/master/node-js/check-magic-packet.js">shell-scripts/node-js/check-magic-packet.js at master · Neos21/shell-scripts</a></li>
+</ul>
+<p>このスクリプトを Node.js で実行すると、マジックパケットを監視するサーバが起動するので、その状態で iPhone などから Wake on WAN なり Wake on LAN なりを想定したマジックパケット送信を行ってみる。「マジックパケットを受信しました！」とコンソール出力されればネットワーク的な疎通は出来てることになるので、そしたら最後に PC の電源を切った状態で動作チェックすれば完璧だ。</p>
+
+      </main>
+      <aside id="aside">
+        <section id="donate">
+          <h2>このサイトを応援する</h2>
+          <p>このサイトが役に立ったら、コーヒー1杯分ご支援してもらえると嬉しいです。</p>
+          <div id="donate-banners">
+            <div id="donate-ofuse"><a href="https://ofuse.me/neos21">Ofuse</a></div>
+            <div id="donate-buy-me-a-coffee"><a href="https://buymeacoffee.com/neos21">Buy Me A Coffee</a></div>
+            <div id="donate-stripe"><a href="https://donate.stripe.com/eVq5kF87XaNZgOGbLu4wM00">Stripe</a></div>
+            <div id="donate-github-sponsors"><a href="https://github.com/sponsors/Neos21">GitHub Sponsors</a></div>
+          </div>
+        </section>
+      </aside>
+      <footer id="footer">
+        <div id="footer-contents">
+          <div id="date-time">
+            <dl>
+              <dt>Created</dt>
+              <dd><time>2026-10-23</time></dd>
+              <dt>Last-Modified</dt>
+              <dd><time>2026-10-23</time></dd>
+            </dl>
+          </div>
+          <nav id="footer-links">
+            <ul>
+              <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+              <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+              <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+              <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+            </ul>
+          </nav>
+          <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+        </div>
+      </footer>
+    </div>
+  </body>
+</html>
