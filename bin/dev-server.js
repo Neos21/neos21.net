@@ -20,7 +20,7 @@ import { reloadTemplate } from '../lib/template-replacers.js';
  * 
  * @param {string} sourceFilePath 変更があったファイルパス
  */
-const unlinkFunc = sourceFilePath => {
+const unlinkFile = sourceFilePath => {
   const distFilePath = sourceFilePath.replace(constants.pages.src, constants.pages.dist).replace('.md', '.html');
   try {
     fs.unlinkSync(distFilePath);
@@ -36,7 +36,7 @@ const unlinkFunc = sourceFilePath => {
  * 
  * @param {string} sourceFilePath 変更があったディレクトリパス
  */
-const unlinkDirFunc = sourceFilePath => {
+const unlinkDirectory = sourceFilePath => {
   const distDirectoryPath = sourceFilePath.replace(constants.pages.src, constants.pages.dist);
   try {
     fs.rmdirSync(distDirectoryPath, { recursive: true });
@@ -54,7 +54,7 @@ const unlinkDirFunc = sourceFilePath => {
  */
 const buildForBlog = sourceFilePath => {
   const match = sourceFilePath.match((/\/blog\/([0-9]{4})\/([0-9]{2})\/[0-9]{2}-[0-9]{2}\.md/u));
-  if(!match) return;
+  if(match == null) return;
   
   console.log('Build Index Pages For Blog');
   const year  = match[1];
@@ -99,13 +99,16 @@ browserSyncInstance.init({
   ],
   files: [  // 変更検知時の処理を定義する
     {
+      // ページデータの変更
       match: [`${constants.pages.src}/**/*`],
-      // event : `add`・`change`・`unlink`・`addDir`・`unlinkDir`
-      // sourdePath : ex. `src/pages/index.html`
+      /**
+       * @param event `add`・`change`・`unlink`・`addDir`・`unlinkDir`
+       * @param sourceFilePath ex. `src/pages/index.html`
+       */
       fn: (event, sourceFilePath) => {
         if(event === 'addDir') return;  // Do Nothing
-        if(event === 'unlink') return unlinkFunc(sourceFilePath);
-        if(event === 'unlinkDir') return unlinkDirFunc(sourceFilePath);
+        if(event === 'unlink') return unlinkFile(sourceFilePath);
+        if(event === 'unlinkDir') return unlinkDirectory(sourceFilePath);
         
         // 以降 `add` or `change` のみ
         
@@ -127,6 +130,7 @@ browserSyncInstance.init({
       }
     },
     {
+      // CSS の変更
       match: [`${path.dirname(constants.styles.src)}/**/*`],
       fn: (event, sourceFilePath) => {
         console.log(`Build CSS : [${event}] [${sourceFilePath}]`)
@@ -134,6 +138,7 @@ browserSyncInstance.init({
       }
     },
     {
+      // テンプレート HTML の変更
       match: [constants.templates.src],
       fn: (event, sourceFilePath) => {
         // テンプレートファイル更新時は、本来全量ビルドが必要になるが、ココでは「この後に変更したソース HTML・Markdown ファイル」に新テンプレートを適用するようにする
@@ -142,13 +147,16 @@ browserSyncInstance.init({
       }
     },
     {
+      // Neo's Documents の変更
       match: [`${constants.documents.src}/**/*`],
-      // event : `add`・`change`・`unlink`・`addDir`・`unlinkDir`
-      // sourdePath : ex. `src/documents/index.html`
+      /**
+       * @param event `add`・`change`・`unlink`・`addDir`・`unlinkDir`
+       * @param sourceFilePath ex. `src/documents/index.html`
+       */
       fn: (event, sourceFilePath) => {
         if(event === 'addDir') return;  // Do Nothing
-        if(event === 'unlink') return unlinkFunc(sourceFilePath);
-        if(event === 'unlinkDir') return unlinkDirFunc(sourceFilePath);
+        if(event === 'unlink') return unlinkFile(sourceFilePath);
+        if(event === 'unlinkDir') return unlinkDirectory(sourceFilePath);
         
         // 以降 `add` or `change` : ファイルコピーのみ
         const distFilePath = sourceFilePath.replace(constants.documents.src, constants.documents.dist);

@@ -47,7 +47,7 @@ const getLatestBlogPosts = () => listFiles(`${constants.pages.src}/blog`)
   .filter(filePath => {
     // 未来日でない記事ファイルのみに絞り込む
     const match = filePath.match((/\/blog\/([0-9]{4})\/([0-9]{2})\/([0-9]{2})-[0-9]{2}\.md/u));
-    if(!match) return false;  // 記事ファイル以外は除外する
+    if(match == null) return false;  // 記事ファイル以外は除外する
     const blogYear  = Number(match[1]);
     const blogMonth = Number(match[2]);
     const blogDate  = Number(match[3]);

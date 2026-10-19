@@ -16,7 +16,11 @@ import { listFiles } from '../lib/list-files.js';
 /*!
  * Markdown・HTML ファイルの構文チェックを行う
  * 
- * 時々手動で流してチェックすること
+ * - 時々手動で流してチェックすること
+ * - 既知の指摘
+ *   - `[no-trailing-whitespace] Trailing whitespace` : 一部 HTML でスペース入りの空行をわざと設けてる・放置
+ *   - `[no-deprecated-attr] Attribute "border" is deprecated on <img> element` : A8.net あたりの広告コードをそのまま貼り付けたところで指摘が出てる・放置
+ *   - `src/pages/blog/2019/03/07-01.md:36:18  アスタリスク強調が CommonMark として成立していない可能性があります` : Archive.org へのリンクとして正しいモノが誤検知されてる・放置
  */
 
 /** HTML-Validate のルール https://html-validate.org/rules/index.html */
@@ -24,13 +28,13 @@ const htmlvalidate = new HtmlValidate({
   extends: ['html-validate:recommended'],
   rules: {
     'element-permitted-order': 'off',  // `tbody` 要素を `tfoot` 要素より後に書くと怒られるのは解せない
-    'form-dup-name': 'off',  // `test.html` でのみ引っかかるので無視する (`name="checkbox"` が重複しているのが怒られてる)
-    'no-inline-style': 'off',  // インラインスタイルを許容する
-    'prefer-button': 'off',  // `input[type="button"]` で良いじゃねえか
-    'script-type': 'off',  // `old-diary-2005.html` でのみ引っかかるので無視する (`type="text/javascript"` と書かせてくれ)
-    'wcag/h30': 'off',  // 中にテキストがない (画像だけの) `a` 要素を許容する
-    'wcag/h37': 'off',  // `alt` 属性のない `img` 要素を許容する
-    'wcag/h63': 'off'  // `table` 要素内のセルに必要とされる属性などを強制しない
+    'form-dup-name'          : 'off',  // `test.html` でのみ引っかかるので無視する (`name="checkbox"` が重複しているのが怒られてる)
+    'no-inline-style'        : 'off',  // インラインスタイルを許容する
+    'prefer-button'          : 'off',  // `input[type="button"]` で良いじゃねえか
+    'script-type'            : 'off',  // `old-diary-2005.html` でのみ引っかかるので無視する (`type="text/javascript"` と書かせてくれ)
+    'wcag/h30'               : 'off',  // 中にテキストがない (画像だけの) `a` 要素を許容する
+    'wcag/h37'               : 'off',  // `alt` 属性のない `img` 要素を許容する
+    'wcag/h63'               : 'off'   // `table` 要素内のセルに必要とされる属性などを強制しない
   }
 });
 
@@ -109,7 +113,7 @@ const lintMarkdown = sourceFilePath => {
   // Remark・Rehype を使用してチェックする
   const bodyResult = markdownProcessor.processSync(source);
   bodyResult.messages?.forEach(message => {
-    const line = message.line != null ? message.line : '??';  // 行番号をそのまま使用する
+    const line   = message.line   != null ? message.line   : '??';  // 行番号をそのまま使用する
     const column = message.column != null ? message.column : '??';
     console.log(`${sourceFilePath}:${line}:${column}  ${message.reason}`);
   });

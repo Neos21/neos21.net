@@ -24,12 +24,12 @@ const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
   // 対象ファイルが一つもない場合は空配列 `[]` が記載されている。必ず3ファイルとも存在しないとこのスクリプトは動作しない
   const addedModified = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../../temp/added_modified.json'), 'utf-8'));
   const renamed       = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../../temp/renamed.json'       ), 'utf-8'));
-  const removed       = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../../temp/removed.json'       ), 'utf-8'));  // 削除されたファイルがあるかどうかの確認だけ
-  if(removed.length) console.log('Removed Files Exist. Please Remove Manually');
+  const removed       = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../../temp/removed.json'       ), 'utf-8'));  // 削除されたファイルがあるか否かの確認だけ
+  if(removed.length > 0) console.log('Removed Files Exist. Please Remove Manually');
   
   // `src/` 配下の変更ファイルのみ扱う
   const rawChangedFiles = [...addedModified, ...renamed].filter(sourceFilePath => sourceFilePath.includes(constants.src));
-  if(!rawChangedFiles.length) return console.log('Changed Files Not Exist. Aborted');
+  if(rawChangedFiles.length === 0) return console.log('Changed Files Not Exist. Aborted');
   
   // `src/templates/templates.html` の変更がある場合は一切のアップロードを行わないこととする
   // 全量アップロードが必要になり、GitHub Actions 内での全量アップは自信がないので手作業にする
@@ -59,7 +59,7 @@ const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
     else {
       // ブログの画像ファイルなどを取得する
       const match = sourceFilePath.match((/\/blog\/([0-9]{4})\/([0-9]{2})\/([0-9]{2})/u));
-      if(!match) return false;  // マッチしなかった資材はアップロード対象にしない
+      if(match == null) return false;  // マッチしなかった資材はアップロード対象にしない
       const date = `${match[1]}-${match[2]}-${match[3]}`;
       return date === today;
     }
@@ -119,7 +119,7 @@ const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
       
       // 上の処理で除外できているはずだが、念のためファイルパスでも未来日のブログ記事を除外する
       const match = sourceFilePath.match((/\/blog\/([0-9]{4})\/([0-9]{2})\/([0-9]{2})/u));
-      if(!match) return true;  // マッチしなかったファイルはアップロード対象にする
+      if(match == null) return true;  // マッチしなかったファイルはアップロード対象にする
       const blogYear  = Number(match[1]);
       const blogMonth = Number(match[2]);
       const blogDate  = Number(match[3]);
@@ -136,10 +136,10 @@ const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
       else {
         console.log(`Update : Markdown … [${sourceFilePath}]`);
         buildMarkdown(sourceFilePath);
-      
+        
         // `/blog/YYYY/MM/DD-00.md` ファイルの更新時は `index.md` と Atom フィードもアップロード対象にする
         const match = sourceFilePath.match((/\/blog\/([0-9]{4})\/([0-9]{2})\/[0-9]{2}-[0-9]{2}\.md/u));
-        if(match) {
+        if(match != null) {
           const year  = match[1];
           const month = match[2];
           console.log(`Update : Markdown Blog Indexes … [${sourceFilePath}] [${year}-${month}]`);
@@ -166,7 +166,7 @@ const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
       
       // 未来日のブログ関連のファイルは除外する
       const match = sourceFilePath.match((/\/blog\/([0-9]{4})\/([0-9]{2})\/([0-9]{2})/u));
-      if(!match) return true;  // マッチしなかったファイルはアップロード対象にする
+      if(match == null) return true;  // マッチしなかったファイルはアップロード対象にする
       const blogYear  = Number(match[1]);
       const blogMonth = Number(match[2]);
       const blogDate  = Number(match[3]);
@@ -181,7 +181,7 @@ const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
       uploadFilesSet.add(distFilePath);
     });
   
-  if(!uploadFilesSet.size) return console.log('Upload Files Not Exist');
+  if(uploadFilesSet.size === 0) return console.log('Upload Files Not Exist');
   
   // サイトマップはアップロード対象があれば常に一緒にアップロードする
   buildMarkdown(`${constants.pages.src}/about/sitemap.md`);
@@ -190,7 +190,8 @@ const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
   
   // アップロード対象のファイルパスの配列を作る
   const filePaths = Array.from(uploadFilesSet).sort();
-  console.log('Target File Paths :\n', filePaths);
+  console.log('Target File Paths :');
+  console.log(filePaths);
   
   // `./temp/upload.json` ファイルが存在すれば後続の GitHub Actions Step が実行されるようにしているのでファイルを書き出しておく
   makeDirectory(path.resolve(__dirname, '../../temp'));  // 手前の Step で作成済だがテストしやすくするためにも入れておく

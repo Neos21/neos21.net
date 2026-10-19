@@ -21,5 +21,5 @@ listFiles(constants.pages.src)
     lines.push(`${url}\t${frontMatter.title.replaceAll('&amp;', '&')}`);
   });
 
-fs.writeFileSync('url-title.txt', lines.join('\n'), 'utf-8');
+fs.writeFileSync('url-title.txt', lines.join('\n') + '\n', 'utf-8');
 console.log('List Page URL And Title : Succeeded');

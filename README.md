@@ -10,7 +10,7 @@
   - 2020-11-01 に Value Domain で取得した独自ドメイン
   - [GitHub Pages](https://neos21.github.io/neos21.net) にてホスティングしている
   - GitHub Pages の Enforce HTTPS 機能で HTTPS 化している
-  - DNS 設定は Value Domain から Cloudflare に移管しており、Apex ドメインには GitHub の IP を4つ指定し、`www` には `CNAME` で `neos21.github.io` を指定している
+  - DNS 設定は 2025-01-16 に Value Domain から Cloudflare に移管しており、Apex ドメインには GitHub の IP を4つ指定し、`www` には `CNAME` で `neos21.github.io` を指定している
 - <https://neos21.github.io/neos21.net/>
   - 実際にホスティングされている GitHub Pages の URL。`neos21.net` にリダイレクトされる
 
@@ -26,6 +26,10 @@ HTML・Markdown ファイルの先頭には YAML 形式の Front Matter が記�
   - マッピング : Front Matter の `title` プロパティ・記述必須
   - ページタイトル
   - トップページ (`title` が `Neo's World`) 以外は `【title プロパティ】 - Neo's World` を挿入するようにしてある
+- `{{ canonical }}`
+  - 「インライン・プレースホルダ」 : `meta` や `link` 要素の属性値として囲んである
+  - マッピング : ファイルパス・ファイル名から導出している
+  - 内部的には、HTML・Markdown のビルド時に Front Matter を抽出したタイミングで、ファイル名・ファイルパスを取得して実際の URL フルパスを組み立て、Front Matter オブジェクト内に混ぜ込むことで置換処理に回している
 - `{{ head }}`
   - 「ブロック・プレースホルダ」 : `head` 要素の終了タグ直前に配置してある
   - マッピング : Front Matter の `head` プロパティ・任意
@@ -44,7 +48,7 @@ HTML・Markdown ファイルの先頭には YAML 形式の Front Matter が記�
   - マッピング : Front Matter の `title` プロパティ・記述必須
   - ページタイトル
 - `{{ description }}`
-  - 「ブロック・プレースホルダ」 : `main#main` の配下、`h1#page-title` と `aside.adsense` の直後に配置してある
+  - 「ブロック・プレースホルダ」 : `main#main` の配下、`h1#page-title` の直後に配置してある
   - マッピング : Front Matter の `description` プロパティ・任意
   - HTML の ToC が `{{ contents }}` の先頭に付いてしまうため、ToC の前段に書きたい内容があれば書けるようにしてある
   - Markdown の場合は `## 目次` 見出しの位置に自由に挿入できるため利用機会がないが、記述したい場合は Markdown ではなく HTML で書くこと
@@ -70,15 +74,16 @@ HTML・Markdown ファイルの先頭には YAML 形式の Front Matter が記�
 
 ### HTML
 
-- `{{ blog-latests 【num】 }}`
-- `{{ news-latests 【num】 }}`
-- `{{ news-all }}`
+- `{{ blog-latests 【num】 }}` : `./src/pages/index.html` のみ
+- `{{ news-latests 【num】 }}` : `./src/pages/index.html` のみ
+- `{{ news-all }}` : `./src/pages/about/new.html` のみ
+- `{{ sitemap }}` : `./src/pages/about/sitemap.md` のみ
 
 ### Markdown
 
-- `{{ blog-list-years 【year】 }}`
-- `{{ blog-list-months }}`
-- `{{ blog-list-dates }}`
+- `{{ blog-list-years 【year】 }}` : `./src/pages/blog/index.md` のみ・年をまたいだら手動で更新する
+- `{{ blog-list-months }}` : `./src/pages/blog/YYYY/index.md`
+- `{{ blog-list-dates }}` : `./src/pages/blog/YYYY/MM/index.md`
 
 
 ## その他ファイルのプレースホルダ

@@ -73,7 +73,7 @@ path:
   - ブログ記事 : 2024-02-22 [念願の NAS。Synology DS224+ を買った](/blog/2024/02/22-01.html)
 
 <div class="ad-banner">
-  <script language="javascript" src="//ad.jp.ap.valuecommerce.com/servlet/jsbanner?sid=3604622&pid=892570465"></script><noscript><a href="//ck.jp.ap.valuecommerce.com/servlet/referral?sid=3604622&pid=892570465" rel="nofollow"><img src="//ad.jp.ap.valuecommerce.com/servlet/gifbanner?sid=3604622&pid=892570465" border="0"></a></noscript>
+  <script src="//ad.jp.ap.valuecommerce.com/servlet/jsbanner?sid=3604622&pid=892570465"></script><noscript><a href="//ck.jp.ap.valuecommerce.com/servlet/referral?sid=3604622&pid=892570465" rel="nofollow"><img src="//ad.jp.ap.valuecommerce.com/servlet/gifbanner?sid=3604622&pid=892570465" border="0"></a></noscript>
   <!-- Elecom -->
 </div>
 
@@ -109,7 +109,7 @@ path:
   - ミニ PC は Dell モニタに、サブ PC は BenQ モニタに表示、ということも可能 (常設しているモノではマウスとキーボードが足りていないが)
 
 <div class="ad-banner">
-  <a href="//ck.jp.ap.valuecommerce.com/servlet/referral?sid=3604622&pid=892570467&vc_url=https%3A%2F%2Fstore.shopping.yahoo.co.jp%2Flogicool%2F" rel="nofollow"><img src="//ad.jp.ap.valuecommerce.com/servlet/gifbanner?sid=3604622&pid=892570467" height="1" width="0" border="0"><img src='https://shopping.geocities.jp/logicool/special/kv_pc_.jpg' border='0' /></a>
+  <a href="//ck.jp.ap.valuecommerce.com/servlet/referral?sid=3604622&pid=892570467&vc_url=https%3A%2F%2Fstore.shopping.yahoo.co.jp%2Flogicool%2F" rel="nofollow"><img src="//ad.jp.ap.valuecommerce.com/servlet/gifbanner?sid=3604622&pid=892570467" height="1" width="0" border="0"><img src="https://shopping.geocities.jp/logicool/special/kv_pc_.jpg" border="0"></a>
   <!-- Yahoo Shopping : Logicool -->
 </div>
 
@@ -389,7 +389,7 @@ Labists というところが出しているスターターキットでラズパ
 - ブログ記事 : [GPD Win2 に JoyToKey を入れてマウス操作を快適にする](/blog/2021/04/23-01.html)
 
 <div class="ad-banner">
-  <script language="javascript" src="//ad.jp.ap.valuecommerce.com/servlet/jsbanner?sid=3604622&pid=892570468"></script><noscript><a href="//ck.jp.ap.valuecommerce.com/servlet/referral?sid=3604622&pid=892570468" rel="nofollow"><img src="//ad.jp.ap.valuecommerce.com/servlet/gifbanner?sid=3604622&pid=892570468" border="0"></a></noscript>
+  <script src="//ad.jp.ap.valuecommerce.com/servlet/jsbanner?sid=3604622&pid=892570468"></script><noscript><a href="//ck.jp.ap.valuecommerce.com/servlet/referral?sid=3604622&pid=892570468" rel="nofollow"><img src="//ad.jp.ap.valuecommerce.com/servlet/gifbanner?sid=3604622&pid=892570468" border="0"></a></noscript>
   <!-- Tsukumo -->
 </div>
 

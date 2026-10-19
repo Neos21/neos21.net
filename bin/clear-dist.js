@@ -1,7 +1,6 @@
 import fs from 'node:fs';
 
 import { constants } from '../lib/constants.js';
-import { listDirectories } from '../lib/list-directories.js';
 import { makeDirectory } from '../lib/make-directory.js';
 
 /*!
@@ -14,8 +13,23 @@ import { makeDirectory } from '../lib/make-directory.js';
 try {
   fs.rmSync(constants.dist, { recursive: true });
 }
-catch(_error) { /* Do Nothing */ }
+catch { /* Do Nothing */ }
 makeDirectory(constants.dist, false);
+
+/**
+ * 指定のディレクトリパス配下のディレクトリを全て列挙する
+ * 
+ * @param {string} targetDirectoryPath ディレクトリパス・末尾スラッシュなし
+ * @return {Array<string>} ディレクトリパスの配列
+ */
+const listDirectories = targetDirectoryPath => {
+  const directoryPaths = fs.readdirSync(targetDirectoryPath, { withFileTypes: true })
+    .filter(dirent => dirent.isDirectory())
+    .map(dirent => `${targetDirectoryPath}/${dirent.name}`);
+  const allDirectoryPaths = [...directoryPaths];
+  directoryPaths.forEach(subDirectoryPath => allDirectoryPaths.push(...listDirectories(subDirectoryPath)));
+  return allDirectoryPaths.sort();
+};
 
 // `src/pages/` 配下のサブディレクトリパスを抽出し、空ディレクトリを作成したい `dist/` 配下のフルパスに変換する
 listDirectories(constants.pages.src)

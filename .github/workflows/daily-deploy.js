@@ -35,14 +35,15 @@ const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
     else {
       // ブログの画像ファイルなどを取得する
       const match = sourceFilePath.match((/\/blog\/([0-9]{4})\/([0-9]{2})\/([0-9]{2})/u));
-      if(!match) return false;  // マッチしなかった資材はアップロード対象にしない
+      if(match == null) return false;  // マッチしなかった資材はアップロード対象にしない
       const date = `${match[1]}-${match[2]}-${match[3]}`;
       return date === today;
     }
   });
   
-  if(!todaySourceFilePaths.length) return console.log('Maybe There Was No Assets Today. Aborted');
-  console.log('Today Source Files :\n', todaySourceFilePaths);
+  if(todaySourceFilePaths.length === 0) return console.log('Maybe There Was No Assets Today. Aborted');
+  console.log('Today Source Files :');
+  console.log(todaySourceFilePaths);
   
   // 重複を除去するため一旦 Set を使う
   const uploadFilesSet = new Set();
@@ -87,7 +88,8 @@ const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
   
   // アップロード対象のファイルパスの配列を作る
   const filePaths = Array.from(uploadFilesSet).sort();
-  console.log('Target File Paths :\n', filePaths);
+  console.log('Target File Paths :');
+  console.log(filePaths);
   
   // `./temp/upload.json` ファイルが存在すれば後続の GitHub Actions Step が実行されるようにしているのでファイルを書き出しておく
   makeDirectory(path.resolve(__dirname, '../../temp'));

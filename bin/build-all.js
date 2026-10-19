@@ -9,8 +9,8 @@ import { listFiles } from '../lib/list-files.js';
 /*!
  * HTML・Markdown をビルドし、それ以外のファイルをコピーする
  * 
- * - CSS は clean-css-cli の `@import` 解釈に問題があるのでこのスクリプト内からは実行せず `$ npm run` にて別途実行する
- * - 最終更新日やブログのファイルパスが未来日のモノも除外せずビルドする
+ * - CSS はこのスクリプト内からは実行せず `$ npm run build-css` にて別途実行する
+ * - 最終更新日やブログのファイルパスが未来日のファイルも除外せずビルドする (一覧を生成するプレースホルダ部分は未来日が除外される)
  */
 
 console.log('Build All : Start');
