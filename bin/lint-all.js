@@ -20,7 +20,7 @@ import { listFiles } from '../lib/list-files.js';
  * - 既知の指摘
  *   - `[no-trailing-whitespace] Trailing whitespace` : 一部 HTML でスペース入りの空行をわざと設けてる・放置
  *   - `[no-deprecated-attr] Attribute "border" is deprecated on <img> element` : A8.net あたりの広告コードをそのまま貼り付けたところで指摘が出てる・放置
- *   - `src/pages/blog/2019/03/07-01.md:36:18  アスタリスク強調が CommonMark として成立していない可能性があります` : Archive.org へのリンクとして正しいモノが誤検知されてる・放置
+ *   - `src/pages/blog/2019/03/07-01.md:36:18 アスタリスク強調が CommonMark として成立していない可能性があります` : Archive.org へのリンクとして正しいモノが誤検知されてる・放置
  */
 
 /** HTML-Validate のルール https://html-validate.org/rules/index.html */

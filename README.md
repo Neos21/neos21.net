@@ -7,12 +7,12 @@
 - <https://www.neos21.net/>
 - <http://neos21.net/>
 - <http://www.neos21.net/>
-  - 2020-11-01 に Value Domain で取得した独自ドメイン
-  - [GitHub Pages](https://neos21.github.io/neos21.net) にてホスティングしている
-  - GitHub Pages の Enforce HTTPS 機能で HTTPS 化している
-  - DNS 設定は 2025-01-16 に Value Domain から Cloudflare に移管しており、Apex ドメインには GitHub の IP を4つ指定し、`www` には `CNAME` で `neos21.github.io` を指定している
+    -  2020-11-01 に Value Domain で取得した独自ドメイン
+    -  [GitHub Pages](https://neos21.github.io/neos21.net) にてホスティングしている
+    -  GitHub Pages の Enforce HTTPS 機能で HTTPS 化している
+    -  DNS 設定は 2025-01-16 に Value Domain から Cloudflare に移管しており、Apex ドメインには GitHub の IP を4つ指定し、`www` には `CNAME` で `neos21.github.io` を指定している
 - <https://neos21.github.io/neos21.net/>
-  - 実際にホスティングされている GitHub Pages の URL。`neos21.net` にリダイレクトされる
+    -  実際にホスティングされている GitHub Pages の URL。`neos21.net` にリダイレクトされる
 
 
 ## テンプレートの仕様
@@ -22,50 +22,50 @@
 HTML・Markdown ファイルの先頭には YAML 形式の Front Matter が記述されており、コレを利用してプレースホルダを埋めている。マッピング仕様は以下のとおり。
 
 - `{{ page-title }}`
-  - 「インライン・プレースホルダ」 : `title` 要素で囲んでいる
-  - マッピング : Front Matter の `title` プロパティ・記述必須
-  - ページタイトル
-  - トップページ (`title` が `Neo's World`) 以外は `【title プロパティ】 - Neo's World` を挿入するようにしてある
+    -  「インライン・プレースホルダ」 : `title` 要素で囲んでいる
+    -  マッピング : Front Matter の `title` プロパティ・記述必須
+    -  ページタイトル
+    -  トップページ (`title` が `Neo's World`) 以外は `【title プロパティ】 - Neo's World` を挿入するようにしてある
 - `{{ canonical }}`
-  - 「インライン・プレースホルダ」 : `meta` や `link` 要素の属性値として囲んである
-  - マッピング : ファイルパス・ファイル名から導出している
-  - 内部的には、HTML・Markdown のビルド時に Front Matter を抽出したタイミングで、ファイル名・ファイルパスを取得して実際の URL フルパスを組み立て、Front Matter オブジェクト内に混ぜ込むことで置換処理に回している
+    -  「インライン・プレースホルダ」 : `meta` や `link` 要素の属性値として囲んである
+    -  マッピング : ファイルパス・ファイル名から導出している
+    -  内部的には、HTML・Markdown のビルド時に Front Matter を抽出したタイミングで、ファイル名・ファイルパスを取得して実際の URL フルパスを組み立て、Front Matter オブジェクト内に混ぜ込むことで置換処理に回している
 - `{{ head }}`
-  - 「ブロック・プレースホルダ」 : `head` 要素の終了タグ直前に配置してある
-  - マッピング : Front Matter の `head` プロパティ・任意
-  - ページ独自の `style` 要素や `script` 要素などを挿入できるようにしてある
+    -  「ブロック・プレースホルダ」 : `head` 要素の終了タグ直前に配置してある
+    -  マッピング : Front Matter の `head` プロパティ・任意
+    -  ページ独自の `style` 要素や `script` 要素などを挿入できるようにしてある
 - `{{ path }}`
-  - 「ブロック・プレースホルダ」 : `nav#path > ul` の配下に配置してある
-  - マッピング : Front Matter の `path` プロパティ・記述必須
-  - プロパティは配列で記述し、トップページからのパンくずリストを `【リンクパス】 【ページ名】` (スペース区切り) で記述する
+    -  「ブロック・プレースホルダ」 : `nav#path > ul` の配下に配置してある
+    -  マッピング : Front Matter の `path` プロパティ・記述必須
+    -  プロパティは配列で記述し、トップページからのパンくずリストを `【リンクパス】 【ページ名】` (スペース区切り) で記述する
 - `{{ date }}`
-  - 「ブロック・プレースホルダ」 : `h1#page-title` 要素の直前に配置してある
-  - マッピング : Front Matter の `created` プロパティ・記述必須
-  - 主にブログ用に、公開日時をページタイトル上部に配置するためのプロパティ。`div#header-date > time > 【created プロパティ】` という HTML を配置する
-  - **Front Matter にて `header-date: true` の指定がある場合のみ、`created` プロパティの値を利用して配置する**
+    -  「ブロック・プレースホルダ」 : `h1#page-title` 要素の直前に配置してある
+    -  マッピング : Front Matter の `created` プロパティ・記述必須
+    -  主にブログ用に、公開日時をページタイトル上部に配置するためのプロパティ。`div#header-date > time > 【created プロパティ】` という HTML を配置する
+    -  **Front Matter にて `header-date: true` の指定がある場合のみ、`created` プロパティの値を利用して配置する**
 - `{{ title }}`
-  - 「インライン・プレースホルダ」 : `h1#page-title` 要素で囲んでいる
-  - マッピング : Front Matter の `title` プロパティ・記述必須
-  - ページタイトル
+    -  「インライン・プレースホルダ」 : `h1#page-title` 要素で囲んでいる
+    -  マッピング : Front Matter の `title` プロパティ・記述必須
+    -  ページタイトル
 - `{{ description }}`
-  - 「ブロック・プレースホルダ」 : `main#main` の配下、`h1#page-title` の直後に配置してある
-  - マッピング : Front Matter の `description` プロパティ・任意
-  - HTML の ToC が `{{ contents }}` の先頭に付いてしまうため、ToC の前段に書きたい内容があれば書けるようにしてある
-  - Markdown の場合は `## 目次` 見出しの位置に自由に挿入できるため利用機会がないが、記述したい場合は Markdown ではなく HTML で書くこと
+    -  「ブロック・プレースホルダ」 : `main#main` の配下、`h1#page-title` の直後に配置してある
+    -  マッピング : Front Matter の `description` プロパティ・任意
+    -  HTML の ToC が `{{ contents }}` の先頭に付いてしまうため、ToC の前段に書きたい内容があれば書けるようにしてある
+    -  Markdown の場合は `## 目次` 見出しの位置に自由に挿入できるため利用機会がないが、記述したい場合は Markdown ではなく HTML で書くこと
 - `{{ contents }}`
-  - 「ブロック・プレースホルダ」 : `main#main` の直下に配置してある
-  - マッピング : HTML・Markdown の先頭にある Front Matter 部分を除去した残りの部分
-  - HTML・Markdown ともに、Slug、ToC、Prism.js、見出しリンクを付与し、HTML 形式で挿入される
-  - **HTML の場合、`toc` プロパティに `false` を指定してあると ToC を配置しないようにできる**
-  - Markdown は HTML パースされる。ToC は `## 目次` という見出しを配置した位置に挿入される
+    -  「ブロック・プレースホルダ」 : `main#main` の直下に配置してある
+    -  マッピング : HTML・Markdown の先頭にある Front Matter 部分を除去した残りの部分
+    -  HTML・Markdown ともに、Slug、ToC、Prism.js、見出しリンクを付与し、HTML 形式で挿入される
+    -  **HTML の場合、`toc` プロパティに `false` を指定してあると ToC を配置しないようにできる**
+    -  Markdown は HTML パースされる。ToC は `## 目次` という見出しを配置した位置に挿入される
 - `{{ created }}`
-  - 「インライン・プレースホルダ」 : `dl#date-time > dd > time` 要素で囲んでいる
-  - マッピング : Front Matter の `created` プロパティ・記述必須
-  - ページの初版作成日
+    -  「インライン・プレースホルダ」 : `dl#date-time > dd > time` 要素で囲んでいる
+    -  マッピング : Front Matter の `created` プロパティ・記述必須
+    -  ページの初版作成日
 - `{{ last-modified }}`
-  - 「インライン・プレースホルダ」 : `dl#date-time > dd > time` 要素で囲んでいる
-  - マッピング : Front Matter の `last-modified` プロパティ・記述必須
-  - ページの最終更新日
+    -  「インライン・プレースホルダ」 : `dl#date-time > dd > time` 要素で囲んでいる
+    -  マッピング : Front Matter の `last-modified` プロパティ・記述必須
+    -  ページの最終更新日
 
 
 ## ソースファイルのプレースホルダ
@@ -115,10 +115,10 @@ $ cd ./dist
 `master` ブランチへの Push 時に `./.github/workflows/deploy-on-commit.yaml` が動作する。そのコミットで追加・変更したファイルをデプロイする。
 
 - `./src/` 配下のファイルの追加・変更を検知して `./dist/` ディレクトリにビルドする
-  - ファイルの削除に対しては何も処理しないので、別途手動でデプロイすること
+    -  ファイルの削除に対しては何も処理しないので、別途手動でデプロイすること
 - `git stash` で退避し、`gh-pages` ディレクトリに切替後、Pop して `./dist/` ディレクトリを復元する
 - `./dist/` ディレクトリ配下のファイルをプロジェクトディレクトリ直下にコピーする
-  - コレにより、都度全量ビルドするのを避け、差分のみ配置する
+    -  コレにより、都度全量ビルドするのを避け、差分のみ配置する
 - `gh-pages` ブランチに対して Add・Commit・Push を行う
 
 ### Daily Deploy
@@ -127,9 +127,9 @@ $ cd ./dist
 
 - `./src/pages/` 配下の HTML・Markdown ファイル内の `last-modified` が当日日付のファイルを抽出し `./dist/` 配下にビルドする
 - `./src/pages/blog/` 配下の画像ファイル等について、ファイル名が当日日付のファイルを抽出し `./dist/` 配下にコピーする
-  - CSS の変更は検知しない
-  - `src/documents/` 配下は無視する
-  - `src/pages/` 配下の、ブログ以外の画像ファイルなどは無視する (新規ファイルなのか特定ができないため・必要なら別途手作業でデプロイする)
+    -  CSS の変更は検知しない
+    -  `src/documents/` 配下は無視する
+    -  `src/pages/` 配下の、ブログ以外の画像ファイルなどは無視する (新規ファイルなのか特定ができないため・必要なら別途手作業でデプロイする)
 - `./dist/` ディレクトリが出来上がってから `gh-pages` ブランチへ Push するまでの処理は、上述の Deploy On Commit と同じ
 
 
@@ -139,7 +139,17 @@ $ cd ./dist
 - `/ae52213dcf6345ccb5cfd82813bbbe70.txt` : IndexNow 確認用
 - `/.well-known/atproto-did` : [Bluesky アカウント](https://bsky.app/profile/neos21.net) 認証用
 - `/.well-known/brave-rewards-verification.txt` : Brave Rewards 用
-- HTML ヘッダ内に書くモノはコメント入れてある
+- HTML ヘッダの記述
+    -  `<meta name="google-site-verification">` : Google Search Console
+    -  `<meta property="og:...">` : Open Graph・Facebook 用の OGP
+    -  `<meta property="twitter:...">` : Twitter 用の OGP
+    -  `title` 要素以降は次のように並べる : インライン JS によるテーマ設定を最速で行い、初期表示時のチラ付きを避ける
+        - Favicon の `link` 要素
+        - その他 `link` 要素
+        - インライン JS コードを埋め込んだ `script` 要素
+        - CSS ファイルを指定した `link` 要素
+        - `defer` 属性を指定した JS ファイルを読み込む `script` 要素
+        - `{{ head }}` プレースホルダ
 
 
 ## Author
