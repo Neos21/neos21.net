@@ -8,10 +8,10 @@
 //   読み込みが長引いた場合のために `setTimeout` でも実行するような実装が必要 (`window.onload` と重複実行しないようフラグ変数での管理が必要になる)
 document.addEventListener('DOMContentLoaded', () => {
   /**
-   * `requestIdleCallback` はメインスレッドがアイドル状態になったら処理を開始する・Safari ブラウザにはまだ `requestIdleCallback` がないので `setTimeout` で代用する
+   * `window.requestIdleCallback` はメインスレッドがアイドル状態になったら処理を開始する・Safari ブラウザにはまだ `requestIdleCallback` がないので `setTimeout` で代用する
    * なお、Terser は変数化が不要なモノは自動的にインライン展開して短縮してくれる
    */
-  const safeIdle = window.requestIdleCallback || (callback => setTimeout(callback, 1));
+  const safeIdle = requestIdleCallback || (callback => setTimeout(callback, 1));
   
   safeIdle(async () => {
     /**
