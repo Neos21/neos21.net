@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#0990d0">
+    <meta name="google-site-verification" content="AvoEr3mUJFF2H_mPWWgShfmjBVP3ywRpyx9hxeeq2d4">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="Neo's World">
+    <meta property="og:title" content="Fetch じゃなくて navigator.sendBeacon を使ってみる・NestJS で受け取る - Neo's World">
+    <meta property="og:description" content="Fetch じゃなくて navigator.sendBeacon を使ってみる・NestJS で受け取る - Neo's World">
+    <meta property="og:url" content="https://neos21.net/blog/2026/10/29-01.html">
+    <meta property="og:image" content="https://neos21.net/ogp.png">
+    <meta property="og:locale" content="ja_JP">
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:title" content="Fetch じゃなくて navigator.sendBeacon を使ってみる・NestJS で受け取る - Neo's World">
+    <meta property="twitter:description" content="Fetch じゃなくて navigator.sendBeacon を使ってみる・NestJS で受け取る - Neo's World">
+    <meta property="twitter:url" content="https://neos21.net/blog/2026/10/29-01.html">
+    <meta property="twitter:image" content="https://neos21.net/ogp.png">
+    <title>Fetch じゃなくて navigator.sendBeacon を使ってみる・NestJS で受け取る - Neo's World</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+    <link rel="manifest" href="/manifest.webmanifest">
+    <link rel="canonical" href="https://neos21.net/blog/2026/10/29-01.html">
+    <link rel="search" type="application/opensearchdescription+xml" title="neos21.net" href="/opensearch.xml">
+    <link rel="alternate" type="application/atom+xml" title="Feeds" href="/feeds.xml">
+    <link rel="author" href="http://www.hatena.ne.jp/neos21/">
+    <script>try{document.documentElement.dataset.theme=localStorage.getItem('theme')??(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light')}catch{document.documentElement.dataset.theme='light'}</script>
+    <link rel="stylesheet" href="/styles.css">
+    <script src="/scripts.js" defer></script>
+  </head>
+  <body>
+    <div id="container">
+      <header id="header">
+        <div id="header-brand">
+          <div id="header-brand-contents">
+            <div id="site-title"><a href="/index.html">Neo's World</a></div>
+            <nav id="header-links">
+              <ul>
+                <li id="header-link-theme"><a href="#" title="Toggle Theme"><span>Toggle Theme</span></a></li>
+                <li id="header-link-about"><a href="/about/index.html" title="About"><span>About</span></a></li>
+                <li id="header-link-search"><a href="/about/search.html" title="Search"><span>Search</span></a></li>
+                <li id="header-link-feeds"><a href="/feeds.xml" title="Feeds"><span>Feeds</span></a></li>
+                <li id="header-link-to-bottom"><a href="#date-time" title="To Bottom"><span>▼ To Bottom</span></a></li>
+              </ul>
+            </nav>
+          </div>
+        </div>
+        <nav id="global-nav">
+          <ul>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/tech/index.html">Tech</a></li>
+            <li><a href="/music/index.html">Music</a></li>
+            <li><a href="/games/index.html">Games</a></li>
+            <li><a href="/gallery/index.html">Gallery</a></li>
+            <li><a href="/etc/index.html">Etc.</a></li>
+          </ul>
+        </nav>
+        <nav id="path">
+          <ul>
+            <li><a href="/index.html">Neo's World</a></li>
+            <li><a href="/blog/index.html">Blog</a></li>
+            <li><a href="/blog/2026/index.html">2026年</a></li>
+            <li><a href="/blog/2026/10/index.html">10月</a></li>
+          </ul>
+        </nav>
+      </header>
+      <main id="main">
+        <div id="header-date"><time>2026-10-29</time></div>
+        <h1 id="page-title">Fetch じゃなくて navigator.sendBeacon を使ってみる・NestJS で受け取る</h1>
+
+<p>アクセス解析などの用途で、API サーバに POST リクエストを送りたい。当初は以下のように Fetch を書いていた。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token function">fetch</span><span class="token punctuation">(</span>url<span class="token punctuation">,</span> <span class="token punctuation">{</span>
+  mode<span class="token operator">:</span> <span class="token string">'cors'</span><span class="token punctuation">,</span>  <span class="token comment">// 別のサブドメインへの通信なので CORS を指定</span>
+  method<span class="token operator">:</span> <span class="token string">'POST'</span><span class="token punctuation">,</span>
+  headers<span class="token operator">:</span> <span class="token punctuation">{</span> <span class="token string">'Content-Type'</span><span class="token operator">:</span> <span class="token string">'application/json'</span> <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  body<span class="token operator">:</span> <span class="token known-class-name class-name">JSON</span><span class="token punctuation">.</span><span class="token method function property-access">stringify</span><span class="token punctuation">(</span>data<span class="token punctuation">)</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token keyword control-flow">catch</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span> <span class="token comment">/* エラーは無視 */</span> <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>CORS のための HTTP ヘッダー設定などはすでに実施済みなので、とりあえずコレで JSON データを NestJS 製の API サーバに送って処理できていた。</p>
+<p>しかし、最近色々調べていたら、この書き方ではページ離脱時・ブラウザタブを閉じた時などにリクエストが破棄される場合があると知った。</p>
+<p>そこで今回は、Fetch API の <code>keepalive</code> オプション、そして <code>navigator.sendBeacon()</code> という API について調べたことをまとめていく。</p>
+<h2 id="目次"><a class="header-link" href="#目次"><span class="header-link-mark"></span></a>目次</h2>
+<ul>
+  <li><a href="#fetch-api-%E3%81%AE-keepalive-%E3%82%AA%E3%83%97%E3%82%B7%E3%83%A7%E3%83%B3">Fetch API の <code>keepalive</code> オプション</a></li>
+  <li><a href="#fetchlater-%E3%81%A8%E3%81%84%E3%81%86-api-%E3%82%82%E3%81%82%E3%82%8B"><code>fetchLater()</code> という API もある</a></li>
+  <li><a href="#beacon-api">Beacon API</a></li>
+  <li><a href="#cors-%E3%81%A8%E6%AD%B4%E5%8F%B2%E7%9A%84%E7%B5%8C%E7%B7%AF">CORS と歴史的経緯</a></li>
+  <li><a href="#%E3%83%97%E3%83%AA%E3%83%95%E3%83%A9%E3%82%A4%E3%83%88%E4%B8%AD%E3%81%AB%E7%A0%B4%E6%A3%84%E3%81%95%E3%82%8C%E3%82%8B%E5%8F%AF%E8%83%BD%E6%80%A7%E3%82%92%E9%81%BF%E3%81%91%E3%82%8B%E3%81%9F%E3%82%81%E3%81%AE-textplain">プリフライト中に破棄される可能性を避けるための <code>text/plain</code></a></li>
+  <li><a href="#%E3%81%A8%E3%81%84%E3%81%86%E3%81%93%E3%81%A8%E3%81%A7textplain-%E3%81%A7%E9%80%81%E3%82%8A%E3%81%BE%E3%81%97%E3%82%87%E3%81%86--%E3%82%B3%E3%82%B3%E3%81%BE%E3%81%A7%E3%81%8C%E3%82%AF%E3%83%A9%E3%82%A4%E3%82%A2%E3%83%B3%E3%83%88%E3%81%AE%E8%A9%B1">ということで、<code>text/plain</code> で送りましょう ← ココまでがクライアントの話</a></li>
+  <li><a href="#%E3%82%B5%E3%83%BC%E3%83%90%E3%82%B5%E3%82%A4%E3%83%89-nestjs-%E3%81%A7-json-%E3%81%A7%E3%82%82%E3%83%97%E3%83%AC%E3%83%BC%E3%83%B3%E3%83%86%E3%82%AD%E3%82%B9%E3%83%88%E3%81%A7%E3%82%82%E5%8F%97%E3%81%91%E5%8F%96%E3%82%8C%E3%82%8B%E3%82%88%E3%81%86%E3%81%AB%E3%81%99%E3%82%8B">サーバサイド (NestJS) で JSON でもプレーンテキストでも受け取れるようにする</a></li>
+  <li><a href="#%E4%BB%A5%E4%B8%8A">以上</a></li>
+</ul>
+<h2 id="fetch-api-の-keepalive-オプション"><a class="header-link" href="#fetch-api-の-keepalive-オプション"><span class="header-link-mark"></span></a>Fetch API の <code>keepalive</code> オプション</h2>
+<p><code>fetch()</code> に <code>keepalive: true</code> というオプションを指定すると、リクエストの最中にページを離脱したりタブを閉じたりしても、通信が切断されなくなるそうだ。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token function">fetch</span><span class="token punctuation">(</span>url<span class="token punctuation">,</span> <span class="token punctuation">{</span>
+  mode<span class="token operator">:</span> <span class="token string">'cors'</span><span class="token punctuation">,</span>
+  method<span class="token operator">:</span> <span class="token string">'POST'</span><span class="token punctuation">,</span>
+  headers<span class="token operator">:</span> <span class="token punctuation">{</span> <span class="token string">'Content-Type'</span><span class="token operator">:</span> <span class="token string">'application/json'</span> <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  body<span class="token operator">:</span> <span class="token known-class-name class-name">JSON</span><span class="token punctuation">.</span><span class="token method function property-access">stringify</span><span class="token punctuation">(</span>data<span class="token punctuation">)</span><span class="token punctuation">,</span>
+  keepalive<span class="token operator">:</span> <span class="token boolean">true</span>  <span class="token comment">// ← コレを追加した</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token keyword control-flow">catch</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span> <span class="token comment">/* エラーは無視 */</span> <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>普段のリクエスト時は挙動に何も変化はなく、<code>const response = await fetch();</code> と書けばレスポンスデータも普通に受け取れる。ページ離脱とかをした時のリクエストが破棄されにくくなるだけだ。</p>
+<p>ただし条件が一つあって、<em><code>keepalive: true</code> を指定すると、リクエストボディの合計が 64KiB (65536 バイト) を超えた時にリクエストが失敗する</em>仕様になっている。まぁ 64KiB なら日本語でも UTF-8 で2万文字分くらいの換算なので、アクセス解析のためにちょっとした JSON データを送るような用途なら十分余裕があると思う。</p>
+<ul>
+  <li>参考 : <a href="https://triple-underscore.github.io/Fetch-ja.html#http-network-or-cache-fetch">Fetch Standard （日本語訳）</a> (その仕様が書いてある)</li>
+  <li>「合計」というのは、例えば複数の KeepAlive Fetch が同時にリクエストされたりすると、それらの「送信キューに溜まっているリクエストデータの合計」として計上される、ということ。1リクエストあたり 64KiB までで複数指定できるワケではない</li>
+  <li>これはブラウザが裏で保持するメモリ量を節約するための制限らしい</li>
+</ul>
+<h2 id="fetchlater-という-api-もある"><a class="header-link" href="#fetchlater-という-api-もある"><span class="header-link-mark"></span></a><code>fetchLater()</code> という API もある</h2>
+<p>ページを離脱するタイミングにリクエストをしたい、というような場合により向いている API があって、<code>fetch()</code> の書き味のまま使える <code>fetchLater()</code> という API もあるそうだ。</p>
+<p>引数の仕様などは <code>fetch()</code> と同様だが、「その場でリクエストを開始し、レスポンスを受け取れる」モノではなく、「ブラウザ内部の送信キューにリクエスト情報を追加する」だけの関数となる。つまり実際にリクエストが行われるのは Promise の解決よりも後になり、レスポンスデータも受け取れない「遅延送信」専用のモノとなる。</p>
+<ul>
+  <li>参考 : <a href="https://blog.jxck.io/entries/2025-02-25/beaconing.html">Web における Beacon の変遷 (sendBeacon(), fetch() keepalive, fetchLater()) | blog.jxck.io</a></li>
+</ul>
+<h2 id="beacon-api"><a class="header-link" href="#beacon-api"><span class="header-link-mark"></span></a>Beacon API</h2>
+<p>歴史的にはこれらよりも以前から策定されていたモノとして、<em>Beacon API</em> というモノがある。今回の本題、<code>navigator.sendBeacon()</code> メソッドである。この API の特徴や制限は以下のとおり。</p>
+<ul>
+  <li>送信処理がメインスレッドをブロックしない。バックグラウンドで送信処理が行われる</li>
+  <li>ページ遷移やタブを閉じても非同期に送信処理が行われる</li>
+  <li><em>メソッドは POST 固定</em> (GET・PUT・PATCH などは選べない)</li>
+  <li><strong>デフォルトでは Content-Type は <code>text/plain</code> で送信される</strong>
+    <ul>
+      <li>フォームデータ <code>application/x-www-form-urlencoded</code>・マルチパート <code>multipart/form-data</code> の他、JSON <code>application/json</code> も実装次第では送信可能</li>
+    </ul>
+  </li>
+  <li><em>KeepAlive Fetch と同じく、送れるデータ長は 64KiB という制限アリ</em></li>
+</ul>
+<p>書き方はこんな感じ。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token comment">// 何か送りたいデータのイメージ</span>
+<span class="token keyword">const</span> body <span class="token operator">=</span> <span class="token punctuation">{</span>
+  url<span class="token operator">:</span> <span class="token dom variable">location</span><span class="token punctuation">.</span><span class="token property-access">href</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+
+<span class="token comment">// 指定の URL に `Content-Type: text/plain` で POST 送信する</span>
+<span class="token dom variable">navigator</span><span class="token punctuation">.</span><span class="token method function property-access">sendBeacon</span><span class="token punctuation">(</span>url<span class="token punctuation">,</span> <span class="token known-class-name class-name">JSON</span><span class="token punctuation">.</span><span class="token method function property-access">stringify</span><span class="token punctuation">(</span>body<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// このように書けば `Content-Type: application/json` で POST 送信できる</span>
+<span class="token dom variable">navigator</span><span class="token punctuation">.</span><span class="token method function property-access">sendBeacon</span><span class="token punctuation">(</span>url<span class="token punctuation">,</span> <span class="token keyword">new</span> <span class="token class-name">Blob</span><span class="token punctuation">(</span><span class="token punctuation">[</span><span class="token known-class-name class-name">JSON</span><span class="token punctuation">.</span><span class="token method function property-access">stringify</span><span class="token punctuation">(</span>body<span class="token punctuation">)</span><span class="token punctuation">]</span><span class="token punctuation">,</span> <span class="token punctuation">{</span> type<span class="token operator">:</span> <span class="token string">'application/json'</span> <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>最初は <code>application/json</code> を指定して送ればいいやー、と思っていたのだが、<code>sendBeacon()</code> を使う「旨味」は<em>あえての <code>text/plain</code> にある</em>と分かったので、そのことについてもまとめておく。</p>
+<h2 id="cors-と歴史的経緯"><a class="header-link" href="#cors-と歴史的経緯"><span class="header-link-mark"></span></a>CORS と歴史的経緯</h2>
+<p>なんで <code>Content-Type: text/plain</code> で送るのがデフォルトなのか、<code>Content-Type: application/json</code> で送るのはマズイのかどうか？という話には、<strong>CORS 制限</strong>が関係してくる。</p>
+<ul>
+  <li>CORS とは : オリジン間リソース共有、というルールの名前
+    <ul>
+      <li>参考 : <a href="https://developer.mozilla.org/ja/docs/Web/HTTP/Guides/CORS">オリジン間リソース共有 (CORS) - HTTP | MDN</a></li>
+    </ul>
+  </li>
+  <li><em>異なるオリジン</em>に向けたリクエストには、デフォルトでは制限が設けられていて、制限に引っ掛かると通信が失敗するように扱われますよ、という仕様
+    <ul>
+      <li>「異なるオリジン」とは、簡単に言えば<em>サブドメインを含めたドメイン部分が異なる URL</em> のこと。<code>domain-a.com</code> と <code>domain-b.com</code> はもちろん「異なるオリジン」だが、<code>example.com</code> から <code>api.example.com</code> へのリクエストも、<strong>サブドメインが違うと「異なるオリジン」とみなされる</strong></li>
+    </ul>
+  </li>
+  <li>通信制限はブラウザがおこなっていて、リクエストの方式によって「事前チェックで弾く」のと「レスポンスデータをチェックして弾く」処理が入る
+    <ul>
+      <li>なので、サーバサイドには何らかのリクエストが届いていて、ブラウザ内部でもレスポンスデータを受け取っているけど、<code>fetch()</code> の結果としては何も取得できずエラー扱いになるのが CORS の仕組み</li>
+      <li>ブラウザが独自にやっていることなので、<code>curl</code> コマンドとかでリクエストした場合は CORS は無関係 (もしリクエストが失敗するとしたら、サーバサイドが JWT なり IP アドレスなり UA なりで判定してエラーレスポンスを返している、ということになる)</li>
+    </ul>
+  </li>
+  <li>「<em>シンプルリクエスト (単純リクエスト)</em>」と定義される条件に当てはまれば、異なるオリジン間の通信でも CORS 制限を受けずに通信ができる。主なルールは以下のとおり
+    <ul>
+      <li>GET・HEAD・<em>POST メソッド</em>のいずれかであること</li>
+      <li>Content-Type ヘッダーが<strong>プレーンテキスト <code>text/plain</code></strong>・フォームデータ <code>application/x-www-form-urlencoded</code>・マルチパート <code>multipart/form-data</code> のいずれかであること</li>
+      <li>→ POST メソッドでも、JSON 文字列を <code>Content-Type: application/json</code> で送ろうとした場合は「シンプルリクエスト」とみなされない</li>
+    </ul>
+  </li>
+  <li>「シンプルリクエスト」に当てはまらないリクエストの場合、対象のサーバがそのリクエストを認めるかどうかという情報を HTTP ヘッダーでやり取りして、ブラウザがチェックする
+    <ul>
+      <li>この時、ブラウザによって「プリフライトリクエスト」という OPTIONS メソッドのリクエストが自動的に送信される。このリクエストに実データは何も乗っていない。サーバサイドは <code>Access-Control-Allow-Origin</code> ヘッダーなどで許可している条件をレスポンスする</li>
+      <li>プリフライトのレスポンス内容をブラウザがチェックして、サーバサイドからの許可が確認できたら、実際のリクエストが行われる</li>
+      <li>→ つまり、<strong>オリジンが異なる場合は「プリフライトリクエスト」と「実際のリクエスト」と、2回の往復が発生している</strong>。これは開発者ツールの「Network」でも実際に OPTIONS メソッドが飛んでいて確認できる</li>
+    </ul>
+  </li>
+</ul>
+<p>こうした制限はセキュリティ面の懸念から考案されたもので、CORS の策定は2004年頃から始まり、正式承認されたのは2014年頃。</p>
+<p>策定が始まった2004年当時、一般的なサイトでは「メソッドは GET か POST のどっちかだけ」「XMLHttpRequest (XHR) のブラウザ対応状況もまばら」「HTTPS 対応してなくても普通」というような時代。ブラウザを使う多くの一般利用者にとってのセキュリティリスクを考慮して、後から策定されたワケだ。</p>
+<p>「GET で何か取得するだけなら情報奪取のリスクも低く安全でしょう」「<em>プレーンテキストやフォームデータの POST は既にもう広く浸透しているから</em>、後からコレを規制しちゃうと困るサイトが出てくるでしょう」といった、いわば後方互換性を考慮して、これらを「シンプルリクエスト」と定義し、シンプルリクエストならオリジンが違っても最初から制限しないよ、というルールになっている。</p>
+<p>JSON という形式は2001年に考案されたモノだが、RFC が初公開されたのは2006年、ECMA 国際標準になったのは2013年ということで、CORS の策定タイミングからすると「まだまだ普及率の低い新しい形式」であり、「だったら CORS であえて制限する対象にしておき、今後厳しくチェックするモノとして扱いましょう」という流れになったようだ。<strong>だから <code>application/json</code> の POST リクエスト時はプリフライトリクエストが飛ぶ</strong>のである。</p>
+<h2 id="プリフライト中に破棄される可能性を避けるための-textplain"><a class="header-link" href="#プリフライト中に破棄される可能性を避けるための-textplain"><span class="header-link-mark"></span></a>プリフライト中に破棄される可能性を避けるための <code>text/plain</code></h2>
+<p>プリフライトは前述のとおり、2回の往復が発生している。つまり KeepAlive Fetch や Beacon API の実行時に、オリジンが異なることでプリフライトが発生すると、<em>プリフライト中にブラウザのプロセスが完全に終了してしまい、POST 送信がされない</em>可能性があるのだ。</p>
+<p>その可能性を考えると、プリフライト分の往復を回避して、一発目から POST データを送りたい。そうするにはどうしたらいいか？リクエストの方式を「シンプルリクエスト」の条件に合うようにすればいいのだ。つまり <code>application/json</code> では送らず、<code>text/plain</code> で送ればいいじゃん、ということだ。</p>
+<p>Beacon API が <code>text/plain</code> でのリクエストをデフォルトの挙動にしているのは、プリフライトをスキップできる「シンプルリクエスト」の中でも最も原始的な形式であり、リクエスト送信の成功率を高める狙いがあったと思われる。</p>
+<p>ちなみに、Fetch API でも Beacon API でも、Content-Type を記述しなかった場合は、<code>text/plain</code>・<code>application/x-www-form-urlencoded</code>・<code>multipart/form-data</code> の3つのいずれかが自動指定されるようになっている。</p>
+<ul>
+  <li>Fetch API の場合</li>
+</ul>
+<pre class="language-javascript"><code class="language-javascript"><span class="token comment">// `Content-Type` のヘッダ指定がない場合 : `text/plain` になる</span>
+<span class="token function">fetch</span><span class="token punctuation">(</span>url<span class="token punctuation">,</span> <span class="token punctuation">{</span> method<span class="token operator">:</span> <span class="token string">'POST'</span><span class="token punctuation">,</span> body<span class="token operator">:</span> <span class="token string">'Text'</span> <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// `JSON.stringify()` した結果は結局文字列なので、`text/plain` になる</span>
+<span class="token function">fetch</span><span class="token punctuation">(</span>url<span class="token punctuation">,</span> <span class="token punctuation">{</span> method<span class="token operator">:</span> <span class="token string">'POST'</span><span class="token punctuation">,</span> body<span class="token operator">:</span> <span class="token known-class-name class-name">JSON</span><span class="token punctuation">.</span><span class="token method function property-access">stringify</span><span class="token punctuation">(</span>data<span class="token punctuation">)</span> <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// URLSearchParams を渡すと `application/x-www-form-urlencoded` になる</span>
+<span class="token keyword">const</span> params <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">URLSearchParams</span><span class="token punctuation">(</span><span class="token string">'?name=Example&#x26;age=20'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token function">fetch</span><span class="token punctuation">(</span>url<span class="token punctuation">,</span> <span class="token punctuation">{</span> method<span class="token operator">:</span> <span class="token string">'POST'</span><span class="token punctuation">,</span> body<span class="token operator">:</span> params <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// FormData を渡すと `multipart/form-data` になる</span>
+<span class="token keyword">const</span> formData <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">FormData</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+formData<span class="token punctuation">.</span><span class="token method function property-access">append</span><span class="token punctuation">(</span><span class="token string">'name'</span><span class="token punctuation">,</span> <span class="token string">'Example'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+formData<span class="token punctuation">.</span><span class="token method function property-access">append</span><span class="token punctuation">(</span><span class="token string">'age'</span><span class="token punctuation">,</span> <span class="token number">20</span><span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment">// FormData は Boolean や Number を String に自動変換する点に留意</span>
+<span class="token function">fetch</span><span class="token punctuation">(</span>url<span class="token punctuation">,</span> <span class="token punctuation">{</span> method<span class="token operator">:</span> <span class="token string">'POST'</span><span class="token punctuation">,</span> body<span class="token operator">:</span> formData <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// JSON 形式で送りたい場合は明示的な指定が必要 (そしてプリフライトリクエストが発生する)</span>
+<span class="token function">fetch</span><span class="token punctuation">(</span>url<span class="token punctuation">,</span> <span class="token punctuation">{</span>
+  method<span class="token operator">:</span> <span class="token string">'POST'</span><span class="token punctuation">,</span>
+  headers<span class="token operator">:</span> <span class="token punctuation">{</span> <span class="token string">'Content-Type'</span><span class="token operator">:</span> <span class="token string">'application/json'</span> <span class="token punctuation">}</span>
+  body<span class="token operator">:</span> <span class="token known-class-name class-name">JSON</span><span class="token punctuation">.</span><span class="token method function property-access">stringify</span><span class="token punctuation">(</span>data<span class="token punctuation">)</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<ul>
+  <li>Beacon API の場合</li>
+</ul>
+<pre class="language-javascript"><code class="language-javascript"><span class="token comment">// `Content-Type` のヘッダ指定がない場合 : `text/plain` になる</span>
+<span class="token dom variable">navigator</span><span class="token punctuation">.</span><span class="token method function property-access">sendBeacon</span><span class="token punctuation">(</span>url<span class="token punctuation">,</span> <span class="token string">'Text'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// `JSON.stringify()` した結果は結局文字列なので、`text/plain` になる</span>
+<span class="token dom variable">navigator</span><span class="token punctuation">.</span><span class="token method function property-access">sendBeacon</span><span class="token punctuation">(</span>url<span class="token punctuation">,</span> <span class="token known-class-name class-name">JSON</span><span class="token punctuation">.</span><span class="token method function property-access">stringify</span><span class="token punctuation">(</span>data<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// URLSearchParams を渡すと `application/x-www-form-urlencoded` になる</span>
+<span class="token keyword">const</span> params <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">URLSearchParams</span><span class="token punctuation">(</span><span class="token string">'?name=Example&#x26;age=20'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token dom variable">navigator</span><span class="token punctuation">.</span><span class="token method function property-access">sendBeacon</span><span class="token punctuation">(</span>url<span class="token punctuation">,</span> params<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// FormData を渡すと `multipart/form-data` になる</span>
+<span class="token keyword">const</span> formData <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">FormData</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+formData<span class="token punctuation">.</span><span class="token method function property-access">append</span><span class="token punctuation">(</span><span class="token string">'name'</span><span class="token punctuation">,</span> <span class="token string">'Example'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+formData<span class="token punctuation">.</span><span class="token method function property-access">append</span><span class="token punctuation">(</span><span class="token string">'age'</span><span class="token punctuation">,</span> <span class="token number">20</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token dom variable">navigator</span><span class="token punctuation">.</span><span class="token method function property-access">sendBeacon</span><span class="token punctuation">(</span>url<span class="token punctuation">,</span> formData<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// JSON 形式で送りたい場合は明示的な指定が必要 (そしてプリフライトリクエストが発生する)</span>
+<span class="token dom variable">navigator</span><span class="token punctuation">.</span><span class="token method function property-access">sendBeacon</span><span class="token punctuation">(</span>url<span class="token punctuation">,</span> <span class="token keyword">new</span> <span class="token class-name">Blob</span><span class="token punctuation">(</span><span class="token punctuation">[</span><span class="token known-class-name class-name">JSON</span><span class="token punctuation">.</span><span class="token method function property-access">stringify</span><span class="token punctuation">(</span>data<span class="token punctuation">)</span><span class="token punctuation">]</span><span class="token punctuation">,</span> <span class="token punctuation">{</span> type<span class="token operator">:</span> <span class="token string">'application/json'</span> <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p>名前がややこしいのだが、<code>application/x-www-form-urlencoded</code> のことを単に「フォームデータ形式」と呼ぶことがあるが、使用するのは <code>URLSearchParams</code>。<code>FormData</code> (「フォームデータ」) を使うと <code>multipart/form-data</code> になって、コレは「マルチパート形式」と呼ぶことが多い。単に「フォームデータ形式で～」と言った時にどちらを指しているのかは確認が必要だが、どちらにせよ<em>古くからある形式だから「シンプルリクエスト」として許可されている</em>ワケだ。</p>
+<p><code>sendBeacon()</code> の場合は Content-Type ヘッダを直接指定する引数はないので、JSON にしたい場合は Blob の <code>type</code> で MIME タイプを指定することで、それが Content-Type ヘッダとして使用される仕組みになっている。繰り返しになるが <code>application/json</code> を指定してしまうと、CORS プリフライトリクエストが発生するので、タイミングによっては実際の POST リクエストが破棄されてしまうリスクがある。</p>
+<p>KeepAlive Fetch と <code>sendBeacon()</code> は内部的に同様の実装で動いているらしいので、JavaScript コードとしての書き方に若干の違いはあれど、HTTP リクエストとしての扱われ方はよく似ているというかほとんど同じだ。</p>
+<h2 id="ということでtextplain-で送りましょう--ココまでがクライアントの話"><a class="header-link" href="#ということでtextplain-で送りましょう--ココまでがクライアントの話"><span class="header-link-mark"></span></a>ということで、<code>text/plain</code> で送りましょう ← ココまでがクライアントの話</h2>
+<p>CORS 制限を回避してプリフライトをスキップし、POST 送信の成功率を上げるためにも、せっかく <code>sendBeacon()</code> を使うなら、<code>text/plain</code> のまま送っちゃいましょう。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword">const</span> isQueued <span class="token operator">=</span> <span class="token dom variable">navigator</span><span class="token punctuation">.</span><span class="token method function property-access">sendBeacon</span><span class="token punctuation">(</span>url<span class="token punctuation">,</span> <span class="token known-class-name class-name">JSON</span><span class="token punctuation">.</span><span class="token method function property-access">stringify</span><span class="token punctuation">(</span>data<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre>
+<p><code>sendBeacon()</code> は一見、同期メソッドのように見える (<code>await</code> は要らない)。しかしリクエスト送信はちゃんとバックグラウンドで行われている。戻り値は「送信キューに追加できたか否か」を示す Boolean が返される。戻り値を確認する必要がなければ、変数に入れなくて良い。</p>
+<p>最近のモダンブラウザなら普通に <code>sendBeacon()</code> に対応しているが、少し古い Safari などでは <code>navigator.sendBeacon</code> が存在しない場合がある。そうした場合のためのフォールバックとして、依然として KeepAlive Fetch を書くのもアリだ。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token keyword control-flow">if</span><span class="token punctuation">(</span><span class="token dom variable">navigator</span><span class="token punctuation">.</span><span class="token property-access">sendBeacon</span> <span class="token operator">!=</span> <span class="token keyword null nil">null</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token dom variable">navigator</span><span class="token punctuation">.</span><span class="token method function property-access">sendBeacon</span><span class="token punctuation">(</span>url<span class="token punctuation">,</span> <span class="token known-class-name class-name">JSON</span><span class="token punctuation">.</span><span class="token method function property-access">stringify</span><span class="token punctuation">(</span>data<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+<span class="token keyword control-flow">else</span> <span class="token punctuation">{</span>
+  <span class="token comment">// Beacon API が使えなければ KeepAlive Fetch で代用する</span>
+  <span class="token function">fetch</span><span class="token punctuation">(</span>url<span class="token punctuation">,</span> <span class="token punctuation">{</span>
+    method<span class="token operator">:</span> <span class="token string">'POST'</span><span class="token punctuation">,</span>
+    keepalive<span class="token operator">:</span> <span class="token boolean">true</span><span class="token punctuation">,</span>
+    body<span class="token operator">:</span> <span class="token known-class-name class-name">JSON</span><span class="token punctuation">.</span><span class="token method function property-access">stringify</span><span class="token punctuation">(</span>data<span class="token punctuation">)</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token keyword control-flow">catch</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span> <span class="token comment">/* エラーを握りつぶしておく */</span> <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>Fetch は非同期関数なので、<code>await</code> を書かずに、戻り値を受け取らないようにすれば、<code>sendBeacon()</code> とほぼほぼ同等の動きをするモノになる。ただ、レスポンスエラー時に Uncaught In Promise エラーが裏で発生しないように、<code>.catch()</code> チェーンでエラーを握りつぶしておくと良い。</p>
+<p>Beacon API と比べて、KeepAlive Fetch を含めた Fetch API は、レスポンスデータを受け取ろうと思えば受け取れる、というところが大きな違いだ。</p>
+<p>前述のとおり、Beacon API も KeepAlive Fetch も、いずれもリクエストボディのデータ長は最大 64KiB という制限がある。もしもデータ長が大きくなる可能性がある場合は、KeepAlive を指定しない Fetch も用意しておくなどすれば、「なんとしてでもデータを送りつけるんだ」という意図のコードにはできる。もちろん、KeepAlive を指定しない Fetch はページ離脱時の通信が破棄されうるワケだが。</p>
+<pre class="language-javascript"><code class="language-javascript"><span class="token comment">// 送りたいデータ</span>
+<span class="token keyword">const</span> payload <span class="token operator">=</span> <span class="token known-class-name class-name">JSON</span><span class="token punctuation">.</span><span class="token method function property-access">stringify</span><span class="token punctuation">(</span>data<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// フォールバック用の通常 Fetch を呼ぶ関数</span>
+<span class="token keyword">const</span> <span class="token function-variable function">normalFetch</span> <span class="token operator">=</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+  <span class="token function">fetch</span><span class="token punctuation">(</span>url<span class="token punctuation">,</span> <span class="token punctuation">{</span>
+    method<span class="token operator">:</span> <span class="token string">'POST'</span><span class="token punctuation">,</span>
+    body<span class="token operator">:</span> payload
+  <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token keyword control-flow">catch</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span> <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+
+<span class="token comment">// 文字列のバイト数を正確に計測するために Blob を使う</span>
+<span class="token keyword">const</span> blob <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">Blob</span><span class="token punctuation">(</span><span class="token punctuation">[</span>payload<span class="token punctuation">]</span><span class="token punctuation">,</span> <span class="token punctuation">{</span> type<span class="token operator">:</span> <span class="token string">'application/json'</span> <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token comment">// 64KiB を超える場合は最初から普通の Fetch にして終了する</span>
+<span class="token keyword control-flow">if</span><span class="token punctuation">(</span>blob<span class="token punctuation">.</span><span class="token property-access">size</span> <span class="token operator">></span> <span class="token number">65536</span><span class="token punctuation">)</span> <span class="token keyword control-flow">return</span> <span class="token function">normalFetch</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// Beacon API が成功したか否かを控える</span>
+<span class="token keyword">let</span> isBeaconSucceeded <span class="token operator">=</span> <span class="token boolean">false</span><span class="token punctuation">;</span>
+<span class="token comment">// Beacon API が使えそうなら使う</span>
+<span class="token keyword control-flow">if</span><span class="token punctuation">(</span><span class="token dom variable">navigator</span><span class="token punctuation">.</span><span class="token property-access">sendBeacon</span> <span class="token operator">!=</span> <span class="token keyword null nil">null</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token keyword control-flow">try</span> <span class="token punctuation">{</span>
+    isBeaconSucceeded <span class="token operator">=</span> <span class="token dom variable">navigator</span><span class="token punctuation">.</span><span class="token method function property-access">sendBeacon</span><span class="token punctuation">(</span>url<span class="token punctuation">,</span> payload<span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment">// データ長が 64KiB 超・ブラウザキューが満杯だった場合は `false` が返る</span>
+  <span class="token punctuation">}</span> <span class="token keyword control-flow">catch</span> <span class="token punctuation">{</span>
+    isBeaconSucceeded <span class="token operator">=</span> <span class="token boolean">false</span><span class="token punctuation">;</span>  <span class="token comment">// 混在コンテンツ・CSP 違反などの場合は例外としてスローされる</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+
+<span class="token comment">// Beacon API が使えなかったか、Beacon API が失敗した場合は KeepAlive Fetch にフォールバックする</span>
+<span class="token keyword control-flow">if</span><span class="token punctuation">(</span><span class="token operator">!</span>isBeaconSucceeded<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+  <span class="token function">fetch</span><span class="token punctuation">(</span>url<span class="token punctuation">,</span> <span class="token punctuation">{</span>
+    method<span class="token operator">:</span> <span class="token string">'POST'</span><span class="token punctuation">,</span>
+    keepalive<span class="token operator">:</span> <span class="token boolean">true</span><span class="token punctuation">,</span>  <span class="token comment">// KeepAlive</span>
+    body<span class="token operator">:</span> payload
+  <span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token keyword control-flow">catch</span><span class="token punctuation">(</span><span class="token parameter">_error</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span>
+    <span class="token comment">// KeepAlive 指定時も 64KiB 超で例外が発生しうる・その場合は通常 Fetch を試みる</span>
+    <span class="token function">normalFetch</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>いずれも Content-Type 未指定なので、<code>text/plain</code> で送られるが、お好みで通常 Fetch は <code>application/json</code> を指定したりしても良い。…まぁ、ココまでやることはあんまなさそうだが…。ｗ</p>
+<h2 id="サーバサイド-nestjs-で-json-でもプレーンテキストでも受け取れるようにする"><a class="header-link" href="#サーバサイド-nestjs-で-json-でもプレーンテキストでも受け取れるようにする"><span class="header-link-mark"></span></a>サーバサイド (NestJS) で JSON でもプレーンテキストでも受け取れるようにする</h2>
+<p>だいぶ長くなったが、ココまではクライアントサイドで CORS を考慮した上で、<code>sendBeacon()</code> を使って送信するところだ。</p>
+<p>自分はサーバサイドに NestJS を使っていたのだが、この <strong>NestJS、デフォルトでは <code>text/plain</code> で送られてきたデータを上手く取得できない</strong>のだ。</p>
+<p>元のコントローラはこんな感じ。</p>
+<pre class="language-typescript"><code class="language-typescript"><span class="token comment">// NestJS のコントローラ</span>
+@<span class="token function"><span class="token maybe-class-name">Controller</span></span><span class="token punctuation">(</span><span class="token string">'api'</span><span class="token punctuation">)</span>
+<span class="token keyword">export</span> <span class="token keyword">class</span> <span class="token class-name"><span class="token maybe-class-name">MyApiController</span></span> <span class="token punctuation">{</span>
+  <span class="token comment">// POST `/api/example` エンドポイントの定義</span>
+  @<span class="token function"><span class="token maybe-class-name">Post</span></span><span class="token punctuation">(</span><span class="token string">'example'</span><span class="token punctuation">)</span>
+  <span class="token keyword">public</span> <span class="token keyword">async</span> <span class="token function">example</span><span class="token punctuation">(</span>@<span class="token function"><span class="token maybe-class-name">Body</span></span><span class="token punctuation">(</span><span class="token punctuation">)</span> myData<span class="token operator">:</span> <span class="token maybe-class-name">MyData</span><span class="token punctuation">,</span> @<span class="token function"><span class="token maybe-class-name">Res</span></span><span class="token punctuation">(</span><span class="token punctuation">)</span> response<span class="token operator">:</span> <span class="token maybe-class-name">Response</span><span class="token punctuation">)</span><span class="token operator">:</span> <span class="token known-class-name class-name">Promise</span><span class="token operator">&#x3C;</span><span class="token maybe-class-name">Response</span><span class="token operator">></span> <span class="token punctuation">{</span>
+    <span class="token comment">// 引数に指定した `myData` は、NestJS が既に `JSON.parse()` 相当の処理をしたオブジェクトになっている</span>
+    
+    <span class="token keyword">return</span> response<span class="token punctuation">.</span><span class="token method function property-access">status</span><span class="token punctuation">(</span><span class="token maybe-class-name">HttpStatus</span><span class="token punctuation">.</span><span class="token constant">OK</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">end</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p><code>@Body()</code> デコレータを使ってリクエストボディを取得しているのだが、この時、NestJS は<em>リクエストヘッダの Content-Type を見て、リクエストボディに対して適切なパーサを通している</em>。</p>
+<ul>
+  <li><code>application/json</code> が指定されていれば、<code>JSON.parse()</code> 相当のパースを行った結果オブジェクトを渡す</li>
+  <li><code>text/plain</code> の場合、NestJS はその文字列をどう処理すればいいか分からないので、<code>JSON.parse()</code> もせず、<strong>空のオブジェクトを渡す</strong> = リクエストデータを破棄してしまう</li>
+</ul>
+<p>つまり今回は、Content-Type として <code>application/json</code> を指定すれば、KeepAlive Fetch でも <code>sendBeacon()</code> でもうまく受信できていたが、<code>text/plain</code> で送ると途端に空オブジェクト <code>{}</code> 扱いになってしまう、という状態に遭遇した。</p>
+<p>これに対する対処法はちゃんとあって、NestJS がベースとしている Express の <code>text()</code> ミドルウェアを噛ませるというモノだ。</p>
+<p>実装方法もいくつかの方法があって、<code>main.ts</code> に書く方法、<code>@Module</code> デコレータが付いた <code>class Module</code> に書く方法、そして今回紹介するようにメソッドに限って <code>text/plain</code> を解釈できるように書く方法がある。</p>
+<pre class="language-typescript"><code class="language-typescript"><span class="token comment">// Express から `text` 関数 (ミドルウェア) をインポートする</span>
+<span class="token keyword">import</span> <span class="token punctuation">{</span> text<span class="token punctuation">,</span> <span class="token keyword">type</span> <span class="token class-name"><span class="token maybe-class-name">Request</span></span><span class="token punctuation">,</span> <span class="token keyword">type</span> <span class="token class-name"><span class="token maybe-class-name">Response</span></span> <span class="token punctuation">}</span> <span class="token keyword">from</span> <span class="token string">'express'</span><span class="token punctuation">;</span>
+
+@<span class="token function"><span class="token maybe-class-name">Controller</span></span><span class="token punctuation">(</span><span class="token string">'api'</span><span class="token punctuation">)</span>
+<span class="token keyword">export</span> <span class="token keyword">class</span> <span class="token class-name"><span class="token maybe-class-name">MyApiController</span></span> <span class="token punctuation">{</span>
+  <span class="token comment">// 先ほどの例と比べて、`@Req()` を追加で引数に入れてある</span>
+  @<span class="token function"><span class="token maybe-class-name">Post</span></span><span class="token punctuation">(</span><span class="token string">'example'</span><span class="token punctuation">)</span>
+  <span class="token keyword">public</span> <span class="token keyword">async</span> <span class="token function">example</span><span class="token punctuation">(</span>@<span class="token function"><span class="token maybe-class-name">Req</span></span><span class="token punctuation">(</span><span class="token punctuation">)</span> request<span class="token operator">:</span> <span class="token maybe-class-name">Request</span><span class="token punctuation">,</span> @<span class="token function"><span class="token maybe-class-name">Body</span></span><span class="token punctuation">(</span><span class="token punctuation">)</span> myData<span class="token operator">:</span> <span class="token maybe-class-name">MyData</span><span class="token punctuation">,</span> @<span class="token function"><span class="token maybe-class-name">Res</span></span><span class="token punctuation">(</span><span class="token punctuation">)</span> response<span class="token operator">:</span> <span class="token maybe-class-name">Response</span><span class="token punctuation">)</span><span class="token operator">:</span> <span class="token known-class-name class-name">Promise</span><span class="token operator">&#x3C;</span><span class="token maybe-class-name">Response</span><span class="token operator">></span> <span class="token punctuation">{</span>
+    <span class="token comment">// `navigator.sendBeacon()` で送信した場合は `text/plain` で届くので、その場合は生のリクエストデータを取得して JSON に変換する</span>
+    <span class="token keyword">if</span><span class="token punctuation">(</span>request<span class="token punctuation">.</span><span class="token keyword">is</span><span class="token punctuation">(</span><span class="token string">'text/plain'</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">{</span>
+      <span class="token keyword">try</span> <span class="token punctuation">{</span>
+        <span class="token keyword">await</span> <span class="token keyword">new</span> <span class="token class-name"><span class="token known-class-name class-name">Promise</span><span class="token operator">&#x3C;</span><span class="token keyword">void</span><span class="token operator">></span></span><span class="token punctuation">(</span><span class="token punctuation">(</span>resolve<span class="token punctuation">,</span> reject<span class="token punctuation">)</span> <span class="token arrow operator">=></span> <span class="token punctuation">{</span> <span class="token function">text</span><span class="token punctuation">(</span><span class="token punctuation">{</span> <span class="token keyword">type</span><span class="token operator">:</span> <span class="token string">'text/plain'</span> <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">(</span>request<span class="token punctuation">,</span> response<span class="token punctuation">,</span> error <span class="token arrow operator">=></span> error <span class="token operator">?</span> <span class="token function">reject</span><span class="token punctuation">(</span>error<span class="token punctuation">)</span> <span class="token operator">:</span> <span class="token function">resolve</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span>
+      <span class="token keyword">catch</span><span class="token punctuation">(</span>error<span class="token punctuation">)</span> <span class="token punctuation">{</span>
+        <span class="token keyword">const</span> status <span class="token operator">=</span> <span class="token punctuation">(</span>error <span class="token keyword">as</span> <span class="token punctuation">{</span> status<span class="token operator">?</span><span class="token operator">:</span> <span class="token builtin">number</span> <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token property-access">status</span> <span class="token operator">===</span> <span class="token maybe-class-name">HttpStatus</span><span class="token punctuation">.</span><span class="token constant">PAYLOAD_TOO_LARGE</span> <span class="token operator">?</span> <span class="token maybe-class-name">HttpStatus</span><span class="token punctuation">.</span><span class="token constant">PAYLOAD_TOO_LARGE</span> <span class="token operator">:</span> <span class="token maybe-class-name">HttpStatus</span><span class="token punctuation">.</span><span class="token constant">BAD_REQUEST</span><span class="token punctuation">;</span>
+        <span class="token keyword">return</span> response<span class="token punctuation">.</span><span class="token method function property-access">status</span><span class="token punctuation">(</span>status<span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">json</span><span class="token punctuation">(</span><span class="token punctuation">{</span> error<span class="token operator">:</span> <span class="token string">'Failed To Read Body'</span> <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span>
+      
+      <span class="token comment">// この時、引数 `myData` は空オブジェクトの状態なので、ココでパースして再代入する</span>
+      <span class="token keyword">try</span> <span class="token punctuation">{</span>
+        myData <span class="token operator">=</span> <span class="token known-class-name class-name">JSON</span><span class="token punctuation">.</span><span class="token method function property-access">parse</span><span class="token punctuation">(</span>request<span class="token punctuation">.</span><span class="token property-access">body</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span>
+      <span class="token keyword">catch</span> <span class="token punctuation">{</span>
+        <span class="token keyword">return</span> response<span class="token punctuation">.</span><span class="token method function property-access">status</span><span class="token punctuation">(</span><span class="token maybe-class-name">HttpStatus</span><span class="token punctuation">.</span><span class="token constant">BAD_REQUEST</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">json</span><span class="token punctuation">(</span><span class="token punctuation">{</span> error<span class="token operator">:</span> <span class="token string">'Invalid JSON Body'</span> <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span>
+    
+    <span class="token comment">// `application/json` で送られてきた場合は上述の `if` 文を通らず、最初から引数 `myData` がパース済みの JSON になっている</span>
+    <span class="token comment">// `text/plain` で送られてきた場合も、`if` 文の中で自分で `JSON.parse()` した結果を `myData` に代入し直しているので</span>
+    <span class="token comment">// どちらの場合でも以降は引数 `myData` を利用すれば良い</span>
+    
+    <span class="token keyword">return</span> response<span class="token punctuation">.</span><span class="token method function property-access">status</span><span class="token punctuation">(</span><span class="token maybe-class-name">HttpStatus</span><span class="token punctuation">.</span><span class="token constant">OK</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token method function property-access">end</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre>
+<p>こんな感じ。以前までの <code>application/json</code> のままリクエストした場合は <code>if</code> 文を通らないので何も変更がない。</p>
+<p><code>text/plain</code> で送られてきた場合は、<code>if</code> 文の中で Express の <code>text</code> ミドルウェアを通すことでリクエスト文字列を取得できるようにしたので、<code>JSON.parse()</code> して引き継いでやれば、後続処理のコードは変更しなくて良い。</p>
+<p><code>main.ts</code> や <code>@Module()</code> で処理する場合のコードは省略するが、やることは同じで <code>text</code> ミドルウェアを噛ませるだけ。自分は、この API エンドポイントだけ例外的に <code>text/plain</code> を送る場合がある構成だったので、他の API エンドポイントに影響を与えないようにするためこの実装に落ち着いた。</p>
+<h2 id="以上"><a class="header-link" href="#以上"><span class="header-link-mark"></span></a>以上</h2>
+<p>長くなってしまったが、以上で <code>navigator.sendBeacon()</code> でも KeepAlive Fetch でも、<code>application/json</code> 指定の通常 Fetch でも、とにかく POST リクエストを送って、NestJS サーバで同じ形に整えて受け取れるようにできた。</p>
+<p>CORS とプリフライトリクエストの仕様についても、ふんわりとしか分かっていなかったところや歴史的経緯なんかを学び直せたので、良い勉強になった。</p>
+
+      </main>
+      <aside id="aside">
+        <section id="donate">
+          <h2>このサイトを応援する</h2>
+          <p>このサイトが役に立ったら、コーヒー1杯分ご支援してもらえると嬉しいです。</p>
+          <div id="donate-banners">
+            <div id="donate-ofuse"><a href="https://ofuse.me/neos21">Ofuse</a></div>
+            <div id="donate-buy-me-a-coffee"><a href="https://buymeacoffee.com/neos21">Buy Me A Coffee</a></div>
+            <div id="donate-stripe"><a href="https://donate.stripe.com/eVq5kF87XaNZgOGbLu4wM00">Stripe</a></div>
+            <div id="donate-github-sponsors"><a href="https://github.com/sponsors/Neos21">GitHub Sponsors</a></div>
+          </div>
+        </section>
+      </aside>
+      <footer id="footer">
+        <div id="footer-contents">
+          <div id="date-time">
+            <dl>
+              <dt>Created</dt>
+              <dd><time>2026-10-29</time></dd>
+              <dt>Last-Modified</dt>
+              <dd><time>2026-10-29</time></dd>
+            </dl>
+          </div>
+          <nav id="footer-links">
+            <ul>
+              <li id="footer-link-about"><a href="/about/index.html" title="About">About</a></li>
+              <li id="footer-link-search"><a href="/about/search.html" title="Search">Search</a></li>
+              <li id="footer-link-feeds"><a href="/feeds.xml" title="Feeds">Feeds</a></li>
+              <li id="footer-link-github"><a href="https://github.com/Neos21/" title="GitHub">GitHub</a></li>
+            </ul>
+          </nav>
+          <nav id="to-top"><a href="#" title="To Top"><span>▲ To Top</span></a></nav>
+        </div>
+      </footer>
+    </div>
+  </body>
+</html>
