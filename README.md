@@ -137,7 +137,6 @@ $ cd ./dist
 
 - `/ads.txt` : Google AdSense 用
 - `/ae52213dcf6345ccb5cfd82813bbbe70.txt` : IndexNow 確認用
-- `/.well-known/atproto-did` : [Bluesky アカウント](https://bsky.app/profile/neos21.net) 認証用
 - `/.well-known/brave-rewards-verification.txt` : Brave Rewards 用
 - HTML ヘッダの記述
     -  `<meta name="google-site-verification">` : Google Search Console
